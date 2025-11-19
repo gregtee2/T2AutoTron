@@ -1,0 +1,156 @@
+//working version
+require('dotenv').config({ path: './.env' });
+console.log('Starting server.js...');
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const figlet = require('figlet');
+const chalk = require('chalk');
+const config = require('./config/env');
+const { connectMongoDB } = require('./config/database');
+const logger = require('./logging/logger');
+const DeviceService = require('./devices/services/deviceService');
+const { setupNotifications } = require('./notifications/notificationService');
+const { fetchWeatherData } = require('./weather/weatherService');
+const { fetchForecastData } = require('./weather/forecastService');
+const { normalizeState } = require('./utils/normalizeState');
+const hueManager = require('./devices/managers/hueManager');
+
+console.log('Weather imports:', { fetchWeatherData: typeof fetchWeatherData, fetchForecastData: typeof fetchForecastData });
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: ['http://localhost:3000', 'http://localhost:8080', 'file://'],
+        methods: ['GET', 'POST', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: true
+    },
+    maxHttpBufferSize: 1e8,
+    pingTimeout: 30000,
+    pingInterval: 10000,
+    transports: ['websocket', 'polling'],
+    allowEIO3: true
+});
+
+// Log Socket.IO errors
+io.on('error', (error) => {
+    logger.log('Socket.IO server error: ' + error.message, 'error', false, 'socket:error', { stack: error.stack });
+});
+
+// Log client connections/disconnections
+io.on('connection', (socket) => {
+    logger.log(`Socket.IO client connected: ${socket.id}`, 'info', false, 'socket:connect');
+    socket.on('disconnect', (reason) => {
+        logger.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`, 'warn', false, 'socket:disconnect');
+    });
+});
+
+app.use(express.json());
+app.use(require('./api/middleware/csp'));
+app.use(require('./config/cors'));
+app.use(require('./api/middleware/errorHandler'));
+
+console.log('Initializing DeviceService...');
+const deviceService = new DeviceService({
+    hueManager: require('./devices/managers/hueManager'),
+    kasaManager: require('./devices/managers/kasaManager'),
+    shellyManager: require('./devices/managers/shellyManager'),
+    haManager: require('./devices/managers/homeAssistantManager'),
+});
+console.log('DeviceService initialized');
+
+let hueLights = hueManager.hueLights;
+app.use('/api/devices', require('./api/routes/deviceRoutes')(deviceService));
+app.use('/api/lights/hue', require('./api/routes/hueRoutes')(null, hueLights, io));
+app.use('/api/lights/kasa', require('./api/routes/kasaRoutes')(io));
+app.use('/api/lights/shelly', require('./api/routes/shellyRoutes')(io));
+app.use('/api/lights/ha', require('./api/routes/haRoutes')(io));
+
+async function displayBanner() {
+    console.log('Displaying banner...');
+    const banner = figlet.textSync('T2AutoTron', { font: 'Slant' });
+    console.log(chalk.green(banner));
+    console.log(chalk.cyan('🚀 Welcome to T2AutoTron - With Shelly Support and Energy Metering 🚀'));
+    await logger.log('Banner displayed', 'info', false, 'banner:display');
+    console.log('Banner displayed');
+}
+
+async function initializeModules() {
+    console.log('Setting up notifications...');
+    const notificationEmitter = await setupNotifications(io);
+    io.sockets.notificationEmitter = notificationEmitter;
+    console.log('Notifications set up');
+
+    console.log('Initializing devices...');
+    try {
+        const devices = await deviceService.initialize(io, notificationEmitter, logger.log.bind(logger));
+        deviceService.setIo(io);
+        hueLights = devices.hue || hueManager.hueLights;
+        console.log(`Initialized ${hueLights.length} Hue lights`);
+    } catch (error) {
+        console.error('Failed to initialize devices:', error);
+        logger.log(`Failed to initialize devices: ${error.message}`, 'error', false, 'devices:init:error', { stack: error.stack });
+        hueLights = hueManager.hueLights;
+    }
+    console.log('Devices initialized');
+
+    console.log('Fetching initial weather data...');
+    const initialWeather = await fetchWeatherData(true);
+    console.log('Fetching initial forecast data...');
+    console.log('Calling fetchForecastData:', typeof fetchForecastData);
+    const initialForecast = await fetchForecastData(true);
+    if (initialWeather) io.emit('weather-update', initialWeather);
+    if (initialForecast) io.emit('forecast-update', initialForecast);
+    console.log('Weather data fetched');
+
+    let lastWeatherDate = null;
+    let lastForecastDate = null;
+    setInterval(async () => {
+        const updatedWeather = await fetchWeatherData(true);
+        const updatedForecast = await fetchForecastData(true);
+        if (updatedWeather && (!lastWeatherDate || updatedWeather.date !== lastWeatherDate)) {
+            io.emit('weather-update', updatedWeather);
+            lastWeatherDate = updatedWeather.date;
+            await logger.log('Emitted weather-update with new data', 'info', false, 'weather-update');
+        }
+        if (updatedForecast && (!lastForecastDate || updatedForecast[0].date !== lastForecastDate)) {
+            io.emit('forecast-update', updatedForecast);
+            lastForecastDate = updatedForecast[0].date;
+            await logger.log('Emitted forecast-update with new data', 'info', false, 'forecast-update');
+        }
+    }, 3 * 60 * 1000);
+
+    io.on('connection', require('./api/socketHandlers')(deviceService));
+}
+
+async function startServer() {
+    try {
+        console.log('Starting server setup...');
+        await displayBanner();
+        console.log('Connecting to MongoDB...');
+        await connectMongoDB();
+        console.log('Initializing modules...');
+        await initializeModules();
+        console.log('Starting server on port...');
+        const PORT = config.get('port');
+        server.listen(PORT, () => {
+            logger.log(`Server running on http://localhost:${PORT}`, 'info', false, 'server:start');
+            console.log(chalk.cyan(`🚀 Server is fully operational on port ${PORT} with Shelly, Osram SMART+, and Energy Metering 🚀`));
+        });
+    } catch (err) {
+        console.log('Startup error:', err);
+        await logger.log(`Startup failed: ${err.message}`, 'error', false, 'error:startup');
+        process.exit(1);
+    }
+}
+
+startServer();
+
+process.on('SIGINT', async () => {
+    await logger.log('Shutting down server', 'info', false, 'shutdown');
+    server.close(() => {
+        mongoose.connection.close(() => process.exit(0));
+    });
+});

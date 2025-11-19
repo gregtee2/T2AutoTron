@@ -1,0 +1,530 @@
+// File: custom_nodes/Timers/TimeOfDayNode.js
+    // Define the TimeOfDayNode class
+    class TimeOfDayNode extends LiteGraph.LGraphNode {
+        constructor() {
+            super();
+            this.title = "Time of Day";
+            this.size = [220, 400];  // Increased height to accommodate new widgets
+
+            // Define default properties with all necessary fields
+            this.properties = {
+                start_hour: 8,
+                start_minute: 0,
+                start_ampm: "AM",
+                stop_hour: 6,
+                stop_minute: 0,
+                stop_ampm: "PM",
+                start_action: "on",
+                stop_action: "off",
+                start_enabled: true,  // Enable/Disable Start Action
+                stop_enabled: true,   // Enable/Disable Stop Action
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', // Default to user's local timezone or UTC
+                emit_initial_state: false  // Option to emit initial state upon connection
+            };
+
+            // Validate initial timezone
+            if (!luxon.IANAZone.isValidZone(this.properties.timezone)) {
+                console.warn(`TimeOfDayNode.js - Invalid initial timezone "${this.properties.timezone}". Defaulting to UTC.`);
+                this.properties.timezone = 'UTC';
+            }
+
+            // Add Timezone Dropdown Widget
+            const timezones = [
+                'UTC',
+                'America/New_York',
+                'America/Los_Angeles',
+                'Europe/London',
+                'Europe/Paris',
+                'Asia/Tokyo',
+                'Asia/Hong_Kong',
+                'Australia/Sydney',
+                'America/Sao_Paulo',
+                'Europe/Berlin',
+                'Asia/Kolkata',
+                'Africa/Johannesburg',
+                'America/Chicago',
+                // Add more valid IANA timezones as needed
+            ];
+            this.addWidget("combo", "Timezone", this.properties.timezone, (v) => {
+                if (luxon.IANAZone.isValidZone(v)) {
+                    this.properties.timezone = v;
+                    console.log(`TimeOfDayNode - Timezone updated to: ${v}`);
+                    this.updateTimes(); // Update times for new timezone
+                    this.scheduleNextCheck();
+                } else {
+                    console.error(`Invalid timezone selected: ${v}`);
+                }
+            }, { values: timezones });
+
+            // Emit Initial State Toggle Widget
+            this.addWidget("toggle", "Emit Initial State", this.properties.emit_initial_state, (v) => {
+                this.properties.emit_initial_state = v;
+                this.updateStatus(`Emit Initial State ${v ? "Enabled" : "Disabled"}`);
+                console.log(`TimeOfDayNode - Emit Initial State set to: ${v}`);
+                this.setDirtyCanvas(true);
+            });
+
+            this.addOutput("State", "boolean");  // Set output type to boolean
+
+            // Initialize widgets
+            this.setupWidgets();
+
+            // Parse the initial start and stop times using Luxon
+            this.updateTimes();
+
+            // Force the size after widgets are added
+            this.forceSize();
+
+            // Internal state
+            this.currentState = null;      // Tracks the current state ("on"/"off")
+            this.startTimeoutId = null;    // ID of the scheduled Start timeout
+            this.stopTimeoutId = null;     // ID of the scheduled Stop timeout
+
+            // Listen for visibility changes to handle tab activation
+            this.visibilityChangeHandler = this.handleVisibilityChange.bind(this);
+            document.addEventListener("visibilitychange", this.visibilityChangeHandler);
+
+            console.log("TimeOfDayNode - Initialized.");
+        }
+
+        setupWidgets() {
+            // Start Time Widgets
+            this.addWidget("combo", "Start Hour", this.properties.start_hour, (v) => {
+                this.properties.start_hour = parseInt(v, 10);
+                console.log(`TimeOfDayNode - Start Hour set to: ${v}`);
+                this.updateTimes();
+            }, { values: Array.from({ length: 12 }, (_, i) => i + 1) });
+
+            this.addWidget("combo", "Start Minute", this.properties.start_minute, (v) => {
+                this.properties.start_minute = parseInt(v, 10);
+                console.log(`TimeOfDayNode - Start Minute set to: ${v}`);
+                this.updateTimes();
+            }, { values: Array.from({ length: 60 }, (_, i) => this.formatMinute(i)) });
+
+            this.addWidget("combo", "Start AM/PM", this.properties.start_ampm, (v) => {
+                this.properties.start_ampm = v;
+                console.log(`TimeOfDayNode - Start AM/PM set to: ${v}`);
+                this.updateTimes();
+            }, { values: ["AM", "PM"] });
+
+            // Start Action Widget
+            this.addWidget("combo", "Start Action", this.properties.start_action, (v) => {
+                if (["on", "off"].includes(v)) {
+                    this.properties.start_action = v;
+                    this.updateStatus(`Start Action set to: ${v}`);
+                    console.log(`TimeOfDayNode - Start Action set to: ${v}`);
+                    this.setDirtyCanvas(true);
+                } else {
+                    console.error("TimeOfDayNode - Invalid Start Action value:", v);
+                }
+            }, { values: ["on", "off"] });
+
+            // Enable Start Action Toggle
+            this.addWidget("toggle", "Enable Start Action", this.properties.start_enabled, (v) => {
+                this.properties.start_enabled = v;
+                this.updateStatus(`Start Action ${v ? "Enabled" : "Disabled"}`);
+                console.log(`TimeOfDayNode - Start Action enabled: ${v}`);
+                this.setDirtyCanvas(true);
+                this.scheduleNextCheck();  // Reschedule based on new state
+            });
+
+            // Spacer for better layout
+            this.addWidget("text", "", "", null, {
+                readonly: true,
+                value: "----- Stop Time Settings -----"
+            });
+
+            // Stop Time Widgets
+            this.addWidget("combo", "Stop Hour", this.properties.stop_hour, (v) => {
+                this.properties.stop_hour = parseInt(v, 10);
+                console.log(`TimeOfDayNode - Stop Hour set to: ${v}`);
+                this.updateTimes();
+            }, { values: Array.from({ length: 12 }, (_, i) => i + 1) });
+
+            this.addWidget("combo", "Stop Minute", this.properties.stop_minute, (v) => {
+                this.properties.stop_minute = parseInt(v, 10);
+                console.log(`TimeOfDayNode - Stop Minute set to: ${v}`);
+                this.updateTimes();
+            }, { values: Array.from({ length: 60 }, (_, i) => this.formatMinute(i)) });
+
+            this.addWidget("combo", "Stop AM/PM", this.properties.stop_ampm, (v) => {
+                this.properties.stop_ampm = v;
+                console.log(`TimeOfDayNode - Stop AM/PM set to: ${v}`);
+                this.updateTimes();
+            }, { values: ["AM", "PM"] });
+
+            // Stop Action Widget
+            this.addWidget("combo", "Stop Action", this.properties.stop_action, (v) => {
+                if (["on", "off"].includes(v)) {
+                    this.properties.stop_action = v;
+                    this.updateStatus(`Stop Action set to: ${v}`);
+                    console.log(`TimeOfDayNode - Stop Action set to: ${v}`);
+                    this.setDirtyCanvas(true);
+                } else {
+                    console.error("TimeOfDayNode - Invalid Stop Action value:", v);
+                }
+            }, { values: ["on", "off"] });
+
+            // Enable Stop Action Toggle
+            this.addWidget("toggle", "Enable Stop Action", this.properties.stop_enabled, (v) => {
+                this.properties.stop_enabled = v;
+                this.updateStatus(`Stop Action ${v ? "Enabled" : "Disabled"}`);
+                console.log(`TimeOfDayNode - Stop Action enabled: ${v}`);
+                this.setDirtyCanvas(true);
+                this.scheduleNextCheck();  // Reschedule based on new state
+            });
+
+            // Force the size again after widgets setup
+            this.forceSize();
+        }
+
+        formatMinute(minute) {
+            // Ensure minutes are displayed as two digits
+            return minute < 10 ? `0${minute}` : `${minute}`;
+        }
+
+        updateTimes() {
+            if (typeof luxon === 'undefined') {
+                console.error("TimeOfDayNode.js - Luxon is not loaded.");
+                return;
+            }
+
+            // Ensure timezone is valid
+            if (!luxon.IANAZone.isValidZone(this.properties.timezone)) {
+                console.warn(`TimeOfDayNode.js - Invalid timezone "${this.properties.timezone}". Defaulting to UTC.`);
+                this.properties.timezone = 'UTC';
+            }
+
+            // Update the internal time objects using Luxon for timezone-aware calculations
+            this.startTimeObj = this.parseTime(this.properties.start_hour, this.properties.start_minute, this.properties.start_ampm);
+            this.stopTimeObj = this.parseTime(this.properties.stop_hour, this.properties.stop_minute, this.properties.stop_ampm);
+
+            if (!this.startTimeObj.isValid || !this.stopTimeObj.isValid) {
+                console.error("TimeOfDayNode - Invalid start or stop time object.");
+                return;
+            }
+
+            console.log(`TimeOfDayNode - Updated times: Start ${this.startTimeObj.toFormat('hh:mm a')}, Stop ${this.stopTimeObj.toFormat('hh:mm a')}`);
+            this.setDirtyCanvas(true);  // Redraw the canvas to reflect changes
+
+            // Reschedule the next state check
+            this.scheduleNextCheck();
+        }
+
+        parseTime(hour, minute, ampm) {
+            if (typeof luxon === 'undefined') {
+                console.error("TimeOfDayNode.js - Luxon is not loaded.");
+                return null;
+            }
+
+            let adjustedHour = hour;
+            if (ampm === "PM" && hour !== 12) {
+                adjustedHour += 12;
+            }
+            if (ampm === "AM" && hour === 12) {
+                adjustedHour = 0;
+            }
+
+            // Validate timezone before creating DateTime object
+            if (!luxon.IANAZone.isValidZone(this.properties.timezone)) {
+                console.warn(`TimeOfDayNode.js - Invalid timezone "${this.properties.timezone}". Defaulting to UTC.`);
+                this.properties.timezone = 'UTC';
+            }
+
+            const dt = luxon.DateTime.fromObject({
+                hour: adjustedHour,
+                minute: minute,
+                second: 0,
+                millisecond: 0,
+                zone: this.properties.timezone
+            });
+
+            if (!dt.isValid) {
+                console.error(`TimeOfDayNode.js - Invalid DateTime object created for time: ${hour}:${minute} ${ampm}`);
+            }
+
+            return dt;
+        }
+
+        isCurrentTimeWithinRange() {
+            if (typeof luxon === 'undefined') {
+                console.error("TimeOfDayNode.js - Luxon is not loaded.");
+                return false;
+            }
+
+            const now = luxon.DateTime.now().setZone(this.properties.timezone);
+            const currentMinutes = now.hour * 60 + now.minute;
+
+            const startMinutes = this.startTimeObj.hour * 60 + this.startTimeObj.minute;
+            const stopMinutes = this.stopTimeObj.hour * 60 + this.stopTimeObj.minute;
+
+            const inRange = (startMinutes < stopMinutes)
+                ? (currentMinutes >= startMinutes && currentMinutes < stopMinutes)
+                : (currentMinutes >= startMinutes || currentMinutes < stopMinutes);
+
+            console.log(`TimeOfDayNode - Current Time: ${now.toFormat('hh:mm a')} (${currentMinutes} minutes), Start Time: ${this.startTimeObj.toFormat('hh:mm a')} (${startMinutes} minutes), Stop Time: ${this.stopTimeObj.toFormat('hh:mm a')} (${stopMinutes} minutes), In Range: ${inRange}`);
+            return inRange;
+        }
+
+        /**
+         * Override onExecute to remove output logic.
+         * We'll rely solely on scheduled actions to handle outputs.
+         */
+        onExecute() {
+            // No output logic here to prevent conflicts.
+            // Outputs are handled by scheduled actions.
+        }
+
+        /**
+         * Handle Start Action based on configured settings.
+         */
+        handleStartAction() {
+            if (!this.properties.start_enabled) {
+                console.log("TimeOfDayNode - Start Action is disabled. No output.");
+                return;
+            }
+
+            console.log("TimeOfDayNode - Start Action triggered.");
+            if (this.properties.start_action === "on") {
+                this.setOutputData(0, true);
+                this.triggerSlot(0);
+                console.log("TimeOfDayNode - Output: on");
+            } else if (this.properties.start_action === "off") {
+                this.setOutputData(0, false);
+                this.triggerSlot(0);
+                console.log("TimeOfDayNode - Output: off");
+            } else {
+                console.error("TimeOfDayNode - Invalid Start Action value:", this.properties.start_action);
+            }
+
+            // Update currentState based on action
+            this.currentState = this.properties.start_action === "on";
+        }
+
+        /**
+         * Handle Stop Action based on configured settings.
+         */
+        handleStopAction() {
+            if (!this.properties.stop_enabled) {
+                console.log("TimeOfDayNode - Stop Action is disabled. No output.");
+                return;
+            }
+
+            console.log("TimeOfDayNode - Stop Action triggered.");
+            if (this.properties.stop_action === "on") {
+                this.setOutputData(0, true);
+                this.triggerSlot(0);
+                console.log("TimeOfDayNode - Output: on");
+            } else if (this.properties.stop_action === "off") {
+                this.setOutputData(0, false);
+                this.triggerSlot(0);
+                console.log("TimeOfDayNode - Output: off");
+            } else {
+                console.error("TimeOfDayNode - Invalid Stop Action value:", this.properties.stop_action);
+            }
+
+            // Update currentState based on action
+            this.currentState = this.properties.stop_action === "on";
+        }
+
+        onDrawForeground(ctx) {
+            // Visual indication of whether actions are enabled or disabled
+            // Start Action
+            ctx.fillStyle = this.properties.start_enabled ? "rgb(34, 139, 34)" : "rgb(169, 169, 169)";  // Green or Dark Gray
+            ctx.font = "14px Arial";
+            ctx.textAlign = "left";
+            ctx.fillText(`Start: ${this.startTimeObj.toFormat('hh:mm a')}`, 10, this.size[1] - 100);
+
+            // Stop Action
+            ctx.fillStyle = this.properties.stop_enabled ? "#FF0000" : "#A9A9A9";  // Red or Dark Gray
+            ctx.fillText(`Stop: ${this.stopTimeObj.toFormat('hh:mm a')}`, 10, this.size[1] - 60);
+        }
+
+        /**
+         * Schedule the next Start and Stop actions based on enabled states.
+         */
+        scheduleNextCheck() {
+            // Clear any existing timeouts
+            if (this.startTimeoutId) {
+                clearTimeout(this.startTimeoutId);
+                this.startTimeoutId = null;
+                console.log(`TimeOfDayNode - Cleared existing Start Timeout.`);
+            }
+            if (this.stopTimeoutId) {
+                clearTimeout(this.stopTimeoutId);
+                this.stopTimeoutId = null;
+                console.log(`TimeOfDayNode - Cleared existing Stop Timeout.`);
+            }
+
+            const now = luxon.DateTime.now().setZone(this.properties.timezone);
+
+            // Schedule Start Action if enabled
+            if (this.properties.start_enabled) {
+                const startDate = this.getNextOccurrence(this.startTimeObj, now);
+                const delayStart = startDate.diff(now).as('milliseconds');
+                if (delayStart > 0) {
+                    this.startTimeoutId = setTimeout(() => {
+                        this.handleStartAction();
+                        this.scheduleNextCheck();  // Reschedule after action
+                    }, delayStart);
+                    console.log(`TimeOfDayNode - Start Action scheduled at ${startDate.toFormat('yyyy-MM-dd HH:mm:ss')}`);
+                } else {
+                    console.warn(`TimeOfDayNode - Start time has already passed for today.`);
+                }
+            }
+
+            // Schedule Stop Action if enabled
+            if (this.properties.stop_enabled) {
+                const stopDate = this.getNextOccurrence(this.stopTimeObj, now);
+                const delayStop = stopDate.diff(now).as('milliseconds');
+                if (delayStop > 0) {
+                    this.stopTimeoutId = setTimeout(() => {
+                        this.handleStopAction();
+                        this.scheduleNextCheck();  // Reschedule after action
+                    }, delayStop);
+                    console.log(`TimeOfDayNode - Stop Action scheduled at ${stopDate.toFormat('yyyy-MM-dd HH:mm:ss')}`);
+                } else {
+                    console.warn(`TimeOfDayNode - Stop time has already passed for today.`);
+                }
+            }
+
+            // Handle scenarios where both actions are disabled
+            if (!this.properties.start_enabled && !this.properties.stop_enabled) {
+                console.log("TimeOfDayNode - Both Start and Stop actions are disabled. No actions scheduled.");
+            }
+
+            // Handle cases where no timeouts are active
+            if (!this.startTimeoutId && !this.stopTimeoutId) {
+                console.log("TimeOfDayNode - No actions enabled. No fallback checks scheduled.");
+            }
+        }
+
+        /**
+         * Get the next occurrence of a given time object relative to 'now'.
+         * @param {luxon.DateTime} timeObj - Luxon DateTime object.
+         * @param {luxon.DateTime} now - Current Luxon DateTime object.
+         * @returns {luxon.DateTime} - Next occurrence of the specified time.
+         */
+        getNextOccurrence(timeObj, now) {
+            let scheduledTime = timeObj.set({
+                year: now.year,
+                month: now.month,
+                day: now.day
+            });
+
+            if (scheduledTime <= now) {
+                // If the scheduled time has already passed today, schedule for tomorrow
+                scheduledTime = scheduledTime.plus({ days: 1 });
+            }
+
+            return scheduledTime;
+        }
+
+        handleVisibilityChange() {
+            if (!document.hidden) {
+                console.log("TimeOfDayNode - Tab became active. Rescheduling actions.");
+                this.scheduleNextCheck();  // Reschedule based on the current time
+            }
+        }
+
+        onSerialize(o) {
+            // Ensure all properties are saved
+            o.properties = LiteGraph.cloneObject(this.properties);
+            console.log("TimeOfDayNode - Serialized properties:", o.properties);
+        }
+
+        onConfigure(o) {
+            if (o.properties) {
+                // Restore properties with defaults for missing fields
+                const defaultProperties = {
+                    start_hour: 8,
+                    start_minute: 0,
+                    start_ampm: "AM",
+                    stop_hour: 6,
+                    stop_minute: 0,
+                    stop_ampm: "PM",
+                    start_action: "on",
+                    stop_action: "off",
+                    start_enabled: true,
+                    stop_enabled: true,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+                    emit_initial_state: false
+                };
+
+                // Merge saved properties with defaults
+                this.properties = Object.assign({}, defaultProperties, o.properties);
+
+                // Validate timezone
+                if (!luxon.IANAZone.isValidZone(this.properties.timezone)) {
+                    console.warn(`TimeOfDayNode.js - Configured timezone "${this.properties.timezone}" is invalid. Defaulting to UTC.`);
+                    this.properties.timezone = 'UTC';
+                }
+
+                console.log("TimeOfDayNode - Configured with properties:", this.properties);
+                this.setupWidgets();  // Recreate widgets based on restored properties
+                this.updateTimes();    // Ensure the internal times are updated based on restored properties
+                this.forceSize();      // Force the size when the node is configured
+            }
+        }
+
+        forceSize() {
+            this.size = [220, 400];  // Ensure the size is consistently applied in multiple locations
+            console.log(`TimeOfDayNode - Node ${this.id} size set to: ${this.size[0]}x${this.size[1]}`);
+            this.setDirtyCanvas(true);
+        }
+
+        onAdded() {
+            this.forceSize();
+            // Initialize currentState based on initial time and enabled states
+            this.currentState = this.isCurrentTimeWithinRange() ? true : false;
+            console.log(`TimeOfDayNode - Initial State: ${this.currentState ? "on" : "off"}`);
+
+            // Conditionally emit initial state based on user configuration
+            if (this.properties.emit_initial_state) {
+                if ((this.currentState && this.properties.start_enabled) || (!this.currentState && this.properties.stop_enabled)) {
+                    this.setOutputData(0, this.currentState);
+                    this.triggerSlot(0);
+                    console.log(`TimeOfDayNode - Initial Output: ${this.currentState ? "on" : "off"}`);
+                } else {
+                    console.log(`TimeOfDayNode - Initial Output not emitted due to disabled action.`);
+                }
+            } else {
+                console.log("TimeOfDayNode - Initial emission of state is disabled.");
+            }
+
+            this.scheduleNextCheck();  // Schedule the first state check
+        }
+
+        onRemoved() {
+            // Clear any existing timeouts
+            if (this.startTimeoutId) {
+                clearTimeout(this.startTimeoutId);
+                this.startTimeoutId = null;
+                console.log(`TimeOfDayNode - Cleared Start Timeout on removal.`);
+            }
+            if (this.stopTimeoutId) {
+                clearTimeout(this.stopTimeoutId);
+                this.stopTimeoutId = null;
+                console.log(`TimeOfDayNode - Cleared Stop Timeout on removal.`);
+            }
+
+            // Remove visibility change listener
+            document.removeEventListener("visibilitychange", this.visibilityChangeHandler);
+        }
+
+        /**
+         * Update the status with a message.
+         * Currently, it logs to the console.
+         * You can expand this to update a status widget if desired.
+         * @param {string} message - The status message to log.
+         */
+        updateStatus(message) {
+            console.log(`TimeOfDayNode - ${message}`);
+            // Optionally, implement a status widget to display messages to the user
+        }
+    }
+
+    // Register the node with LiteGraph under the "Timers" category
+    LiteGraph.registerNodeType("Timers/time_of_day", TimeOfDayNode);
+    console.log("TimeOfDayNode - Registered successfully.");
+})();

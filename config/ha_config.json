@@ -1,0 +1,13 @@
+{
+  "home_assistant": {
+    "sensor_include_patterns": [
+      "third_reality_inc_",
+      "sunshine_terrace_",
+      "garage_door"
+    ],
+    "sensor_exclude_patterns": [
+      "diagnostic",
+      "update"
+    ]
+  }
+}

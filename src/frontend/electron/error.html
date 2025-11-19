@@ -1,0 +1,52 @@
+<!-- File: electron/error.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>T2AutoTron - Error</title>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .error-container {
+            max-width: 600px;
+        }
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #ff4c4c;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1>Oops! Something Went Wrong.</h1>
+        <p>We couldn't connect to the backend server. Please ensure the backend is running correctly.</p>
+        <button onclick="window.close()">Close</button>
+    </div>
+</body>
+</html>

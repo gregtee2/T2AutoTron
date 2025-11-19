@@ -1,0 +1,71 @@
+const logger = require('../../logging/logger');
+
+class DeviceService {
+  constructor({ hueManager, kasaManager, shellyManager, haManager }) {
+    this.managers = {
+      hue: hueManager,
+      kasa: kasaManager, // Use kasaManager directly
+      shelly: shellyManager,
+      ha: haManager,
+    };
+    this.controlDeviceBase = require('../../devices/managers/deviceManagers').controlDevice;
+    this.lastStates = {};
+    this.io = null;
+  }
+
+  setIo(io) {
+    this.io = io;
+  }
+
+  getLastStates() {
+    return this.lastStates;
+  }
+
+  updateLastStates(deviceId, state) {
+    this.lastStates[deviceId] = state;
+  }
+
+  async initialize(io, notificationEmitter, logger) {
+    const devices = await require('../../devices/managers/deviceManagers').initializeDevices(io, notificationEmitter, logger);
+    // Don't override managers; they're already set in constructor
+    return devices;
+  }
+
+  async controlDevice(deviceId, state) {
+    try {
+      let result;
+      if (deviceId.startsWith('ha_')) {
+        result = await this.managers.ha.controlDevice(deviceId.replace('ha_', ''), state);
+      } else if (deviceId.startsWith('hue_')) {
+        result = await this.managers.hue.controlHueDevice(deviceId, state);
+      } else if (deviceId.startsWith('kasa_')) {
+        result = await this.managers.kasa.controlKasaDevice(deviceId, state);
+      } else if (deviceId.startsWith('shellyplus1-')) {
+        result = await this.managers.shelly.controlShellyDevice(deviceId, state);
+      } else {
+        result = await this.controlDeviceBase(deviceId, state, this.io);
+      }
+      if (result.success) {
+        this.updateLastStates(deviceId, { ...state, id: deviceId, timestamp: new Date().toISOString() });
+        if (this.io) {
+          this.io.emit('device-state-update', this.lastStates[deviceId]);
+        }
+      }
+      return result;
+    } catch (error) {
+      logger.log('error', `Failed to control device ${deviceId}: ${error.message}`, { key: `error:device:${deviceId}`, stack: error.stack });
+      return { success: false, error: error.message };
+    }
+  }
+
+  getAllDevices() {
+    return {
+      hue: this.managers.hue.hueLights || [],
+      kasa: this.managers.kasa.getDevices ? this.managers.kasa.getDevices() : [],
+      shelly: this.managers.shelly.getShellyDevices ? this.managers.shelly.getShellyDevices() : [],
+      ha: this.managers.ha.getDevices ? this.managers.ha.getDevices() : [],
+    };
+  }
+}
+
+module.exports = DeviceService;

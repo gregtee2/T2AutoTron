@@ -1,0 +1,75 @@
+LiteGraph Node Development Guidelines for Creating a New Node
+This outline provides a comprehensive set of best practices for creating a new node in a LiteGraph-based system. These guidelines ensure the node processes inputs efficiently, propagates outputs reliably to downstream nodes, and logs events appropriately without cluttering the console. Follow these steps to build a node that integrates seamlessly into a graph, handles user inputs (e.g., triggers, HSV data), and communicates with external APIs (e.g., for controlling lights or devices).
+Initialize Node State and Properties:
+Define essential properties in the constructor to manage the node’s state, such as selected device IDs, names, and status messages. Include a debug flag for controlling log verbosity.
+Example: this.properties = { selectedDeviceIds: [], selectedDeviceNames: [], status: "No action yet", debug: false };
+
+Set up initial variables to track input history and timestamps for periodic updates or debouncing.
+Example: this.lastTriggerInput = null; this.lastToggleInput = null; this.lastForceUpdate = 0;
+
+Set Up Inputs, Outputs, and Widgets:
+Add inputs for data like triggers (boolean), HSV info (color data), or other control signals, and outputs for downstream data propagation.
+Example: this.addInput("Trigger", "boolean"); this.addOutput("Device Info", "device_info");
+
+Create UI widgets for user interaction, such as device selectors, toggles, and a debug toggle to control logging.
+Example: this.addWidget("toggle", "Debug Logs", this.properties.debug, (value) => { this.properties.debug = value; }, { width: 100 });
+
+Track Input Changes to Avoid Redundant Processing:
+Store the previous input value (e.g., lastTriggerInput) to detect changes and avoid processing unchanged inputs.
+Example: In onExecute, check if (triggerInput !== this.lastTriggerInput) before processing.
+
+In methods handling specific inputs (e.g., handleTrigger), use a state-based check to skip redundant actions.
+Example: if (!force && desiredState === this.lastToggleInput) { if (this.properties.debug) console.log("Skipping trigger: no change"); return; }
+
+Handle Trigger Inputs Efficiently:
+Use a state-based check in handleTrigger to skip redundant triggers, preventing unnecessary API calls or processing.
+Example: if (!force && desiredState === this.lastToggleInput) return;
+
+Queue state changes (e.g., using a requestQueue) to process updates sequentially, avoiding race conditions.
+Example: this.requestQueue.push({ desiredState, timestamp: Date.now() }); if (!this.isProcessingQueue) this.processQueue();
+
+Ensure Reliable Downstream Propagation:
+After setting output data, trigger graph.runStep() multiple times with delays (e.g., 100ms, 1000ms, 2000ms) to ensure downstream nodes are updated, even if LiteGraph’s scheduling misses initial propagation.
+Example: setTimeout(() => { if (this.graph) this.graph.runStep(); }, 1000);
+
+Increment graph._version whenever outputs change to force LiteGraph to re-evaluate downstream dependencies.
+Example: if (this.graph) this.graph._version++;
+
+Implement periodic forced updates (e.g., every 60 seconds) to re-propagate outputs, preventing staleness over long periods.
+Example: if (now - this.lastForceUpdate > 60000) { /* force update */ this.lastForceUpdate = now; }
+
+Handle Connection Changes:
+In onConnectionsChange, call onExecute and trigger graph.runStep() to propagate output changes immediately after input connections are modified.
+Example: this.onExecute(); setTimeout(() => { if (this.graph) this.graph.runStep(); }, 100);
+
+Support Robust Deserialization:
+In onDeserialized, restore output data and trigger multiple delayed graph.runStep() calls to ensure downstream nodes receive updates after the graph is loaded.
+Example: After onExecute, add setTimeout(() => { if (this.graph) this.graph.runStep(); }, 1000);
+
+Execute upstream nodes (if applicable) to refresh input data before propagation.
+Example: if (upstreamNode && upstreamNode.onExecute) upstreamNode.onExecute();
+
+Preserve and Restore State:
+Serialize and deserialize key state variables (e.g., lastTriggerInput, lastToggleInput, lastForceUpdate) to maintain continuity across sessions.
+Example: data.lastToggleInput = this.lastToggleInput; in onSerialize, and this.lastToggleInput = data.lastToggleInput ?? null; in onDeserialized.
+
+Minimize Console Logging to Avoid Clutter:
+Log only significant events, such as state changes, API calls, or errors, rather than every input or skipped action.
+Example: In handleTrigger, log when processing a trigger, not when skipping:
+javascript
+
+console.log(`Processing trigger: trigger=${trigger}, force=${force}, ...`);
+
+Avoid logging in onExecute unless an action is taken (e.g., don’t log every trigger input).
+
+Use Debug Flags for Detailed Logging:
+Add a debug property and a debug toggle widget to control detailed logging.
+Example: this.properties.debug = false; in the constructor, and add a widget in setupWidgets.
+
+Conditionalize verbose logs (e.g., skipping messages) with the debug flag to reduce console clutter during normal operation.
+Example: if (this.properties.debug) console.log("Skipping trigger: no change");
+
+Log Significant Events Clearly:
+Log meaningful actions, such as state updates, API responses, or queue processing, to provide useful feedback without overwhelming the console.
+Example: console.log("Processing queue with desiredState: " + desiredState);
+
