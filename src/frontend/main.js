@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.insertAdjacentHTML('beforeend', `
       <p><strong>State:</strong> ${state.on ? 'ON' : 'OFF'}</p>
       <p><strong>Brightness:</strong> ${state.brightness}</p>
-      <p><strong>HHue:</strong> ${state.hue}</p>
+      <p><strong>Hue:</strong> ${state.hue}</p>
       <p><strong>Sat:</strong> ${state.saturation}</p>
       <p><strong>Temp:</strong> ${state.colorTemp}K</p>
     `);
@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `graph_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
+    a.download = `graph_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
     a.click();
   };
   $('loadGraphBtn').onclick = () => $('fileInput').click();

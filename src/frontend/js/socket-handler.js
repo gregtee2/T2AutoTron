@@ -29,8 +29,8 @@ function getVendorLabel(deviceType) {
     if (!deviceType) return "Unknown";
     const lower = deviceType.toLowerCase();
     return lower.includes("kasa") ? "Kasa" :
-           (lower.includes("extended color") || lower.includes("color light") || lower.includes("hue")) ? "Hue" :
-           lower.includes("shelly") ? "Shelly" : "Unknown";
+        (lower.includes("extended color") || lower.includes("color light") || lower.includes("hue")) ? "Hue" :
+            lower.includes("shelly") ? "Shelly" : "Unknown";
 }
 
 function toHSV(hueVal, satVal, briVal) {
@@ -59,7 +59,7 @@ function sanitizeString(str) {
 function throttle(func, limit) {
     let lastFunc;
     let lastRan;
-    return function(...args) {
+    return function (...args) {
         if (!lastRan) {
             func.apply(this, args);
             lastRan = Date.now();
@@ -81,10 +81,8 @@ function validateDeviceState(newState) {
         return false;
     }
     if (typeof newState.on !== 'boolean') {
-        //console.warn('Invalid device state: on must be a boolean', newState);
         return false;
     }
-    // Skip brightness and color validation for non-light entities (e.g., sensors, switches)
     if (newState.id.includes('sensor') || newState.id.includes('switch')) {
         return true;
     }
@@ -93,14 +91,12 @@ function validateDeviceState(newState) {
             console.warn('Invalid device state: brightness must be a number', newState);
             return false;
         }
-        // Scale brightness from 0-255 to 0-100 if needed
         newState.brightness = newState.brightness > 100 ? Math.round((newState.brightness / 255) * 100) : newState.brightness;
         if (newState.brightness < 0 || newState.brightness > 100) {
             console.warn('Invalid device state: brightness must be between 0 and 100 after scaling', newState);
             return false;
         }
     }
-    // Validate hue and saturation only if both are present and valid
     if (newState.hue !== undefined && newState.saturation !== undefined) {
         if (typeof newState.hue !== 'number' || newState.hue < 0 || newState.hue > 360) {
             console.warn('Invalid device state: hue must be a number between 0 and 360, defaulting to 0', newState);
@@ -111,7 +107,6 @@ function validateDeviceState(newState) {
             newState.saturation = 0;
         }
     } else {
-        // If hue or saturation is missing, assume no color data and skip validation
         newState.hue = 0;
         newState.saturation = 0;
     }
@@ -135,9 +130,9 @@ function updateDeviceState(device) {
     const onVal = device.state?.on ?? false;
     const hsvVal = toHSV(device.state?.hue, device.state?.sat, device.state?.bri);
     const vendorLabel = getVendorLabel(device.type || device.vendor);
-    lastStates[device.id] = { 
-        on: onVal, 
-        hsv: hsvVal, 
+    lastStates[device.id] = {
+        on: onVal,
+        hsv: hsvVal,
         vendor: vendorLabel,
         name: device.name
     };
@@ -169,10 +164,10 @@ function initializeDevices(socket, graph, updateStatusCallback) {
 function DeviceControl(socket) {
     this.socket = socket;
     this.maxRetries = 3;
-    this.retryDelay = 1000; // 1 second
+    this.retryDelay = 1000;
 }
 
-DeviceControl.prototype.sendCommand = async function(deviceId, vendor, action, options = {}) {
+DeviceControl.prototype.sendCommand = async function (deviceId, vendor, action, options = {}) {
     const command = action === 'on' ? 'turnOn' : 'turnOff';
     return new Promise((resolve, reject) => {
         const payload = {
@@ -217,16 +212,44 @@ DeviceControl.prototype.sendCommand = async function(deviceId, vendor, action, o
     });
 };
 
-DeviceControl.prototype.turnOn = async function(deviceId, vendor, options = { retries: 0 }) {
+DeviceControl.prototype.turnOn = async function (deviceId, vendor, options = { retries: 0 }) {
     return this.sendCommand(deviceId, vendor, 'on', options);
 };
 
-DeviceControl.prototype.turnOff = async function(deviceId, vendor, options = { retries: 0 }) {
+DeviceControl.prototype.turnOff = async function (deviceId, vendor, options = { retries: 0 }) {
     return this.sendCommand(deviceId, vendor, 'off', options);
 };
 
+// Helper function to get custom weather icon SVG
+function getWeatherIconSVG(condition) {
+    const lowerCondition = (condition || '').toLowerCase();
+
+    // Sun icon for clear/sunny
+    if (lowerCondition.includes('clear') || lowerCondition.includes('sun')) {
+        return '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+    }
+
+    // Rain icon
+    if (lowerCondition.includes('rain') || lowerCondition.includes('drizzle') || lowerCondition.includes('shower')) {
+        return '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4facfe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"></path><line x1="8" y1="19" x2="8" y2="21"></line><line x1="8" y1="13" x2="8" y2="15"></line><line x1="16" y1="19" x2="16" y2="21"></line><line x1="16" y1="13" x2="16" y2="15"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="12" y1="15" x2="12" y2="17"></line></svg>';
+    }
+
+    // Partial sun/cloud icon
+    if (lowerCondition.includes('partly') || lowerCondition.includes('partial') || lowerCondition.includes('few')) {
+        return '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v2"></path><path d="M3 13h2"></path><path d="M20 13h2"></path><path d="M5.6 5.6l1.4 1.4"></path><path d="M18.4 5.6l-1.4 1.4"></path><path d="M13 22a5 5 0 0 0 5-5H8a5 5 0 0 0 5 5z" stroke="#B0C4DE"></path><path d="M13 17a5 5 0 0 0 0-10 5.5 5.5 0 0 0-5.5 5.5" stroke="#B0C4DE"></path></svg>';
+    }
+
+    // Cloud icon for overcast/cloudy
+    if (lowerCondition.includes('cloud') || lowerCondition.includes('overcast')) {
+        return '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B0C4DE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>';
+    }
+
+    // Default to cloud icon
+    return '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B0C4DE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>';
+}
+
 // Socket Setup Function
-window.setupSocket = function(graph, updateStatusCallback) {
+window.setupSocket = function (graph, updateStatusCallback) {
     if (typeof window.io !== 'function') {
         console.error("Socket.IO library not loaded!");
         logEvent("Socket.IO library not loaded", "error");
@@ -237,12 +260,11 @@ window.setupSocket = function(graph, updateStatusCallback) {
     LiteGraph.LGraphNode.prototype.sharedSocket = socket;
 
     const originalEmit = socket.emit;
-    socket.emit = function(event, ...args) {
+    socket.emit = function (event, ...args) {
         console.log(`Sending ${event}:`, ...args);
         return originalEmit.apply(socket, [event, ...args]);
     };
 
-    // Initialize and expose DeviceControl globally
     const deviceControl = new DeviceControl(socket);
     window.deviceControl = deviceControl;
     LiteGraph.LGraphNode.prototype.deviceControl = deviceControl;
@@ -274,7 +296,6 @@ window.setupSocket = function(graph, updateStatusCallback) {
 
     initializeDevices(socket, graph, updateStatusCallback);
 
-    // Throttle updates globally to handle bulk changes
     const throttledUpdateDevices = throttle(() => {
         if (typeof window.updateDevicesOverview === "function" && window.graph) {
             window.updateDevicesOverview(window.graph);
@@ -284,7 +305,6 @@ window.setupSocket = function(graph, updateStatusCallback) {
 
     socket.on(EVENTS.DEVICE_STATE_UPDATE, (newState) => {
         if (!validateDeviceState(newState)) {
-            //console.warn("Device state validation failed:", newState);
             return;
         }
 
@@ -373,62 +393,69 @@ window.setupSocket = function(graph, updateStatusCallback) {
 
         forecastList.innerHTML = '';
         forecast.forEach(day => {
-            if (!day.date || !day.low || !day.high) return;
+            if (!day.date || day.low === undefined || day.high === undefined) return;
+
+            const dateStr = new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
             const forecastItem = document.createElement('div');
             forecastItem.className = 'forecast-item';
             forecastItem.innerHTML = [
                 '<span class="forecast-day">',
-                sanitizeString(day.date.split(', ')[0]),
+                sanitizeString(dateStr),
                 '</span>',
-                '<img src="http://openweathermap.org/img/wn/',
-                sanitizeString(day.icon),
-                '.png" alt="',
-                sanitizeString(day.description),
-                '" class="forecast-icon">',
+                '<span class="forecast-icon" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;">',
+                getWeatherIconSVG(day.condition),
+                '</span>',
                 '<div class="forecast-temps">',
                 '<span class="forecast-low">',
-                day.low,
+                Math.round(day.low),
                 '°</span>',
                 '<div class="forecast-bar"></div>',
                 '<span class="forecast-high">',
-                day.high,
+                Math.round(day.high),
                 '°</span>',
                 '</div>',
-                '<span class="forecast-percent">',
-                day.percent,
+                '<span class="forecast-percent" style="display:flex;align-items:center;">',
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4facfe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;">',
+                '<path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"></path>',
+                '<path d="M16 14v6"></path>',
+                '<path d="M8 14v6"></path>',
+                '<path d="M12 16v6"></path>',
+                '</svg>',
+                day.precip || 0,
                 '%</span>'
             ].join('');
             const forecastBar = forecastItem.querySelector('.forecast-bar');
-            forecastBar.style.setProperty('--forecast-width', `${(day.high - day.low) / 20 * 100}%`);
+            const diff = Math.max(0, day.high - day.low);
+            forecastBar.style.setProperty('--forecast-width', `${Math.min(100, diff * 5)}%`);
             forecastList.appendChild(forecastItem);
         });
     });
 
     socket.on('notification', (message) => {
-      const match = message.match(/🔄 (?:Kasa|Hue) Update: (.*?)(?: is (ON|OFF)(?:, Brightness: (\d+))?)(?:, ID: (\S+))/);
-      if (!match) {
-        return;
-      }
+        const match = message.match(/🔄 (?:Kasa|Hue) Update: (.*?)(?: is (ON|OFF)(?:, Brightness: (\d+))?)(?:, ID: (\S+))/);
+        if (!match) {
+            return;
+        }
 
-      const [, deviceName, powerState, brightness, deviceId] = match;
-      if (!deviceId || !deviceId.match(/^(ha_|kasa_|shelly)/)) {
-        console.warn(`Invalid or missing device ID in notification: ${deviceId}, message: ${message}`);
-        return;
-      }
+        const [, deviceName, powerState, brightness, deviceId] = match;
+        if (!deviceId || !deviceId.match(/^(ha_|kasa_|shelly)/)) {
+            console.warn(`Invalid or missing device ID in notification: ${deviceId}, message: ${message}`);
+            return;
+        }
 
-      lastStates[deviceId] = {
-        on: powerState === 'ON',
-        hsv: brightness ? toHSV(null, null, parseInt(brightness, 10)) : null,
-        vendor: message.includes('Kasa') ? 'Kasa' : message.includes('Hue') ? 'Hue' : 'Unknown',
-        name: deviceName.trim()
-      };
-      console.log(`Updated lastStates[${deviceId}]:`, lastStates[deviceId]);
+        lastStates[deviceId] = {
+            on: powerState === 'ON',
+            hsv: brightness ? toHSV(null, null, parseInt(brightness, 10)) : null,
+            vendor: message.includes('Kasa') ? 'Kasa' : message.includes('Hue') ? 'Hue' : 'Unknown',
+            name: deviceName.trim()
+        };
+        console.log(`Updated lastStates[${deviceId}]:`, lastStates[deviceId]);
 
-      if (typeof window.updateDevicesOverview === "function" && window.graph) {
-        window.updateDevicesOverview(window.graph);
-        console.log("Devices Overview updated via notification for:", deviceName);
-      }
+        if (typeof window.updateDevicesOverview === "function" && window.graph) {
+            window.updateDevicesOverview(window.graph);
+            console.log("Devices Overview updated via notification for:", deviceName);
+        }
     });
 
     console.log("Socket initialized:", socket);

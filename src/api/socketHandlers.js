@@ -2,10 +2,35 @@ const logger = require('../logging/logger');
 const { fetchWeatherData } = require('../weather/weatherService');
 const { fetchForecastData } = require('../weather/forecastService');
 const { normalizeState } = require('../utils/normalizeState');
+const { deviceToggleSchema, haTokenSchema, logEventSchema, validate } = require('./middleware/validationSchemas');
+const authManager = require('./middleware/authMiddleware');
 
 module.exports = (deviceService) => (socket) => {
   logger.log(`Socket.IO client connected: ${socket.id}`, 'info', false, `socket:connect:${socket.id}`);
-  socket.emit('server-ready', { ready: true, lastStates: deviceService.getLastStates() });
+
+  // Authentication event - must be called before any other events
+  socket.on('authenticate', (pin) => {
+    if (authManager.verifyPin(pin)) {
+      authManager.authenticate(socket);
+      socket.emit('auth-success', { authenticated: true });
+      logger.log(`Socket ${socket.id} authenticated successfully`, 'info', false, `auth:success:${socket.id}`);
+
+      // Send initial data after authentication
+      socket.emit('server-ready', { ready: true, lastStates: deviceService.getLastStates() });
+      emitDeviceList();
+
+      // Send weather/forecast
+      fetchWeatherData().then(weatherData => {
+        if (weatherData) socket.emit('weather-update', weatherData);
+      });
+      fetchForecastData().then(forecastData => {
+        if (forecastData) socket.emit('forecast-update', forecastData);
+      });
+    } else {
+      socket.emit('auth-failed', { error: 'Invalid PIN' });
+      logger.log(`Socket ${socket.id} authentication failed`, 'warn', false, `auth:failed:${socket.id}`);
+    }
+  });
 
   // Emit initial device list
   const emitDeviceList = () => {
@@ -51,18 +76,14 @@ module.exports = (deviceService) => (socket) => {
     };
     socket.emit('device-list-update', simplifiedDevices);
   };
-  emitDeviceList();
 
-  // Initial weather/forecast
-  fetchWeatherData().then(weatherData => {
-    if (weatherData) socket.emit('weather-update', weatherData);
-  });
-  fetchForecastData().then(forecastData => {
-    if (forecastData) socket.emit('forecast-update', forecastData);
-  });
-
-  // Handle device control
+  // Handle device control (requires authentication)
   socket.on('device-control', async (data) => {
+    if (!authManager.isAuthenticated(socket)) {
+      socket.emit('control-error', { error: 'Authentication required' });
+      return;
+    }
+
     const { id, on, brightness, hue, saturation, transitiontime, hs_color } = data;
     if (!id || typeof on !== 'boolean') {
       logger.log(`Invalid device-control data: ${JSON.stringify(data)}`, 'error', false, 'error:device-control');
@@ -108,9 +129,22 @@ module.exports = (deviceService) => (socket) => {
     }
   });
 
-  // Handle device toggle
+  // Handle device toggle (requires authentication + validation)
   socket.on('device-toggle', async (data, callback) => {
-    const { deviceId, vendor, action, transition, brightness, hue, saturation } = data;
+    if (!authManager.isAuthenticated(socket)) {
+      callback({ success: false, error: 'Authentication required' });
+      return;
+    }
+
+    // Validate input
+    const validation = validate(data, deviceToggleSchema);
+    if (!validation.valid) {
+      logger.log(`Invalid device-toggle data: ${validation.error}`, 'warn', false, 'validation:device-toggle');
+      callback({ success: false, error: validation.error });
+      return;
+    }
+
+    const { deviceId, vendor, action, transition, brightness, hue, saturation } = validation.value;
     try {
       const state = {
         on: action === 'on',
@@ -135,13 +169,21 @@ module.exports = (deviceService) => (socket) => {
     }
   });
 
-  // Handle device list request
+  // Handle device list request (requires authentication)
   socket.on('request-device-list', () => {
+    if (!authManager.isAuthenticated(socket)) {
+      socket.emit('error', { message: 'Authentication required' });
+      return;
+    }
     emitDeviceList();
   });
 
-  // Handle weather/forecast updates
+  // Handle weather/forecast updates (requires authentication)
   socket.on('request-weather-update', async () => {
+    if (!authManager.isAuthenticated(socket)) {
+      socket.emit('error', { message: 'Authentication required' });
+      return;
+    }
     const weatherData = await fetchWeatherData(true);
     const forecastData = await fetchForecastData(true);
     if (weatherData) socket.emit('weather-update', weatherData);
@@ -149,6 +191,7 @@ module.exports = (deviceService) => (socket) => {
   });
 
   socket.on('disconnect', (reason) => {
+    authManager.deauthenticate(socket);
     logger.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`, 'warn', false, `socket:disconnect:${socket.id}`);
   });
 
