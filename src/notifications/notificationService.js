@@ -72,29 +72,13 @@ function setupNotifications(io) {
     const match = message.match(/Update: (.*?) is (ON|OFF)(?:, Brightness: (\d+))?/);
     if (!match) {
       // Non-device: only send errors/warnings
-      if (message.includes('ERROR') || message.includes('Failed') || message.includes('WARNING')) {
-        send(message, 'system');
-      }
-      return;
-    }
-
-    const [_, name, state, bri] = match;
-    const brightness = bri ? parseInt(bri, 10) : null;
-    const idMatch = message.match(/ID: (\S+)/);
-    const deviceId = idMatch ? idMatch[1] : name;
-
-    const newState = { on: state === 'ON', brightness };
-    const oldState = deviceStates.get(deviceId);
-
-    // First time seen
-    if (!oldState) {
       send(`Device online: ${name} is ${state}`, deviceId);
       deviceStates.set(deviceId, newState);
       return;
     }
 
     // Real change?
-    const changed = 
+    const changed =
       oldState.on !== newState.on ||
       (newState.brightness !== null && oldState.brightness !== newState.brightness);
 
