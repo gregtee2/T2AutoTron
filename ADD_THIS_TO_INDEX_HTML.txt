@@ -1,0 +1,21 @@
+MANUAL STEP REQUIRED:
+=====================
+
+The polish.css file exists but isn't being loaded because the import line needs to be added to index.html.
+
+Please open: src/frontend/index.html
+
+Find this line (around line 32):
+    <link rel="stylesheet" href="css/styles.css">
+
+Add this line IMMEDIATELY after it:
+    <link rel="stylesheet" href="css/polish.css">
+
+So it should look like:
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/polish.css">
+
+Then restart the Electron app and you'll see:
+- Logout button hidden
+- Right panel fully integrated (full height, matching left sidebar style)
+- Better spacing and hover effects throughout

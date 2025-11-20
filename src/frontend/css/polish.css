@@ -1,0 +1,133 @@
+/* UI Polish Enhancements - Import this after styles.css */
+/* Preserves existing color scheme while improving spacing, glassmorphism, and animations */
+
+/* ===== HIDE LOGOUT BUTTON ===== */
+#status-bar button[onclick="logout()"] {
+    display: none !important;
+}
+
+/* ===== SIDEBAR IMPROVEMENTS ===== */
+#controls {
+    padding: 12px;
+    backdrop-filter: blur(15px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#controls button {
+    margin: 8px 0 !important;
+    /* Reduced from 20px for better density */
+    padding: 10px 12px !important;
+    backdrop-filter: blur(10px) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+#controls button:hover:not(:disabled) {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* ===== FORECAST PANEL IMPROVEMENTS ===== */
+.forecast-item {
+    padding: 14px !important;
+    margin-bottom: 8px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.forecast-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+}
+
+body.light-theme .forecast-item {
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .forecast-item:hover {
+    background: rgba(194, 116, 0, 0.6) !important;
+}
+
+/* ===== RIGHT PANEL INTEGRATION (MATCH LEFT SIDEBAR STYLE) ===== */
+#combined-panel {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    height: 100vh !important;
+    width: 280px !important;
+    margin: 0 !important;
+    padding: 12px !important;
+    backdrop-filter: blur(15px) !important;
+    box-shadow: none !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 0 !important;
+    z-index: 1000 !important;
+}
+
+body.light-theme #combined-panel {
+    border-left: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+#combined-panel .panel-header {
+    background: #014261a6 !important;
+    color: #af5b0d !important;
+    padding: 10px 12px !important;
+    margin-bottom: 8px !important;
+    border-radius: 8px !important;
+    backdrop-filter: blur(10px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+#combined-panel .panel-header:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+}
+
+#combined-panel .sub-header {
+    background: #014261a6 !important;
+    color: #af5b0d !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(10px) !important;
+    transition: all 0.2s ease !important;
+}
+
+#combined-panel .sub-header:hover {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    transform: translateX(2px) !important;
+}
+
+/* NOTE: Canvas width overrides removed - they were causing mouse offset issues */
+/* The original styles.css handles canvas/banner/log widths correctly */
+
+/* ===== LOG PANEL ENHANCEMENTS ===== */
+#log-panel {
+    backdrop-filter: blur(15px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.25) !important;
+}
+
+body.light-theme #log-panel {
+    border-top: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ===== SMOOTH TRANSITIONS ===== */
+.sub-collapsible .sub-content,
+.collapsible .panel-content,
+.collapsible .log-container {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* ===== BUTTON ENHANCEMENTS ===== */
+#health-content button,
+.log-controls button {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+#health-content button:hover:not(:disabled),
+.log-controls button:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}

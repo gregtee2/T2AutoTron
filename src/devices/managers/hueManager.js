@@ -30,6 +30,40 @@ async function setupHue(io, notificationEmitter) {
   try {
     if (!process.env.HUE_BRIDGE_IP || !process.env.HUE_USERNAME) {
       throw new Error('Hue Bridge credentials missing');
+    }
+    hueClient = await v3.api.createLocal(process.env.HUE_BRIDGE_IP).connect(process.env.HUE_USERNAME);
+    logWithTimestamp('Connected to Hue Bridge', 'info');
+
+    const lightsData = await hueClient.lights.getAll();
+    hueLights.length = 0; // Clear existing lights
+    for (const light of lightsData) {
+      const hueLight = new HueLight(light, hueClient);
+      hueLights.push(hueLight);
+      logWithTimestamp(`🟡 Connected Hue Light: ${hueLight.name} (ID: ${hueLight.id})`, 'info');
+      await hueLight.updateState(io, notificationEmitter);
+    }
+
+    setInterval(async () => {
+      try {
+        await Promise.all(hueLights.map(light => light.updateState(io, notificationEmitter)));
+      } catch (err) {
+        logWithTimestamp(`Hue refresh error: ${err.message}`, 'error');
+      }
+    }, 10000);
+
+    logWithTimestamp(`Hue setup completed: ${hueLights.length} lights initialized, hueClient: ${!!hueClient}`, 'info');
+    return hueLights;
+  } catch (err) {
+    logWithTimestamp(`Hue setup failed: ${err.message}`, 'error');
+    throw err;
+  }
+}
+
+async function controlHueDevice(deviceId, state) {
+  try {
+    const lightId = deviceId.replace('hue_', '');
+    const light = hueLights.find(l => l.id === lightId);
+    if (!light) {
       throw new Error(`Hue light with ID ${lightId} not found`);
     }
 

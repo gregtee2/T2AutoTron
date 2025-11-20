@@ -241,9 +241,9 @@ class ReceiverNode extends LiteGraph.LGraphNode {
                     fillColor = "#F80";
                     text = `[String] ${this.lastOutputValue}`;
                 } else if (typeof this.lastOutputValue === "object" &&
-                           "hue" in this.lastOutputValue &&
-                           "saturation" in this.lastOutputValue &&
-                           "brightness" in this.lastOutputValue) {
+                    "hue" in this.lastOutputValue &&
+                    "saturation" in this.lastOutputValue &&
+                    "brightness" in this.lastOutputValue) {
                     const { hue, saturation, brightness } = this.lastOutputValue;
                     const [r, g, b] = this.hsvToRgb(hue, saturation, brightness);
                     fillColor = `rgb(${r}, ${g}, ${b})`;
@@ -296,7 +296,9 @@ class ReceiverNode extends LiteGraph.LGraphNode {
         }
         this.lastOutputValue = null;
         this.lastBufferValue = null;
-        this.scheduleOutputPulses();
+        // REMOVED: scheduleOutputPulses() - was causing timing issues on graph load
+        // The node will execute normally through the graph's execution cycle
+        //this.scheduleOutputPulses();
     }
 
     clone() {

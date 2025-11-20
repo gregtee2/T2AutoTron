@@ -990,5 +990,5 @@ if (!LiteGraph.registered_node_types?.["HomeAssistant/HAWebSocketEventNode"]) {
   }
 
   LiteGraph.registerNodeType("HomeAssistant/HAWebSocketEventNode", HAWebSocketEventNode);
-  LiteGraph.registerType("light_info", "object");
+  //LiteGraph.registerType("light_info", "object");
 }

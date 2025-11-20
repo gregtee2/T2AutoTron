@@ -194,13 +194,9 @@ class SenderNode extends LiteGraph.LGraphNode {
             if (this.deleteBufferWidget) {
                 this.deleteBufferWidget.value = this.properties.bufferToDelete || "None";
             }
-            if (this.properties.bufferName && SenderNode.sharedBuffer) {
-                const inputData = this.getInputData(0);
-                if (inputData !== undefined) {
-                    const prefixedName = this.getPrefixedBufferName(this.properties.bufferName, inputData);
-                    SenderNode.sharedBuffer[prefixedName] = inputData;
-                }
-            }
+            // REMOVED: Buffer population during onConfigure - causes timing issues
+            // The buffer will be populated during normal execution (onExecute)
+            // when connections are fully established
         }
     }
 

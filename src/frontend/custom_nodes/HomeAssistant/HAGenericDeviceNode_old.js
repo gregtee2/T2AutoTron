@@ -992,11 +992,10 @@ if (!LiteGraph.registered_node_types?.["HomeAssistant/HAGenericDeviceNode"]) {
             on: state.state === 'on',
             hs_color: [hue, saturation],
             brightness,
-            transition: this.properties.transitionTime,
-            timestamp: Date.now()
+            transition: this.properties.transitionTime
           };
         },
-        timestamp: Date.now()
+        //timestamp: Date.now()
       };
 
       this.commandQueue.push(command);
