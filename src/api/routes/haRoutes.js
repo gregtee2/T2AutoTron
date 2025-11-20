@@ -34,7 +34,7 @@ module.exports = function (io) {
   // Middleware to check if devices are initialized
   router.use((req, res, next) => {
     const devices = homeAssistantManager.getDevices();
-    logWithTimestamp(`HA devices check: ${devices ? devices.length : 'none'} devices`, 'info');
+    // Removed verbose logging - devices are checked on every request
     if (!devices || devices.length === 0) {
       logWithTimestamp('Home Assistant devices not initialized yet.', 'error');
       return res.status(503).json({ success: false, error: 'Home Assistant devices not initialized yet.' });
@@ -74,18 +74,18 @@ module.exports = function (io) {
     const cached = stateCache.get(cacheKey);
 
     if (cached && Date.now() < cached.expiry) {
-      logWithTimestamp(`Returning cached state for HA device ${id}: ${JSON.stringify(cached.state)}`, 'info');
+      // Cache hit - no logging needed
       return res.json({ success: true, state: cached.state });
     }
 
-    logWithTimestamp(`Fetching state of HA device ${id}`, 'info');
+    // Fetching state - logging done in manager layer
     try {
       const result = await homeAssistantManager.getState(id);
       if (!result.success) {
         logWithTimestamp(`HA device ${id} not found or error: ${result.error}`, 'error');
         return res.status(404).json({ success: false, error: result.error || 'Device not found' });
       }
-      logWithTimestamp(`Fetched state for HA device ${id}: ${JSON.stringify(result.state)}`, 'info');
+      // State fetched successfully - logging done in manager layer
       stateCache.set(cacheKey, { state: result.state, expiry: Date.now() + CACHE_TTL });
       res.json(result);
     } catch (error) {
