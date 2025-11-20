@@ -982,7 +982,24 @@ if (!LiteGraph.registered_node_types?.["HomeAssistant/HAGenericDeviceNode"]) {
       if (!eligibleDevices.length) {
         this.log("HSV", "No update needed: HSV change below threshold or no eligible devices", false);
         return;
-        this.log("HSV", `Queued HSV command for ${eligibleDevices.length} devices: hue=${hue}, sat=${saturation}, bri=${brightness}`, false);
+      }
+
+      const command = {
+        devices: eligibleDevices,
+        update: (deviceId) => {
+          const state = this.perDeviceState[deviceId];
+          return {
+            on: state.state === 'on',
+            hs_color: [hue, saturation],
+            brightness,
+            transition: this.properties.transitionTime
+          };
+        },
+        //timestamp: Date.now()
+      };
+
+      this.commandQueue.push(command);
+      this.log("HSV", `Queued HSV command for ${eligibleDevices.length} devices: hue=${hue}, sat=${saturation}, bri=${brightness}`, false);
 
         if (!this.isProcessingQueue) {
           await this.processQueue();
