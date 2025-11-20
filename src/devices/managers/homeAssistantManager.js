@@ -54,7 +54,7 @@ class HomeAssistantManager {
         this.ws.on('open', () => {
           this.ws.send(JSON.stringify({ type: 'auth', access_token: this.config.token }));
           this.ws.send(JSON.stringify({ id: 1, type: 'subscribe_events', event_type: 'state_changed' }));
-          log('HA WebSocket connected', 'info', false, 'ha:websocket');
+          log(' HA WebSocket connected', 'info', false, 'ha:websocket');
         });
         this.ws.on('message', (data) => {
           try {
@@ -243,4 +243,18 @@ class HomeAssistantManager {
   }
 }
 
-module.exports = new HomeAssistantManager();
+// Create singleton instance
+const instance = new HomeAssistantManager();
+
+// Export with plugin interface
+module.exports = {
+  name: 'HomeAssistant',
+  type: 'device',
+  prefix: 'ha_',
+  initialize: (io, notificationEmitter, log) => instance.initialize(io, notificationEmitter, log),
+  getState: (id) => instance.getState(id),
+  updateState: (id, update) => instance.updateState(id, update),
+  controlDevice: (deviceId, state) => instance.controlDevice(deviceId, state),
+  getDevices: () => instance.getDevices(),
+  shutdown: () => instance.shutdown()
+};
