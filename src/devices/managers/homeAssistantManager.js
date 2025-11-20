@@ -1,175 +1,77 @@
 const fetch = require('node-fetch');
 const WebSocket = require('ws');
 const logger = require('../../logging/logger');
-const fs = require('fs');
-const path = require('path');
 
 class HomeAssistantManager {
-  static devices = [];
-  static ws = null;
-  static config = {
-    host: process.env.HA_HOST || 'http://homeassistant.local:8123',
-    token: process.env.HA_TOKEN,
-  };
-  static supportedDomains = ['light', 'switch', 'fan', 'cover', 'weather', 'sensor', 'binary_sensor', 'media_player'];
-
-  // Load configuration from file
-  static loadConfig() {
-    const configPath = path.join(__dirname, '..', '..', 'config', 'ha_config.json');
-    try {
-      if (fs.existsSync(configPath)) {
-        const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        return {
-          includePatterns: configData.home_assistant?.sensor_include_patterns || [],
-          excludePatterns: configData.home_assistant?.sensor_exclude_patterns || []
-        };
-      }
-    } catch (error) {
-      logger.log(`Failed to load HA config: ${error.message}`, 'error', false, 'ha:config');
-    }
-    return { includePatterns: [], excludePatterns: [] };
+  constructor() {
+    this.devices = [];
+    this.config = {
+      host: process.env.HA_HOST || 'http://localhost:8123',
+      token: process.env.HA_TOKEN,
+    };
+    this.ws = null;
+    // Performance caching
+    this.stateCache = new Map();
+    this.deviceCache = null;
+    this.STATE_CACHE_TTL = 5000; // 5 seconds for state cache
+    this.DEVICE_CACHE_TTL = 30000; // 30 seconds for device list cache
   }
 
   async initialize(io, notificationEmitter, log) {
     try {
       await log('Initializing Home Assistant...', 'info', false, 'ha:init');
-      await log(`HA Config: host=${HomeAssistantManager.config.host}, token=${HomeAssistantManager.config.token ? 'present' : 'missing'}`, 'info', false, 'ha:config');
-      
-      const response = await fetch(`${HomeAssistantManager.config.host}/api/states`, {
-        headers: { Authorization: `Bearer ${HomeAssistantManager.config.token}` },
+      const response = await fetch(`${this.config.host}/api/states`, {
+        headers: { Authorization: `Bearer ${this.config.token}` },
       });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HA API error: ${response.status}: ${response.statusText}, Body: ${errorText}`);
-      }
+      if (!response.ok) throw new Error(`HA API error: ${response.status}: ${response.statusText}`);
       const states = await response.json();
-      const { includePatterns, excludePatterns } = HomeAssistantManager.loadConfig();
-      HomeAssistantManager.devices = states.filter(s => 
-        HomeAssistantManager.supportedDomains.some(domain => 
-          s.entity_id.startsWith(`${domain}.`) &&
-          (domain !== 'sensor' && domain !== 'binary_sensor' || 
-            (
-              // Include if matches an include pattern (or no patterns defined)
-              (includePatterns.length === 0 || 
-               includePatterns.some(pattern => 
-                 s.entity_id.toLowerCase().includes(pattern.toLowerCase()) || 
-                 s.attributes.friendly_name?.toLowerCase().includes(pattern.toLowerCase())
-               )) &&
-              // Exclude if matches an exclude pattern
-              !excludePatterns.some(pattern => 
-                s.entity_id.toLowerCase().includes(pattern.toLowerCase()) || 
-                s.attributes.friendly_name?.toLowerCase().includes(pattern.toLowerCase())
-              )
-            ))
-        )
-      );
-      await log(`Initialized ${HomeAssistantManager.devices.length} HA devices (${HomeAssistantManager.supportedDomains.join(', ')})`, 'info', false, 'ha:initialized');
+      this.devices = states.filter(s => s.entity_id.startsWith('light.') || s.entity_id.startsWith('switch.'));
+
+      // Initialize device cache
+      this.deviceCache = {
+        data: this.getDevices(),
+        expiry: Date.now() + this.DEVICE_CACHE_TTL
+      };
+
+      await log(`Initialized ${this.devices.length} HA devices (light and switch)`, 'info', false, 'ha:initialized');
 
       if (io && notificationEmitter) {
-        HomeAssistantManager.devices.forEach(device => {
-          const entityType = device.entity_id.split('.')[0];
+        this.devices.forEach(device => {
           const state = {
             id: `ha_${device.entity_id}`,
             name: device.attributes.friendly_name || device.entity_id,
-            type: entityType,
-            ...(entityType === 'weather' ? {
-              condition: device.state,
-              temperature: device.attributes.temperature,
-              humidity: device.attributes.humidity,
-              wind_speed: device.attributes.wind_speed,
-              pressure: device.attributes.pressure,
-              precipitation: device.attributes.precipitation
-            } : entityType === 'sensor' ? {
-              value: device.state,
-              unit: device.attributes.unit_of_measurement
-            } : entityType === 'binary_sensor' ? {
-              on: device.state === 'on'
-            } : entityType === 'light' ? {
-              on: device.state === 'on',
-              brightness: device.attributes.brightness ? Math.round((device.attributes.brightness / 255) * 100) : (device.state === 'on' ? 100 : 0),
-              hs_color: device.attributes.hs_color || [0, 0]
-            } : entityType === 'fan' ? {
-              on: device.state === 'on',
-              percentage: device.attributes.percentage || 0
-            } : entityType === 'cover' ? {
-              on: device.state === 'open',
-              position: device.attributes.current_position || 0
-            } : entityType === 'switch' ? {
-              on: device.state === 'on',
-              brightness: device.attributes.brightness ? Math.round((device.attributes.brightness / 255) * 100) : (device.state === 'on' ? 100 : 0),
-              hs_color: device.attributes.hs_color || [0, 0]
-            } : entityType === 'media_player' ? {
-              state: device.state,
-              volume_level: device.attributes.volume_level,
-              source: device.attributes.source,
-              media_title: device.attributes.media_title
-            } : {})
+            type: device.entity_id.split('.')[0],
+            on: device.state === 'on',
+            brightness: device.attributes.brightness ? Math.round((device.attributes.brightness / 255) * 100) : (device.state === 'on' ? 100 : 0),
+            hs_color: device.attributes.hs_color || [0, 0]
           };
           io.emit('device-state-update', state);
-          notificationEmitter.emit('notify', `🔄 HA Update: ${state.name} updated`);
+          notificationEmitter.emit('notify', `🔄 HA Update: ${state.name} is ${state.on ? 'ON' : 'OFF'}`);
         });
 
-        HomeAssistantManager.ws = new WebSocket(`${HomeAssistantManager.config.host.replace('http', 'ws')}/api/websocket`);
-        HomeAssistantManager.ws.on('open', () => {
-          HomeAssistantManager.ws.send(JSON.stringify({ type: 'auth', access_token: HomeAssistantManager.config.token }));
-          HomeAssistantManager.ws.send(JSON.stringify({ id: 1, type: 'subscribe_events', event_type: 'state_changed' }));
+        // Initialize WebSocket for real-time updates
+        this.ws = new WebSocket(`${this.config.host.replace('http', 'ws')}/api/websocket`);
+        this.ws.on('open', () => {
+          this.ws.send(JSON.stringify({ type: 'auth', access_token: this.config.token }));
+          this.ws.send(JSON.stringify({ id: 1, type: 'subscribe_events', event_type: 'state_changed' }));
           log('HA WebSocket connected', 'info', false, 'ha:websocket');
         });
-        HomeAssistantManager.ws.on('message', (data) => {
+        this.ws.on('message', (data) => {
           try {
             const msg = JSON.parse(data);
             if (msg.type === 'event' && msg.event.event_type === 'state_changed') {
               const entity = msg.event.data.new_state;
-              if (!entity || !HomeAssistantManager.supportedDomains.some(domain => 
-                entity.entity_id.startsWith(`${domain}.`) &&
-                (domain !== 'sensor' && domain !== 'binary_sensor' || 
-                  (
-                    (includePatterns.length === 0 || 
-                     includePatterns.some(pattern => 
-                       entity.entity_id.toLowerCase().includes(pattern.toLowerCase()) || 
-                       entity.attributes.friendly_name?.toLowerCase().includes(pattern.toLowerCase())
-                     )) &&
-                    !excludePatterns.some(pattern => 
-                      entity.entity_id.toLowerCase().includes(pattern.toLowerCase()) || 
-                      entity.attributes.friendly_name?.toLowerCase().includes(pattern.toLowerCase())
-                    )
-                  ))
-              )) return;
-              const entityType = entity.entity_id.split('.')[0];
+              if (!entity || !(entity.entity_id.startsWith('light.') || entity.entity_id.startsWith('switch.'))) return;
+
+              // Invalidate cache on state change
+              const cacheKey = `ha_${entity.entity_id}`;
+              this.stateCache.delete(cacheKey);
+
               const state = {
-                id: `ha_${entity.entity_id}`,
-                ...(entityType === 'weather' ? {
-                  condition: entity.state,
-                  temperature: entity.attributes.temperature,
-                  humidity: entity.attributes.humidity,
-                  wind_speed: entity.attributes.wind_speed,
-                  pressure: entity.attributes.pressure,
-                  precipitation: entity.attributes.precipitation
-                } : entityType === 'sensor' ? {
-                  value: entity.state,
-                  unit: entity.attributes.unit_of_measurement
-                } : entityType === 'binary_sensor' ? {
-                  on: entity.state === 'on'
-                } : entityType === 'light' ? {
-                  on: entity.state === 'on',
-                  brightness: entity.attributes.brightness ? Math.round((entity.attributes.brightness / 255) * 100) : (entity.state === 'on' ? 100 : 0),
-                  hs_color: entity.attributes.hs_color || [0, 0]
-                } : entityType === 'fan' ? {
-                  on: entity.state === 'on',
-                  percentage: entity.attributes.percentage || 0
-                } : entityType === 'cover' ? {
-                  on: entity.state === 'open',
-                  position: entity.attributes.current_position || 0
-                } : entityType === 'switch' ? {
-                  on: entity.state === 'on',
-                  brightness: entity.attributes.brightness ? Math.round((entity.attributes.brightness / 255) * 100) : (entity.state === 'on' ? 100 : 0),
-                  hs_color: entity.attributes.hs_color || [0, 0]
-                } : entityType === 'media_player' ? {
-                  state: entity.state,
-                  volume_level: entity.attributes.volume_level,
-                  source: entity.attributes.source,
-                  media_title: entity.attributes.media_title
-                } : {})
+                id: cacheKey,
+                on: entity.state === 'on',
+                brightness: entity.attributes.brightness ? Math.round((entity.attributes.brightness / 255) * 100) : (entity.state === 'on' ? 100 : 0),
+                hs_color: entity.attributes.hs_color || [0, 0]
               };
               io.emit('device-state-update', state);
               log(`HA state update: ${state.id} - ${entity.state}`, 'info', false, `ha:state:${state.id}`);
@@ -178,10 +80,10 @@ class HomeAssistantManager {
             log(`HA WebSocket message error: ${err.message}`, 'error', false, 'ha:websocket:message');
           }
         });
-        HomeAssistantManager.ws.on('error', (err) => log(`HA WebSocket error: ${err.message}`, 'error', false, 'ha:websocket:error'));
-        HomeAssistantManager.ws.on('close', () => log('HA WebSocket closed', 'warn', false, 'ha:websocket:close'));
+        this.ws.on('error', (err) => log(`HA WebSocket error: ${err.message}`, 'error', false, 'ha:websocket:error'));
+        this.ws.on('close', () => log('HA WebSocket closed', 'warn', false, 'ha:websocket:close'));
       }
-      return HomeAssistantManager.devices;
+      return this.devices;
     } catch (error) {
       await log(`HA initialization failed: ${error.message}`, 'error', false, 'ha:error');
       return [];
@@ -189,53 +91,37 @@ class HomeAssistantManager {
   }
 
   async getState(id) {
+    const cacheKey = id;
+    const cached = this.stateCache.get(cacheKey);
+
+    // Check cache first
+    if (cached && Date.now() < cached.expiry) {
+      await logger.log(`[CACHE HIT] Returning cached state for ${id}`, 'info', false, `ha:cache:${id}`);
+      return { success: true, state: cached.state };
+    }
+
+    // Cache miss - fetch from API
     try {
       const rawId = id.replace('ha_', '');
-      const response = await fetch(`${HomeAssistantManager.config.host}/api/states/${rawId}`, {
-        headers: { Authorization: `Bearer ${HomeAssistantManager.config.token}` },
+      const response = await fetch(`${this.config.host}/api/states/${rawId}`, {
+        headers: { Authorization: `Bearer ${this.config.token}` },
         timeout: 5000
       });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HA API error: ${response.status}: ${response.statusText}, Body: ${errorText}`);
-      }
+      if (!response.ok) throw new Error(`HA API error: ${response.status}: ${response.statusText}`);
       const data = await response.json();
-      const entityType = rawId.split('.')[0];
       const state = {
-        ...(entityType === 'weather' ? {
-          condition: data.state,
-          temperature: data.attributes.temperature,
-          humidity: data.attributes.humidity,
-          wind_speed: data.attributes.wind_speed,
-          pressure: data.attributes.pressure,
-          precipitation: data.attributes.precipitation
-        } : entityType === 'sensor' ? {
-          value: data.state,
-          unit: data.attributes.unit_of_measurement
-        } : entityType === 'binary_sensor' ? {
-          on: data.state === 'on'
-        } : entityType === 'light' ? {
-          on: data.state === 'on',
-          brightness: data.attributes.brightness ? Math.round((data.attributes.brightness / 255) * 100) : (data.state === 'on' ? 100 : 0),
-          hs_color: data.attributes.hs_color || [0, 0]
-        } : entityType === 'fan' ? {
-          on: data.state === 'on',
-          percentage: data.attributes.percentage || 0
-        } : entityType === 'cover' ? {
-          on: data.state === 'open',
-          position: data.attributes.current_position || 0
-        } : entityType === 'switch' ? {
-          on: data.state === 'on',
-          brightness: data.attributes.brightness ? Math.round((data.attributes.brightness / 255) * 100) : (data.state === 'on' ? 100 : 0),
-          hs_color: data.attributes.hs_color || [0, 0]
-        } : entityType === 'media_player' ? {
-          state: data.state,
-          volume_level: data.attributes.volume_level,
-          source: data.attributes.source,
-          media_title: data.attributes.media_title
-        } : {})
+        on: data.state === 'on',
+        brightness: data.attributes.brightness ? Math.round((data.attributes.brightness / 255) * 100) : (data.state === 'on' ? 100 : 0),
+        hs_color: data.attributes.hs_color || [0, 0]
       };
-      await logger.log(`Fetched state for HA device ${rawId}: ${JSON.stringify(state)}`, 'info', false, `ha:state:${rawId}`);
+
+      // Store in cache
+      this.stateCache.set(cacheKey, {
+        state,
+        expiry: Date.now() + this.STATE_CACHE_TTL
+      });
+
+      await logger.log(`[CACHE MISS] Fetched state for HA device ${rawId}: on=${state.on}, brightness=${state.brightness}, hs_color=${JSON.stringify(state.hs_color)}`, 'info', false, `ha:state:${rawId}`);
       return { success: true, state };
     } catch (error) {
       await logger.log(`Failed to fetch state for HA device ${id}: ${error.message}`, 'error', false, `ha:state:${id}`);
@@ -247,47 +133,18 @@ class HomeAssistantManager {
     try {
       const rawId = id.replace('ha_', '');
       const entityType = rawId.split('.')[0];
-      let service;
+      const service = entityType === 'light' ? 'light' : 'switch';
       const payload = { entity_id: rawId };
-
-      switch (entityType) {
-        case 'light':
-          service = update.on ? 'light/turn_on' : 'light/turn_off';
-          if (update.on) {
-            if (update.brightness !== undefined) payload.brightness_pct = Math.round(update.brightness);
-            if (update.hs_color) payload.hs_color = update.hs_color;
-            if (update.transition !== undefined) payload.transition = update.transition / 1000;
-          }
-          break;
-        case 'switch':
-          service = update.on ? 'switch/turn_on' : 'switch/turn_off';
-          break;
-        case 'fan':
-          service = update.on ? 'fan/turn_on' : 'fan/turn_off';
-          if (update.on && update.percentage !== undefined) payload.percentage = update.percentage;
-          break;
-        case 'cover':
-          service = update.on ? 'cover/open_cover' : 'cover/close_cover';
-          if (update.position !== undefined) payload.position = update.position;
-          break;
-        case 'media_player':
-          service = update.on ? 'media_player.turn_on' : 'media_player.turn_off';
-          if (update.volume_level !== undefined) payload.volume_level = update.volume_level;
-          if (update.source) payload.source = update.source;
-          break;
-        case 'weather':
-        case 'sensor':
-        case 'binary_sensor':
-          throw new Error(`Weather, sensor, and binary sensor entities are read-only`);
-        default:
-          throw new Error(`Unsupported entity type: ${entityType}`);
+      if (update.on) {
+        if (update.brightness !== undefined) payload.brightness_pct = Math.round(update.brightness);
+        if (update.hs_color) payload.hs_color = update.hs_color;
+        if (update.transition !== undefined) payload.transition = update.transition / 1000;
       }
-
       await logger.log(`Sending HA state update for ${id}: ${JSON.stringify(payload)}`, 'info', false, `ha:state:${id}`);
-      const response = await fetch(`${HomeAssistantManager.config.host}/api/services/${service}`, {
+      const response = await fetch(`${this.config.host}/api/services/${service}/${update.on ? 'turn_on' : 'turn_off'}`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${HomeAssistantManager.config.token}`,
+          Authorization: `Bearer ${this.config.token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
@@ -297,6 +154,10 @@ class HomeAssistantManager {
         const errorBody = await response.text();
         throw new Error(`HA API error: ${response.status}: ${response.statusText}, Body: ${errorBody}`);
       }
+
+      // Invalidate cache after update
+      this.stateCache.delete(id);
+
       await logger.log(`HA state update succeeded for ${id}: ${JSON.stringify(payload)}`, 'info', false, `ha:state:${id}`);
       return { success: true };
     } catch (error) {
@@ -305,51 +166,21 @@ class HomeAssistantManager {
     }
   }
 
-  async controlDevice(deviceId, state) {
+  async controlDevice(id, state) {
     try {
-      const rawId = deviceId.replace('ha_', '');
+      const rawId = id.replace('ha_', '');
       const entityType = rawId.split('.')[0];
-      let service;
+      const service = entityType === 'light' ? 'light' : 'switch';
       const payload = { entity_id: rawId };
-
-      switch (entityType) {
-        case 'light':
-          service = state.on ? 'light/turn_on' : 'light/turn_off';
-          if (state.on) {
-            if (state.brightness !== undefined) payload.brightness_pct = Math.round(state.brightness);
-            if (state.hs_color) payload.hs_color = state.hs_color;
-            if (state.transition !== undefined) payload.transition = state.transition / 1000;
-          }
-          break;
-        case 'switch':
-          service = state.on ? 'switch/turn_on' : 'switch/turn_off';
-          break;
-        case 'fan':
-          service = state.on ? 'fan/turn_on' : 'fan/turn_off';
-          if (state.on && state.percentage !== undefined) payload.percentage = state.percentage;
-          break;
-        case 'cover':
-          service = state.on ? 'cover/open_cover' : 'cover/close_cover';
-          if (state.position !== undefined) payload.position = state.position;
-          break;
-        case 'media_player':
-          service = state.on ? 'media_player.turn_on' : 'media_player.turn_off';
-          if (state.volume_level !== undefined) payload.volume_level = state.volume_level;
-          if (state.source) payload.source = state.source;
-          break;
-        case 'weather':
-        case 'sensor':
-        case 'binary_sensor':
-          throw new Error(`Weather, sensor, and binary sensor entities are read-only`);
-        default:
-          throw new Error(`Unsupported entity type: ${entityType}`);
+      if (state.on) {
+        if (state.brightness !== undefined) payload.brightness_pct = Math.round(state.brightness);
+        if (state.hs_color) payload.hs_color = state.hs_color;
+        if (state.transition !== undefined) payload.transition = state.transition / 1000;
       }
-
-      await logger.log(`Sending HA control for ${deviceId}: ${JSON.stringify(payload)}`, 'info', false, `ha:control:${deviceId}`);
-      const response = await fetch(`${HomeAssistantManager.config.host}/api/services/${service}`, {
+      const response = await fetch(`${this.config.host}/api/services/${service}/${state.on ? 'turn_on' : 'turn_off'}`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${HomeAssistantManager.config.token}`,
+          Authorization: `Bearer ${this.config.token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
@@ -359,80 +190,57 @@ class HomeAssistantManager {
         const errorBody = await response.text();
         throw new Error(`HA API error: ${response.status}: ${response.statusText}, Body: ${errorBody}`);
       }
-      await logger.log(`HA control succeeded for ${deviceId}: ${JSON.stringify(payload)}`, 'info', false, `ha:control:${deviceId}`);
+
+      // Invalidate cache after control
+      this.stateCache.delete(id);
+
+      await logger.log(`HA control succeeded for ${id}: ${JSON.stringify(payload)}`, 'info', false, `ha:control:${id}`);
       return { success: true };
     } catch (error) {
-      await logger.log(`HA control failed for ${deviceId}: ${error.message}`, 'error', false, `ha:error:${deviceId}`);
+      await logger.log(`HA control failed for ${id}: ${error.message}`, 'error', false, `ha:error:${id}`);
       return { success: false, error: error.message };
     }
   }
 
   getDevices() {
-    return HomeAssistantManager.devices.map(device => {
-      const entityType = device.entity_id.split('.')[0];
-      return {
-        id: `ha_${device.entity_id}`,
-        name: device.attributes.friendly_name || device.entity_id,
-        type: entityType,
-        state: {
-          ...(entityType === 'weather' ? {
-            condition: device.state,
-            temperature: device.attributes.temperature,
-            humidity: device.attributes.humidity,
-            wind_speed: device.attributes.wind_speed,
-            pressure: device.attributes.pressure,
-            precipitation: device.attributes.precipitation
-          } : entityType === 'sensor' ? {
-            value: device.state,
-            unit: device.attributes.unit_of_measurement
-          } : entityType === 'binary_sensor' ? {
-            on: device.state === 'on'
-          } : entityType === 'light' ? {
-            on: device.state === 'on',
-            brightness: device.attributes.brightness ? Math.round((device.attributes.brightness / 255) * 100) : (device.state === 'on' ? 100 : 0),
-            hs_color: device.attributes.hs_color || [0, 0]
-          } : entityType === 'fan' ? {
-            on: device.state === 'on',
-            percentage: device.attributes.percentage || 0
-          } : entityType === 'cover' ? {
-            on: device.state === 'open',
-            position: device.attributes.current_position || 0
-          } : entityType === 'switch' ? {
-            on: device.state === 'on',
-            brightness: device.attributes.brightness ? Math.round((device.attributes.brightness / 255) * 100) : (device.state === 'on' ? 100 : 0),
-            hs_color: device.attributes.hs_color || [0, 0]
-          } : entityType === 'media_player' ? {
-            state: device.state,
-            volume_level: device.attributes.volume_level,
-            source: device.attributes.source,
-            media_title: device.attributes.media_title,
-            media_content_type: device.attributes.media_content_type,
-            media_artist: device.attributes.media_artist,
-            shuffle: device.attributes.shuffle,
-            repeat: device.attributes.repeat,
-            supported_features: device.attributes.supported_features
-          } : {})
-        }
-      };
-    });
+    // Check cache first
+    if (this.deviceCache && Date.now() < this.deviceCache.expiry) {
+      logger.log('[CACHE HIT] Returning cached device list', 'info', false, 'ha:cache:devices').catch(() => { });
+      return this.deviceCache.data;
+    }
+
+    // Cache miss - generate new device list
+    const deviceList = this.devices.map(device => ({
+      id: `ha_${device.entity_id}`,
+      name: device.attributes.friendly_name || device.entity_id,
+      type: device.entity_id.split('.')[0],
+      state: {
+        on: device.state === 'on',
+        brightness: device.attributes.brightness ? Math.round((device.attributes.brightness / 255) * 100) : (device.state === 'on' ? 100 : 0),
+        hs_color: device.attributes.hs_color || [0, 0]
+      }
+    }));
+
+    // Update cache
+    this.deviceCache = {
+      data: deviceList,
+      expiry: Date.now() + this.DEVICE_CACHE_TTL
+    };
+
+    logger.log('[CACHE MISS] Generated fresh device list', 'info', false, 'ha:cache:devices').catch(() => { });
+    return deviceList;
   }
 
-  async shutdown() {
-    if (HomeAssistantManager.ws) {
-      HomeAssistantManager.ws.close();
-      HomeAssistantManager.ws = null;
+  // Cleanup WebSocket on shutdown
+  shutdown() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
     }
+    // Clear caches
+    this.stateCache.clear();
+    this.deviceCache = null;
   }
 }
 
-module.exports = {
-  name: 'HomeAssistant',
-  type: 'device',
-  prefix: 'ha_',
-  initialize: async (io, notificationEmitter, log) => await new HomeAssistantManager().initialize(io, notificationEmitter, log),
-  getState: async (id) => await new HomeAssistantManager().getState(id),
-  updateState: async (id, update) => await new HomeAssistantManager().updateState(id, update),
-  controlDevice: async (deviceId, state) => await new HomeAssistantManager().controlDevice(deviceId, state),
-  getDevices: () => new HomeAssistantManager().getDevices(),
-  shutdown: async () => await new HomeAssistantManager().shutdown()
-};
+module.exports = new HomeAssistantManager();
