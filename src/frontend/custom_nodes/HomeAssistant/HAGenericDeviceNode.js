@@ -972,6 +972,29 @@ if (!LiteGraph.registered_node_types?.["HomeAssistant/HAGenericDeviceNode"]) {
         const state = this.perDeviceState[deviceId];
         if (
           Math.abs(state.attributes.hs_color[0] - hue) > this.HSV_CHANGE_THRESHOLD ||
+          Math.abs(state.attributes.hs_color[1] - saturation) > this.HSV_CHANGE_THRESHOLD ||
+          Math.abs((state.attributes.brightness || (state.state === 'on' ? 100 : 0)) - brightness) > this.HSV_CHANGE_THRESHOLD
+        ) {
+          eligibleDevices.push(deviceId);
+        }
+      }
+
+      if (!eligibleDevices.length) {
+        this.log("HSV", "No update needed: HSV change below threshold or no eligible devices", false);
+        return;
+        this.log("HSV", `Queued HSV command for ${eligibleDevices.length} devices: hue=${hue}, sat=${saturation}, bri=${brightness}`, false);
+
+        if (!this.isProcessingQueue) {
+          await this.processQueue();
+        }
+      };
+
+      updateDeviceState = async (deviceId, update, source = "application") => {
+        if (!deviceId || !this.perDeviceState[deviceId]) {
+          this.log("updateDeviceState", `Invalid deviceId or missing state for ${deviceId}`, true, "WARN");
+          return false;
+        }
+        const device = this.devices.find((d) => d.entity_id === deviceId);
         const deviceName = this.properties.selectedDeviceNames[this.properties.selectedDeviceIds.indexOf(deviceId)] || "Unknown";
         const isExternal = source === "external";
 
@@ -1614,7 +1637,7 @@ if (!LiteGraph.registered_node_types?.["HomeAssistant/HAGenericDeviceNode"]) {
     }
 
   LiteGraph.registerNodeType("HomeAssistant/HAGenericDeviceNode", HAGenericDeviceNode);
-  //LiteGraph.registerType("light_info", "object");
+  LiteGraph.registerType("light_info", "object");
 
   /* --------------------------------------------------------------
    POLISH & PERFORMANCE PATCH – add to the *end* of the class
