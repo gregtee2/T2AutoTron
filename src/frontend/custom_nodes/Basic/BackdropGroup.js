@@ -1,392 +1,177 @@
 class BackdropGroup extends LiteGraph.LGraphNode {
-    static backdropCounter = 0; // Track addition order
+    static backdropCounter = 0;
 
-    constructor() {
+    constructor(title = "Backdrop Group") {
         super();
-        this.title = "Backdrop Group";
-        this.size = [400, 300]; // Default size
-        this.bgcolor = "rgba(0, 0, 0, 0.2)";
-        this.properties = {
-            muted: false
-        };
+        this.title = title;
+        this.size = [400, 300];
+        this.color = "#334455";               // title bar color
+        this.bgcolor = "rgba(30, 40, 60, 0.35)"; // backdrop fill
+        this.properties = { muted: false };
 
-        // Enable resizing and dragging, disable input capture
         this.resizable = true;
-        this.flags = { skip_dragging: false, capture_input: false };
-
-        // Track contained nodes and last position
-        this.containedNodes = [];
-        this.lastPos = [0, 0];
         this.isDragging = false;
-
-        // Assign unique addition order
+        this.lastPos = [0, 0];
         this.addOrder = BackdropGroup.backdropCounter++;
 
-        // Add toggle widget after setting size
-        this.addWidget(
-            "toggle",
-            "Mute",
-            this.properties.muted,
-            (v) => {
-                this.toggleMute();
-            },
-            { width: 100, label_width: 50 }
-        );
+        // IMPORTANT: completely ignore mouse capture + hover
+        this.flags = { capture_input: false };
+        this.mouseOver = () => false;   // ← this is what finally fixes the "locked" nodes
 
-        // Ensure size isn't overwritten by widget
+        // Mute toggle
+        this.addWidget("toggle", "Mute", false, (v) => {
+            this.properties.muted = v;
+            this.propagateMute();
+            this.setDirtyCanvas(true, true);
+        });
+
+        // Force size again after widgets (prevents LiteGraph from shrinking it)
         this.size = [400, 300];
     }
 
-    /**
-     * Update the list of contained nodes based on boundaries
-     */
+    // ─────── MOUSE HANDLING – the only three you need ───────
+    onMouseDown(e) {
+        if (e.which === 3) return false; // right click → pass through
+
+        const y = e.canvasY - this.pos[1];
+        if (y > 35) return false;        // clicked inside → let nodes below get it
+
+        // clicked title bar → drag the whole group
+        this.isDragging = true;
+        this.lastPos = [...this.pos];
+        return true;
+    }
+
+    onMouseMove(e) {
+        if (!this.isDragging) return false;
+
+        const dx = this.pos[0] - this.lastPos[0];
+        const dy = this.pos[1] - this.lastPos[1];
+        if (dx || dy) {
+            this.moveContainedNodes(dx, dy);
+            this.lastPos = [...this.pos];
+            this.graph.setDirtyCanvas(true, true);
+        }
+        return true;
+    }
+
+    onMouseUp() {
+        this.isDragging = false;
+        return false;
+    }
+
+    // ─────── CORE: move all contained nodes ───────
+    moveContainedNodes(dx, dy) {
+        this.updateContainedNodes();
+        for (const node of this.containedNodes) {
+            node.pos[0] += dx;
+            node.pos[1] += dy;
+            node.setDirtyCanvas(true);
+        }
+    }
+
     updateContainedNodes() {
-        if (!this.graph || !this.graph._nodes) {
-            console.log("updateContainedNodes skipped: graph not ready");
+        if (!this.graph?._nodes) {
             this.containedNodes = [];
             return;
         }
-
-        // Log all nodes in the graph
-        console.log(`Graph contains ${this.graph._nodes.length} nodes: ` +
-                    this.graph._nodes.map(n => `${n.title} at [${n.pos[0]}, ${n.pos[1]}]`).join(", "));
-
-        this.containedNodes = this.graph._nodes.filter((node) => {
-            if (node === this) return false; // Exclude self
-            const [nodeX, nodeY] = node.pos;
-            const [nodeWidth, nodeHeight] = node.size;
-            const [groupX, groupY] = this.pos;
-            const [groupWidth, groupHeight] = this.size;
-
-            // Adjust for title bar offset
-            const titleBarOffset = 30;
-            const isContained = (
-                nodeX >= groupX &&
-                nodeY >= groupY + titleBarOffset &&
-                nodeX + nodeWidth <= groupX + groupWidth &&
-                nodeY + nodeHeight <= groupY + groupHeight + titleBarOffset
-            );
-
-            console.log(`Node ${node.title} at [${nodeX}, ${nodeY}] size [${nodeWidth}, ${nodeHeight}] ` +
-                        `vs Backdrop at [${groupX}, ${groupY}] size [${groupWidth}, ${groupHeight}] ` +
-                        `-> Contained: ${isContained}`);
-            return isContained;
+        const titleH = 35;
+        this.containedNodes = this.graph._nodes.filter(n => {
+            if (n === this || n instanceof BackdropGroup) return false;
+            const nx = n.pos[0], ny = n.pos[1];
+            const nw = n.size[0], nh = n.size[1];
+            const gx = this.pos[0], gy = this.pos[1];
+            const gw = this.size[0], gh = this.size[1];
+            return nx >= gx && ny >= gy + titleH &&
+                   nx + nw <= gx + gw && ny + nh <= gy + gh;
         });
-        console.log(`Contained nodes: ${this.containedNodes.map(n => n.title).join(", ")}`);
     }
 
-    /**
-     * Override setSize to update capture area
-     * @param {Array} size [width, height]
-     */
+    // ─────── RESIZE – use setSize (never override onResize) ───────
     setSize(size) {
-        this.size = [Math.max(size[0], 200), Math.max(size[1], 100)];
-        console.log(`Backdrop resized to size: [${this.size[0]}, ${this.size[1]}], pos: [${this.pos[0]}, ${this.pos[1]}]`);
-        if (this.graph) {
-            this.updateContainedNodes();
-            this.updateZOrder();
-            this.graph.setDirtyCanvas(true, true);
-        }
-    }
-
-    /**
-     * Override setPosition to move contained nodes
-     * @param {number} x
-     * @param {number} y
-     */
-    setPosition(x, y) {
-        console.log(`setPosition called with x: ${x}, y: ${y}`);
-        const deltaX = x - this.pos[0];
-        const deltaY = y - this.pos[1];
-
-        // Update contained nodes' positions
+        super.setSize(size);
         this.updateContainedNodes();
-        this.containedNodes.forEach((node) => {
-            node.pos[0] += deltaX;
-            node.pos[1] += deltaY;
-            node.setDirtyCanvas(true);
-            console.log(`Moved node ${node.title} to [${node.pos[0]}, ${node.pos[1]}]`);
-        });
-
-        // Update own position
-        this.pos[0] = x;
-        this.pos[1] = y;
-        this.lastPos[0] = x;
-        this.lastPos[1] = y;
-        this.graph?.setDirtyCanvas(true, true);
-    }
-
-    /**
-     * Handle mouse drag to move contained nodes
-     */
-    onMouseDrag(event) {
-        if (!this.isDragging) return;
-        console.log(`onMouseDrag called, pos: [${this.pos[0]}, ${this.pos[1]}]`);
-
-        const deltaX = this.pos[0] - this.lastPos[0];
-        const deltaY = this.pos[1] - this.lastPos[1];
-
-        if (deltaX !== 0 || deltaY !== 0) {
-            this.updateContainedNodes();
-            this.containedNodes.forEach((node) => {
-                node.pos[0] += deltaX;
-                node.pos[1] += deltaY;
-                node.setDirtyCanvas(true);
-                console.log(`Dragged node ${node.title} to [${node.pos[0]}, ${node.pos[1]}]`);
-            });
-            this.lastPos[0] = this.pos[0];
-            this.lastPos[1] = this.pos[1];
-            this.graph?.setDirtyCanvas(true, true);
-        }
-    }
-
-    /**
-     * Fallback to detect position changes during drag
-     */
-    onMouseMove(event) {
-        if (!this.isDragging) return;
-        console.log(`onMouseMove called, pos: [${this.pos[0]}, ${this.pos[1]}]`);
-
-        const deltaX = this.pos[0] - this.lastPos[0];
-        const deltaY = this.pos[1] - this.lastPos[1];
-
-        if (deltaX !== 0 || deltaY !== 0) {
-            this.updateContainedNodes();
-            this.containedNodes.forEach((node) => {
-                node.pos[0] += deltaX;
-                node.pos[1] += deltaY;
-                node.setDirtyCanvas(true);
-                console.log(`Moved node ${node.title} to [${node.pos[0]}, ${node.pos[1]}] (via onMouseMove)`);
-            });
-            this.lastPos[0] = this.pos[0];
-            this.lastPos[1] = this.pos[1];
-            this.graph?.setDirtyCanvas(true, true);
-        }
-    }
-
-    /**
-     * Custom drag detection
-     */
-    onMouseDown(event) {
-        this.isDragging = true;
-        this.lastPos[0] = this.pos[0];
-        this.lastPos[1] = this.pos[1];
-        console.log(`Mouse down, drag started, pos: [${this.pos[0]}, ${this.pos[1]}]`);
-    }
-
-    /**
-     * End custom drag
-     */
-    onMouseUp(event) {
-        this.isDragging = false;
-        console.log("Mouse up, drag ended");
-    }
-
-    /**
-     * Handle drag start
-     */
-    onDragStart(event) {
-        this.isDragging = true;
-        this.lastPos[0] = this.pos[0];
-        this.lastPos[1] = this.pos[1];
-        console.log(`Drag started, initial pos: [${this.lastPos[0]}, ${this.pos[1]}]`);
-    }
-
-    /**
-     * Handle drag end
-     */
-    onDragEnd(event) {
-        this.isDragging = false;
-        console.log("Drag ended");
         this.updateZOrder();
     }
 
-    /**
-     * Fallback to detect position changes in update loop
-     */
-    onExecute() {
-        if (this.pos[0] !== this.lastPos[0] || this.pos[1] !== this.lastPos[1]) {
-            console.log(`Position changed in onExecute, pos: [${this.pos[0]}, ${this.pos[1]}]`);
-            const deltaX = this.pos[0] - this.lastPos[0];
-            const deltaY = this.pos[1] - this.lastPos[1];
-
-            this.updateContainedNodes();
-            this.containedNodes.forEach((node) => {
-                node.pos[0] += deltaX;
-                node.pos[1] += deltaY;
-                node.setDirtyCanvas(true);
-                console.log(`Moved node ${node.title} to [${node.pos[0]}, ${node.pos[1]}] (via onExecute)`);
-            });
-
-            this.lastPos[0] = this.pos[0];
-            this.lastPos[1] = this.pos[1];
-            this.graph?.setDirtyCanvas(true, true);
-        }
+    // ─────── Z-ORDER – backdrops always behind ───────
+    updateZOrder() {
+        if (!this.graph?._nodes) return;
+        const backdrops = this.graph._nodes
+            .filter(n => n instanceof BackdropGroup)
+            .sort((a, b) => a.addOrder - b.addOrder);
+        const others = this.graph._nodes.filter(n => !(n instanceof BackdropGroup));
+        this.graph._nodes = [...backdrops, ...others];
+        this.graph.setDirtyCanvas(true, true);
     }
 
-    /**
-     * Toggle the mute state of the group
-     */
-    toggleMute() {
-        this.properties.muted = !this.properties.muted;
-        this.propagateMuteState();
-        this.setDirtyCanvas(true);
-        this.graph?.updateExecutionOrder();
-    }
-
-    /**
-     * Propagate the mute state to all contained nodes
-     */
-    propagateMuteState() {
+    // ─────── MUTE ───────
+    propagateMute() {
         this.updateContainedNodes();
-        this.containedNodes.forEach((node) => {
-            node.properties = node.properties || {};
-            node.properties.muted = this.properties.muted;
-            node.setDirtyCanvas(true);
+        this.containedNodes.forEach(n => {
+            if (!n.properties) n.properties = {};
+            n.properties.muted = this.properties.muted;
+            n.setDirtyCanvas(true);
         });
     }
 
-    /**
-     * Add context menu options
-     */
-    getContextMenuOptions(options) {
-        options = options || [];
-        options.push({
-            content: this.properties.muted ? "Unmute Group" : "Mute Group",
-            callback: () => {
-                this.toggleMute();
-            },
-        });
-        return options;
-    }
-
-    /**
-     * Handle double-click event to toggle mute
-     */
-    onMouseDoubleClick(event) {
-        this.toggleMute();
-    }
-
-    /**
-     * Draw background to ensure backdrop is behind
-     */
+    // ─────── DRAWING ───────
     onDrawBackground(ctx) {
         ctx.fillStyle = this.bgcolor;
         ctx.fillRect(0, 0, this.size[0], this.size[1]);
     }
 
-    /**
-     * Visual feedback for muted state and bounding box
-     */
     onDrawForeground(ctx) {
-        // Draw bounding box for debugging
-        ctx.strokeStyle = "rgba(0, 255, 0, 0.5)"; // Green outline
-        ctx.lineWidth = 2;
-        ctx.strokeRect(0, 0, this.size[0], this.size[1]);
+        // title bar
+        ctx.fillStyle = this.mouseOverTitle ? "#556677" : this.color;
+        ctx.fillRect(0, 0, this.size[0], 30);
 
-        // Draw position label with add order
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = "12px Arial";
-        ctx.textAlign = "left";
-        ctx.fillText(`Pos: [${this.pos[0]}, ${this.pos[1]}] Order: ${this.addOrder}`, 5, 15);
+        ctx.fillStyle = "#fff";
+        ctx.font = "14px Arial";
+        ctx.fillText(this.title, 12, 20);
 
+        // muted overlay
         if (this.properties.muted) {
-            ctx.fillStyle = "rgba(255, 0, 0, 0.3)";
-            ctx.fillRect(0, 0, this.size[0], this.size[1]);
-
-            ctx.fillStyle = "#FFFFFF";
-            ctx.font = "16px Arial";
+            ctx.fillStyle = "rgba(200,0,0,0.4)";
+            ctx.fillRect(0, 30, this.size[0], this.size[1] - 30);
+            ctx.fillStyle = "#fcc";
+            ctx.font = "bold 20px Arial";
             ctx.textAlign = "center";
-            ctx.fillText("Muted", this.size[0] / 2, this.size[1] / 2);
-        }
-    }
-
-    /**
-     * Ensure backdrop is rendered furthest back
-     */
-    updateZOrder() {
-        if (!this.graph || !this.graph._nodes) return;
-
-        // Collect all BackdropGroup nodes and others
-        const backdrops = [];
-        const otherNodes = [];
-        for (const node of this.graph._nodes) {
-            if (node instanceof BackdropGroup) {
-                backdrops.push(node);
-            } else {
-                otherNodes.push(node);
-            }
+            ctx.fillText("MUTED", this.size[0] / 2, this.size[1] / 2);
         }
 
-        // Sort backdrops by addOrder (earliest first)
-        backdrops.sort((a, b) => a.addOrder - b.addOrder);
-
-        // Rebuild graph._nodes: backdrops first, then others
-        this.graph._nodes = [...backdrops, ...otherNodes];
-        const newIndex = this.graph._nodes.indexOf(this);
-        console.log(`Updated Z-order for ${this.title}, addOrder: ${this.addOrder}, new index: ${newIndex}`);
-        console.log(`Node order: ${this.graph._nodes.map(n => `${n.title} (order: ${n.addOrder || 'N/A'})`).join(", ")}`);
-        this.graph.setDirtyCanvas(true, true);
+        // outline
+        ctx.strokeStyle = "#889";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0.5, 0.5, this.size[0] - 1, this.size[1] - 1);
     }
 
-    /**
-     * Serialize the node's properties
-     */
+    // ─────── SERIALIZATION ───────
     onSerialize(o) {
         o.properties = this.properties;
         o.size = this.size;
         o.addOrder = this.addOrder;
     }
 
-    /**
-     * Deserialize the node's properties
-     */
     onConfigure(o) {
         if (o.properties) {
             this.properties = o.properties;
-            this.propagateMuteState();
+            this.propagateMute();
         }
-        if (o.size) {
-            this.size = o.size;
-        }
-        if (o.addOrder) {
+        if (o.size) this.size = o.size;
+        if (o.addOrder !== undefined) {
             this.addOrder = o.addOrder;
             BackdropGroup.backdropCounter = Math.max(BackdropGroup.backdropCounter, o.addOrder + 1);
         }
-        this.lastPos = [this.pos[0], this.pos[1]];
+        this.updateZOrder();
     }
 
-    /**
-     * Initialize contained nodes list and Z-order when added to graph
-     */
-    onAdded(graph) {
-        this.graph = graph;
-        this.updateContainedNodes();
+    onAdded() {
         this.updateZOrder();
-        console.log("Backdrop added to graph");
-
-        // Add graph-level move listener
-        this.graph.onNodeMoved = (node) => {
-            if (node === this) {
-                console.log(`Graph detected node move, pos: [${this.pos[0]}, ${this.pos[1]}]`);
-                const deltaX = this.pos[0] - this.lastPos[0];
-                const deltaY = this.pos[1] - this.lastPos[1];
-                if (deltaX !== 0 || deltaY !== 0) {
-                    this.updateContainedNodes();
-                    this.containedNodes.forEach((n) => {
-                        n.pos[0] += deltaX;
-                        n.pos[1] += deltaY;
-                        n.setDirtyCanvas(true);
-                        console.log(`Moved node ${n.title} to [${n.pos[0]}, ${n.pos[1]}] (via graph)`);
-                    });
-                    this.lastPos[0] = this.pos[0];
-                    this.lastPos[1] = this.pos[1];
-                    this.graph.setDirtyCanvas(true, true);
-                }
-            }
-        };
+        this.graph.addEventListener?.("node_added", () => this.updateZOrder());
+        this.graph.addEventListener?.("node_removed", () => this.updateZOrder());
     }
 }
 
-// Register BackdropGroup as a node type
-LiteGraph.registerNodeType("Groups/BackdropGroup", BackdropGroup);
+// Register
+LiteGraph.registerNodeType("group/Backdrop", BackdropGroup);

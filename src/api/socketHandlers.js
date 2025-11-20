@@ -8,30 +8,6 @@ const authManager = require('./middleware/authMiddleware');
 module.exports = (deviceService) => (socket) => {
   logger.log(`Socket.IO client connected: ${socket.id}`, 'info', false, `socket:connect:${socket.id}`);
 
-  // Authentication event - must be called before any other events
-  socket.on('authenticate', (pin) => {
-    if (authManager.verifyPin(pin)) {
-      authManager.authenticate(socket);
-      socket.emit('auth-success', { authenticated: true });
-      logger.log(`Socket ${socket.id} authenticated successfully`, 'info', false, `auth:success:${socket.id}`);
-
-      // Send initial data after authentication
-      socket.emit('server-ready', { ready: true, lastStates: deviceService.getLastStates() });
-      emitDeviceList();
-
-      // Send weather/forecast
-      fetchWeatherData().then(weatherData => {
-        if (weatherData) socket.emit('weather-update', weatherData);
-      });
-      fetchForecastData().then(forecastData => {
-        if (forecastData) socket.emit('forecast-update', forecastData);
-      });
-    } else {
-      socket.emit('auth-failed', { error: 'Invalid PIN' });
-      logger.log(`Socket ${socket.id} authentication failed`, 'warn', false, `auth:failed:${socket.id}`);
-    }
-  });
-
   // Emit initial device list
   const emitDeviceList = () => {
     const allDevices = deviceService.getAllDevices();
@@ -76,6 +52,30 @@ module.exports = (deviceService) => (socket) => {
     };
     socket.emit('device-list-update', simplifiedDevices);
   };
+
+  // Authentication event - must be called before any other events
+  socket.on('authenticate', (pin) => {
+    if (authManager.verifyPin(pin)) {
+      authManager.authenticate(socket);
+      socket.emit('auth-success', { authenticated: true });
+      logger.log(`Socket ${socket.id} authenticated successfully`, 'info', false, `auth:success:${socket.id}`);
+
+      // Send initial data after authentication
+      socket.emit('server-ready', { ready: true, lastStates: deviceService.getLastStates() });
+      emitDeviceList();
+
+      // Send weather/forecast (force refresh to ensure fresh data)
+      fetchWeatherData(true).then(weatherData => {
+        if (weatherData) socket.emit('weather-update', weatherData);
+      });
+      fetchForecastData(true).then(forecastData => {
+        if (forecastData) socket.emit('forecast-update', forecastData);
+      });
+    } else {
+      socket.emit('auth-failed', { error: 'Invalid PIN' });
+      logger.log(`Socket ${socket.id} authentication failed`, 'warn', false, `auth:failed:${socket.id}`);
+    }
+  });
 
   // Handle device control (requires authentication)
   socket.on('device-control', async (data) => {
@@ -176,6 +176,16 @@ module.exports = (deviceService) => (socket) => {
       return;
     }
     emitDeviceList();
+  });
+
+  // Handle forecast request (requires authentication)
+  socket.on('request-forecast', async () => {
+    if (!authManager.isAuthenticated(socket)) {
+      socket.emit('error', { message: 'Authentication required' });
+      return;
+    }
+    const forecastData = await fetchForecastData(true);
+    if (forecastData) socket.emit('forecast-update', forecastData);
   });
 
   // Handle weather/forecast updates (requires authentication)

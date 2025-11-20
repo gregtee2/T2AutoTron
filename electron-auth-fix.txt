@@ -1,0 +1,35 @@
+<!-- Authentication Check -->
+<script>
+    // Check if running in Electron
+    const isElectron = navigator.userAgent.toLowerCase().indexOf(' electron/') > -1;
+    
+    if (!isElectron) {
+        // Only check authentication for web browsers, not Electron
+        (function() {
+            const authenticated = sessionStorage.getItem('authenticated');
+            const authTime = sessionStorage.getItem('authTime');
+            const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
+
+            // Check if authenticated and session not expired
+            if (!authenticated || !authTime || (Date.now() - parseInt(authTime)) > SESSION_TIMEOUT) {
+                // Clear expired session
+                sessionStorage.removeItem('authenticated');
+                sessionStorage.removeItem('authTime');
+                // Redirect to login
+                window.location.href = '/login.html';
+            }
+
+            // Add logout function
+            window.logout = function() {
+                sessionStorage.removeItem('authenticated');
+                sessionStorage.removeItem('authTime');
+                window.location.href = '/login.html';
+            };
+        })();
+    } else {
+        // Electron: no authentication needed, but add dummy logout function
+        window.logout = function() {
+            console.log('Logout not needed in Electron');
+        };
+    }
+</script>

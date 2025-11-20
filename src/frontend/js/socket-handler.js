@@ -277,8 +277,24 @@ window.setupSocket = function (graph, updateStatusCallback) {
         console.log('Socket connected to server:', socket.id);
         document.getElementById('server-status').innerText = 'Server: Connected';
         document.getElementById('server-indicator').classList.add('connected');
+        // Auto-authenticate for Electron
+        const isElectron = navigator.userAgent.toLowerCase().indexOf(' electron/') > -1;
+        if (isElectron) {
+            socket.emit('authenticate', '2265');
+            console.log('Electron: Auto-authenticating with PIN 2265...');
+        }
         socket.emit(EVENTS.REQUEST_WEATHER_UPDATE);
         console.log('Requested weather update on connect');
+    });
+
+    socket.on('auth-success', (data) => {
+        console.log('Authentication successful:', data);
+        socket.emit('request-forecast');
+    });
+
+    socket.on('auth-failed', (data) => {
+        console.error('Authentication failed:', data);
+        document.getElementById('server-status').innerText = 'Auth Failed';
     });
 
     socket.on(EVENTS.CONNECT_ERROR, (error) => {
@@ -461,3 +477,4 @@ window.setupSocket = function (graph, updateStatusCallback) {
     console.log("Socket initialized:", socket);
     return socket;
 };
+

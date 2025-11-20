@@ -19,4 +19,4 @@ function DeviceControlNode() {
     }
   };
 }
-export default [{ type: 'generic/device_control', constructor: DeviceControlNode }];
+LiteGraph.registerNodeType("Generic/DeviceControl", DeviceControlNode);

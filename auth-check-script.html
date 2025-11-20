@@ -1,0 +1,26 @@
+<!-- Authentication Check Script -->
+<!-- Add this AFTER the core libraries (around line 160) and BEFORE LiteGraph libraries -->
+<script>
+    // Check authentication before loading app
+    (function () {
+        const authenticated = sessionStorage.getItem('authenticated');
+        const authTime = sessionStorage.getItem('authTime');
+        const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
+
+        // Check if authenticated and session not expired
+        if (!authenticated || !authTime || (Date.now() - parseInt(authTime)) > SESSION_TIMEOUT) {
+            // Clear expired session
+            sessionStorage.removeItem('authenticated');
+            sessionStorage.removeItem('authTime');
+            // Redirect to login
+            window.location.href = '/login.html';
+        }
+
+        // Add logout function
+        window.logout = function () {
+            sessionStorage.removeItem('authenticated');
+            sessionStorage.removeItem('authTime');
+            window.location.href = '/login.html';
+        };
+    })();
+</script>

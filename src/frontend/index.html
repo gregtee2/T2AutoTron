@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>T2Auto Home Automation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-eval' 
+      script-src 'self' 'unsafe-eval' 'unsafe-inline'
         https://cdnjs.cloudflare.com 
         https://cdn.jsdelivr.net 
         https://code.jquery.com 
@@ -26,16 +27,24 @@
     ">
     <!-- Stylesheets -->
     <link rel="stylesheet" href="lightgraph/css/litegraph.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
+        crossorigin="anonymous">
     <link rel="stylesheet" href="css/styles.css">
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400&display=swap" rel="stylesheet">
     <style>
-        #log-panel { position: relative; z-index: 1002; }
-        #api-config-modal { z-index: 1000; }
+        #log-panel {
+            position: relative;
+            z-index: 1002;
+        }
+
+        #api-config-modal {
+            z-index: 1000;
+        }
     </style>
 </head>
+
 <body>
     <div id="weather-banner">
         <span id="weather-text">Loading weather...</span>
@@ -45,6 +54,8 @@
         <span id="node-count">Nodes: 0</span>
         <span id="device-count">Devices: 0</span>
         <span id="server-indicator" class="indicator"></span>
+        <button onclick="logout()"
+            style="margin-left: auto; padding: 4px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Logout</button>
     </div>
     <div id="main">
         <canvas id="graphcanvas"></canvas>
@@ -56,7 +67,8 @@
                 <div id="forecast-section" class="sub-collapsible" data-expanded="true">
                     <div class="sub-header">
                         5-Day Forecast
-                        <button id="refresh-forecast-btn" style="float:right; font-size:11px; padding:2px 6px; margin-left:8px;">Refresh</button>
+                        <button id="refresh-forecast-btn"
+                            style="float:right; font-size:11px; padding:2px 6px; margin-left:8px;">Refresh</button>
                     </div>
                     <div class="sub-content" id="forecast-list" style="padding:10px;"></div>
                 </div>
@@ -103,7 +115,8 @@
         <nav id="controls">
             <button id="loadGraphBtn" title="Load a graph from a JSON file">Load Graph</button>
             <button id="saveGraphBtn" title="Save the current graph as JSON">Save Graph</button>
-            <button id="importCustomGraphBtn" title="Import a custom graph into the current one">Import Custom File</button>
+            <button id="importCustomGraphBtn" title="Import a custom graph into the current one">Import Custom
+                File</button>
             <button id="saveLogicBtn" title="Save the core logic of the graph as a simplified JSON">Save Logic</button>
             <button id="loadLogicBtn" title="Load logic overview from a JSON file">Load Logic Overview</button>
             <button id="themeToggleBtn" title="Switch between dark and light themes">Toggle Theme</button>
@@ -117,12 +130,16 @@
     <div id="api-config-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2>Configure API Keys</h2>
-            <label>Hue API Key: <input type="text" id="hue-key" placeholder="Enter Hue API Key"> <button id="fetch-hue-btn">Fetch from Bridge</button></label><br>
+            <label>Hue API Key: <input type="text" id="hue-key" placeholder="Enter Hue API Key"> <button
+                    id="fetch-hue-btn">Fetch from Bridge</button></label><br>
             <!-- Hidden input to store the Hue Bridge IP -->
             <input type="hidden" id="hue-bridge-ip" value="">
-            <label>Telegram API Key: <input type="text" id="telegram-key" placeholder="Enter Telegram API Key"></label><br>
-            <label>Open Weather API Key: <input type="text" id="openweather-key" placeholder="Enter Open Weather API Key"></label><br>
-            <label>Ambient Weather API Key: <input type="text" id="ambientweather-key" placeholder="Enter Ambient Weather API Key"></label><br>
+            <label>Telegram API Key: <input type="text" id="telegram-key"
+                    placeholder="Enter Telegram API Key"></label><br>
+            <label>Open Weather API Key: <input type="text" id="openweather-key"
+                    placeholder="Enter Open Weather API Key"></label><br>
+            <label>Ambient Weather API Key: <input type="text" id="ambientweather-key"
+                    placeholder="Enter Ambient Weather API Key"></label><br>
             <button id="save-api-btn">Save</button>
             <button id="cancel-api-btn">Cancel</button>
         </div>
@@ -147,22 +164,65 @@
         </div>
     </div>
     <!-- Add a backdrop for the modal -->
-    <div id="ip-input-backdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 999;"></div>
+    <div id="ip-input-backdrop"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 999;">
+    </div>
     <!-- IP Input Modal -->
-    <div id="ip-input-modal" class="modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001; background-color: white; padding: 20px; border: 2px solid black; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+    <div id="ip-input-modal" class="modal"
+        style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001; background-color: white; padding: 20px; border: 2px solid black; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
         <div class="modal-content">
             <h2>Enter Hue Bridge IP</h2>
             <label>IP Address: <input type="text" id="hue-ip-input" placeholder="e.g., 192.168.1.100"></label><br>
-            <button id="submit-ip-btn" onclick="console.log('Submit button clicked via onclick'); alert('Submit button clicked! Please enter the IP and confirm.');">Submit</button>
-            <button id="cancel-ip-btn" onclick="console.log('Cancel button clicked via onclick'); alert('Cancel button clicked! Dialog will close.');">Cancel</button>
+            <button id="submit-ip-btn"
+                onclick="console.log('Submit button clicked via onclick'); alert('Submit button clicked! Please enter the IP and confirm.');">Submit</button>
+            <button id="cancel-ip-btn"
+                onclick="console.log('Cancel button clicked via onclick'); alert('Cancel button clicked! Dialog will close.');">Cancel</button>
         </div>
     </div>
     <!-- Core Libraries -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.socket.io/4.4.1/socket.io.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"
+        crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.3.0/luxon.min.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js" crossorigin="anonymous"></script>
+
+    <!-- Authentication Check -->
+    <script>
+        // Check if running in Electron
+        const isElectron = navigator.userAgent.toLowerCase().indexOf(' electron/') > -1;
+
+        if (!isElectron) {
+            // Only check authentication for web browsers, not Electron
+            (function () {
+                const authenticated = sessionStorage.getItem('authenticated');
+                const authTime = sessionStorage.getItem('authTime');
+                const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
+
+                // Check if authenticated and session not expired
+                if (!authenticated || !authTime || (Date.now() - parseInt(authTime)) > SESSION_TIMEOUT) {
+                    // Clear expired session
+                    sessionStorage.removeItem('authenticated');
+                    sessionStorage.removeItem('authTime');
+                    // Redirect to login
+                    window.location.href = '/login.html';
+                }
+
+                // Add logout function
+                window.logout = function () {
+                    sessionStorage.removeItem('authenticated');
+                    sessionStorage.removeItem('authTime');
+                    window.location.href = '/login.html';
+                };
+            })();
+        } else {
+            // Electron: no authentication needed, but add dummy logout function
+            window.logout = function () {
+                console.log('Logout not needed in Electron');
+            };
+        }
+    </script>
+
     <!-- LiteGraph Libraries -->
     <script src="lightgraph/litegraph.js"></script>
     <script src="lightgraph/litegraph-editor.js"></script>
@@ -251,4 +311,5 @@
     <!--script src="js/nodeLoader.js"></script-->
     <script src="custom_nodes/Generic/DeviceControlNode.js"></script>
 </body>
+
 </html>
