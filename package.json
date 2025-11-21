@@ -4,7 +4,7 @@
   "main": "src/frontend/electron/main.js",
   "description": "Smart Lighting with Home Assistant Integration",
   "author": "Your Name <your.email@example.com>",
-  "homepage": "https://t2autotron.example.com",
+  "homepage": "https://github.com/gregtee2/T2AutoTron",
   "scripts": {
     "start": "node src/server.js",
     "start:backend": "node src/server.js",
@@ -44,7 +44,9 @@
     "appId": "com.t2autotron.app",
     "productName": "T2AutoTron",
     "linux": {
-      "target": ["deb"],
+      "target": [
+        "deb"
+      ],
       "category": "Utility",
       "maintainer": "Your Name <your.email@example.com>",
       "description": "Smart Lighting with Home Assistant Integration",
