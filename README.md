@@ -37,8 +37,8 @@ Imagine you have lights from Philips Hue, smart plugs from TP-Link Kasa, switche
 
 1.  **Clone the Repository:**
     ```bash
-    git clone https://github.com/gregtee2/homeauto.git
-    cd homeauto
+    git clone https://github.com/gregtee2/T2AutoTron.git
+    cd T2AutoTron
     ```
 
 2.  **Install Dependencies:**
