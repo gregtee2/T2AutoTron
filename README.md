@@ -4,7 +4,7 @@
 
 Imagine you have lights from Philips Hue, smart plugs from TP-Link Kasa, switches from Shelly, and devices connected to Home Assistant—all speaking different "languages" and controlled by separate apps. T2AutoTron brings them all together into one powerful, visual interface.
 
-![T2AutoTron Interface](https://github.com/gregtee2/homeauto/raw/main/docs/screenshot.png) *(Note: Add a screenshot to your repo and update this link!)*
+![T2AutoTron Main Dashboard](docs/main-dashboard.png)
 
 ## 🚀 Why T2AutoTron?
 
@@ -17,6 +17,28 @@ Imagine you have lights from Philips Hue, smart plugs from TP-Link Kasa, switche
 - **Local Operation:** Runs on your local network for privacy and speed.
 
 **Think of it as:** *Mission Control for your smart home, with the power of a programming language but the simplicity of connecting dots.*
+
+## 📸 Screenshots
+
+### Visual Logic Flow
+![Logic Flow Example](docs/logic-flow_exmaple.png)
+*Complex automation logic built with simple drag-and-drop nodes*
+
+### Weather Integration
+![Weather Forecast](docs/weather-forecast.png)
+*5-day forecast with sun times for automation triggers*
+
+### Advanced Color Control
+![Color Selector](docs/Color_Selector_Node.png)
+*Professional HSV color picker for precise lighting control*
+
+### Home Assistant Integration
+![HA Device Loader](docs/Home_Assistant_Generic_Device_Loader_Example.png)
+*Seamless integration with Home Assistant devices*
+
+### Weather & Sun Logic Nodes
+![Weather Logic](docs/weather_and_Sun-times_logic_nodes.png)
+*Use weather conditions and sun times to trigger automations*
 
 ## ✨ Key Features
 
