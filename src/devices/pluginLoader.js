@@ -34,7 +34,7 @@ function normalizeManager(manager, file) {
       initialize: manager.initialize,
       controlDevice: manager.controlDevice,
       getDevices: manager.getDevices,
-      shutdown: manager.shutdown || (async () => {})
+      shutdown: manager.shutdown || (async () => { })
     };
   }
 
@@ -51,7 +51,7 @@ function normalizeManager(manager, file) {
         type: light.type,
         state: light.state
       })),
-      shutdown: async () => {}
+      shutdown: async () => { }
     };
   }
   if (fileName === 'kasaManager') {
@@ -62,7 +62,7 @@ function normalizeManager(manager, file) {
       initialize: async (io, notificationEmitter, log) => await manager.setupKasa(io, notificationEmitter, log),
       controlDevice: async (deviceId, state) => await manager.controlKasaDevice(deviceId, state),
       getDevices: () => manager.getDevices ? manager.getDevices() : [],
-      shutdown: async () => {}
+      shutdown: async () => { }
     };
   }
   if (fileName === 'shellyManager') {
@@ -73,7 +73,7 @@ function normalizeManager(manager, file) {
       initialize: async (io, notificationEmitter, log) => await manager.setupShelly(io, notificationEmitter, log),
       controlDevice: async (deviceId, state) => await manager.controlShellyDevice(deviceId, state),
       getDevices: () => manager.getShellyDevices ? manager.getShellyDevices() : [],
-      shutdown: async () => {}
+      shutdown: async () => { }
     };
   }
   throw new Error(`Manager ${fileName} does not conform to plugin interface`);
@@ -89,7 +89,11 @@ async function loadRoutes(app, io, deviceService) {
       try {
         const route = require(path.join(routesDir, file));
         const routeConfig = normalizeRoute(route, file);
-        const routePath = `/api/${routeConfig.type}s/${routeConfig.prefix}`;
+        // Fix double slash issue if type is empty
+        const routePath = routeConfig.type
+          ? `/api/${routeConfig.type}s/${routeConfig.prefix}`
+          : `/api/${routeConfig.prefix}`;
+
         const routeInstance = routeConfig.legacyParams
           ? route(...routeConfig.legacyParams)
           : route(io, deviceService);
@@ -109,7 +113,7 @@ function normalizeRoute(route, file) {
     hueRoutes: { type: 'light', prefix: 'hue', legacyParams: [null, require('./managers/hueManager').hueLights, null] },
     kasaRoutes: { type: 'light', prefix: 'kasa', legacyParams: [null] },
     shellyRoutes: { type: 'light', prefix: 'shelly', legacyParams: [null] },
-    deviceRoutes: { type: 'device', prefix: 'devices', legacyParams: null },
+    deviceRoutes: { type: '', prefix: 'devices', legacyParams: null }, // Mounts at /api/devices
     nodeRoutes: { type: 'node', prefix: 'nodes', legacyParams: null }
   };
   return routeMap[fileName] || { type: fileName.replace('Routes', '').toLowerCase(), prefix: fileName.replace('Routes', '').toLowerCase(), legacyParams: null };

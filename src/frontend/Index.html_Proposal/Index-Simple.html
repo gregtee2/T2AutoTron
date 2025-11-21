@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>T2Auto Home Automation (Sandbox - Simple Test)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-eval' 'unsafe-inline'
+      https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://cdn.socket.io;
+    style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
+    connect-src 'self'
+      http://localhost:3000 ws://localhost:3000
+      http://localhost:8123 ws://localhost:8123
+      http://192.168.1.78:8123 ws://192.168.1.78:8123
+      https://api.bigdatacloud.net http://ip-api.com https://api.openweathermap.org;
+    img-src 'self' data: http://openweathermap.org;
+    font-src 'self' https://fonts.gstatic.com;
+  ">
+    <!-- Stylesheets - using absolute paths from root -->
+    <link rel="stylesheet" href="/lightgraph/css/litegraph.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/polish.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fira+Code&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* Visual indicator this is the sandbox version */
+        body::before {
+            content: "🧪 SIMPLE SANDBOX VERSION - Testing Path Resolution";
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4caf50;
+            color: white;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 10000;
+            border-radius: 0 0 4px 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 style="margin-top: 40px; text-align: center;">Simple Sandbox Test</h1>
+    <div style="max-width: 800px; margin: 20px auto; padding: 20px; background: #f5f5f5; border-radius: 8px;">
+        <h2>Diagnostic Information</h2>
+        <div id="diagnostic-output">
+            <p>Checking script loading...</p>
+        </div>
+    </div>
+
+    <!-- CDN Libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.3.0/luxon.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js" crossorigin="anonymous"></script>
+
+    <!-- Diagnostic Script -->
+    <script>
+        const output = document.getElementById('diagnostic-output');
+
+        function addResult(label, status, details = '') {
+            const p = document.createElement('p');
+            const icon = status ? '✅' : '❌';
+            p.innerHTML = `${icon} <strong>${label}:</strong> ${status ? 'OK' : 'FAIL'} ${details}`;
+            p.style.color = status ? 'green' : 'red';
+            output.appendChild(p);
+        }
+
+        // Check CDN libraries
+        addResult('jQuery', typeof $ !== 'undefined', typeof $ !== 'undefined' ? `v${$.fn.jquery}` : '');
+        addResult('Socket.IO', typeof io !== 'undefined', typeof io !== 'undefined' ? 'Loaded' : '');
+        addResult('Toastr', typeof toastr !== 'undefined');
+        addResult('Luxon', typeof luxon !== 'undefined');
+        addResult('SunCalc', typeof SunCalc !== 'undefined');
+
+        // Try to load a local script
+        const testScript = document.createElement('script');
+        testScript.src = '/js/main.js';
+        testScript.onload = () => addResult('Local Script (/js/main.js)', true);
+        testScript.onerror = () => addResult('Local Script (/js/main.js)', false, 'Failed to load');
+        document.body.appendChild(testScript);
+
+        // Test Socket.IO connection
+        if (typeof io !== 'undefined') {
+            const socket = io('http://localhost:3000');
+            socket.on('connect', () => {
+                addResult('Socket.IO Connection', true, `Connected with ID: ${socket.id}`);
+            });
+            socket.on('connect_error', (err) => {
+                addResult('Socket.IO Connection', false, err.message);
+            });
+        }
+    </script>
+</body>
+
+</html>

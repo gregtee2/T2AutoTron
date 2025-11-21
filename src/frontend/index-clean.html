@@ -5,35 +5,41 @@
     <meta charset="UTF-8">
     <title>T2Auto Home Automation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self';
-      script-src 'self' 'unsafe-eval' 'unsafe-inline'
-        https://cdnjs.cloudflare.com 
-        https://cdn.jsdelivr.net 
-        https://code.jquery.com 
-        https://cdn.socket.io;
-      style-src 'self' 'unsafe-inline' 
-        https://cdnjs.cloudflare.com 
-        https://fonts.googleapis.com;
-      connect-src 'self' 
-        http://localhost:3000 ws://localhost:3000 
-        http://localhost:8123 ws://localhost:8123 
-        http://192.168.1.78:8123 ws://192.168.1.78:8123 
-        https://api.bigdatacloud.net 
-        http://ip-api.com 
-        https://api.openweathermap.org;
-      img-src 'self' data: http://openweathermap.org;
-      font-src 'self' https://fonts.gstatic.com;
+        default-src 'self';
+        script-src 'self' 'unsafe-eval' 'unsafe-inline'
+            https://cdnjs.cloudflare.com 
+            https://cdn.jsdelivr.net 
+            https://code.jquery.com 
+            https://cdn.socket.io;
+        style-src 'self' 'unsafe-inline' 
+            https://cdnjs.cloudflare.com 
+            https://fonts.googleapis.com;
+        connect-src 'self' 
+            http://localhost:3000 ws://localhost:3000 
+            http://localhost:8123 ws://localhost:8123 
+            http://192.168.1.78:8123 ws://192.168.1.78:8123 
+            https://api.bigdatacloud.net 
+            http://ip-api.com 
+            https://api.openweathermap.org;
+        img-src 'self' data: http://openweathermap.org;
+        font-src 'self' https://fonts.gstatic.com;
     ">
-    <!-- Stylesheets -->
+
+    <!-- External Stylesheets -->
     <link rel="stylesheet" href="lightgraph/css/litegraph.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
         crossorigin="anonymous">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/polish.css">
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400&display=swap" rel="stylesheet">
+
+    <!-- Component-specific Styles -->
     <style>
         #log-panel {
             position: relative;
@@ -47,24 +53,36 @@
 </head>
 
 <body>
+    <!-- ========================================
+         HEADER: Weather & Status Bar
+         ======================================== -->
     <div id="weather-banner">
         <span id="weather-text">Loading weather...</span>
     </div>
+
     <div id="status-bar">
         <span id="server-status">Server: Connecting...</span>
         <span id="node-count">Nodes: 0</span>
         <span id="device-count">Devices: 0</span>
         <span id="server-indicator" class="indicator"></span>
-        <button id="logout-btn"
+        <button onclick="logout()"
             style="margin-left: auto; padding: 4px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Logout</button>
     </div>
+
+    <!-- ========================================
+         MAIN CONTENT: Canvas & Panels
+         ======================================== -->
     <div id="main">
+        <!-- LiteGraph Canvas -->
         <canvas id="graphcanvas"></canvas>
         <div id="dateTimeDisplay"></div>
+
+        <!-- System Overview Panel -->
         <div id="combined-panel" class="collapsible" data-expanded="true">
             <div class="panel-header">System Overview (Click to Collapse/Expand)</div>
             <div class="panel-content">
-                <!-- Forecast Section -->
+
+                <!-- 5-Day Forecast -->
                 <div id="forecast-section" class="sub-collapsible" data-expanded="true">
                     <div class="sub-header">
                         5-Day Forecast
@@ -73,7 +91,8 @@
                     </div>
                     <div class="sub-content" id="forecast-list" style="padding:10px;"></div>
                 </div>
-                <!-- Logic Overview Section -->
+
+                <!-- Logic Overview -->
                 <div id="overview-section" class="sub-collapsible" data-expanded="false">
                     <div class="sub-header">Logic Overview</div>
                     <div class="sub-content" style="max-height: 0; opacity: 0; display: none;">
@@ -85,7 +104,8 @@
                         </div>
                     </div>
                 </div>
-                <!-- Devices Overview Section -->
+
+                <!-- Devices Overview -->
                 <div id="devices-section" class="sub-collapsible" data-expanded="false">
                     <div class="sub-header">Devices Overview</div>
                     <div class="sub-content" style="max-height: 0; opacity: 0; display: none;">
@@ -95,7 +115,8 @@
                         <div id="devices-list"></div>
                     </div>
                 </div>
-                <!-- Resource HUD Section -->
+
+                <!-- Resource HUD -->
                 <div id="resource-section" class="sub-collapsible" data-expanded="true">
                     <div class="sub-header">Resource HUD</div>
                     <div class="sub-content" id="health-content">
@@ -113,6 +134,8 @@
                 </div>
             </div>
         </div>
+
+        <!-- Control Buttons -->
         <nav id="controls">
             <button id="loadGraphBtn" title="Load a graph from a JSON file">Load Graph</button>
             <button id="saveGraphBtn" title="Save the current graph as JSON">Save Graph</button>
@@ -123,17 +146,24 @@
             <button id="themeToggleBtn" title="Switch between dark and light themes">Toggle Theme</button>
             <button id="configApiKeysBtn" title="Configure API keys for the app">Configure API Keys</button>
         </nav>
+
+        <!-- File Input -->
         <div>
             <label for="fileInput" class="sr-only">Upload JSON file</label>
             <input type="file" id="fileInput" accept=".json" hidden>
         </div>
     </div>
+
+    <!-- ========================================
+         MODALS
+         ======================================== -->
+
+    <!-- API Configuration Modal -->
     <div id="api-config-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2>Configure API Keys</h2>
             <label>Hue API Key: <input type="text" id="hue-key" placeholder="Enter Hue API Key"> <button
                     id="fetch-hue-btn">Fetch from Bridge</button></label><br>
-            <!-- Hidden input to store the Hue Bridge IP -->
             <input type="hidden" id="hue-bridge-ip" value="">
             <label>Telegram API Key: <input type="text" id="telegram-key"
                     placeholder="Enter Telegram API Key"></label><br>
@@ -145,9 +175,31 @@
             <button id="cancel-api-btn">Cancel</button>
         </div>
     </div>
-    <div id="device-panel" class="collapsible" data-expanded="false">
-        <!-- Empty content, hidden via CSS -->
+
+    <!-- Hue Bridge IP Modal -->
+    <div id="ip-input-backdrop"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 999;">
     </div>
+    <div id="ip-input-modal" class="modal"
+        style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001; background-color: white; padding: 20px; border: 2px solid black; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+        <div class="modal-content">
+            <h2>Enter Hue Bridge IP</h2>
+            <label>IP Address: <input type="text" id="hue-ip-input" placeholder="e.g., 192.168.1.100"></label><br>
+            <button id="submit-ip-btn"
+                onclick="console.log('Submit button clicked via onclick'); alert('Submit button clicked! Please enter the IP and confirm.');">Submit</button>
+            <button id="cancel-ip-btn"
+                onclick="console.log('Cancel button clicked via onclick'); alert('Cancel button clicked! Dialog will close.');">Cancel</button>
+        </div>
+    </div>
+
+    <!-- ========================================
+         PANELS
+         ======================================== -->
+
+    <!-- Device Panel (unused, kept for compatibility) -->
+    <div id="device-panel" class="collapsible" data-expanded="false"></div>
+
+    <!-- Log Panel -->
     <div id="log-panel" class="collapsible" data-expanded="true">
         <div class="log-header">Log (Click to Collapse/Expand)</div>
         <div class="log-controls">
@@ -164,22 +216,10 @@
             </div>
         </div>
     </div>
-    <!-- Add a backdrop for the modal -->
-    <div id="ip-input-backdrop"
-        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 999;">
-    </div>
-    <!-- IP Input Modal -->
-    <div id="ip-input-modal" class="modal"
-        style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001; background-color: white; padding: 20px; border: 2px solid black; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-        <div class="modal-content">
-            <h2>Enter Hue Bridge IP</h2>
-            <label>IP Address: <input type="text" id="hue-ip-input" placeholder="e.g., 192.168.1.100"></label><br>
-            <button id="submit-ip-btn">Submit</button>
-            <button id="cancel-ip-btn">Cancel</button>
-        </div>
-    </div>
 
-    <!-- Core Libraries -->
+    <!-- ========================================
+         EXTERNAL LIBRARIES (CDN)
+         ======================================== -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.socket.io/4.4.1/socket.io.min.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"
@@ -187,40 +227,99 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.3.0/luxon.min.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js" crossorigin="anonymous"></script>
 
-    <!-- LiteGraph Libraries -->
+    <!-- ========================================
+         AUTHENTICATION
+         ======================================== -->
+    <script>
+        // Check if running in Electron
+        const isElectron = navigator.userAgent.toLowerCase().indexOf(' electron/') > -1;
+
+        if (false && !isElectron) {  // TEMP: Auth disabled for testing            
+            (function () {
+                const authenticated = sessionStorage.getItem('authenticated');
+                const authTime = sessionStorage.getItem('authTime');
+                const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
+
+                // Check if authenticated and session not expired
+                if (!authenticated || !authTime || (Date.now() - parseInt(authTime)) > SESSION_TIMEOUT) {
+                    // Clear expired session and redirect to login
+                    sessionStorage.removeItem('authenticated');
+                    sessionStorage.removeItem('authTime');
+                    window.location.href = '/login.html';
+                }
+
+                // Add logout function
+                window.logout = function () {
+                    sessionStorage.removeItem('authenticated');
+                    sessionStorage.removeItem('authTime');
+                    window.location.href = '/login.html';
+                };
+            })();
+        } else {
+            // Electron: no authentication needed, but add dummy logout function
+            window.logout = function () {
+                console.log('Logout not needed in Electron');
+            };
+        }
+    </script>
+
+    <!-- ========================================
+         LITEGRAPH LIBRARIES
+         ======================================== -->
     <script src="lightgraph/litegraph.js"></script>
     <script src="lightgraph/litegraph-editor.js"></script>
     <script src="lightgraph/defaults.js"></script>
 
-    <!-- Event Scheduler -->
+    <!-- ========================================
+         CORE APPLICATION SCRIPTS
+         ======================================== -->
     <script src="js/event-scheduler.js"></script>
-
-    <!-- Socket and Device Control -->
     <script src="js/socket-handler.js"></script>
     <script src="js/deviceControl.js"></script>
+    <script src="js/graph-utils.js"></script>
 
-    <!-- Custom Nodes -->
+    <!-- ========================================
+         CUSTOM NODES (Grouped by Category)
+         NOTE: Future improvement - load these dynamically
+         ======================================== -->
+
+    <!-- Utility Nodes -->
     <script src="custom_nodes/Utility/SenderNode.js"></script>
-    <script src="custom_nodes/Animation/SplineHSVTime.js"></script>
-    <script src="custom_nodes/Audio/HADenonAVRControlNode.js"></script>
     <script src="custom_nodes/Utility/ReceiverNode.js"></script>
     <script src="custom_nodes/Utility/OffsetNode.js"></script>
     <script src="custom_nodes/Utility/PassThroughNode.js"></script>
     <script src="custom_nodes/Utility/LightInfoExtractorNode.js"></script>
+
+    <!-- Animation Nodes -->
+    <script src="custom_nodes/Animation/SplineHSVTime.js"></script>
+
+    <!-- Audio Nodes -->
+    <script src="custom_nodes/Audio/HADenonAVRControlNode.js"></script>
+
+    <!-- Device Nodes -->
     <script src="custom_nodes/Device/DeviceContainerNode.js"></script>
+    <script src="custom_nodes/Generic/DeviceControlNode.js"></script>
+
+    <!-- Lighting Nodes -->
     <script src="custom_nodes/Lighting/HALightControlNode.js"></script>
     <script src="custom_nodes/Lighting/HueLightControlNode.js"></script>
     <script src="custom_nodes/Lighting/HueLightStateNode.js"></script>
     <script src="custom_nodes/Lighting/HueFXNode.js"></script>
     <script src="custom_nodes/Lighting/KasaLightControlNode.js"></script>
     <script src="custom_nodes/Lighting/ShellyDeviceContainerNode.js"></script>
+
+    <!-- Power Nodes -->
     <script src="custom_nodes/Power/KasaPlugControlNode.js"></script>
+
+    <!-- Home Assistant Nodes -->
     <script src="custom_nodes/HomeAssistant/HAGenericDeviceNode.js"></script>
     <script src="custom_nodes/HomeAssistant/HADeviceStateOutputNode.js"></script>
     <script src="custom_nodes/HomeAssistant/HADeviceAutomationNode.js"></script>
     <script src="custom_nodes/HomeAssistant/ColorGradientNode.js"></script>
     <script src="custom_nodes/HomeAssistant/LogicCompareNode.js"></script>
     <script src="custom_nodes/HomeAssistant/TimeTriggerNode.js"></script>
+
+    <!-- Logic Nodes -->
     <script src="custom_nodes/Logic/IfThenNode.js"></script>
     <script src="custom_nodes/Logic/HS_AndNode.js"></script>
     <script src="custom_nodes/Logic/HS_ComparisonNode.js"></script>
@@ -245,8 +344,12 @@
     <script src="custom_nodes/Logic/InjectNode.js"></script>
     <script src="custom_nodes/Logic/TimeBasedLogicNode.js"></script>
     <script src="custom_nodes/Logic/TimeRangeNode.js"></script>
+
+    <!-- Math Nodes -->
     <script src="custom_nodes/Math/MultiplierNode.js"></script>
     <script src="custom_nodes/Math/TimeMathNode.js"></script>
+
+    <!-- Timer Nodes -->
     <script src="custom_nodes/Timers/TimeOfDayNode.js"></script>
     <script src="custom_nodes/Timers/SunriseSunsetTrigger.js"></script>
     <script src="custom_nodes/Timers/ConditionalDate.js"></script>
@@ -255,32 +358,38 @@
     <script src="custom_nodes/Timers/TriggerBusNode.js"></script>
     <script src="custom_nodes/Timers/Timer.js"></script>
     <script src="custom_nodes/Timers/TriggerDelayNode.js"></script>
+
+    <!-- Display Nodes -->
     <script src="custom_nodes/Display/DisplayNode.js"></script>
     <script src="custom_nodes/Display/MultiDisplayNode.js"></script>
+
+    <!-- Execution Nodes -->
     <script src="custom_nodes/Execution/PushButtonNode.js"></script>
+
+    <!-- Color Control Nodes -->
     <script src="custom_nodes/CC_Control_Nodes/CustomColorControlNode.js"></script>
     <script src="custom_nodes/CC_Control_Nodes/hsv_control_node.js"></script>
     <script src="custom_nodes/CC_Control_Nodes/HSVModifierNode.js"></script>
     <script src="custom_nodes/CC_Control_Nodes/BrightnessAdjustNode.js"></script>
     <script src="custom_nodes/CC_Control_Nodes/AllInOneColorControl.js"></script>
+
+    <!-- Custom & Generator Nodes -->
     <script src="custom_nodes/Custom/CustomLayoutNode.js"></script>
     <script src="custom_nodes/Generators/CyclingIntegerNode.js"></script>
+
+    <!-- Basic Nodes -->
     <script src="custom_nodes/Basic/BackdropGroup.js"></script>
+
+    <!-- Scene Nodes -->
     <script src="custom_nodes/Scenes/SceneManagerNode.js"></script>
     <script src="custom_nodes/Scenes/RoomNode.js"></script>
     <script src="custom_nodes/Scenes/SceneReceiverNode.js"></script>
     <script src="custom_nodes/Scenes/SceneToLightAdapterNode.js"></script>
-    <script src="custom_nodes/Generic/DeviceControlNode.js"></script>
 
-    <!-- NEW COMPONENT SCRIPTS (as instructed) -->
-    <script src="js/browser-compat.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/modals.js"></script>
-    <script src="js/custom-node-loader.js"></script>
-    <script src="js/energy-display.js"></script> 
-
-    <!-- Main Scripts -->
-    <script src="js/graph-utils.js"></script>
+    <!-- ========================================
+         MAIN APPLICATION SCRIPT
+         This must load AFTER all custom nodes
+         ======================================== -->
     <script src="js/main.js"></script>
 </body>
 

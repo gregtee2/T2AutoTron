@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Override drawNode for custom highlighting with a bold neon green outline
     const originalDrawNode = editor.drawNode;
-    editor.drawNode = function(node, ctx) {
+    editor.drawNode = function (node, ctx) {
         // Draw the node normally first
         originalDrawNode.call(this, node, ctx);
 
@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, { capture: true }); // Use capture phase to ensure the event is handled early
 
     // Debug connection changes
-    graph.onConnectionChange = function() {
+    graph.onConnectionChange = function () {
         console.log("Connection changed, current _links:", graph._links);
         console.log("Nodes:", graph._nodes.map(n => ({ id: n.id, type: n.type })));
         graph._nodes.forEach(node => {
@@ -101,14 +101,13 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // Debug editor link creation
-    editor.onConnectionCreated = function(link) {
+    editor.onConnectionCreated = function (link) {
         console.log("Editor created link:", link);
     };
 
     // Ensure outputs are updated after each step
-    graph.onAfterStep = function() {
+    graph.onAfterStep = function () {
         graph._nodes.forEach(node => {
-            if (node.onExecute) node.onExecute();
         });
     };
 
@@ -126,11 +125,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     setInterval(stepGraph, 1000 / 60); // Run at ~60 FPS
-    graph.start = function() {
+
+    graph.start = function () {
         this._is_running = true;
         console.log("Graph started with setInterval");
     };
-    graph.stop = function() {
+    graph.stop = function () {
         this._is_running = false;
         console.log("Graph stopped");
     };
@@ -159,7 +159,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (typeof window.setupSocket !== 'function') {
             throw new Error("window.setupSocket is not defined. Check script load order.");
         }
-        socket = window.setupSocket(graph, updateStatusBar);
+        window.socket = window.setupSocket(graph, updateStatusBar);
+        socket = window.socket;
         if (!socket) {
             throw new Error("setupSocket returned undefined");
         }
@@ -407,7 +408,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    
+
 }); // End of DOMContentLoaded
 
 function toggleModal(modalId, show) {
@@ -818,9 +819,9 @@ function renderOverview(summary) {
                     ${nodesToShow.map(n => `
                         <li><a href="#" class="node-link" data-node-id="${n.id}">${n.type} (ID: ${n.id})</a></li>
                     `).join('')}
-                    ${data.nodes.length > 3 && !data.expanded ? 
-                        `<li><a href="#" class="expand-link" data-group="${group}">Show more</a></li>` : 
-                        (data.expanded ? `<li><a href="#" class="expand-link" data-group="${group}">Show less</a></li>` : '')}
+                    ${data.nodes.length > 3 && !data.expanded ?
+                `<li><a href="#" class="expand-link" data-group="${group}">Show more</a></li>` :
+                (data.expanded ? `<li><a href="#" class="expand-link" data-group="${group}">Show less</a></li>` : '')}
                 </ul>
             </li>
         `;
@@ -894,7 +895,7 @@ function togglePanel(panelId, subSectionId = null) {
         console.warn(`Panel ${panelId} not found`);
         return;
     }
-    
+
     if (subSectionId) {
         const subSection = document.getElementById(subSectionId);
         if (!subSection) {
@@ -945,7 +946,7 @@ function setupControls(graph) {
     console.log("setupControls started");
     console.log("setupControls called with graph:", graph);
     console.log("Graph nodes:", graph._nodes ? graph._nodes.length : "No nodes");
-    
+
     const saveGraphBtn = document.getElementById("saveGraphBtn");
     const loadGraphBtn = document.getElementById("loadGraphBtn");
     const importCustomGraphBtn = document.getElementById("importCustomGraphBtn");
@@ -1036,7 +1037,7 @@ if (typeof LiteGraph !== 'undefined' && typeof LGraphCanvas !== 'undefined') {
     const originalConvertEventToCanvas = LGraphCanvas.prototype.convertEventToCanvas;
 
     // Override to adjust for canvas offset
-    LGraphCanvas.prototype.convertEventToCanvas = function(e) {
+    LGraphCanvas.prototype.convertEventToCanvas = function (e) {
         var rect = this.canvas.getBoundingClientRect();
         var x = e.clientX - rect.left;
         var y = e.clientY - rect.top;

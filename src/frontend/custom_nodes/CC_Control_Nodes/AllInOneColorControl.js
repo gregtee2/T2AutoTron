@@ -53,23 +53,28 @@ class AllInOneColorNode extends LiteGraph.LGraphNode {
   }
 
   configure(data) {
-    super.configure(data);
-    if (data.properties) {
-      this.properties = { ...this.properties, ...data.properties };
-    }
+      super.configure(data);
 
-    // Rebuild UI from saved state
-    this.widgets = [];
-    this.buildUI();
+      if (data.properties) {
+          this.properties = { ...this.properties, ...data.properties };
+      }
 
-    // Sync sliders & visuals
-    this.syncAllSliders();
-    this.updateColorSwatch();
+      // === CRITICAL FIX: Clear old widgets AND inputs before rebuilding ===
+      this.widgets = [];
+      this.inputs = [];        // ← THIS WAS MISSING!
+      this.outputs = [];       // ← Also clear outputs to be safe (optional but clean)
 
-    // Restart auto trigger
-    if (this.properties.enableAutoTrigger) {
-      this.startAuto();
-    }
+      // Rebuild UI from saved state
+      this.buildUI();
+
+      // Sync sliders & visuals
+      this.syncAllSliders();
+      this.updateColorSwatch();
+
+      // Restart auto trigger if enabled
+      if (this.properties.enableAutoTrigger) {
+          this.startAuto();
+      }
   }
 
   // -------------------------------------------------------------------------

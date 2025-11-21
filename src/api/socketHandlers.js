@@ -27,6 +27,7 @@ module.exports = (deviceService) => (socket) => {
         type: device.deviceType,
         state: device.state,
         vendor: 'Kasa',
+        energyUsage: device.energy // Plugs use this
       })),
       shelly: (allDevices['shellyplus1-'] || []).map(device => ({
         id: `shellyplus1-${device.mac}`,
@@ -41,12 +42,29 @@ module.exports = (deviceService) => (socket) => {
           logger.log(`Invalid HA device: ${JSON.stringify(device)}`, 'error', false, 'ha:invalid_device');
           return null;
         }
+
+        // EXTRACT ENERGY DATA FROM HA ATTRIBUTES AND PROMOTE TO TOP LEVEL
+        let energyUsage = null;
+        const attrs = device.attributes || {};
+
+        // Kasa bulbs in HA: emeter is nested in attributes
+        if (attrs.emeter?.power != null) {
+          energyUsage = { power: Number(attrs.emeter.power) };
+        }
+        // Some forks flatten it
+        else if (attrs.power != null) {
+          energyUsage = { power: Number(attrs.power) };
+        }
+
         return {
           id: `ha_${device.entity_id}`,
-          name: device.attributes?.friendly_name || device.entity_id.split('.')[1] || device.entity_id,
+          name: attrs.friendly_name || device.entity_id.split('.')[1] || device.entity_id,
           type: device.entity_id.split('.')[0],
           state: { on: device.state === 'on' },
           vendor: 'HomeAssistant',
+          attributes: attrs,
+          energyUsage: energyUsage,  // ← THIS IS THE KEY: top-level energyUsage!
+          emeter: attrs.emeter       // ← Also expose raw emeter for safety
         };
       }).filter(device => device !== null),
     };
@@ -64,7 +82,7 @@ module.exports = (deviceService) => (socket) => {
       socket.emit('server-ready', { ready: true, lastStates: deviceService.getLastStates() });
       emitDeviceList();
 
-      // Send weather/forecast (force refresh to ensure fresh data)
+      // Send weather/forecast
       fetchWeatherData(true).then(weatherData => {
         if (weatherData) socket.emit('weather-update', weatherData);
       });
@@ -136,7 +154,6 @@ module.exports = (deviceService) => (socket) => {
       return;
     }
 
-    // Validate input
     const validation = validate(data, deviceToggleSchema);
     if (!validation.valid) {
       logger.log(`Invalid device-toggle data: ${validation.error}`, 'warn', false, 'validation:device-toggle');

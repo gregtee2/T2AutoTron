@@ -117,3 +117,4 @@ backup/
 crashes/
 states.json
 tree.txt
+**/bak/

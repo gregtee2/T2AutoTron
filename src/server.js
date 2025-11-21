@@ -102,6 +102,12 @@ io.on('connection', (socket) => {
 app.use(express.static(path.join(__dirname, 'frontend')));
 app.use('/custom_nodes', express.static(path.join(__dirname, 'frontend/custom_nodes')));
 
+
+// Sandbox route for testing refactored index.html
+app.get('/sandbox', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'Index.html_Proposal', 'Index.html'));
+});
+
 // Endpoint to list custom node files
 app.get('/api/custom-nodes', async (req, res) => {
   try {

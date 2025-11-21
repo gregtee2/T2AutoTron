@@ -43,7 +43,8 @@ class HomeAssistantManager {
             type: device.entity_id.split('.')[0],
             on: device.state === 'on',
             brightness: device.attributes.brightness ? Math.round((device.attributes.brightness / 255) * 100) : (device.state === 'on' ? 100 : 0),
-            hs_color: device.attributes.hs_color || [0, 0]
+            hs_color: device.attributes.hs_color || [0, 0],
+            attributes: device.attributes // Include attributes for power data
           };
           io.emit('device-state-update', state);
           notificationEmitter.emit('notify', `🔄 HA Update: ${state.name} is ${state.on ? 'ON' : 'OFF'}`);
@@ -71,7 +72,8 @@ class HomeAssistantManager {
                 id: cacheKey,
                 on: entity.state === 'on',
                 brightness: entity.attributes.brightness ? Math.round((entity.attributes.brightness / 255) * 100) : (entity.state === 'on' ? 100 : 0),
-                hs_color: entity.attributes.hs_color || [0, 0]
+                hs_color: entity.attributes.hs_color || [0, 0],
+                attributes: entity.attributes // Include attributes for power data
               };
               io.emit('device-state-update', state);
               log(`HA state update: ${state.id} - ${entity.state}`, 'info', false, `ha:state:${state.id}`);
@@ -218,7 +220,8 @@ class HomeAssistantManager {
         on: device.state === 'on',
         brightness: device.attributes.brightness ? Math.round((device.attributes.brightness / 255) * 100) : (device.state === 'on' ? 100 : 0),
         hs_color: device.attributes.hs_color || [0, 0]
-      }
+      },
+      attributes: device.attributes // Include attributes for power data
     }));
 
     // Update cache

@@ -22,27 +22,61 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
     this.numberInputs = {};
     this.transition = { active: false, startColor: null, endColor: null, progress: 0 };
     this.mode = LiteGraph.ALWAYS;
-
     this.defaultTitleColor = "#4e4e4e";
     this.enabledTitleColor = "#00FF00";
     this.title_color = this.properties.enabled ? this.enabledTitleColor : this.defaultTitleColor;
-
     this.setupWidgets();
     this.setupInputsOutputs();
     this.bindMethods();
     this.updateSize();
   }
-
   bindMethods() {
     this.onExecute = this.onExecute.bind(this);
     this.onResize = this.onResize.bind(this);
     this.updateSize = this.updateSize.bind(this);
     this.onDrawForeground = this.onDrawForeground.bind(this);
     this.hsvToRgb = this.hsvToRgb.bind(this);
+    this.rgbToHsv = this.rgbToHsv.bind(this);
     this.updateColorSwatch = this.updateColorSwatch.bind(this);
     this.updateInputDisplay = this.updateInputDisplay.bind(this);
     this.updateOutputDisplay = this.updateOutputDisplay.bind(this);
     this.modifyHSV = this.modifyHSV.bind(this);
+  }
+
+  // Exact same color math as AllInOneColorNode
+  hsvToRgb(h, s, v) {
+    const i = Math.floor(h * 6);
+    const f = h * 6 - i;
+    const p = v * (1 - s);
+    const q = v * (1 - f * s);
+    const t = v * (1 - (1 - f) * s);
+    let r, g, b;
+    switch (i % 6) {
+      case 0: r = v; g = t; b = p; break;
+      case 1: r = q; g = v; b = p; break;
+      case 2: r = p; g = v; b = t; break;
+      case 3: r = p; g = q; b = v; break;
+      case 4: r = t; g = p; b = v; break;
+      case 5: r = v; g = p; b = q; break;
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+  }
+
+  rgbToHsv(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const d = max - min;
+    const s = max === 0 ? 0 : d / max;
+    let h = 0;
+    if (max !== min) {
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return { hue: h, saturation: s, brightness: max * 254 };
   }
 
   setupWidgets() {
@@ -58,7 +92,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       },
       { width: 100, tooltip: "Manually enable or disable the HSV modification" }
     );
-
     this.bufferWidget = this.addWidget(
       "combo",
       "Enable Buffer",
@@ -79,14 +112,12 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
         tooltip: "Select a [Trigger] buffer to control enabling the HSV modification. Only boolean buffers are shown."
       }
     );
-
     this.hsvBufferWidget = this.addWidget(
       "combo",
       "HSV Buffer",
       this.properties.selectedHsvBuffer || "None",
       (value) => {
         this.properties.selectedHsvBuffer = value === "None" ? null : value;
-        // Update title based on selected HSV buffer
         this.title = this.properties.selectedHsvBuffer || "HSV Modifier";
         this.updateSliderState();
         this.setDirtyCanvas(true);
@@ -103,7 +134,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
         tooltip: "Select an [HSV] buffer to override incoming HSV data. Only applies when the node is enabled."
       }
     );
-
     this.addWidget(
       "toggle",
       "Auto-Disable Sliders",
@@ -114,36 +144,32 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       },
       { width: 150, tooltip: "Automatically disable sliders when an HSV buffer is selected and the node is enabled" }
     );
-
     this.statusWidget = this.addWidget("text", "Status", "Idle", null, { readonly: true, width: 300 });
-
     this.inputDisplay = this.addWidget("text", "Input HSV", "H: 0, S: 0%, B: 0", null, { readonly: true, width: 420 });
     this.inputDisplay.tooltip = "Incoming HSV values: Hue (0-360), Saturation (0-100%), Brightness (0-254)";
-
     const slidersConfig = [
       { name: "Hue Shift", property: "hueShift", min: -360, max: 360, step: 1, default: 0, tooltip: "Shift the hue in degrees (-360 to 360)." },
       { name: "Saturation", property: "saturationScale", min: 0, max: 1, step: 0.01, default: 1.0, tooltip: "Set the saturation (0 to 1)." },
       { name: "Brightness", property: "brightnessScale", min: 0, max: 254, step: 1, default: 254, tooltip: "Set the brightness (0 to 254)." }
     ];
-
     slidersConfig.forEach(({ name, property, min, max, step, default: defaultValue, tooltip }) => {
       const slider = this.addWidget("slider", name, this.properties[property], (value) => {
-        this.properties[property] = Number(value.toFixed(2));
+        this.properties[property] = Number(value.toFixed(property === "saturationScale" ? 2 : 0));
         this.numberInputs[property].value = this.properties[property];
         this.updateColorSwatch();
         this.updateOutputDisplay();
+        this.setDirtyCanvas(true);
       }, { min, max, step, width: 300 });
       slider.tooltip = tooltip;
       this.sliders[property] = slider;
-
       const numberInput = this.addWidget("number", "", this.properties[property], (value) => {
         this.properties[property] = Math.max(min, Math.min(max, value));
         this.sliders[property].value = this.properties[property];
         this.updateColorSwatch();
         this.updateOutputDisplay();
+        this.setDirtyCanvas(true);
       }, { min, max, step, width: 80 });
       this.numberInputs[property] = numberInput;
-
       this.addWidget("button", "Reset", "R", () => {
         this.properties[property] = defaultValue;
         this.sliders[property].value = defaultValue;
@@ -153,10 +179,8 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
         this.setDirtyCanvas(true);
       }, { width: 40 });
     });
-
     this.outputDisplay = this.addWidget("text", "Output HSV", "H: 0, S: 0%, B: 0", null, { readonly: true, width: 420 });
     this.outputDisplay.tooltip = "Modified HSV values: Hue (0-360), Saturation (0-100%), Brightness (0-254)";
-
     this.addWidget("button", "Double Brightness", "2x B", () => {
       this.properties.brightnessScale = Math.min(254, this.properties.brightnessScale * 2);
       this.sliders.brightnessScale.value = this.properties.brightnessScale;
@@ -165,7 +189,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       this.updateOutputDisplay();
       this.setDirtyCanvas(true);
     }, { width: 100 });
-
     this.addWidget("button", "Invert Hue", "Inv H", () => {
       this.properties.hueShift = (this.properties.lastHueShift + 180) % 360;
       this.properties.lastHueShift = this.properties.hueShift;
@@ -175,7 +198,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       this.updateOutputDisplay();
       this.setDirtyCanvas(true);
     }, { width: 100 });
-
     this.presetCombo = this.addWidget("combo", "Presets", "None", (value) => {
       const index = this.properties.presets.findIndex(p => p.name === value);
       if (index >= 0) {
@@ -194,7 +216,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
         this.setDirtyCanvas(true);
       }
     }, { values: () => ["None", ...this.properties.presets.map(p => p.name)], width: 300 });
-
     this.addWidget("button", "Save Preset", "Save", () => {
       const name = prompt("Enter preset name:");
       if (name) {
@@ -208,53 +229,37 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
         this.setDirtyCanvas(true);
       }
     }, { width: 100 });
-
     this.lockToggle = this.addWidget("toggle", "Lock Sliders", false, (value) => {
       Object.values(this.sliders).forEach(slider => slider.disabled = value);
       Object.values(this.numberInputs).forEach(input => input.disabled = value);
     }, { width: 100 });
-
     this.updateSliderState();
   }
-
   setupInputsOutputs() {
     this.addInput("HSV In", "hsv_info");
     this.addInput("Enable", "boolean");
     this.addOutput("HSV Out", "hsv_info");
   }
-
   updateSliderState() {
     const disableSliders = this.properties.enabled && this.properties.selectedHsvBuffer && this.properties.autoDisableSliders;
     Object.values(this.sliders).forEach(slider => slider.disabled = disableSliders);
     Object.values(this.numberInputs).forEach(input => input.disabled = disableSliders);
     this.setDirtyCanvas(true);
   }
-
-  updateColorSwatch() {
-    if (!this.properties.lastHsvInfo) {
-      this.boxcolor = this.properties.enabled ? 'black' : this.defaultTitleColor;
-      this.properties.targetDotColor = this.boxcolor;
-      this.transition = { active: false };
+  updateColorSwatch(hsvOverride = null) {
+    const hsv = hsvOverride || this.properties.lastHsvInfo;
+    if (!hsv) {
+      this.boxcolor = "#333333";
+      this.properties.targetDotColor = null;
       return;
     }
-
-    if (!this.properties.enabled) {
-      this.boxcolor = this.defaultTitleColor;
-      this.properties.targetDotColor = this.boxcolor;
-      this.transition = { active: false };
-      return;
-    }
-
-    const modifiedHSV = this.modifyHSV(this.properties.lastHsvInfo);
-    const rgb = this.hsvToRgb(modifiedHSV.hue, modifiedHSV.saturation, modifiedHSV.brightness / 254);
+    const displayHsv = this.properties.enabled ? this.modifyHSV(hsv) : hsv;
+    const rgb = this.hsvToRgb(displayHsv.hue, displayHsv.saturation, displayHsv.brightness / 254);
     const newColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-
     this.properties.targetDotColor = newColor;
     this.boxcolor = newColor;
-    this.transition = { active: false };
     this.setDirtyCanvas(true);
   }
-
   updateInputDisplay(hsv) {
     if (!hsv) {
       this.inputDisplay.value = "H: 0, S: 0%, B: 0";
@@ -265,7 +270,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
     const bri = Math.round(hsv.brightness);
     this.inputDisplay.value = `H: ${hue}, S: ${sat}%, B: ${bri}`;
   }
-
   updateOutputDisplay() {
     if (!this.properties.lastHsvInfo) {
       this.outputDisplay.value = "H: 0, S: 0%, B: 0";
@@ -277,10 +281,8 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
     const briOut = Math.round(modifiedHSV.brightness);
     this.outputDisplay.value = `H: ${hueOut}, S: ${satOut}%, B: ${briOut}`;
   }
-
   modifyHSV(hsv) {
     if (!hsv) return { hue: 0, saturation: 0, brightness: 0 };
-
     if (this.properties.enabled && this.properties.selectedHsvBuffer && !this.properties.useLegacyHsvBufferBehavior) {
       const buffer = SenderNode.sharedBuffer || {};
       const hsvBufferData = buffer[this.properties.selectedHsvBuffer];
@@ -292,7 +294,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
         };
       }
     }
-
     if (this.properties.enabled) {
       let hue = (hsv.hue * 360 + this.properties.hueShift) % 360;
       if (hue < 0) hue += 360;
@@ -300,30 +301,11 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       const brightness = Math.max(0, Math.min(254, this.properties.brightnessScale));
       return { hue: hue / 360, saturation, brightness };
     }
-
     return hsv;
   }
-
-  hsvToRgb(h, s, v) {
-    const i = Math.floor(h * 6);
-    const f = h * 6 - i;
-    const p = v * (1 - s);
-    const q = v * (1 - f * s);
-    const t = v * (1 - (1 - f) * s);
-
-    const mappings = [
-      [v, t, p], [q, v, p], [p, v, t],
-      [p, q, v], [t, p, v], [v, p, q]
-    ];
-
-    const [r, g, b] = mappings[i % 6];
-    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-  }
-
   onExecute() {
     const previousEnabled = this.properties.enabled;
-    const previousHsvBuffer = this.properties.selectedHsvBuffer; // Track previous buffer
-
+    const previousHsvBuffer = this.properties.selectedHsvBuffer;
     const enableInput = this.getInputData(1);
     let enableSource = "Toggle";
     if (enableInput !== undefined) {
@@ -334,7 +316,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       const bufferName = this.properties.selectedBuffer;
       const buffer = SenderNode.sharedBuffer || {};
       const bufferValue = buffer[bufferName];
-
       if (bufferName && bufferValue !== undefined && bufferValue !== null) {
         if (!bufferName.startsWith("[Trigger]")) {
           this.properties.selectedBuffer = null;
@@ -356,7 +337,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
         }
       }
     }
-
     if (enableSource === "Input") {
       this.statusWidget.value = `Enabled via Input (${this.properties.enabled ? "Enabled" : "Disabled"})`;
     } else if (enableSource === "Buffer") {
@@ -365,21 +345,68 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
     } else {
       this.statusWidget.value = `Toggle (${this.properties.enabled ? "Enabled" : "Disabled"})`;
     }
-
     if (previousEnabled !== this.properties.enabled) {
       this.title_color = this.properties.enabled ? this.enabledTitleColor : this.defaultTitleColor;
-      this.updateColorSwatch();
       this.updateSliderState();
       this.setDirtyCanvas(true);
     }
-
-    // Update title if selectedHsvBuffer changed
     if (previousHsvBuffer !== this.properties.selectedHsvBuffer) {
       this.title = this.properties.selectedHsvBuffer || "HSV Modifier";
       this.setDirtyCanvas(true);
-      console.log(`[HSVModifierNode] Title updated to: ${this.title}`);
     }
 
+    // AUTO-CONVERT RGB INPUT (the real bug fix!)
+    const rawInput = this.getInputData(0);
+    if (rawInput !== undefined) {
+      if (rawInput.r !== undefined || rawInput.red !== undefined || Array.isArray(rawInput)) {
+        const rgb = Array.isArray(rawInput) 
+          ? rawInput 
+          : [rawInput.r ?? rawInput.red ?? 0, rawInput.g ?? rawInput.green ?? 0, rawInput.b ?? rawInput.blue ?? 0];
+        const hsv = this.rgbToHsv(rgb[0], rgb[1], rgb[2]);
+        this.properties.lastHsvInfo = { hue: hsv.hue, saturation: hsv.saturation, brightness: hsv.brightness };
+      } else {
+        this.properties.lastHsvInfo = rawInput;
+      }
+    }
+
+    if (this.properties.lastHsvInfo) {
+      this.updateInputDisplay(this.properties.lastHsvInfo);
+    }
+
+    // DISABLED → FULL PASSTHROUGH
+    if (!this.properties.enabled) {
+      this.setOutputData(0, this.properties.lastHsvInfo);
+      this.updateOutputDisplay();
+      this.updateColorSwatch(this.properties.lastHsvInfo);
+      this.statusWidget.value += " → Passthrough";
+      this.boxcolor = this.defaultTitleColor;
+      this.setDirtyCanvas(true);
+      return;
+    }
+
+    // ENABLED → normal operation
+    let hsvInput = this.properties.lastHsvInfo;
+
+    if (this.properties.selectedHsvBuffer) {
+      const buffer = SenderNode.sharedBuffer || {};
+      const hsvBufferData = buffer[this.properties.selectedHsvBuffer];
+      if (hsvBufferData && typeof hsvBufferData === 'object' && 'hue' in hsvBufferData && 'saturation' in hsvBufferData && 'brightness' in hsvBufferData) {
+        hsvInput = hsvBufferData;
+        this.statusWidget.value += ` (Using HSV Buffer: ${this.properties.selectedHsvBuffer})`;
+      } else {
+        this.statusWidget.value += ` (HSV Buffer '${this.properties.selectedHsvBuffer}' invalid)`;
+      }
+    }
+
+    if (hsvInput) {
+      this.properties.lastHsvInfo = hsvInput;
+      const outputHSV = this.modifyHSV(hsvInput);
+      this.setOutputData(0, outputHSV);
+      this.updateOutputDisplay();
+      this.updateColorSwatch(outputHSV);
+    }
+
+    // Pulsing effect when enabled
     if (this.properties.enabled && this.properties.targetDotColor) {
       const now = Date.now();
       const pulse = (Math.sin(now / 500) + 1) / 2;
@@ -396,41 +423,12 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       this.boxcolor = this.defaultTitleColor;
       this.setDirtyCanvas(true);
     }
-
-    let hsvInput = this.getInputData(0);
-    if (this.properties.enabled && this.properties.selectedHsvBuffer) {
-      const buffer = SenderNode.sharedBuffer || {};
-      const hsvBufferData = buffer[this.properties.selectedHsvBuffer];
-      if (hsvBufferData && typeof hsvBufferData === 'object' && 'hue' in hsvBufferData && 'saturation' in hsvBufferData && 'brightness' in hsvBufferData) {
-        hsvInput = hsvBufferData;
-        this.statusWidget.value += ` (Using HSV Buffer: ${this.properties.selectedHsvBuffer})`;
-      } else {
-        this.statusWidget.value += ` (HSV Buffer '${this.properties.selectedHsvBuffer}' not found or invalid)`;
-      }
-    }
-
-    if (hsvInput) {
-      this.properties.lastHsvInfo = hsvInput;
-      this.updateInputDisplay(hsvInput);
-      const outputHSV = this.properties.enabled ? this.modifyHSV(hsvInput) : hsvInput;
-      this.setOutputData(0, outputHSV);
-      this.updateColorSwatch();
-      this.updateOutputDisplay();
-    } else if (this.properties.lastHsvInfo) {
-      this.updateInputDisplay(this.properties.lastHsvInfo);
-      const outputHSV = this.properties.enabled ? this.modifyHSV(this.properties.lastHsvInfo) : this.properties.lastHsvInfo;
-      this.setOutputData(0, outputHSV);
-      this.updateOutputDisplay();
-    }
   }
-
   onDrawForeground(ctx) {
     if (this.flags.collapsed) return;
-
     const widgetAreaHeight = this.widgets.length * LiteGraph.NODE_WIDGET_HEIGHT;
     const reservedTop = 20;
     const reservedBottom = 210;
-
     const hueBarY = widgetAreaHeight + reservedTop + 105;
     const hueBarHeight = 20;
     const gradient = ctx.createLinearGradient(10, 0, this.size[0] - 20, 0);
@@ -442,7 +440,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
     ctx.fillRect(10, hueBarY, this.size[0] - 20, hueBarHeight);
     ctx.strokeStyle = "#FFFFFF";
     ctx.strokeRect(10, hueBarY, this.size[0] - 20, hueBarHeight);
-
     if (this.properties.lastHsvInfo) {
       const hue = (this.properties.lastHsvInfo.hue * 360 + (this.properties.enabled ? this.properties.hueShift : 0)) % 360;
       const huePos = 10 + ((hue < 0 ? hue + 360 : hue) / 360) * (this.size[0] - 20);
@@ -453,7 +450,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       ctx.lineTo(huePos + 5, hueBarY);
       ctx.fill();
     }
-
     const swatchHeight = 20;
     const inputSwatchY = widgetAreaHeight + reservedTop + 135;
     if (this.properties.lastHsvInfo) {
@@ -466,7 +462,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       ctx.font = "12px Arial";
       ctx.fillText("Input Color", 15, inputSwatchY + 15);
     }
-
     const modSwatchY = widgetAreaHeight + reservedTop + 165;
     if (this.properties.lastHsvInfo) {
       const modifiedHSV = this.properties.enabled ? this.modifyHSV(this.properties.lastHsvInfo) : this.properties.lastHsvInfo;
@@ -488,7 +483,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       ctx.fillText("Modified Color", 15, modSwatchY + 15);
     }
   }
-
   updateSize() {
     const widgetHeight = this.widgets.length * LiteGraph.NODE_WIDGET_HEIGHT;
     const reservedTop = 20;
@@ -497,11 +491,9 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
     this.size[0] = Math.max(this.size[0], 450);
     this.setDirtyCanvas(true);
   }
-
   onResize() {
     this.updateSize();
   }
-
   serialize() {
     const data = super.serialize();
     data.version = "2.0";
@@ -521,10 +513,9 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       autoDisableSliders: this.properties.autoDisableSliders
     };
     data.title_color = this.title_color;
-    data.title = this.title; // Ensure title is saved
+    data.title = this.title;
     return data;
   }
-
   configure(data) {
     super.configure(data);
     if (data.properties) {
@@ -552,7 +543,6 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
       this.numberInputs.saturationScale.value = this.properties.saturationScale;
       this.numberInputs.brightnessScale.value = this.properties.brightnessScale;
       this.presetCombo.options.values = ["None", ...this.properties.presets.map(p => p.name)];
-      // Set title based on selectedHsvBuffer
       this.title = this.properties.selectedHsvBuffer || "HSV Modifier";
       this.updateColorSwatch();
       this.updateOutputDisplay();
@@ -562,5 +552,4 @@ class HSVModifierNode extends LiteGraph.LGraphNode {
     this.setDirtyCanvas(true);
   }
 }
-
 LiteGraph.registerNodeType("CC_Control_Nodes/hsv_modifier", HSVModifierNode);
