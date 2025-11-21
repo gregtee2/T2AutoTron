@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LiteGraph Example Integration</title>
+    <link rel="stylesheet" type="text/css" href="css/litegraph.css">
+    <link rel="stylesheet" type="text/css" href="css/litegraph-editor.css">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        #main {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        #lightList {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            width: 200px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: none; /* Initially hidden */
+            z-index: 5;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            display: flex;
+            gap: 10px; /* Space between buttons */
+        }
+        #controls button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        #controls button:hover {
+            background-color: #45a049;
+        }
+        #fileInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="main">
+        <canvas id="graphcanvas"></canvas>
+        <div id="lightList"></div>
+        <div id="controls">
+            <button id="fetchGlobalsButton">Fetch Globals</button>
+            <button id="resetGlobalsBtn">Reset Globals</button>
+            <button id="saveGraphBtn">Save Graph</button>
+            <button id="loadGraphBtn">Load Graph</button>
+            <input type="file" id="fileInput" accept=".json">
+        </div>
+        <div id="globalStatus" style="margin-top: 20px; color: white;">
+            <!-- Status of the IP and API key will be displayed here -->
+            <div id="bridgeIP"></div>
+            <div id="apiKey"></div>
+        </div>
+    </div>
+
+    <div id="manualIpEntry" style="display:none;">
+        <label for="bridgeIpField">Enter Hue Bridge IP Address:</label>
+        <input type="text" id="bridgeIpField" placeholder="192.168.x.x">
+        <button id="submitIpButton">Submit IP</button>
+    </div>
+
+    <div id="apiKeyRetrieval" style="display:none;">
+        <button id="apiKeyButton">Press after Hue Bridge button</button>
+        <input type="hidden" id="apiKeyField">
+    </div>
+
+    <!-- Ensure globalManager.js is loaded before initializeGraph.js -->
+    <script src="globals/globalManager.js"></script>
+    <script src="globals/fetchGlobals.js"></script>
+    <script src="globals/globals.js"></script>
+    <script src="js/initializeGraph.js"></script>
+    <script src="js/litegraph.js"></script>
+    <script src="js/litegraph-editor.js"></script>
+    <script src="js/defaults.js"></script>
+    <!--script src="custom_nodes/hue_light_node.js"></script-->
+    <script src="custom_nodes/pushbutton_node.js"></script>
+    <script src="custom_nodes/execute_node.js"></script>
+    <script src="custom_nodes/hsv_control_node.js"></script>
+    <!---script src="custom_nodes/insteon/InsteonDeviceNode.js"></script--->
+    <script src="custom_nodes/HueLightNodePlus.js"></script>
+    <script src="custom_nodes/OffsetValueNode.js"></script>
+    <script src="custom_nodes/HueRotationNode.js"></script>
+    <script src="custom_nodes/FixedLightMergeNode.js"></script>
+    <script src="custom_nodes/HueBridgeConfigNode.js"></script>
+
+    <script>
+        document.getElementById("fetchGlobalsButton").addEventListener("click", function() {
+            initializeGlobals();
+        });
+
+        document.getElementById("resetGlobalsBtn").addEventListener("click", function() {
+            resetGlobals();
+        });
+
+        function toggleLightList() {
+            const lightList = document.getElementById('lightList');
+            if (lightList.style.display === 'none') {
+                fetchLights();
+            } else {
+                lightList.style.display = 'none';
+            }
+        }
+
+        function fetchLights() {
+            fetch('http://localhost:5000/api/lights')
+                .then(response => response.json())
+                .then(data => {
+                    const lightList = document.getElementById('lightList');
+                    lightList.innerHTML = '';
+                    for (const [name, info] of Object.entries(data)) {
+                        const button = document.createElement('button');
+                        button.innerText = name;
+                        button.onclick = () => addLightNode(info.id, name);
+                        lightList.appendChild(button);
+                    }
+                    lightList.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching lights:', error);
+                });
+        }
+
+        function addLightNode(lightId, lightName) {
+            const node = LiteGraph.createNode('custom/hue_light');
+            console.log('Node created:', node);
+            if (!node) {
+                console.error("Failed to create node 'custom/hue_light'");
+                return;
+            }
+            node.pos = [Math.random() * 800, Math.random() * 600];
+            node.properties.light_id = lightId;
+            node.title = lightName;
+            graph.add(node);
+        }
+
+        // Client-side save functionality
+        document.getElementById("saveGraphBtn").addEventListener("click", function () {
+            const graphData = JSON.stringify(graph.serialize());
+
+            const blob = new Blob([graphData], { type: 'application/json' });
+            const defaultFilename = `graph_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = defaultFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            console.log("Graph saved successfully on client-side.");
+        });
+
+        // Client-side load functionality
+        document.getElementById("loadGraphBtn").addEventListener("click", function () {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const graphData = e.target.result;
+                    try {
+                        graph.clear();
+                        graph.configure(JSON.parse(graphData));
+                        console.log("Graph loaded successfully from file");
+                    } catch (err) {
+                        console.error("Error loading graph from file:", err);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+    </script>
+<!-- Other HTML content -->
+
+<!-- Place before closing body tag -->
+<script src="globals/fetchGlobals.js"></script>
+</body>
+</html>
+

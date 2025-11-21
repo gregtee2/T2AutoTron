@@ -1,0 +1,27 @@
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore user-specific files
+*.log
+*.tmp
+
+# Ignore Windows system files
+Desktop.ini
+*.lnk
+
+# Ignore application data directories
+AppData/
+Application Data/
+Cookies/
+Local Settings/
+My Documents/
+NetHood/
+PrintHood/
+Recent/
+SendTo/
+Start Menu/
+Templates/
+
+# Ignore other unwanted directories and files
+node_modules/
