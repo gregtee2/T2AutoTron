@@ -119,7 +119,9 @@ app.get('/api/custom-nodes', async (req, res) => {
         const fullPath = path.join(dir, entry.name);
         const relativePath = path.relative(baseDir, fullPath).replace(/\\/g, '/');
         if (entry.isDirectory()) {
-          results = results.concat(await getJsFiles(fullPath, baseDir));
+          if (entry.name !== 'deprecated') {
+            results = results.concat(await getJsFiles(fullPath, baseDir));
+          }
         } else if (entry.isFile() && entry.name.endsWith('.js')) {
           results.push(`custom_nodes/${relativePath}`);
         }

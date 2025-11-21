@@ -1,7 +1,11 @@
 export async function loadAllCustomNodes() {
   try {
     const resp = await fetch('./nodes-manifest.json');
-    const files = await resp.json();
+    const text = await resp.text();
+
+    // Strip comments (// and /* */) before parsing
+    const json = text.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+    const files = JSON.parse(json);
 
     console.log(`📦 Loading ${files.length} custom nodes...`);
 
