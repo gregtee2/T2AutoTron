@@ -2,7 +2,12 @@
 node_modules/
 
 # Environment variables
+# Environment variables
 .env
+.env.bak
+.env.local
+.env.*
+
 
 # Logs
 logs
