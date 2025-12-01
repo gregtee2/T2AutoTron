@@ -1,0 +1,144 @@
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #1e1e1e;
+  /* Dark background for editor */
+}
+
+.app-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.connection-status {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-family: sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 1000;
+  /* Ensure it's above the editor */
+  pointer-events: none;
+  /* Let clicks pass through */
+}
+
+.connection-status.connected {
+  background-color: rgba(0, 255, 0, 0.2);
+  color: #00ff00;
+  border: 1px solid #00ff00;
+}
+
+.connection-status.disconnected {
+  background-color: rgba(255, 0, 0, 0.2);
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+/* FORCE NODE LAYOUT ORDER */
+/* Target the Rete.js node structure */
+[data-testid="node"] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Title at the very top */
+[data-testid="node"]>.title {
+  order: 0;
+}
+
+/* Inputs (sockets) at the top, below title */
+[data-testid="node"]>.input-socket,
+[data-testid="node"]>[data-testid="input"] {
+  order: 1 !important;
+}
+
+/* Controls in the middle */
+[data-testid="node"]>.control,
+[data-testid="node"]>[data-testid="control"] {
+  order: 2 !important;
+}
+
+/* Outputs at the bottom */
+[data-testid="node"]>.output-socket,
+[data-testid="node"]>[data-testid="output"] {
+  order: 3 !important;
+}
+
+/* Rete Context Menu */
+.rete-context-menu,
+.context-menu,
+[data-testid="context-menu"] {
+  background: rgba(15, 20, 25, 0.95) !important;
+  border: 1px solid #00f3ff !important;
+  border-radius: 6px !important;
+  padding: 5px 0 !important;
+  width: 180px !important;
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.2) !important;
+  z-index: 9999 !important;
+  position: absolute !important;
+  overflow: hidden !important;
+  display: block !important;
+  /* Ensure it's not hidden */
+}
+
+.rete-context-menu .item,
+.context-menu .item,
+[data-testid="context-menu"] .item {
+  padding: 8px 15px !important;
+  color: #e0f7fa !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  font-family: 'Segoe UI', sans-serif !important;
+  transition: all 0.2s !important;
+  border-bottom: 1px solid rgba(0, 243, 255, 0.1) !important;
+  display: block !important;
+}
+
+.rete-context-menu .item:last-child,
+.context-menu .item:last-child,
+[data-testid="context-menu"] .item:last-child {
+  border-bottom: none !important;
+}
+
+.rete-context-menu .item:hover,
+.context-menu .item:hover,
+[data-testid="context-menu"] .item:hover {
+  background: rgba(0, 243, 255, 0.15) !important;
+  color: #fff !important;
+  padding-left: 20px !important;
+}
+
+.rete-context-menu .search,
+.context-menu .search,
+[data-testid="context-menu"] .search {
+  border-bottom: 1px solid rgba(0, 243, 255, 0.3) !important;
+  margin-bottom: 5px !important;
+  display: block !important;
+}
+
+.rete-context-menu .search input,
+.context-menu .search input,
+[data-testid="context-menu"] .search input {
+  background: transparent !important;
+  border: none !important;
+  color: #00f3ff !important;
+  padding: 8px 15px !important;
+  width: 100% !important;
+  outline: none !important;
+  font-family: 'Segoe UI', sans-serif !important;
+}

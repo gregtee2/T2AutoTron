@@ -1,0 +1,338 @@
+require('dotenv').config({ path: './.env' });
+console.log('Starting server.js...');
+console.log('OPENWEATHERMAP_API_KEY:', process.env.OPENWEATHERMAP_API_KEY);
+console.log('HA_TOKEN:', process.env.HA_TOKEN ? 'Loaded' : 'Not set');
+
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const figlet = require('figlet');
+const chalk = require('chalk');
+const config = require('./config/env');
+const { connectMongoDB } = require('./config/database');
+const logger = require('./logging/logger');
+const DeviceService = require('./devices/services/deviceService');
+const { setupNotifications } = require('./notifications/notificationService');
+const { fetchWeatherData } = require('./weather/weatherService');
+const { fetchForecastData } = require('./weather/forecastService');
+const { normalizeState } = require('./utils/normalizeState');
+const { loadManagers, loadRoutes } = require('./devices/pluginLoader');
+const deviceManagers = require('./devices/managers/deviceManagers');
+const mongoose = require('mongoose');
+const fs = require('fs').promises;
+const path = require('path');
+
+
+console.log('Weather imports:', {
+  fetchWeatherData: typeof fetchWeatherData,
+  fetchForecastData: typeof fetchForecastData
+});
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: ['http://localhost:3000', 'http://localhost:8080', 'file://', 'http://localhost:5173'],
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  },
+  maxHttpBufferSize: 1e8,
+  pingTimeout: 30000,
+  pingInterval: 10000,
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
+});
+
+// Log Socket.IO errors
+io.on('error', (error) => {
+  logger.log('Socket.IO server error: ' + error.message, 'error', false, 'socket:error', { stack: error.stack });
+  console.log('Socket.IO server error:', error.message);
+});
+
+// Log client connections/disconnections
+io.on('connection', (socket) => {
+  logger.log(`Socket.IO client connected: ${socket.id}`, 'info', false, 'socket:connect');
+  console.log(`Socket.IO client connected: ${socket.id}`);
+
+  // === CLIENT LOGGING ===
+  socket.on('log', ({ message, level, timestamp }) => {
+    logger.log(message, level, false, 'node:log', { timestamp });
+  });
+
+  socket.on('subscribe-logs', () => {
+    const logListener = (message, level) => {
+      socket.emit('log', { message, level, timestamp: new Date() });
+    };
+    logger.on('log', logListener);
+    socket.on('disconnect', () => logger.off('log', logListener));
+  });
+
+  // === HA TOKEN FROM CLIENT ===
+  let clientHAToken = null;
+  socket.on('set-ha-token', (token) => {
+    clientHAToken = token;
+    logger.log('HA token received from client', 'info');
+  });
+
+  // === 5-DAY FORECAST REQUEST ===
+  socket.on('request-forecast', async () => {
+    try {
+      const forecast = await fetchForecastData(true, clientHAToken);
+      if (Array.isArray(forecast) && forecast.length > 0) {
+        socket.emit('forecast-update', forecast);
+        logger.log('Sent forecast to client', 'info');
+      } else {
+        logger.log('No forecast data to send', 'warn');
+      }
+    } catch (err) {
+      logger.log(`Forecast request failed: ${err.message}`, 'error');
+      console.error('Forecast request failed:', err);
+    }
+  });
+
+  // === DISCONNECT ===
+  socket.on('disconnect', (reason) => {
+    logger.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`, 'warn', false, 'socket:disconnect');
+    console.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`);
+  });
+});
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'frontend')));
+app.use('/custom_nodes', express.static(path.join(__dirname, 'frontend/custom_nodes')));
+
+
+// Sandbox route for testing refactored index.html
+app.get('/sandbox', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'Index.html_Proposal', 'Index.html'));
+});
+
+// Endpoint to list custom node files
+app.get('/api/custom-nodes', async (req, res) => {
+  try {
+    const customNodesDir = path.join(__dirname, 'frontend/custom_nodes');
+    async function getJsFiles(dir, baseDir = customNodesDir) {
+      let results = [];
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relativePath = path.relative(baseDir, fullPath).replace(/\\/g, '/');
+        if (entry.isDirectory()) {
+          if (entry.name !== 'deprecated') {
+            results = results.concat(await getJsFiles(fullPath, baseDir));
+          }
+        } else if (entry.isFile() && entry.name.endsWith('.js')) {
+          results.push(`custom_nodes/${relativePath}`);
+        }
+      }
+      return results;
+    }
+    const jsFiles = await getJsFiles(customNodesDir);
+    res.json(jsFiles);
+  } catch (error) {
+    logger.log(`Failed to list custom nodes: ${error.message}`, 'error', false, 'custom-nodes:error', { stack: error.stack });
+    console.error(`Failed to list custom nodes: ${error.message}`);
+    res.status(500).json({ error: 'Failed to list custom node files' });
+  }
+});
+
+// New endpoint to fetch HA token (securely)
+app.get('/api/ha-token', (req, res) => {
+  try {
+    const token = process.env.HA_TOKEN || '';
+    res.json({ success: true, token: token ? '********' : '' });
+  } catch (error) {
+    logger.log(`Failed to fetch HA token: ${error.message}`, 'error', false, 'ha-token:fetch');
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// New endpoint to fetch Home Assistant config
+app.get('/api/config', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '') || process.env.HA_TOKEN;
+    if (!token) throw new Error('No Home Assistant token provided');
+    const response = await fetch('http://localhost:8123/api/config', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const config = await response.json();
+    res.json({
+      success: true,
+      timezone: config.time_zone,
+      latitude: config.latitude,
+      longitude: config.longitude
+    });
+    logger.log('Fetched HA config', 'info', false, 'config:fetch');
+  } catch (error) {
+    logger.log(`Failed to fetch HA config: ${error.message}`, 'error', false, 'config:fetch');
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// New endpoint to fetch sunrise/sunset
+app.get('/api/sun/times', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '') || process.env.HA_TOKEN;
+    if (!token) throw new Error('No Home Assistant token provided');
+    const sunResponse = await fetch('http://localhost:8123/api/states/sun.sun', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!sunResponse.ok) throw new Error(`HTTP ${sunResponse.status}`);
+    const sun = await sunResponse.json();
+    const configResponse = await fetch('http://localhost:8123/api/config', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!configResponse.ok) throw new Error(`HTTP ${configResponse.status}`);
+    const config = await configResponse.json();
+    res.json({
+      success: true,
+      sunrise: sun.attributes.next_rising,
+      sunset: sun.attributes.next_setting,
+      timezone: config.time_zone || req.query.timezone || 'America/Los_Angeles',
+      latitude: config.latitude || req.query.latitude || 34.0522,
+      longitude: config.longitude || req.query.longitude || -118.2437,
+      city: req.query.city || config.location_name || 'Los Angeles'
+    });
+    logger.log(`Fetched sun times for ${config.location_name || 'Los Angeles'}`, 'info', false, 'sun:fetch');
+  } catch (error) {
+    logger.log(`Failed to fetch sun times: ${error.message}`, 'error', false, 'sun:fetch');
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.use(express.json());
+app.use(require('./api/middleware/csp'));
+app.use(require('./config/cors'));
+app.use(require('./api/middleware/errorHandler'));
+
+// Initialize DeviceService
+console.log('Initializing DeviceService...');
+async function initializeDeviceService() {
+  const managers = await loadManagers();
+  const deviceService = new DeviceService(managers, {
+    controlDeviceBase: deviceManagers.controlDevice,
+    initializeDevices: deviceManagers.initializeDevices
+  });
+  console.log('DeviceService initialized with managers:', Object.keys(managers));
+  return deviceService;
+}
+
+// Load routes
+async function setupRoutes(deviceService) {
+  await loadRoutes(app, io, deviceService);
+  console.log('Routes set up successfully');
+}
+
+async function displayBanner() {
+  console.log('Displaying banner...');
+  const banner = figlet.textSync('T2Automations', { font: 'Slant' });
+  console.log(chalk.green(banner));
+  console.log(chalk.cyan('Welcome to T2Automations - With Shelly Support and Energy Metering'));
+  await logger.log('Banner displayed', 'info', false, 'banner:display');
+  console.log('Banner displayed');
+}
+
+async function initializeModules(deviceService) {
+  console.log('Setting up notifications...');
+  const notificationEmitter = await setupNotifications(io);
+  io.sockets.notificationEmitter = notificationEmitter;
+  console.log('Notifications set up');
+
+  console.log('Initializing devices...');
+  try {
+    const devices = await deviceService.initialize(io, notificationEmitter, logger.log.bind(logger));
+    deviceService.setIo(io);
+    console.log(`Initialized devices: ${Object.keys(devices).length} types`, devices);
+  } catch (error) {
+    console.error('Failed to initialize devices:', error);
+    logger.log(`Failed to initialize devices: ${error.message}`, 'error', false, 'devices:init:error', { stack: error.stack });
+  }
+
+  console.log('Fetching initial weather data...');
+  const initialWeather = await fetchWeatherData(true);
+  console.log('Initial weather data:', initialWeather);
+
+  console.log('Fetching initial forecast data...');
+  const initialForecast = await fetchForecastData(true);
+  console.log('Initial forecast data:', initialForecast);
+
+  if (initialWeather) {
+    io.emit('weather-update', initialWeather);
+    console.log('Emitted initial weather-update');
+    await logger.log('Emitted initial weather-update', 'info', false, 'weather-update:initial');
+  }
+
+  if (initialForecast) {
+    io.emit('forecast-update', initialForecast);
+    console.log('Emitted initial forecast-update');
+    await logger.log('Emitted initial forecast-update', 'info', false, 'forecast-update:initial');
+  }
+
+  console.log('Weather data fetched');
+
+  let lastWeatherDate = null;
+  let lastForecastDate = null;
+
+  setInterval(async () => {
+    console.log('Fetching periodic weather data...');
+    const updatedWeather = await fetchWeatherData(true);
+    console.log('Periodic weather data:', updatedWeather);
+
+    console.log('Fetching periodic forecast data...');
+    const updatedForecast = await fetchForecastData(true);
+    console.log('Periodic forecast data:', updatedForecast);
+
+    if (updatedWeather && (!lastWeatherDate || updatedWeather.date !== lastWeatherDate)) {
+      io.emit('weather-update', updatedWeather);
+      lastWeatherDate = updatedWeather.date;
+      console.log('Emitted periodic weather-update');
+      await logger.log('Emitted weather-update with new data', 'info', false, 'weather-update:periodic');
+    }
+
+    if (updatedForecast && updatedForecast.length > 0 && (!lastForecastDate || updatedForecast[0]?.date !== lastForecastDate)) {
+      io.emit('forecast-update', updatedForecast);
+      lastForecastDate = updatedForecast[0]?.date;
+      console.log('Emitted periodic forecast-update');
+      await logger.log('Emitted forecast-update with new data', 'info', false, 'forecast-update:periodic');
+    }
+  }, 3 * 60 * 1000);
+
+  io.on('connection', require('./api/socketHandlers')(deviceService));
+}
+
+async function startServer() {
+  try {
+    console.log('Starting server setup...');
+    await displayBanner();
+    console.log('Connecting to MongoDB...');
+    await connectMongoDB();
+    console.log('Initializing DeviceService...');
+    const deviceService = await initializeDeviceService();
+    console.log('Setting up routes...');
+    await setupRoutes(deviceService);
+    console.log('Initializing modules...');
+    await initializeModules(deviceService);
+    console.log('Starting server on port...');
+    const PORT = config.get('port');
+    server.listen(PORT, () => {
+      logger.log(`Server running on http://localhost:${PORT}`, 'info', false, 'server:start');
+      console.log(chalk.cyan(`Server is fully operational on port ${PORT} with Shelly, Osram SMART+, and Energy Metering`));
+    });
+  } catch (err) {
+    console.log('Startup error:', err);
+    logger.log(`Startup failed: ${err.message}`, 'error', false, 'error:startup');
+    process.exit(1);
+  }
+}
+
+startServer();
+
+process.on('SIGINT', async () => {
+  await logger.log('Shutting down server', 'info', false, 'shutdown');
+  server.close(async () => {
+    await mongoose.connection.close();
+    process.exit(0);
+  });
+});

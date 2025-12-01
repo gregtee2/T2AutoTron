@@ -1,0 +1,156 @@
+{
+  "name": "t2-autotron",
+  "version": "2.0.0",
+  "main": "src/frontend/electron/main.js",
+  "description": "Smart Lighting with Home Assistant Integration",
+  "author": "Your Name <your.email@example.com>",
+  "homepage": "https://github.com/gregtee2/T2AutoTron",
+  "scripts": {
+    "start": "node src/server.js",
+    "start:backend": "node src/server.js",
+    "start:electron": "electron src/frontend/electron/main.js",
+    "start:all": "concurrently \"npm run start:backend\" \"npm run start:electron\"",
+    "start:dev": "nodemon src/server.js",
+    "test": "jest",
+    "build": "electron-builder --linux deb --arm64",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "overrides": {
+    "shelly-driver": {
+      "axios": "1.9.0",
+      "bonjour": "npm:bonjour-service@1.2.1"
+    },
+    "axios-debug-log": {
+      "axios": "1.9.0"
+    },
+    "bonjour-service": {
+      "dns-packet": "^5.6.1"
+    },
+    "node-telegram-bot-api": {
+      "@cypress/request-promise": {
+        "request-promise-core": "^1.1.4",
+        "request": "^2.88.2",
+        "tough-cookie": "^4.1.3"
+      },
+      "request": "^2.88.2",
+      "tough-cookie": "^4.1.3"
+    }
+  },
+  "resolutions": {
+    "axios": "1.9.0",
+    "dns-packet": "5.6.1"
+  },
+  "build": {
+    "appId": "com.t2autotron.app",
+    "productName": "T2AutoTron",
+    "linux": {
+      "target": [
+        "deb"
+      ],
+      "category": "Utility",
+      "maintainer": "Your Name <your.email@example.com>",
+      "description": "Smart Lighting with Home Assistant Integration",
+      "executableName": "t2-autotron"
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "mongodb",
+        "python3",
+        "python3-pip",
+        "python3-venv",
+        "libffi-dev",
+        "libssl-dev",
+        "libjpeg-dev",
+        "zlib1g-dev",
+        "curl"
+      ],
+      "fpm": [
+        "--before-install",
+        "scripts/before-install.sh",
+        "--after-install",
+        "scripts/after-install.sh"
+      ]
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/{express,litegraph.js,mongoose,node-hue-api,shellies-ng,mqtt,socket.io,axios,dotenv,node-telegram-bot-api,bonjour-service}/**/*",
+      "!dist/",
+      "!scripts/*.sh",
+      "!test/",
+      "!__tests__/",
+      "!node_modules/{jest,webpack,babel*,zwave-js,@matter/*,concurrently,nodemon,supertest}*/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "src/server.js",
+        "to": "server.js"
+      },
+      {
+        "from": ".env",
+        "to": ".env"
+      }
+    ]
+  },
+  "dependencies": {
+    "axios": "1.9.0",
+    "body-parser": "^1.20.3",
+    "bonjour-service": "1.2.1",
+    "color-convert": "^2.0.1",
+    "convict": "^6.2.3",
+    "cors": "^2.8.5",
+    "dns-packet": "5.6.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-async-errors": "^3.1.1",
+    "figlet": "^1.8.0",
+    "helmet": "^6.1.6",
+    "hls.js": "^1.5.17",
+    "ioredis": "^5.3.2",
+    "joi": "^17.13.3",
+    "jquery": "^3.7.1",
+    "litegraph.js": "^0.7.18",
+    "luxon": "^3.5.0",
+    "mongoose": "^8.8.4",
+    "mqtt": "^5.10.4",
+    "multicast-dns": "^7.2.5",
+    "net": "^1.0.2",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0",
+    "node-hue-api": "^5.0.0-beta.16",
+    "node-telegram-bot-api": "^0.66.0",
+    "shellies-ng": "^1.5.1",
+    "shelly-driver": "^0.1.4",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "suncalc": "^1.9.0",
+    "toastr": "^2.1.4",
+    "tplink-smarthome-api": "^5.0.0",
+    "winston": "^3.17.0",
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "@electron/rebuild": "^3.6.0",
+    "babel-loader": "^9.2.1",
+    "concurrently": "^8.2.0",
+    "electron": "^33.2.1",
+    "electron-builder": "^24.13.3",
+    "eslint": "^8.38.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "express-rate-limit": "^5.5.1",
+    "jest": "^29.6.1",
+    "nodemon": "^3.1.9",
+    "prettier": "^3.0.0",
+    "supertest": "^6.3.3",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^5.1.4"
+  }
+}

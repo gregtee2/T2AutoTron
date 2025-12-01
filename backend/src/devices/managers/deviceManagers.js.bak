@@ -1,0 +1,142 @@
+const logger = require('../../logging/logger');
+const hueManager = require('./hueManager');
+const { setupKasa, kasaManager } = require('./kasaManager');
+const shellyManager = require('./shellyManager');
+const homeAssistantManager = require('./homeAssistantManager');
+const homeAssistantMediaPlayerManager = require('./homeAssistantMediaPlayerManager');
+
+let cachedDevices = null;
+
+async function initializeDevices(io, notificationEmitter, wrappedLog = logger.log.bind(logger)) {
+  await wrappedLog('Initializing devices...', 'info', false, 'devices:init');
+
+  let hueDevices = [];
+  try {
+    hueDevices = await hueManager.setupHue(io, notificationEmitter) || [];
+    await wrappedLog(`Hue devices initialized: ${hueDevices.length}`, 'info', false, 'hue:initialized');
+  } catch (err) {
+    await wrappedLog(`Hue setup failed: ${err.message}`, 'error', true, 'error:hue:setup');
+  }
+
+  let kasaDevices = [];
+  try {
+    kasaDevices = await setupKasa(io, notificationEmitter, wrappedLog) || [];
+    await wrappedLog(`Kasa devices initialized: ${kasaDevices.length}`, 'info', false, 'kasa:initialized');
+  } catch (err) {
+    await wrappedLog(`Kasa setup failed: ${err.message}`, 'error', true, 'error:kasa:setup');
+  }
+
+  let shellyDevices = [];
+  try {
+    await wrappedLog('Setting up Shelly devices...', 'info', false, 'shelly:setup');
+    const shellyResult = await shellyManager.setupShelly(io, notificationEmitter, wrappedLog);
+    shellyDevices = shellyResult?.devices || [];
+    await wrappedLog(`Shelly setup complete: ${shellyDevices.length} devices`, 'info', false, 'shelly:initialized');
+  } catch (err) {
+    await wrappedLog(`Shelly setup failed: ${err.message}`, 'error', true, 'error:shelly:setup');
+  }
+
+  let haLightDevices = [];
+  try {
+    const allHaDevices = await homeAssistantManager.initialize(io, notificationEmitter, wrappedLog) || [];
+    haLightDevices = allHaDevices.filter(device => 
+      device.entity_id && device.entity_id.startsWith('light.')
+    );
+    await wrappedLog(
+      `HA light devices initialized: ${haLightDevices.length} light entities (filtered from ${allHaDevices.length} total entities)`,
+      'info',
+      false,
+      'ha:initialized'
+    );
+  } catch (err) {
+    await wrappedLog(`HA light setup failed: ${err.message}`, 'error', true, 'error:ha:setup');
+  }
+
+  let haMediaDevices = [];
+  try {
+    const allHaMediaDevices = await homeAssistantMediaPlayerManager.initialize(io, notificationEmitter, wrappedLog) || [];
+    haMediaDevices = allHaMediaDevices.filter(device => 
+      device.entity_id && device.entity_id.startsWith('media_player.') && device.attributes.device_class === 'receiver'
+    );
+    await wrappedLog(
+      `HA media player devices initialized: ${haMediaDevices.length} media player entities`,
+      'info',
+      false,
+      'ha_media:initialized'
+    );
+  } catch (err) {
+    await wrappedLog(`HA media player setup failed: ${err.message}`, 'error', true, 'error:ha_media:setup');
+  }
+
+  cachedDevices = {
+    hue: Array.isArray(hueDevices) ? hueDevices : [],
+    kasa: Array.isArray(kasaDevices) ? kasaDevices : [],
+    shelly: Array.isArray(shellyDevices) ? shellyDevices : [],
+    ha_light: Array.isArray(haLightDevices) ? haLightDevices : [],
+    ha_media: Array.isArray(haMediaDevices) ? haMediaDevices : []
+  };
+
+  await wrappedLog(
+    `Devices initialized: Hue=${cachedDevices.hue.length}, Kasa=${cachedDevices.kasa.length}, Shelly=${cachedDevices.shelly.length}, HA Light=${cachedDevices.ha_light.length}, HA Media=${cachedDevices.ha_media.length}`,
+    'info',
+    false,
+    'devices:initialized'
+  );
+  return cachedDevices;
+}
+
+async function controlDevice(deviceId, state, io) {
+  try {
+    if (deviceId.startsWith('shellyplus1-')) {
+      return await shellyManager.controlShellyDevice(deviceId, state);
+    } else if (deviceId.startsWith('kasa_')) {
+      return await kasaManager.controlKasaDevice(deviceId, state);
+    } else if (deviceId.startsWith('hue_')) {
+      return await hueManager.controlHueDevice(deviceId, state);
+    } else if (deviceId.startsWith('ha_') && deviceId.includes('media_player.')) {
+      return await homeAssistantMediaPlayerManager.controlDevice(deviceId, state);
+    } else if (deviceId.startsWith('ha_')) {
+      return await homeAssistantManager.controlDevice(deviceId, state);
+    } else {
+      throw new Error(`Unknown device vendor for ID: ${deviceId}`);
+    }
+  } catch (error) {
+    await logger.log(
+      `Error controlling device ${deviceId}: ${error.message}`,
+      'error',
+      true,
+      `error:control:${deviceId}`
+    );
+    return { success: false, error: error.message };
+  }
+}
+
+function getAllDevices() {
+  logger.log('Entering getAllDevices...', 'info', false, 'devices:getAll:start');
+  
+  const allDevices = {
+    hue: cachedDevices?.hue || hueManager.hueLights || [],
+    kasa: kasaManager.getDevices ? kasaManager.getDevices() : [],
+    shelly: cachedDevices?.shelly || (shellyManager.getShellyDevices ? shellyManager.getShellyDevices() : []),
+    ha_light: cachedDevices?.ha_light || (homeAssistantManager.getDevices ? homeAssistantManager.getDevices() : []),
+    ha_media: cachedDevices?.ha_media || (homeAssistantMediaPlayerManager.getDevices ? homeAssistantMediaPlayerManager.getDevices() : [])
+  };
+  
+  const sanitizedDevices = {
+    hue: Array.isArray(allDevices.hue) ? allDevices.hue : [],
+    kasa: Array.isArray(allDevices.kasa) ? allDevices.kasa : [],
+    shelly: Array.isArray(allDevices.shelly) ? allDevices.shelly : [],
+    ha_light: Array.isArray(allDevices.ha_light) ? allDevices.ha_light : [],
+    ha_media: Array.isArray(allDevices.ha_media) ? allDevices.ha_media : []
+  };
+  
+  logger.log(
+    `Returning devices: Hue=${sanitizedDevices.hue.length}, Kasa=${sanitizedDevices.kasa.length}, Shelly=${sanitizedDevices.shelly.length}, HA Light=${sanitizedDevices.ha_light.length}, HA Media=${sanitizedDevices.ha_media.length}`,
+    'info',
+    false,
+    'devices:getAll:complete'
+  );
+  return sanitizedDevices;
+}
+
+module.exports = { initializeDevices, controlDevice, getAllDevices };

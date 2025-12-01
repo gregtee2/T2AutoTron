@@ -1,0 +1,42 @@
+src/
+├── api/
+│   ├── routes/
+│   │   ├── hueRoutes.js          # Copy from your existing src/routes/hueRoutes.js
+│   │   ├── kasaRoutes.js         # Copy from src/routes/kasaRoutes.js
+│   │   ├── shellyRoutes.js       # Copy from src/routes/shellyRoutes.js
+│   │   ├── matterRoutes.js       # Copy from src/routes/matterRoutes.js
+│   │   └── deviceRoutes.js       # New: For /api/devices endpoint
+│   └── middleware/
+│       ├── errorHandler.js       # New: Centralized error handling
+│       └── csp.js                # New: CSP middleware
+├── devices/
+│   ├── managers/
+│   │   ├── hueManager.js         # Copy from src/hueManager.js
+│   │   ├── kasaManager.js        # Copy from src/kasaManager.js
+│   │   ├── shellyManager.js      # Copy from src/shellyManager.js
+│   │   └── homeAssistantManager.js # New: Extract HA logic
+│   ├── models/
+│   │   └── Device.js             # New: Optional device interface
+│   └── services/
+│       └── deviceService.js      # New: Abstracts device management
+├── logging/
+│   ├── logger.js                 # New: Simplified logger (or use Pino)
+│   ├── logWithTimestamp.js       # Copy from src/logger.js
+│   └── throttle.js               # New: Extracted throttle logic
+├── weather/
+│   ├── weatherService.js         # New: Weather fetching logic
+│   ├── locationService.js        # New: Location fetching logic
+│   └── forecastService.js        # New: Forecast fetching logic
+├── notifications/
+│   └── notificationService.js    # Copy from src/notificationService.js
+├── config/
+│   ├── env.js                    # New: Convict-based config
+│   ├── cors.js                   # New: CORS settings
+│   └── database.js               # New: MongoDB connection
+├── utils/
+│   ├── delay.js                  # New: Extracted delay utility
+│   └── normalizeState.js         # New: Extracted state normalization
+├── frontend/
+│   └── js/
+│       └── energyMetering.js     # Copy from frontend/js/energyMetering.js
+└── server.js                     # New: Slimmed-down server
