@@ -1,0 +1,11 @@
+{
+  "models": [
+    {
+      "title": "DeepSeek-Coder-V2 236B",
+      "provider": "ollama",
+      "model": "deepseek-coder-v2:236b"
+    }
+  ],
+  "embeddingsProvider": "ollama",
+  "tabAutocompleteModel": { "provider": "none" }
+}
