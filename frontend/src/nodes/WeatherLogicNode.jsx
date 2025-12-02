@@ -39,14 +39,6 @@ export class WeatherLogicNode extends ClassicPreset.Node {
     }
 
     async data() {
-        // The component updates the properties and internal state.
-        // The data() method returns the current evaluation state.
-        // We need a way to access the latest evaluation result here.
-        // Since Rete v2 separates data flow from UI, we'll rely on the component 
-        // to update a shared state object or we can re-evaluate here if we have the weather data.
-        // However, the weather data is in the component state. 
-        // A common pattern is to store the result in properties as well.
-        
         return {
             all: this.properties._lastEval?.all || false,
             solar: this.properties._lastEval?.solar || false,
@@ -78,14 +70,21 @@ const MetricRow = ({
     singleThreshold, onSingleChange,
     min, max, step,
     trend, range,
-    isActive
+    isActive,
+    socketKey, output, emit, nodeId,
+    secondaryInfo // New prop for extra info like wind direction
 }) => {
     // Simple Bar Graph
     const drawGraph = () => {
-        if (!history || history.length < 1) return null;
+        if (!history || history.length < 1) return <div className="weather-metric-graph" style={{ opacity: 0.3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>No Data</div>;
         const twoHoursAgo = Date.now() - (120 * 60 * 1000);
         const recentData = history.filter(e => e.timestamp >= twoHoursAgo).slice(-40); // Last 40 points
-        if (recentData.length === 0) return null;
+        
+        // If we have history but it's all old, show the last known point or empty
+        if (recentData.length === 0 && history.length > 0) {
+             // Fallback to showing at least the most recent point if available
+             recentData.push(history[history.length - 1]);
+        }
 
         const logMax = Math.log(max + 1);
         
@@ -94,13 +93,20 @@ const MetricRow = ({
                 {recentData.map((entry, i) => {
                     const logValue = Math.log(entry.value + 0.5);
                     const heightPercent = Math.min(100, Math.max(0, (logValue / logMax) * 100));
-                    const widthPercent = 100 / 40;
+                    // Dynamic width: if fewer points, make them wider to fill space, up to a limit
+                    const totalPoints = Math.max(recentData.length, 40); 
+                    const widthPercent = 100 / totalPoints;
+                    // Adjust left position based on index relative to total points
+                    // If we have fewer than 40 points, we want them to stack from the right? 
+                    // Or just fill from left? Let's fill from left for now as they arrive.
+                    const leftPercent = i * widthPercent;
+
                     return (
                         <div 
                             key={i} 
                             className="weather-bar"
                             style={{
-                                left: `${i * widthPercent}%`,
+                                left: `${leftPercent}%`,
                                 height: `${heightPercent}%`,
                                 width: `${widthPercent}%`
                             }}
@@ -113,6 +119,7 @@ const MetricRow = ({
 
     return (
         <div className="weather-metric-row" style={{ borderColor: isActive ? '#00FF00' : 'rgba(0, 243, 255, 0.1)' }}>
+            {/* Left: Info */}
             <div className="weather-metric-info">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span className="weather-metric-label">{label}</span>
@@ -122,6 +129,7 @@ const MetricRow = ({
                 </div>
                 <span className="weather-metric-value">
                     {value !== null ? value.toFixed(step < 1 ? 2 : 1) : 'N/A'} {unit}
+                    {secondaryInfo && <span style={{ marginLeft: '6px', color: '#00f3ff', fontSize: '0.9em' }}>{secondaryInfo}</span>}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
                     <span className="weather-metric-trend" style={{ color: trend.arrow === '↑' ? '#00FF00' : trend.arrow === '↓' ? '#FF0000' : '#FFFF00' }}>
@@ -133,13 +141,14 @@ const MetricRow = ({
                 </div>
             </div>
 
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            {/* Middle: Graph & Controls */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '200px' }}>
                 {drawGraph()}
                 
                 {enabled && (
                     <div className="weather-controls-sub">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11px', color: '#aaa' }}>
-                            <label className="weather-toggle-container" style={{ transform: 'scale(0.8)', transformOrigin: 'left' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#aaa' }}>
+                            <label className="weather-toggle-container" style={{ transform: 'scale(0.9)', transformOrigin: 'left' }}>
                                 <input type="checkbox" className="weather-toggle" checked={invert} onChange={(e) => onInvert(e.target.checked)} />
                                 <span>Invert</span>
                             </label>
@@ -148,37 +157,45 @@ const MetricRow = ({
                         {!singleThreshold ? (
                             <>
                                 <div className="weather-slider-container">
-                                    <span style={{ fontSize: '10px', width: '30px' }}>High</span>
+                                    <span style={{ fontSize: '11px', width: '30px' }}>High</span>
                                     <input 
                                         type="range" className="weather-range-input" 
                                         min={min} max={max} step={step} value={high} 
                                         onChange={(e) => onHighChange(Number(e.target.value))} 
                                     />
-                                    <span style={{ fontSize: '10px', width: '30px', textAlign: 'right' }}>{high}</span>
+                                    <span style={{ fontSize: '11px', width: '30px', textAlign: 'right' }}>{high}</span>
                                 </div>
                                 <div className="weather-slider-container">
-                                    <span style={{ fontSize: '10px', width: '30px' }}>Low</span>
+                                    <span style={{ fontSize: '11px', width: '30px' }}>Low</span>
                                     <input 
                                         type="range" className="weather-range-input" 
                                         min={min} max={max} step={step} value={low} 
                                         onChange={(e) => onLowChange(Number(e.target.value))} 
                                     />
-                                    <span style={{ fontSize: '10px', width: '30px', textAlign: 'right' }}>{low}</span>
+                                    <span style={{ fontSize: '11px', width: '30px', textAlign: 'right' }}>{low}</span>
                                 </div>
                             </>
                         ) : (
                             <div className="weather-slider-container">
-                                <span style={{ fontSize: '10px', width: '30px' }}>Thresh</span>
+                                <span style={{ fontSize: '11px', width: '30px' }}>Thresh</span>
                                 <input 
                                     type="range" className="weather-range-input" 
                                     min={min} max={max} step={step} value={singleThreshold} 
                                     onChange={(e) => onSingleChange(Number(e.target.value))} 
                                 />
-                                <span style={{ fontSize: '10px', width: '30px', textAlign: 'right' }}>{singleThreshold}</span>
+                                <span style={{ fontSize: '11px', width: '30px', textAlign: 'right' }}>{singleThreshold}</span>
                             </div>
                         )}
                     </div>
                 )}
+            </div>
+
+            {/* Right: Socket */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: 'center', width: '40px' }}>
+                <RefComponent 
+                    init={ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: nodeId, side: "output", key: socketKey } })} 
+                    unmount={ref => emit({ type: "unmount", data: { element: ref } })} 
+                />
             </div>
         </div>
     );
@@ -187,7 +204,7 @@ const MetricRow = ({
 export function WeatherLogicNodeComponent({ data, emit }) {
     const [state, setState] = useState({ ...data.properties });
     const [weatherData, setWeatherData] = useState({
-        solar: null, temp: null, humidity: null, wind: null,
+        solar: null, temp: null, humidity: null, wind: null, windDir: null,
         hourlyRain: null, eventRain: null, dailyRain: null
     });
     const [history, setHistory] = useState({
@@ -267,13 +284,6 @@ export function WeatherLogicNodeComponent({ data, emit }) {
             const buffer = (effectiveHigh - effectiveLow) * (hysteresis / 100);
             const inRange = value >= effectiveLow && value <= effectiveHigh;
             let res = inRange;
-            // If we had a previous result, apply hysteresis buffer
-            // Note: In React functional component, accessing "previous result" is tricky without refs.
-            // For simplicity in this port, we'll stick to direct range check or simple buffer.
-            // To do it strictly like v2, we'd need to store the last boolean state.
-            // Let's use the `evalResults` state, but be careful about closure staleness.
-            // Actually, let's just use the direct range for now to avoid oscillation bugs in the port,
-            // or implement a simple latch if needed.
             return invert ? !res : res;
         };
 
@@ -325,7 +335,6 @@ export function WeatherLogicNodeComponent({ data, emit }) {
         loadHistory();
 
         const handleWeatherUpdate = (data) => {
-            // console.log("[WeatherLogicNode] Received update:", data);
             setStatusColor('green');
             
             const newData = {
@@ -333,6 +342,7 @@ export function WeatherLogicNodeComponent({ data, emit }) {
                 temp: data.tempf,
                 humidity: data.humidity,
                 wind: data.windspeedmph,
+                windDir: data.winddir, // Capture wind direction
                 hourlyRain: data.hourlyrainin,
                 eventRain: data.eventrainin,
                 dailyRain: data.dailyrainin
@@ -382,12 +392,19 @@ export function WeatherLogicNodeComponent({ data, emit }) {
         return { min: Math.min(...values), max: Math.max(...values) };
     };
 
+    const getCardinalDirection = (angle) => {
+        if (angle === null || angle === undefined) return '';
+        const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+        const index = Math.round(angle / 22.5) % 16;
+        return directions[index];
+    };
+
     return (
         <div className="weather-node-tron">
             <div className="weather-node-header">
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <div 
-                        style={{ cursor: "pointer", fontSize: "12px", color: '#00f3ff' }}
+                        style={{ cursor: "pointer", fontSize: "14px", color: '#00f3ff' }}
                         onPointerDown={(e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }}
                     >
                         {isCollapsed ? "▶" : "▼"}
@@ -397,33 +414,30 @@ export function WeatherLogicNodeComponent({ data, emit }) {
                 <div className="weather-status-indicator" style={{ background: statusColor, boxShadow: `0 0 5px ${statusColor}` }} />
             </div>
 
-            {/* Outputs */}
-            <div className="weather-io-container">
-                <div style={{ flex: 1 }}></div> {/* No Inputs */}
-                <div className="outputs">
-                    {Object.entries(data.outputs).map(([key, output]) => (
-                        <div key={key} style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: 'flex-end', marginBottom: '4px' }}>
-                            <span className="weather-socket-label" style={{ color: evalResults[key] ? '#00FF00' : '#aaa' }}>{output.label}</span>
-                            <RefComponent init={ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } })} unmount={ref => emit({ type: "unmount", data: { element: ref } })} />
-                        </div>
-                    ))}
-                </div>
-            </div>
-
+            {/* Main Content Area - Always Visible (unless collapsed) */}
             {!isCollapsed && (
                 <div className="weather-controls-container" onPointerDown={(e) => e.stopPropagation()}>
                     
-                    <div className="weather-section-header">Logic Configuration</div>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', color: '#aaa' }}>Logic Type:</span>
-                        <select 
-                            value={state.logicType} 
-                            onChange={(e) => updateProperty('logicType', e.target.value)}
-                            style={{ background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px' }}
-                        >
-                            <option value="OR">OR (Any)</option>
-                            <option value="AND">AND (All)</option>
-                        </select>
+                    {/* Logic Type & All Output */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '5px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', color: '#aaa' }}>Logic Type:</span>
+                            <select 
+                                value={state.logicType} 
+                                onChange={(e) => updateProperty('logicType', e.target.value)}
+                                style={{ background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px', fontSize: '13px' }}
+                            >
+                                <option value="OR">OR (Any)</option>
+                                <option value="AND">AND (All)</option>
+                            </select>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span className="weather-socket-label" style={{ color: evalResults.all ? '#00FF00' : '#aaa', fontWeight: 'bold' }}>All Conditions</span>
+                            <RefComponent 
+                                init={ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.all.socket, nodeId: data.id, side: "output", key: "all" } })} 
+                                unmount={ref => emit({ type: "unmount", data: { element: ref } })} 
+                            />
+                        </div>
                     </div>
 
                     <div className="weather-section-header">Conditions</div>
@@ -437,6 +451,7 @@ export function WeatherLogicNodeComponent({ data, emit }) {
                         min={0} max={1000} step={10}
                         trend={getTrend(history.solar)} range={getRange(history.solar)}
                         isActive={evalResults.solar}
+                        socketKey="solar" output={data.outputs.solar} emit={emit} nodeId={data.id}
                     />
 
                     <MetricRow 
@@ -448,6 +463,7 @@ export function WeatherLogicNodeComponent({ data, emit }) {
                         min={0} max={120} step={1}
                         trend={getTrend(history.temp)} range={getRange(history.temp)}
                         isActive={evalResults.temp}
+                        socketKey="temp" output={data.outputs.temp} emit={emit} nodeId={data.id}
                     />
 
                     <MetricRow 
@@ -459,6 +475,7 @@ export function WeatherLogicNodeComponent({ data, emit }) {
                         min={0} max={100} step={1}
                         trend={getTrend(history.humidity)} range={getRange(history.humidity)}
                         isActive={evalResults.humidity}
+                        socketKey="humidity" output={data.outputs.humidity} emit={emit} nodeId={data.id}
                     />
 
                     <MetricRow 
@@ -470,6 +487,8 @@ export function WeatherLogicNodeComponent({ data, emit }) {
                         min={0} max={50} step={1}
                         trend={getTrend(history.wind)} range={getRange(history.wind)}
                         isActive={evalResults.wind}
+                        socketKey="wind" output={data.outputs.wind} emit={emit} nodeId={data.id}
+                        secondaryInfo={weatherData.windDir !== null ? getCardinalDirection(weatherData.windDir) : ''}
                     />
 
                     <MetricRow 
@@ -480,6 +499,7 @@ export function WeatherLogicNodeComponent({ data, emit }) {
                         min={0} max={2} step={0.01}
                         trend={getTrend(history.hourlyRain)} range={getRange(history.hourlyRain)}
                         isActive={evalResults.hourlyRain}
+                        socketKey="hourly_rain" output={data.outputs.hourly_rain} emit={emit} nodeId={data.id}
                     />
 
                     <MetricRow 
@@ -490,6 +510,7 @@ export function WeatherLogicNodeComponent({ data, emit }) {
                         min={0} max={2} step={0.01}
                         trend={getTrend(history.eventRain)} range={getRange(history.eventRain)}
                         isActive={evalResults.eventRain}
+                        socketKey="event_rain" output={data.outputs.event_rain} emit={emit} nodeId={data.id}
                     />
 
                     <MetricRow 
@@ -500,8 +521,24 @@ export function WeatherLogicNodeComponent({ data, emit }) {
                         min={0} max={2} step={0.01}
                         trend={getTrend(history.dailyRain)} range={getRange(history.dailyRain)}
                         isActive={evalResults.dailyRain}
+                        socketKey="daily_rain" output={data.outputs.daily_rain} emit={emit} nodeId={data.id}
                     />
 
+                </div>
+            )}
+            
+            {/* Collapsed View: Just Outputs */}
+            {isCollapsed && (
+                <div className="weather-io-container">
+                    <div style={{ flex: 1 }}></div>
+                    <div className="outputs">
+                        {Object.entries(data.outputs).map(([key, output]) => (
+                            <div key={key} style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: 'flex-end', marginBottom: '4px' }}>
+                                <span className="weather-socket-label" style={{ color: evalResults[key] ? '#00FF00' : '#aaa' }}>{output.label}</span>
+                                <RefComponent init={ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } })} unmount={ref => emit({ type: "unmount", data: { element: ref } })} />
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
