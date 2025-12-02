@@ -46,8 +46,10 @@ module.exports = function (io) {
   const stateSchema = Joi.object({
     on: Joi.boolean().optional(),
     state: Joi.string().optional(), // For media_player state (e.g., 'on', 'off', 'playing')
-    brightness: Joi.number().min(0).max(100).optional(),
+    brightness: Joi.number().min(0).max(255).optional(), // Allow 0-255 for brightness
     hs_color: Joi.array().items(Joi.number().min(0).max(360), Joi.number().min(0).max(100)).length(2).optional(),
+    color_temp: Joi.number().min(1).optional(), // Mireds
+    color_temp_kelvin: Joi.number().min(1000).max(10000).optional(), // Kelvin
     transition: Joi.number().min(0).optional(),
     percentage: Joi.number().min(0).max(100).optional(),
     position: Joi.number().min(0).max(100).optional(),
@@ -115,6 +117,8 @@ module.exports = function (io) {
         state: body.state,
         brightness: body.brightness,
         hs_color: body.hs_color,
+        color_temp: body.color_temp,
+        color_temp_kelvin: body.color_temp_kelvin,
         transition: body.transition,
         percentage: body.percentage,
         position: body.position,
@@ -125,6 +129,8 @@ module.exports = function (io) {
         logWithTimestamp(`Switch ${id} does not support brightness, color, transition, percentage, position, volume_level, or source, ignoring`, 'warn');
         update.brightness = undefined;
         update.hs_color = undefined;
+        update.color_temp = undefined;
+        update.color_temp_kelvin = undefined;
         update.transition = undefined;
         update.percentage = undefined;
         update.position = undefined;
@@ -135,6 +141,8 @@ module.exports = function (io) {
         // Ensure only relevant fields for media_player
         update.brightness = undefined;
         update.hs_color = undefined;
+        update.color_temp = undefined;
+        update.color_temp_kelvin = undefined;
         update.transition = undefined;
         update.percentage = undefined;
         update.position = undefined;
@@ -163,7 +171,10 @@ module.exports = function (io) {
             } : entityType === 'switch' ? {
               on: stateResult.state.on,
               brightness: stateResult.state.brightness,
-              hs_color: stateResult.state.hs_color
+              hs_color: stateResult.state.hs_color,
+              power: stateResult.state.power,
+              energy: stateResult.state.energy,
+              attributes: stateResult.state.attributes
             } : entityType === 'media_player' ? {
               state: stateResult.state.state,
               volume_level: stateResult.state.volume_level,

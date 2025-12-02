@@ -1,4 +1,3 @@
-// HAGenericDeviceNode.jsx
 import "../sockets.js";
 import sockets from "../sockets.js";
 
@@ -12,6 +11,7 @@ import { SwitchControl } from "../controls/SwitchControl";
 import { NumberControl } from "../controls/NumberControl";
 import { DeviceStateControl } from "../controls/DeviceStateControl";
 
+// Reuse existing styles
 import "./HAGenericDeviceNode.css";
 
 // Wrapper control classes (defined inline)
@@ -36,20 +36,25 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
             selectedDeviceNames: [],
             status: "Initializing...",
             debug: true,
-            haToken: "",
+            haToken: localStorage.getItem('ha_token') || "", // Retrieve token
             transitionTime: 1000,
             filterType: "All",
+            triggerMode: "Follow", // Toggle, Follow, Turn On, Turn Off
             autoRefreshInterval: 30000
         };
 
-        this.lastTriggerValue = false;   // ← For rising-edge detection
+        this.lastTriggerValue = false;
+        this.lastHsvInfo = null; // Track last HSV info to prevent loops
         this.devices = [];
         this.perDeviceState = {};
         this.intervalId = null;
 
-        // Separate inputs - HSV is dedicated for HSV control only
-        this.addInput("hsv_info", new ClassicPreset.Input(sockets.object, "HSV Info"));
+        // CRITICAL: Keep the input definition that was proven to work
+        console.log("[HAGenericDeviceNode] sockets.boolean:", sockets.boolean);
+        console.log("[HAGenericDeviceNode] sockets.object:", sockets.object);
+
         this.addInput("trigger", new ClassicPreset.Input(sockets.boolean, "Trigger"));
+        this.addInput("hsv_info", new ClassicPreset.Input(sockets.object, "HSV Info"));
         this.addOutput("all_devices", new ClassicPreset.Output(sockets.lightInfo, "All Devices"));
 
         this.setupControls();
@@ -62,27 +67,105 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
         this.intervalId = setInterval(() => this.fetchDevices(), this.properties.autoRefreshInterval);
     }
 
+    // Restore state from saved graph
+    restore(state) {
+        if (state.properties) {
+            Object.assign(this.properties, state.properties);
+        }
+
+        // Restore static controls
+        const filterCtrl = this.controls.filter;
+        if (filterCtrl) filterCtrl.value = this.properties.filterType;
+
+        const triggerModeCtrl = this.controls.trigger_mode;
+        if (triggerModeCtrl) triggerModeCtrl.value = this.properties.triggerMode || "Toggle";
+
+        const transitionCtrl = this.controls.transition;
+        if (transitionCtrl) transitionCtrl.value = this.properties.transitionTime;
+
+        const debugCtrl = this.controls.debug;
+        if (debugCtrl) debugCtrl.value = this.properties.debug;
+
+        // Re-create dynamic device controls
+        this.properties.selectedDeviceIds.forEach((id, index) => {
+            const base = `device_${index}_`;
+            const name = this.properties.selectedDeviceNames[index] || "Device " + (index + 1);
+            const entityType = id ? id.split('.')[0] : "light";
+
+            // Re-add controls
+            this.addControl(`${base}select`, new DropdownControl(
+                `Device ${index + 1}`,
+                ["Select Device", ...this.getDeviceOptions()],
+                name, // Use saved name or "Select Device"
+                (v) => this.onDeviceSelected(v, index)
+            ));
+
+            this.addControl(`${base}indicator`, new StatusIndicatorControl({ state: "off" }));
+            this.addControl(`${base}colorbar`, new ColorBarControl({ brightness: 0, hs_color: [0, 0], entityType: entityType }));
+            this.addControl(`${base}power`, new PowerStatsControl({ power: null, energy: null }));
+            this.addControl(`${base}state`, new DeviceStateControl(id, (devId) => this.perDeviceState[devId]));
+
+            // Re-add output
+            this.addOutput(`device_out_${index}`, new ClassicPreset.Output(sockets.lightInfo, `Device ${index + 1}`));
+            
+            // Trigger fetch for this device to ensure state is up to date
+            if (id) this.fetchDeviceState(id);
+        });
+
+        // Trigger initial fetch to populate lists and states
+        this.fetchDevices();
+    }
+
     async data(inputs) {
         const hsvInput = inputs.hsv_info?.[0];
         const triggerRaw = inputs.trigger?.[0];
         const trigger = triggerRaw ?? false;
 
-        if (this.properties.debug) {
-            console.log('[HAGenericDeviceNode] data() - trigger:', triggerRaw, 'hsv:', hsvInput);
-        }
+        // console.log(`[HAGenericDeviceNode] data() called. Trigger: ${trigger}`);
 
         let needsUpdate = false;
 
-        if (hsvInput) {
-            await this.applyHSVInput(hsvInput);
-            needsUpdate = true;
+        // Handle HSV Input (with loop prevention)
+        if (hsvInput && typeof hsvInput === 'object') {
+            // Simple shallow comparison or JSON stringify for deep comparison
+            const hsvString = JSON.stringify(hsvInput);
+            if (hsvString !== this.lastHsvInfo) {
+                console.log("[HAGenericDeviceNode] New HSV Info detected:", hsvInput);
+                this.lastHsvInfo = hsvString;
+                await this.applyHSVInput(hsvInput);
+                needsUpdate = true;
+            }
         }
 
-        // Rising-edge detection — works perfectly with Pulse Mode
-        if (trigger && !this.lastTriggerValue) {
-            console.log('[HAGenericDeviceNode] *** RISING EDGE DETECTED → TOGGLING DEVICES ***');
-            await this.onTrigger();
-            needsUpdate = true;
+        // Rising-edge detection
+        const risingEdge = trigger && !this.lastTriggerValue;
+        const fallingEdge = !trigger && this.lastTriggerValue;
+        const mode = this.properties.triggerMode || "Toggle";
+
+        if (mode === "Toggle") {
+            if (risingEdge) {
+                console.log('[HAGenericDeviceNode] Toggle Mode: Rising Edge -> Toggling');
+                await this.onTrigger();
+                needsUpdate = true;
+            }
+        } else if (mode === "Follow") {
+            if (risingEdge || fallingEdge) {
+                console.log(`[HAGenericDeviceNode] Follow Mode: Input ${trigger ? "High" : "Low"} -> Setting ${trigger ? "On" : "Off"}`);
+                await this.setDevicesState(trigger);
+                needsUpdate = true;
+            }
+        } else if (mode === "Turn On") {
+            if (risingEdge) {
+                console.log('[HAGenericDeviceNode] Turn On Mode: Rising Edge -> Turning On');
+                await this.setDevicesState(true);
+                needsUpdate = true;
+            }
+        } else if (mode === "Turn Off") {
+            if (risingEdge) {
+                console.log('[HAGenericDeviceNode] Turn Off Mode: Rising Edge -> Turning Off');
+                await this.setDevicesState(false);
+                needsUpdate = true;
+            }
         }
 
         this.lastTriggerValue = !!trigger;
@@ -116,6 +199,9 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
             this.properties.filterType = v;
             this.updateDeviceSelectorOptions();
             this.triggerUpdate();
+        }));
+        this.addControl("trigger_mode", new DropdownControl("Input Mode", ["Toggle", "Follow", "Turn On", "Turn Off"], "Follow", (v) => {
+            this.properties.triggerMode = v;
         }));
         this.addControl("add_device", new ButtonControl("➕ Add Device", () => this.onAddDevice()));
         this.addControl("remove_device", new ButtonControl("➖ Remove Device", () => this.onRemoveDevice()));
@@ -245,6 +331,12 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
         const stateCtrl = this.controls[`device_${index}_state`];
         if (stateCtrl) stateCtrl.deviceId = dev.id;
 
+        // Update entity type immediately for UI logic
+        const colorbar = this.controls[`device_${index}_colorbar`];
+        if (colorbar) {
+            colorbar.data.entityType = dev.id.split('.')[0];
+        }
+
         await this.fetchDeviceState(dev.id);
         this.triggerUpdate();
     }
@@ -269,7 +361,7 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
     async applyHSVInput(info) {
         if (!info || typeof info !== "object") return;
 
-        const transitionSec = this.properties.transitionTime > 0 ? this.properties.transitionTime / 1000 : undefined;
+        const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
         const ids = this.properties.selectedDeviceIds.filter(Boolean);
         if (ids.length === 0) return;
 
@@ -277,14 +369,31 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
 
         await Promise.all(ids.map(async (id) => {
             const entityType = id.split('.')[0];
-            const isLight = entityType === "light";
+            const isLight = entityType === "light" || entityType === "ha_light";
 
             let turnOn = info.on ?? true;
             let hs_color = null;
+            let color_temp_kelvin = null;
             let brightness = null;
 
-            if (Array.isArray(info.hs_color)) hs_color = info.hs_color;
-            else if (info.h !== undefined && info.s !== undefined) hs_color = [info.h, (info.s ?? 0) * 100];
+            // Determine Mode (Temp vs Color)
+            // If mode is explicitly 'temp', use it. 
+            // If mode is missing but colorTemp is present and no color info is present, use temp? 
+            // No, stick to explicit mode from AllInOneColorNode.
+            const useTemp = info.mode === 'temp' && info.colorTemp;
+
+            if (useTemp) {
+                color_temp_kelvin = info.colorTemp;
+            } else {
+                // Fallback to Color Mode
+                if (Array.isArray(info.hs_color)) {
+                    hs_color = info.hs_color;
+                } else if (info.h !== undefined && info.s !== undefined) {
+                    hs_color = [info.h, (info.s ?? 0) * 100];
+                } else if (info.hue !== undefined && info.saturation !== undefined) {
+                    hs_color = [info.hue * 360, info.saturation * 100];
+                }
+            }
 
             if (info.brightness !== undefined) brightness = info.brightness;
             else if (info.v !== undefined) brightness = Math.round((info.v ?? 0) * 255);
@@ -293,10 +402,17 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
 
             const payload = { on: turnOn, state: turnOn ? "on" : "off" };
             if (turnOn && isLight) {
-                if (hs_color) payload.hs_color = hs_color;
-                if (brightness !== null) payload.brightness = brightness;
-                if (transitionSec) payload.transition = transitionSec;
+                if (color_temp_kelvin) {
+                    payload.color_temp_kelvin = color_temp_kelvin;
+                } else if (hs_color) {
+                    payload.hs_color = hs_color;
+                }
+                
+                if (brightness !== null) payload.brightness = Math.max(0, Math.min(255, Math.round(brightness)));
+                if (transitionMs) payload.transition = transitionMs;
             }
+
+            // console.log(`[HAGenericDeviceNode] Sending payload to ${id}:`, payload);
 
             try {
                 await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/lights/ha/${id}/state`, {
@@ -314,6 +430,7 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
                     on: turnOn,
                     state: payload.state,
                     ...(hs_color ? { hs_color } : {}),
+                    ...(color_temp_kelvin ? { color_temp_kelvin } : {}),
                     ...(brightness !== null ? { brightness } : {}),
                 };
                 this.updateDeviceControls(id, this.perDeviceState[id]);
@@ -326,10 +443,57 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
         setTimeout(() => this.updateStatus(`Control applied to ${ids.length} devices`), 600);
     }
 
+    async setDevicesState(turnOn) {
+        this.updateStatus(turnOn ? "Turning On..." : "Turning Off...");
+        const ids = this.properties.selectedDeviceIds.filter(Boolean);
+        if (ids.length === 0) return;
+
+        const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
+
+        await Promise.all(ids.map(async (id) => {
+            const payload = {
+                on: turnOn,
+                state: turnOn ? "on" : "off",
+            };
+            if (turnOn && transitionMs) payload.transition = transitionMs;
+
+            try {
+                await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/lights/ha/${id}/state`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        'Authorization': `Bearer ${this.properties.haToken}`
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                this.perDeviceState[id] = {
+                    ...this.perDeviceState[id],
+                    on: turnOn,
+                    state: payload.state,
+                };
+                this.updateDeviceControls(id, this.perDeviceState[id]);
+            } catch (e) {
+                console.error(`Set state failed for ${id}`, e);
+            }
+        }));
+
+        this.triggerUpdate();
+        setTimeout(() => this.updateStatus(turnOn ? "Turned On" : "Turned Off"), 600);
+    }
+
     async onTrigger() {
         this.updateStatus("Toggling...");
         const ids = this.properties.selectedDeviceIds.filter(Boolean);
-        const transitionSec = this.properties.transitionTime > 0 ? this.properties.transitionTime / 1000 : undefined;
+        console.log("[HAGenericDeviceNode] onTrigger called. IDs:", ids);
+
+        if (ids.length === 0) {
+            console.warn("[HAGenericDeviceNode] No devices selected to toggle.");
+            this.updateStatus("No devices selected");
+            return;
+        }
+
+        const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
 
         await Promise.all(ids.map(async (id) => {
             const current = this.perDeviceState[id] || { on: false };
@@ -339,7 +503,7 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
                 on: newOn,
                 state: newOn ? "on" : "off",
             };
-            if (newOn && transitionSec) payload.transition = transitionSec;
+            if (newOn && transitionMs) payload.transition = transitionMs;
 
             try {
                 await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/lights/ha/${id}/state`, {
@@ -379,8 +543,9 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
                 state: data.new_state.state,
                 brightness: a.brightness ?? 0,
                 hs_color: a.hs_color ?? [0, 0],
-                power: a.power ?? null,
-                energy: a.energy ?? null,
+                // Expanded power attribute search
+                power: a.power || a.current_power_w || a.load_power || null,
+                energy: a.energy || a.energy_kwh || a.total_energy_kwh || null,
             };
         }
 
@@ -401,7 +566,13 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
             const power = this.controls[`${base}power`];
 
             if (indicator) indicator.data = { state: state.state || (state.on ? "on" : "off") };
-            if (colorbar) colorbar.data = { brightness: state.brightness ?? 0, hs_color: state.hs_color ?? [0, 0], entityType: id.split('.')[0] };
+            if (colorbar) {
+                colorbar.data = { 
+                    brightness: state.brightness ?? 0, 
+                    hs_color: state.hs_color ?? [0, 0], 
+                    entityType: id.split('.')[0] // Ensure entityType is updated
+                };
+            }
             if (power) power.data = { power: state.power ?? null, energy: state.energy ?? null };
         });
     }
@@ -414,6 +585,7 @@ export class HAGenericDeviceNode extends ClassicPreset.Node {
 
 export function HAGenericDeviceNodeComponent({ data, emit }) {
     const [seed, setSeed] = useState(0);
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     useEffect(() => {
         data.changeCallback = () => setSeed(s => s + 1);
@@ -422,32 +594,115 @@ export function HAGenericDeviceNodeComponent({ data, emit }) {
 
     const inputs = Object.entries(data.inputs);
     const outputs = Object.entries(data.outputs);
-    const controls = Object.entries(data.controls);
+    const allControls = Object.entries(data.controls);
+
+    // Separate Global vs Device Controls
+    const globalControls = [];
+    const deviceGroups = {};
+
+    allControls.forEach(([key, control]) => {
+        if (key.startsWith("device_")) {
+            const parts = key.split("_"); // device, index, type
+            const index = parts[1];
+            if (!deviceGroups[index]) deviceGroups[index] = [];
+            deviceGroups[index].push({ key, control });
+        } else {
+            globalControls.push({ key, control });
+        }
+    });
+
+    // Simplified styles to ensure connectivity works (based on the working minimal node)
+    const containerStyle = {
+        background: "#0a0f14", // Dark blue/black background
+        border: "1px solid #00f3ff", // Cyan border
+        borderRadius: "8px",
+        color: "#e0f7fa", // Light cyan text
+        minWidth: "350px",
+        display: "flex",
+        flexDirection: "column",
+        boxShadow: "0 0 15px rgba(0, 243, 255, 0.2)" // Subtle glow
+    };
+
+    const headerStyle = {
+        padding: "10px",
+        background: "linear-gradient(90deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.0))", // Gradient header
+        borderBottom: "1px solid rgba(0, 243, 255, 0.3)",
+        borderTopLeftRadius: "8px",
+        borderTopRightRadius: "8px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center"
+    };
+
+    const ioStyle = {
+        padding: "10px",
+        display: "flex",
+        justifyContent: "space-between",
+        gap: "20px",
+        background: "rgba(0, 0, 0, 0.2)"
+    };
+
+    const socketRowStyle = {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        marginBottom: "4px"
+    };
+
+    const controlsStyle = {
+        padding: "10px",
+        background: "rgba(0, 10, 15, 0.4)",
+        borderTop: "1px solid rgba(0, 243, 255, 0.2)",
+        borderBottomLeftRadius: "8px",
+        borderBottomRightRadius: "8px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px"
+    };
+
+    const summaryStyle = {
+        padding: "10px",
+        background: "rgba(0, 10, 15, 0.4)",
+        borderTop: "1px solid rgba(0, 243, 255, 0.2)",
+        borderBottomLeftRadius: "8px",
+        borderBottomRightRadius: "8px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "4px"
+    };
 
     return (
-        <div className="ha-node-tron">
-            <div className="ha-node-header">
-                <div className="ha-node-title">{data.label || "HA Generic Device"}</div>
-                <div className="ha-node-status">{data.properties.status}</div>
+        <div style={containerStyle}>
+            <div style={headerStyle}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div 
+                        style={{ cursor: "pointer", fontSize: "12px", userSelect: "none" }}
+                        onPointerDown={(e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }}
+                    >
+                        {isCollapsed ? "▶" : "▼"}
+                    </div>
+                    <div style={{ fontWeight: "bold" }}>{data.label || "HA Generic Device"}</div>
+                </div>
+                <div style={{ fontSize: "0.8em", color: "#aaa" }}>{data.properties.status}</div>
             </div>
 
-            <div className="ha-io-container">
+            <div style={ioStyle}>
                 <div className="inputs">
                     {inputs.map(([key, input]) => (
-                        <div key={key} className="io-row">
+                        <div key={key} style={socketRowStyle}>
                             <RefComponent
                                 init={ref => emit({ type: "render", data: { type: "socket", element: ref, payload: input.socket, nodeId: data.id, side: "input", key } })}
                                 unmount={ref => emit({ type: "unmount", data: { element: ref } })}
                             />
-                            <span className="ha-socket-label">{input.label}</span>
+                            <span style={{ fontSize: "0.8em" }}>{input.label}</span>
                         </div>
                     ))}
                 </div>
 
                 <div className="outputs">
                     {outputs.map(([key, output]) => (
-                        <div key={key} className="io-row">
-                            <span className="ha-socket-label">{output.label}</span>
+                        <div key={key} style={{ ...socketRowStyle, justifyContent: "flex-end" }}>
+                            <span style={{ fontSize: "0.8em" }}>{output.label}</span>
                             <RefComponent
                                 init={ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } })}
                                 unmount={ref => emit({ type: "unmount", data: { element: ref } })}
@@ -457,15 +712,122 @@ export function HAGenericDeviceNodeComponent({ data, emit }) {
                 </div>
             </div>
 
-            <div className="ha-controls-container">
-                {controls.map(([key, control]) => (
-                    <RefComponent
-                        key={key}
-                        init={ref => emit({ type: "render", data: { type: "control", element: ref, payload: control } })}
-                        unmount={ref => emit({ type: "unmount", data: { element: ref } })}
-                    />
-                ))}
-            </div>
+            {/* Collapsed View: Summary Only */}
+            {isCollapsed && (
+                <div style={summaryStyle}>
+                    {Object.entries(deviceGroups).map(([index, groupControls]) => {
+                        const select = groupControls.find(c => c.key.endsWith("_select"));
+                        const indicator = groupControls.find(c => c.key.endsWith("_indicator"));
+                        const name = select?.control?.value || `Device ${parseInt(index) + 1}`;
+                        const isOn = indicator?.control?.data?.state === "on";
+                        
+                        if (name === "Select Device") return null;
+
+                        return (
+                            <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#e0f7fa" }}>
+                                <div style={{ 
+                                    width: "8px", height: "8px", borderRadius: "50%", 
+                                    background: isOn ? "#00f3ff" : "#333",
+                                    boxShadow: isOn ? "0 0 5px #00f3ff" : "none"
+                                }} />
+                                <span>{name}</span>
+                            </div>
+                        );
+                    })}
+                    {Object.keys(deviceGroups).length === 0 && <div style={{ fontSize: "11px", color: "#aaa" }}>No devices added</div>}
+                </div>
+            )}
+
+            {/* Expanded View: Full Controls */}
+            {!isCollapsed && (
+                <div style={controlsStyle}>
+                    {/* Global Controls */}
+                    {globalControls.map(({ key, control }) => (
+                        <RefComponent
+                            key={key}
+                            init={ref => emit({ type: "render", data: { type: "control", element: ref, payload: control } })}
+                            unmount={ref => emit({ type: "unmount", data: { element: ref } })}
+                        />
+                    ))}
+
+                    {/* Device Groups */}
+                    {Object.entries(deviceGroups).map(([index, groupControls]) => {
+                        const findControl = (suffix) => groupControls.find(c => c.key.endsWith(suffix));
+                        
+                        const select = findControl("_select");
+                        const indicator = findControl("_indicator");
+                        const colorbar = findControl("_colorbar");
+                        const power = findControl("_power");
+                        const state = findControl("_state");
+
+                        // Determine visibility based on entity type
+                        const entityType = colorbar?.control?.data?.entityType || "light";
+                        const isSwitch = entityType.includes("switch");
+                        const isLight = entityType.includes("light");
+
+                        return (
+                            <div key={index} style={{ border: '1px solid rgba(0, 243, 255, 0.2)', padding: '8px', borderRadius: '6px', marginTop: '8px', background: 'rgba(0, 20, 30, 0.4)' }}>
+                                {/* Row 1: Select Device */}
+                                {select && (
+                                    <div style={{ marginBottom: '5px' }}>
+                                        <RefComponent
+                                            key={select.key}
+                                            init={ref => emit({ type: "render", data: { type: "control", element: ref, payload: select.control } })}
+                                            unmount={ref => emit({ type: "unmount", data: { element: ref } })}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Row 2: Indicator, Power, ColorBar */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
+                                    {indicator && (
+                                        <div style={{ flex: '0 0 auto' }}>
+                                            <RefComponent
+                                                key={indicator.key}
+                                                init={ref => emit({ type: "render", data: { type: "control", element: ref, payload: indicator.control } })}
+                                                unmount={ref => emit({ type: "unmount", data: { element: ref } })}
+                                            />
+                                        </div>
+                                    )}
+                                    
+                                    {/* Show Power Stats for Switches (or if power data exists) */}
+                                    {power && (isSwitch || power.control.data.power !== null) && (
+                                        <div style={{ flex: '0 0 auto' }}>
+                                            <RefComponent
+                                                key={power.key}
+                                                init={ref => emit({ type: "render", data: { type: "control", element: ref, payload: power.control } })}
+                                                unmount={ref => emit({ type: "unmount", data: { element: ref } })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Show ColorBar (Intensity) ONLY for Lights */}
+                                    {colorbar && isLight && (
+                                        <div style={{ flex: '1 1 auto' }}>
+                                            <RefComponent
+                                                key={colorbar.key}
+                                                init={ref => emit({ type: "render", data: { type: "control", element: ref, payload: colorbar.control } })}
+                                                unmount={ref => emit({ type: "unmount", data: { element: ref } })}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Row 3: State Control */}
+                                {state && (
+                                    <div>
+                                        <RefComponent
+                                            key={state.key}
+                                            init={ref => emit({ type: "render", data: { type: "control", element: ref, payload: state.control } })}
+                                            unmount={ref => emit({ type: "unmount", data: { element: ref } })}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

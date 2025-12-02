@@ -80,6 +80,8 @@ class HomeAssistantManager {
                 on: entity.state === 'on' || entity.state === 'open' || entity.state === 'playing',
                 brightness: entity.attributes.brightness ? Math.round((entity.attributes.brightness / 255) * 100) : (entity.state === 'on' ? 100 : 0),
                 hs_color: entity.attributes.hs_color || [0, 0],
+                power: entity.attributes.power || entity.attributes.current_power_w || entity.attributes.load_power || null,
+                energy: entity.attributes.energy || entity.attributes.energy_kwh || entity.attributes.total_energy_kwh || null,
                 attributes: entity.attributes // Include attributes for power data
               };
               io.emit('device-state-update', state);
@@ -122,7 +124,11 @@ class HomeAssistantManager {
         state: data.state,
         on: data.state === 'on' || data.state === 'open' || data.state === 'playing',
         brightness: data.attributes.brightness ? Math.round((data.attributes.brightness / 255) * 100) : (data.state === 'on' ? 100 : 0),
-        hs_color: data.attributes.hs_color || [0, 0]
+        hs_color: data.attributes.hs_color || [0, 0],
+        // Include power data if available
+        power: data.attributes.power || data.attributes.current_power_w || data.attributes.load_power || null,
+        energy: data.attributes.energy || data.attributes.energy_kwh || data.attributes.total_energy_kwh || null,
+        attributes: data.attributes
       };
 
       // Store in cache
@@ -162,8 +168,10 @@ class HomeAssistantManager {
       }
 
       if (update.on || action === 'turn_on') {
-        if (update.brightness !== undefined) payload.brightness_pct = Math.round(update.brightness);
+        if (update.brightness !== undefined) payload.brightness = Math.round(update.brightness); // Use 0-255 brightness
         if (update.hs_color) payload.hs_color = update.hs_color;
+        if (update.color_temp) payload.color_temp = update.color_temp;
+        if (update.color_temp_kelvin) payload.color_temp_kelvin = update.color_temp_kelvin;
         if (update.transition !== undefined) payload.transition = update.transition / 1000;
         if (update.percentage !== undefined && entityType === 'fan') payload.percentage = update.percentage;
       }
@@ -214,7 +222,9 @@ class HomeAssistantManager {
         state: device.state,
         on: device.state === 'on' || device.state === 'open' || device.state === 'playing',
         brightness: device.attributes.brightness ? Math.round((device.attributes.brightness / 255) * 100) : (device.state === 'on' ? 100 : 0),
-        hs_color: device.attributes.hs_color || [0, 0]
+        hs_color: device.attributes.hs_color || [0, 0],
+        power: device.attributes.power || device.attributes.current_power_w || device.attributes.load_power || null,
+        energy: device.attributes.energy || device.attributes.energy_kwh || device.attributes.total_energy_kwh || null
       },
       attributes: device.attributes // Include attributes for power data
     }));
