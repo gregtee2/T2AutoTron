@@ -32,15 +32,16 @@ export function DeviceStateControlComponent({ data }) {
         return (
             <div style={{
                 padding: "4px 8px",
-                background: "#2c3e50",
+                background: "rgba(0, 20, 30, 0.6)",
                 borderRadius: "4px",
                 marginBottom: "4px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                minHeight: "24px"
+                minHeight: "24px",
+                border: "1px solid rgba(0, 243, 255, 0.1)"
             }}>
-                <span style={{ fontSize: "11px", color: "#95a5a6" }}>No state data</span>
+                <span style={{ fontSize: "11px", color: "rgba(0, 243, 255, 0.5)" }}>No state data</span>
             </div>
         );
     }
@@ -77,10 +78,10 @@ export function DeviceStateControlComponent({ data }) {
     return (
         <div style={{
             padding: "6px 8px",
-            background: "#2c3e50",
+            background: "rgba(0, 20, 30, 0.6)",
             borderRadius: "4px",
             marginBottom: "4px",
-            border: "1px solid #34495e",
+            border: "1px solid rgba(0, 243, 255, 0.2)",
             display: "flex",
             flexDirection: "column"
         }}>
@@ -90,7 +91,7 @@ export function DeviceStateControlComponent({ data }) {
                     <div style={indicatorStyle} />
                     <span style={{
                         fontSize: "12px",
-                        color: "#ecf0f1",
+                        color: "#e0f7fa",
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -102,7 +103,7 @@ export function DeviceStateControlComponent({ data }) {
 
                 <span style={{
                     fontSize: "10px",
-                    color: "#bdc3c7",
+                    color: "#00f3ff",
                     fontFamily: "monospace",
                     whiteSpace: "nowrap"
                 }}>
@@ -115,14 +116,14 @@ export function DeviceStateControlComponent({ data }) {
                 <div style={{
                     width: "100%",
                     height: "4px",
-                    background: "#34495e",
+                    background: "rgba(0, 243, 255, 0.1)",
                     borderRadius: "2px",
                     overflow: "hidden"
                 }}>
                     <div style={{
                         width: `${brightness}%`,
                         height: "100%",
-                        background: `linear-gradient(90deg, #34495e, ${color})`,
+                        background: `linear-gradient(90deg, rgba(0, 243, 255, 0.2), ${color})`,
                         transition: "width 0.3s ease-out"
                     }} />
                 </div>

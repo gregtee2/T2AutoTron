@@ -28,8 +28,9 @@ export function SwitchControlComponent({ data }) {
                 onChange={handleChange}
                 onPointerDown={(e) => e.stopPropagation()}
                 onDoubleClick={(e) => e.stopPropagation()}
+                style={{ accentColor: "#00f3ff" }}
             />
-            <span style={{ marginLeft: "5px", fontSize: "12px", color: "#fff" }}>{data.label}</span>
+            <span style={{ marginLeft: "5px", fontSize: "12px", color: "#00f3ff", textTransform: "uppercase", letterSpacing: "0.5px" }}>{data.label}</span>
         </div>
     );
 }

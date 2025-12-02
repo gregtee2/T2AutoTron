@@ -1,9 +1,17 @@
 import React from "react";
 
 export function PowerStatsControlComponent(props) {
-    const { power, energy } = props.data;
+    // props.data is the Control instance. The actual data is in props.data.data
+    const { power, energy } = props.data.data || {};
 
-    if (power === null && energy === null) return null;
+    // If both are null, show a placeholder so the user knows the control is there but waiting for data
+    if (power === null && energy === null) {
+        return (
+            <div className="power-stats-control" style={{ fontSize: '10px', color: '#777', marginTop: '5px', fontFamily: 'monospace' }}>
+                -- W / -- kWh
+            </div>
+        );
+    }
 
     return (
         <div
@@ -12,18 +20,16 @@ export function PowerStatsControlComponent(props) {
                 display: 'flex',
                 flexDirection: 'column',
                 fontSize: '10px',
-                color: '#aaa',
+                color: '#e0f7fa',
                 marginTop: '5px',
                 fontFamily: 'monospace'
             }}
             onPointerDown={(e) => e.stopPropagation()}
         >
-            {power !== null && (
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>PWR:</span>
-                    <span style={{ color: '#00f3ff' }}>{power} W</span>
-                </div>
-            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>PWR:</span>
+                <span style={{ color: '#00f3ff' }}>{power !== null ? `${power} W` : '--'}</span>
+            </div>
             {energy !== null && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>NRG:</span>

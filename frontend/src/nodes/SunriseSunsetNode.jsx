@@ -53,12 +53,13 @@ export class SunriseSunsetNode extends ClassicPreset.Node {
             next_off_date: null,
             currentState: false,
             status: "Initializing...",
-            debug: false
+            debug: false,
+            pulseMode: true // Default to pulse mode like PushbuttonNode
         };
     }
 
     data() {
-        return this.properties;
+        return { state: this.properties.currentState };
     }
 
     update() {
@@ -93,6 +94,30 @@ export function SunriseSunsetNodeComponent(props) {
             console.log(`[SunriseSunsetNode] ${message}`);
         }
     };
+
+    const triggerPulse = useCallback(() => {
+        log("Triggering Pulse...");
+        
+        if (data.properties.pulseMode) {
+            // Pulse Mode: True -> Wait -> False
+            data.properties.currentState = true;
+            data.update();
+            
+            setTimeout(() => {
+                data.properties.currentState = false;
+                data.update();
+                log("Pulse complete.");
+            }, 500);
+        } else {
+            // Steady State: Toggle? Or just set to True?
+            // For Sunrise/Sunset, usually On=Night, Off=Day.
+            // But if we just hit a trigger time, maybe we just toggle?
+            // Let's assume Pulse Mode is the primary use case for triggering HA Device.
+            // If not pulse mode, we might just flip the state.
+            data.properties.currentState = !data.properties.currentState;
+            data.update();
+        }
+    }, [data]);
 
     const fetchSunTimes = useCallback(async () => {
         updateProperty('status', "Fetching sun times...");
@@ -173,34 +198,31 @@ export function SunriseSunsetNodeComponent(props) {
         updateProperty('next_on_date', nextOn ? nextOn.toJSDate() : null);
         updateProperty('next_off_date', nextOff ? nextOff.toJSDate() : null);
 
-        checkState(now, nextOn, nextOff);
-
     }, [data.properties]);
 
-    const checkState = (now, nextOn, nextOff) => {
-        // Simplified state check logic
-        // Ideally this should match the complex logic in 2.0
-        // For now, let's assume if we are between On and Off (wrapping around midnight if needed)
-
-        // This part requires careful porting of isCurrentTimeWithinRange from 2.0
-        // For this implementation, we'll rely on the next events to drive the countdown
-        // and a basic check.
-
-        // ... (Logic porting omitted for brevity, but would go here)
-    };
-
-    // Countdown Timer
+    // Countdown Timer & Trigger Check
     useEffect(() => {
         const timer = setInterval(() => {
-            const now = DateTime.local();
-            const nextOn = data.properties.next_on_date ? DateTime.fromJSDate(data.properties.next_on_date) : null;
-            const nextOff = data.properties.next_off_date ? DateTime.fromJSDate(data.properties.next_off_date) : null;
+            const now = DateTime.local().setZone(data.properties.timezone);
+            const nextOn = data.properties.next_on_date ? DateTime.fromJSDate(data.properties.next_on_date).setZone(data.properties.timezone) : null;
+            const nextOff = data.properties.next_off_date ? DateTime.fromJSDate(data.properties.next_off_date).setZone(data.properties.timezone) : null;
+
+            // Check for triggers
+            if (nextOn && now >= nextOn) {
+                log("Hit Next On Time!");
+                triggerPulse();
+                calculateTimes(); // Recalculate for next day
+            }
+            
+            if (nextOff && now >= nextOff) {
+                log("Hit Next Off Time!");
+                triggerPulse();
+                calculateTimes(); // Recalculate for next day
+            }
 
             let target = null;
             let label = "";
 
-            // Determine target based on current state (mocked for now)
-            // In a real port, we'd need robust state determination
             if (nextOn && nextOff) {
                 if (nextOn < nextOff) {
                     target = nextOn;
@@ -226,7 +248,7 @@ export function SunriseSunsetNodeComponent(props) {
 
         }, 1000);
         return () => clearInterval(timer);
-    }, [data.properties.next_on_date, data.properties.next_off_date]);
+    }, [data.properties.next_on_date, data.properties.next_off_date, triggerPulse, calculateTimes]);
 
     // Initial Fetch
     useEffect(() => {
@@ -257,6 +279,16 @@ export function SunriseSunsetNodeComponent(props) {
                 </div>
             </div>
             <div className="content" onPointerDown={(e) => e.stopPropagation()}>
+
+                {/* Pulse Mode Control */}
+                <div className="control-row">
+                    <span className="control-label">Pulse Mode</span>
+                    <input
+                        type="checkbox"
+                        checked={state.pulseMode}
+                        onChange={(e) => updateProperty('pulseMode', e.target.checked)}
+                    />
+                </div>
 
                 {/* Home Assistant Section */}
                 <div className="section-header">Home Assistant</div>

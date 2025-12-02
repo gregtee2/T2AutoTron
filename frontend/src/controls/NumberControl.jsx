@@ -23,7 +23,7 @@ export function NumberControlComponent({ data }) {
 
     return (
         <div style={{ marginBottom: "5px" }}>
-            {data.label && <label style={{ display: "block", fontSize: "10px", color: "#ccc" }}>{data.label}</label>}
+            {data.label && <label style={{ display: "block", fontSize: "10px", color: "#00f3ff", marginBottom: "2px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{data.label}</label>}
             <input
                 type="number"
                 value={value}
@@ -33,7 +33,16 @@ export function NumberControlComponent({ data }) {
                 step={data.options.step}
                 onPointerDown={(e) => e.stopPropagation()}
                 onDoubleClick={(e) => e.stopPropagation()}
-                style={{ width: "100%" }}
+                style={{
+                    width: "100%",
+                    background: "#0a0f14",
+                    color: "#00f3ff",
+                    border: "1px solid rgba(0, 243, 255, 0.3)",
+                    padding: "6px",
+                    borderRadius: "4px",
+                    outline: "none",
+                    fontSize: "12px"
+                }}
             />
         </div>
     );

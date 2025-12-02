@@ -1,7 +1,8 @@
 import React from "react";
 
 export function ColorBarControlComponent(props) {
-    const { brightness, hs_color, entityType } = props.data;
+    // props.data is the Control instance. The actual data is in props.data.data
+    const { brightness, hs_color, entityType } = props.data.data || {};
 
     // Calculate color
     let barColor = '#444';
@@ -20,11 +21,11 @@ export function ColorBarControlComponent(props) {
             style={{
                 width: '100%',
                 height: '8px',
-                backgroundColor: '#222',
+                backgroundColor: 'rgba(0, 20, 30, 0.6)',
                 borderRadius: '4px',
                 overflow: 'hidden',
                 marginTop: '5px',
-                border: '1px solid #444'
+                border: '1px solid rgba(0, 243, 255, 0.2)'
             }}
             onPointerDown={(e) => e.stopPropagation()}
         >

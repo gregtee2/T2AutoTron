@@ -66,3 +66,18 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Rete Selection Box */
+.selection-box {
+    position: absolute;
+    background: rgba(0, 243, 255, 0.1);
+    border: 1px solid #00f3ff;
+    pointer-events: none;
+    z-index: 1000;
+    display: none; /* Hidden by default */
+}
+
+/* Selected Node Highlight */
+.rete-node.selected {
+    box-shadow: 0 0 0 2px #00f3ff !important;
+}

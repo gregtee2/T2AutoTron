@@ -69,6 +69,8 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
             };
             reader.readAsText(file);
         }
+        // Reset input value to allow selecting the same file again
+        e.target.value = '';
     };
 
     return (
@@ -97,10 +99,8 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
                 {graphExpanded && (
                     <div className="dock-section-content">
                         <button onClick={onSave} className="dock-btn">💾 Save</button>
-                        <button onClick={onLoad} className="dock-btn">📂 Load</button>
+                        <button onClick={handleImportClick} className="dock-btn">📂 Load</button>
                         <button onClick={onClear} className="dock-btn">🗑️ Clear</button>
-                        <button onClick={onExport} className="dock-btn">📤 Export</button>
-                        <button onClick={handleImportClick} className="dock-btn">📥 Import</button>
                         <input
                             ref={fileInputRef}
                             type="file"

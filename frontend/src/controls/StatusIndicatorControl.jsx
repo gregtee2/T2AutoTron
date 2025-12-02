@@ -1,7 +1,8 @@
 import React from "react";
 
 export function StatusIndicatorControlComponent(props) {
-    const { state, color } = props.data;
+    // props.data is the Control instance. The actual data is in props.data.data
+    const { state, color } = props.data.data || {};
     const isOn = state === 'on' || state === 'open' || state === 'playing';
 
     // Determine color based on props or default to neon blue/orange
@@ -23,10 +24,10 @@ export function StatusIndicatorControlComponent(props) {
                 width: '12px',
                 height: '12px',
                 borderRadius: '50%',
-                backgroundColor: isOn ? activeColor : '#222',
+                backgroundColor: isOn ? activeColor : 'rgba(0, 20, 30, 0.8)',
                 boxShadow: isOn ? `0 0 10px ${activeColor}, 0 0 20px ${activeColor}` : 'none',
                 transition: 'all 0.3s ease',
-                border: '1px solid #444',
+                border: '1px solid rgba(0, 243, 255, 0.3)',
                 animation: isOn ? 'pulse 2s infinite' : 'none'
             }} />
             <style>{`
