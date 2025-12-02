@@ -11,14 +11,12 @@ import "./sockets"; // Import socket patch globally
 import { Dock } from "./ui/Dock";
 import { ForecastPanel } from "./ui/ForecastPanel";
 
-import { HAGenericDeviceNode, HAGenericDeviceNodeComponent, StatusIndicatorControl, ColorBarControl, PowerStatsControl } from "./nodes/HAGenericDeviceNode";
-import { KasaPlugNode, KasaPlugNodeComponent } from "./nodes/KasaPlugNode";
-import { SunriseSunsetNode, SunriseSunsetNodeComponent } from "./nodes/SunriseSunsetNode.jsx";
-import { TimeOfDayNode, TimeOfDayNodeComponent } from "./nodes/TimeOfDayNode.jsx";
-import { PushbuttonNode, PushbuttonNodeComponent } from "./nodes/PushbuttonNode.jsx";
-import { DisplayNode, DisplayNodeComponent } from "./nodes/DisplayNode.jsx";
-import { AllInOneColorNode, AllInOneColorNodeComponent } from "./nodes/AllInOneColorNode.jsx";
-import { WeatherLogicNode, WeatherLogicNodeComponent } from "./nodes/WeatherLogicNode.jsx";
+// Registry
+import { nodeRegistry } from "./registries/NodeRegistry";
+import { registerCoreNodes } from "./nodes/registerNodes";
+
+// Controls (Still imported directly for now)
+import { StatusIndicatorControl, ColorBarControl, PowerStatsControl } from "./nodes/HAGenericDeviceNode";
 import { ButtonControlComponent } from "./controls/ButtonControl";
 import { DropdownControlComponent } from "./controls/DropdownControl";
 import { TextControlComponent } from "./controls/TextControl";
@@ -28,6 +26,9 @@ import { DeviceStateControlComponent } from "./controls/DeviceStateControl";
 import { StatusIndicatorControlComponent } from "./controls/StatusIndicatorControl";
 import { ColorBarControlComponent } from "./controls/ColorBarControl";
 import { PowerStatsControlComponent } from "./controls/PowerStatsControl";
+
+// Register nodes immediately
+registerCoreNodes();
 
 export function Editor() {
     const ref = useRef(null);
@@ -70,48 +71,32 @@ export function Editor() {
             process();
         };
 
-        const defaultItems = ContextMenuPresets.classic.setup([
-            ["HA Generic Device", () => {
-                const node = new HAGenericDeviceNode(() => updateNode(node.id));
+        // Generate Context Menu Items from Registry
+        const registryItems = nodeRegistry.getAll().map(def => {
+            return [def.label, () => {
+                let node;
+                const callback = () => {
+                    if (def.updateStrategy === 'dataflow') {
+                        triggerDataFlow();
+                    } else {
+                        updateNode(node.id);
+                    }
+                };
+                node = def.factory(callback);
                 return node;
-            }],
-            ["Kasa Plug Control", () => {
-                const node = new KasaPlugNode(() => updateNode(node.id));
-                return node;
-            }],
-            ["Sunrise/Sunset Trigger", () => {
-                const node = new SunriseSunsetNode(() => updateNode(node.id));
-                return node;
-            }],
-            ["Time of Day", () => {
-                const node = new TimeOfDayNode(() => updateNode(node.id));
-                return node;
-            }],
-            ["Pushbutton", () => {
-                const node = new PushbuttonNode(() => updateNode(node.id));
-                return node;
-            }],
-            ["Display", () => {
-                const node = new DisplayNode(() => updateNode(node.id));
-                return node;
-            }],
-            ["All-in-One Color Control", () => {
-                // Use triggerDataFlow instead of updateNode to prevent UI re-renders while dragging
-                const node = new AllInOneColorNode(() => triggerDataFlow());
-                return node;
-            }],
-            ["Weather Logic", () => {
-                const node = new WeatherLogicNode(() => updateNode(node.id));
-                return node;
-            }]
-        ]);
+            }];
+        });
+
+        const defaultItems = ContextMenuPresets.classic.setup(registryItems);
 
         const contextMenu = new ContextMenuPlugin({
             items: (context, plugin) => {
                 if (context === 'root') {
                     return defaultItems(context, plugin);
                 }
-                if (context instanceof HAGenericDeviceNode || context instanceof KasaPlugNode || context instanceof SunriseSunsetNode || context instanceof TimeOfDayNode || context instanceof PushbuttonNode || context instanceof DisplayNode || context instanceof AllInOneColorNode || context instanceof WeatherLogicNode) {
+                // Check if context is a registered node type
+                const def = nodeRegistry.getByInstance(context);
+                if (def) {
                     return {
                         searchBar: false,
                         list: [
@@ -136,29 +121,9 @@ export function Editor() {
         render.addPreset(Presets.classic.setup({
             customize: {
                 node(context) {
-                    if (context.payload instanceof HAGenericDeviceNode) {
-                        return HAGenericDeviceNodeComponent;
-                    }
-                    if (context.payload instanceof KasaPlugNode) {
-                        return KasaPlugNodeComponent;
-                    }
-                    if (context.payload instanceof SunriseSunsetNode) {
-                        return SunriseSunsetNodeComponent;
-                    }
-                    if (context.payload instanceof TimeOfDayNode) {
-                        return TimeOfDayNodeComponent;
-                    }
-                    if (context.payload instanceof PushbuttonNode) {
-                        return PushbuttonNodeComponent;
-                    }
-                    if (context.payload instanceof DisplayNode) {
-                        return DisplayNodeComponent;
-                    }
-                    if (context.payload instanceof AllInOneColorNode) {
-                        return AllInOneColorNodeComponent;
-                    }
-                    if (context.payload instanceof WeatherLogicNode) {
-                        return WeatherLogicNodeComponent;
+                    const def = nodeRegistry.getByInstance(context.payload);
+                    if (def) {
+                        return def.component;
                     }
                     return Presets.classic.Node;
                 },
@@ -464,44 +429,54 @@ export function Editor() {
 
                     for (const nodeData of data.nodes) {
                         let node;
-                        const updateCallback = () => {
-                            if (areaInstance) areaInstance.update("node", node.id);
-                            if (engineInstance && editorInstance) {
-                                engineInstance.reset();
-                                setTimeout(() => {
-                                    editorInstance.getNodes().forEach(async (n) => {
-                                        try { await engineInstance.fetch(n.id); } catch (e) { }
-                                    });
-                                }, 0);
-                            }
-                        };
+                        const def = nodeRegistry.getByLabel(nodeData.label);
+                        
+                        if (def) {
+                            const updateCallback = () => {
+                                if (areaInstance) areaInstance.update("node", node.id);
+                                if (engineInstance && editorInstance) {
+                                    engineInstance.reset();
+                                    setTimeout(() => {
+                                        editorInstance.getNodes().forEach(async (n) => {
+                                            try { await engineInstance.fetch(n.id); } catch (e) { }
+                                        });
+                                    }, 0);
+                                }
+                            };
 
-                        if (nodeData.label === "HA Generic Device") node = new HAGenericDeviceNode(updateCallback);
-                        else if (nodeData.label === "Kasa Plug Control") node = new KasaPlugNode(updateCallback);
-                        else if (nodeData.label === "Sunrise/Sunset Trigger") node = new SunriseSunsetNode(updateCallback);
-                        else if (nodeData.label === "Time of Day") node = new TimeOfDayNode(updateCallback);
-                        else if (nodeData.label === "Pushbutton") node = new PushbuttonNode(updateCallback);
-                        else if (nodeData.label === "Display") node = new DisplayNode(updateCallback);
-                        else if (nodeData.label === "Weather Logic") node = new WeatherLogicNode(updateCallback);
-                        else if (nodeData.label === "All-in-One Color Control") node = new AllInOneColorNode(() => {
-                            if (engineInstance) engineInstance.reset();
-                            // We don't have access to 'process' here directly in the same way, 
-                            // but updateCallback does area.update + process.
-                            // For paste, we might need to stick with updateCallback or find a way to pass just process.
-                            // Since paste is a one-time event, updateCallback is fine.
-                            // BUT, if we want the node to behave correctly AFTER paste, we need to pass the right callback.
-                            // The updateCallback defined above in handleKeyDown does: area.update + engine.reset + engine.fetch.
-                            // We need a version that DOES NOT do area.update.
-                            
-                            if (engineInstance && editorInstance) {
-                                engineInstance.reset();
-                                setTimeout(() => {
-                                    editorInstance.getNodes().forEach(async (n) => {
-                                        try { await engineInstance.fetch(n.id); } catch (e) { }
+                            // Special handling for dataflow-only nodes (like Color Node)
+                            // For paste, we generally want the full updateCallback to ensure everything is synced
+                            // But if we want to respect the strategy:
+                            const callback = () => {
+                                if (def.updateStrategy === 'dataflow') {
+                                    // For paste, we might still want area update initially?
+                                    // The original code for paste used a custom callback for ColorNode that did NOT do area.update?
+                                    // Actually, the original code for paste had a callback that did area.update.
+                                    // Wait, let's check the original code I replaced.
+                                    // Original paste code for ColorNode:
+                                    /*
+                                    else if (nodeData.label === "All-in-One Color Control") node = new AllInOneColorNode(() => {
+                                        if (engineInstance) engineInstance.reset();
+                                        if (engineInstance && editorInstance) { ... }
                                     });
-                                }, 0);
-                            }
-                        });
+                                    */
+                                    // It did NOT call area.update("node", node.id).
+                                    
+                                    if (engineInstance) engineInstance.reset();
+                                    if (engineInstance && editorInstance) {
+                                        setTimeout(() => {
+                                            editorInstance.getNodes().forEach(async (n) => {
+                                                try { await engineInstance.fetch(n.id); } catch (e) { }
+                                            });
+                                        }, 0);
+                                    }
+                                } else {
+                                    updateCallback();
+                                }
+                            };
+
+                            node = def.factory(callback);
+                        }
 
                         if (node) {
                             // Restore properties
@@ -633,28 +608,25 @@ export function Editor() {
 
             for (const nodeData of graphData.nodes) {
                 let node;
-                const updateCallback = () => {
-                    if (areaInstance) areaInstance.update("node", nodeData.id);
-                    if (engineInstance && editorInstance) {
-                        engineInstance.reset();
-                        setTimeout(() => {
-                            editorInstance.getNodes().forEach(async (n) => {
-                                try {
-                                    await engineInstance.fetch(n.id);
-                                } catch (e) { }
-                            });
-                        }, 0);
-                    }
-                };
+                const def = nodeRegistry.getByLabel(nodeData.label);
 
-                if (nodeData.label === "HA Generic Device") node = new HAGenericDeviceNode(updateCallback);
-                else if (nodeData.label === "Kasa Plug Control") node = new KasaPlugNode(updateCallback);
-                else if (nodeData.label === "Sunrise/Sunset Trigger") node = new SunriseSunsetNode(updateCallback);
-                else if (nodeData.label === "Time of Day") node = new TimeOfDayNode(updateCallback);
-                else if (nodeData.label === "Pushbutton") node = new PushbuttonNode(updateCallback);
-                else if (nodeData.label === "Display") node = new DisplayNode(updateCallback);
-                else if (nodeData.label === "Weather Logic") node = new WeatherLogicNode(updateCallback);
-                else if (nodeData.label === "All-in-One Color Control") node = new AllInOneColorNode(updateCallback);
+                if (def) {
+                    const updateCallback = () => {
+                        if (areaInstance) areaInstance.update("node", nodeData.id);
+                        if (engineInstance && editorInstance) {
+                            engineInstance.reset();
+                            setTimeout(() => {
+                                editorInstance.getNodes().forEach(async (n) => {
+                                    try {
+                                        await engineInstance.fetch(n.id);
+                                    } catch (e) { }
+                                });
+                            }, 0);
+                        }
+                    };
+                    // For loading, we generally use the standard update callback
+                    node = def.factory(updateCallback);
+                }
 
                 if (node) {
                     node.id = nodeData.id;
@@ -742,28 +714,24 @@ export function Editor() {
 
             for (const nodeData of graphData.nodes) {
                 let node;
-                const updateCallback = () => {
-                    if (areaInstance) areaInstance.update("node", nodeData.id);
-                    if (engineInstance && editorInstance) {
-                        engineInstance.reset();
-                        setTimeout(() => {
-                            editorInstance.getNodes().forEach(async (n) => {
-                                try {
-                                    await engineInstance.fetch(n.id);
-                                } catch (e) { }
-                            });
-                        }, 0);
-                    }
-                };
+                const def = nodeRegistry.getByLabel(nodeData.label);
 
-                if (nodeData.label === "HA Generic Device") node = new HAGenericDeviceNode(updateCallback);
-                else if (nodeData.label === "Kasa Plug Control") node = new KasaPlugNode(updateCallback);
-                else if (nodeData.label === "Sunrise/Sunset Trigger") node = new SunriseSunsetNode(updateCallback);
-                else if (nodeData.label === "Time of Day") node = new TimeOfDayNode(updateCallback);
-                else if (nodeData.label === "Pushbutton") node = new PushbuttonNode(updateCallback);
-                else if (nodeData.label === "Display") node = new DisplayNode(updateCallback);
-                else if (nodeData.label === "Weather Logic") node = new WeatherLogicNode(updateCallback);
-                else if (nodeData.label === "All-in-One Color Control") node = new AllInOneColorNode(updateCallback);
+                if (def) {
+                    const updateCallback = () => {
+                        if (areaInstance) areaInstance.update("node", nodeData.id);
+                        if (engineInstance && editorInstance) {
+                            engineInstance.reset();
+                            setTimeout(() => {
+                                editorInstance.getNodes().forEach(async (n) => {
+                                    try {
+                                        await engineInstance.fetch(n.id);
+                                    } catch (e) { }
+                                });
+                            }, 0);
+                        }
+                    };
+                    node = def.factory(updateCallback);
+                }
 
                 if (node) {
                     node.id = nodeData.id;
