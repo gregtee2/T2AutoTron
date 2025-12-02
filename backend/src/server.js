@@ -91,6 +91,22 @@ io.on('connection', (socket) => {
     }
   });
 
+  // === WEATHER REQUEST ===
+  socket.on('request-weather-update', async () => {
+    try {
+      const weather = await fetchWeatherData(true);
+      if (weather) {
+        socket.emit('weather-update', weather);
+        logger.log('Sent weather to client', 'info');
+      } else {
+        logger.log('No weather data to send', 'warn');
+      }
+    } catch (err) {
+      logger.log(`Weather request failed: ${err.message}`, 'error');
+      console.error('Weather request failed:', err);
+    }
+  });
+
   // === DISCONNECT ===
   socket.on('disconnect', (reason) => {
     logger.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`, 'warn', false, 'socket:disconnect');
