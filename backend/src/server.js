@@ -117,11 +117,33 @@ io.on('connection', (socket) => {
 // Serve static files
 app.use(express.static(path.join(__dirname, 'frontend')));
 app.use('/custom_nodes', express.static(path.join(__dirname, 'frontend/custom_nodes')));
+app.use('/plugins', express.static(path.join(__dirname, 'plugins')));
 
 
 // Sandbox route for testing refactored index.html
 app.get('/sandbox', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'Index.html_Proposal', 'Index.html'));
+});
+
+// Endpoint to list plugins
+app.get('/api/plugins', async (req, res) => {
+  try {
+    const pluginsDir = path.join(__dirname, 'plugins');
+    // Ensure directory exists
+    try {
+      await fs.access(pluginsDir);
+    } catch {
+      await fs.mkdir(pluginsDir, { recursive: true });
+    }
+
+    const files = await fs.readdir(pluginsDir);
+    const jsFiles = files.filter(file => file.endsWith('.js')).map(file => `plugins/${file}`);
+    res.json(jsFiles);
+  } catch (error) {
+    logger.log(`Failed to list plugins: ${error.message}`, 'error', false, 'plugins:error', { stack: error.stack });
+    console.error(`Failed to list plugins: ${error.message}`);
+    res.status(500).json({ error: 'Failed to list plugin files' });
+  }
 });
 
 // Endpoint to list custom node files

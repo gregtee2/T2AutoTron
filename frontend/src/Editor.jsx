@@ -14,6 +14,7 @@ import { ForecastPanel } from "./ui/ForecastPanel";
 // Registry
 import { nodeRegistry } from "./registries/NodeRegistry";
 import { registerCoreNodes } from "./nodes/registerNodes";
+import { loadPlugins } from "./registries/PluginLoader";
 
 // Controls (Still imported directly for now)
 import { StatusIndicatorControl, ColorBarControl, PowerStatsControl } from "./nodes/HAGenericDeviceNode";
@@ -71,28 +72,30 @@ export function Editor() {
             process();
         };
 
-        // Generate Context Menu Items from Registry
-        const registryItems = nodeRegistry.getAll().map(def => {
-            return [def.label, () => {
-                let node;
-                const callback = () => {
-                    if (def.updateStrategy === 'dataflow') {
-                        triggerDataFlow();
-                    } else {
-                        updateNode(node.id);
-                    }
-                };
-                node = def.factory(callback);
-                return node;
-            }];
-        });
-
-        const defaultItems = ContextMenuPresets.classic.setup(registryItems);
+        // Dynamic Context Menu Generator
+        const getMenuOptions = () => {
+            const registryItems = nodeRegistry.getAll().map(def => {
+                return [def.label, () => {
+                    let node;
+                    const callback = () => {
+                        if (def.updateStrategy === 'dataflow') {
+                            triggerDataFlow();
+                        } else {
+                            updateNode(node.id);
+                        }
+                    };
+                    node = def.factory(callback);
+                    return node;
+                }];
+            });
+            return ContextMenuPresets.classic.setup(registryItems);
+        };
 
         const contextMenu = new ContextMenuPlugin({
             items: (context, plugin) => {
                 if (context === 'root') {
-                    return defaultItems(context, plugin);
+                    const createItems = getMenuOptions();
+                    return createItems(context, plugin);
                 }
                 // Check if context is a registered node type
                 const def = nodeRegistry.getByInstance(context);
@@ -300,6 +303,11 @@ export function Editor() {
     }, []);
 
     useEffect(() => {
+        // Load external plugins on startup
+        loadPlugins().then(() => {
+            console.log("[Editor] External plugins loaded");
+        });
+
         const container = ref.current;
         if (!container) return;
 
