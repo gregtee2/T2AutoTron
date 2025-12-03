@@ -33,3 +33,4 @@ crashes/
 *.njsproj
 *.sln
 *.sw?
+crashes/main.log

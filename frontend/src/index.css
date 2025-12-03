@@ -78,8 +78,10 @@ button:focus-visible {
 }
 
 /* Selected Node Highlight */
-.rete-node.selected {
-    box-shadow: 0 0 0 2px #00f3ff !important;
+.rete-node.selected,
+[data-testid="node"].selected {
+    box-shadow: 0 0 0 3px #00f3ff !important;
+    outline: none;
 }
 
 /* Context menu styling is now in App.css */

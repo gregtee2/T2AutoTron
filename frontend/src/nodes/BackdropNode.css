@@ -1,0 +1,202 @@
+/* BackdropNode.css - Styling for the backdrop/group node */
+
+.backdrop-node {
+    position: relative;
+    border: 2px dashed;
+    border-radius: 12px;
+    min-width: 200px;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Segoe UI', sans-serif;
+    user-select: none;
+    /* Allow clicks to pass through to nodes behind */
+    pointer-events: none;
+}
+
+/* Only header and resize handle should capture clicks */
+.backdrop-node .backdrop-header {
+    pointer-events: auto;
+    cursor: move;
+}
+
+.backdrop-node .backdrop-resize-handle,
+.backdrop-node .backdrop-color-picker,
+.backdrop-node .backdrop-color-btn {
+    pointer-events: auto;
+}
+
+/* Content area should NOT capture clicks */
+.backdrop-node .backdrop-content {
+    pointer-events: none;
+}
+
+.backdrop-node .backdrop-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    cursor: move;
+    gap: 8px;
+}
+
+.backdrop-node .backdrop-title {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    flex: 1;
+    cursor: text;
+}
+
+.backdrop-node .backdrop-title-input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 2px 6px;
+    outline: none;
+}
+
+.backdrop-node .backdrop-title-input:focus {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.backdrop-node .backdrop-color-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: #fff;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.backdrop-node .backdrop-color-btn:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.backdrop-node .backdrop-font-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: #fff;
+    padding: 2px 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: baseline;
+    gap: 1px;
+    pointer-events: auto;
+}
+
+.backdrop-node .backdrop-font-btn:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.backdrop-node .backdrop-font-input {
+    width: 40px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: #fff;
+    padding: 2px 4px;
+    font-size: 12px;
+    text-align: center;
+    pointer-events: auto;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.backdrop-node .backdrop-font-input::-webkit-outer-spin-button,
+.backdrop-node .backdrop-font-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.backdrop-node .backdrop-font-input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.backdrop-node .backdrop-color-picker {
+    position: absolute;
+    top: 40px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: rgba(20, 20, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+.backdrop-node .color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+}
+
+.backdrop-node .color-swatch:hover {
+    transform: scale(1.15);
+}
+
+.backdrop-node .color-swatch.selected {
+    border-color: #fff;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+.backdrop-node .backdrop-content {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 8px;
+}
+
+.backdrop-node .backdrop-node-count {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    font-style: italic;
+    pointer-events: none;
+}
+
+.backdrop-node .backdrop-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: nwse-resize;
+    background: linear-gradient(
+        135deg,
+        transparent 0%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0.3) 100%
+    );
+    border-bottom-right-radius: 10px;
+}
+
+.backdrop-node .backdrop-resize-handle:hover {
+    background: linear-gradient(
+        135deg,
+        transparent 0%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.5) 50%,
+        rgba(255, 255, 255, 0.5) 100%
+    );
+}

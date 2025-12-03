@@ -15,11 +15,11 @@ async function scanSubnet(subnet = '192.168.1', wrappedLog = () => { }) {
         const ip = `${subnet}.${i}`;
         promises.push(
             (async () => {
-                const maxRetries = 2;
+                const maxRetries = 1;
                 for (let attempt = 1; attempt <= maxRetries; attempt++) {
                     try {
                         const configRes = await fetch(`http://${ip}/rpc/Sys.GetConfig`, {
-                            timeout: 5000, // Increased to 5 seconds
+                            timeout: 1000, // Reduced to 1 second
                             headers: { 'User-Agent': 'T2AutoTron/1.0' }
                         });
                         if (!configRes.ok) {
@@ -79,8 +79,8 @@ async function setupShelly(io, notificationEmitter, wrappedLog = () => { }) {
     }
     await wrappedLog('Starting Shelly device discovery via subnet scan...', 'info');
 
-    shellyDevices.length = 0;
-    shellyDevices = await scanSubnet('192.168.1', wrappedLog);
+    // shellyDevices.length = 0;
+    // shellyDevices = await scanSubnet('192.168.1', wrappedLog);
     console.log('Initial shellyDevices after scan:', JSON.stringify(shellyDevices, null, 2));
 
     if (shellyDevices.length === 0) {

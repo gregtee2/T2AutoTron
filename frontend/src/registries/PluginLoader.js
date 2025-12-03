@@ -1,14 +1,20 @@
 import { nodeRegistry } from './NodeRegistry';
 import * as Rete from 'rete';
 import * as React from 'react';
+import { RefComponent } from 'rete-react-plugin';
+import * as luxon from 'luxon';
 import sockets from '../sockets';
+import { socket } from '../socket';
 
 // Expose dependencies globally for plugins
 // This allows "Caveman-Simple" plugins to just use window.Rete, window.React, etc.
 window.Rete = Rete;
 window.React = React;
+window.RefComponent = RefComponent;
+window.luxon = luxon;
 window.nodeRegistry = nodeRegistry;
 window.sockets = sockets;
+window.socket = socket;
 
 export async function loadPlugins() {
     try {

@@ -114,30 +114,24 @@ io.on('connection', (socket) => {
   });
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'frontend')));
-app.use('/custom_nodes', express.static(path.join(__dirname, 'frontend/custom_nodes')));
-app.use('/plugins', express.static(path.join(__dirname, 'plugins')));
-
-
-// Sandbox route for testing refactored index.html
-app.get('/sandbox', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'Index.html_Proposal', 'Index.html'));
-});
-
-// Endpoint to list plugins
+// Endpoint to list plugins - Moved before static files to ensure priority
 app.get('/api/plugins', async (req, res) => {
+  console.log('API Request: /api/plugins');
   try {
-    const pluginsDir = path.join(__dirname, 'plugins');
+    const pluginsDir = path.join(__dirname, '../plugins');
+    console.log('Looking for plugins in:', pluginsDir);
+    
     // Ensure directory exists
     try {
       await fs.access(pluginsDir);
     } catch {
+      console.log('Plugins directory not found, creating...');
       await fs.mkdir(pluginsDir, { recursive: true });
     }
 
     const files = await fs.readdir(pluginsDir);
     const jsFiles = files.filter(file => file.endsWith('.js')).map(file => `plugins/${file}`);
+    console.log('Found plugins:', jsFiles);
     res.json(jsFiles);
   } catch (error) {
     logger.log(`Failed to list plugins: ${error.message}`, 'error', false, 'plugins:error', { stack: error.stack });
@@ -145,6 +139,19 @@ app.get('/api/plugins', async (req, res) => {
     res.status(500).json({ error: 'Failed to list plugin files' });
   }
 });
+
+// Serve static files
+app.use(express.static(path.join(__dirname, '../frontend')));
+app.use('/custom_nodes', express.static(path.join(__dirname, '../frontend/custom_nodes')));
+app.use('/plugins', express.static(path.join(__dirname, '../plugins')));
+
+
+// Sandbox route for testing refactored index.html
+app.get('/sandbox', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend', 'Index.html_Proposal', 'Index.html'));
+});
+
+
 
 // Endpoint to list custom node files
 app.get('/api/custom-nodes', async (req, res) => {
@@ -282,7 +289,7 @@ async function initializeModules(deviceService) {
   try {
     const devices = await deviceService.initialize(io, notificationEmitter, logger.log.bind(logger));
     deviceService.setIo(io);
-    console.log(`Initialized devices: ${Object.keys(devices).length} types`, devices);
+    console.log(`Initialized devices: ${Object.keys(devices).length} types`);
   } catch (error) {
     console.error('Failed to initialize devices:', error);
     logger.log(`Failed to initialize devices: ${error.message}`, 'error', false, 'devices:init:error', { stack: error.stack });
@@ -373,4 +380,14 @@ process.on('SIGINT', async () => {
     await mongoose.connection.close();
     process.exit(0);
   });
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  logger.log(`Uncaught Exception: ${err.message}`, 'error', false, 'error:uncaught', { stack: err.stack });
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.log(`Unhandled Rejection: ${reason}`, 'error', false, 'error:unhandled');
 });

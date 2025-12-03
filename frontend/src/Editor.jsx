@@ -190,6 +190,25 @@ export function Editor() {
         AreaExtensions.simpleNodesOrder(area);
         AreaExtensions.showInputControl(area);
 
+        // Listen for node additions to set backdrop z-index
+        editor.addPipe(context => {
+            if (context.type === 'nodecreated') {
+                const node = context.data;
+                const def = nodeRegistry.getByInstance(node);
+                if (def && def.isBackdrop) {
+                    // Set z-index after the node view is created
+                    setTimeout(() => {
+                        const nodeView = area.nodeViews.get(node.id);
+                        if (nodeView && nodeView.element) {
+                            nodeView.element.style.zIndex = '-10';
+                            console.log('[Backdrop] Set z-index on creation for:', node.id);
+                        }
+                    }, 50);
+                }
+            }
+            return context;
+        });
+
         // --- Pan While Connecting Implementation ---
         // Allows users to hold Ctrl while dragging a connection to pan the canvas
         let isConnectionDragging = false;
@@ -255,6 +274,9 @@ export function Editor() {
 
         let isSelecting = false;
         let startPos = { x: 0, y: 0 };
+        
+        // Track lasso-selected nodes for group movement
+        const lassoSelectedNodes = new Set();
 
         const onPointerDown = (e) => {
             // Enable Lasso on Ctrl + Left Click
@@ -278,7 +300,17 @@ export function Editor() {
                 
                 // Clear selection unless Shift is also held
                 if (!e.shiftKey) {
-                    // selector.unselect is not available, use remove on each entity
+                    // Clear visual selection
+                    lassoSelectedNodes.forEach(nodeId => {
+                        const view = area.nodeViews.get(nodeId);
+                        if (view && view.element) {
+                            view.element.classList.remove('selected');
+                            view.element.style.outline = '';
+                        }
+                    });
+                    lassoSelectedNodes.clear();
+                    
+                    // Also clear Rete's selector
                     if (selector && selector.entities) {
                         Array.from(selector.entities).forEach(entity => selector.remove(entity));
                     }
@@ -315,48 +347,86 @@ export function Editor() {
             isSelecting = false;
             selectionBox.style.display = 'none';
             
+            // Skip if box is too small (just a click)
+            if (boxRect.width < 5 && boxRect.height < 5) {
+                console.log("[Editor] Selection box too small, ignoring");
+                return;
+            }
+            
             let selectedCount = 0;
+            const nodesToSelect = [];
+            
             editor.getNodes().forEach(node => {
                 const view = area.nodeViews.get(node.id);
-                if (view) {
+                if (view && view.element) {
                     const nodeRect = view.element.getBoundingClientRect();
-                    // console.log(`[Editor] Node ${node.id} Rect:`, nodeRect);
                     
+                    // Check if node is FULLY contained within selection box
                     if (
-                        boxRect.left < nodeRect.right &&
-                        boxRect.right > nodeRect.left &&
-                        boxRect.top < nodeRect.bottom &&
-                        boxRect.bottom > nodeRect.top
+                        boxRect.left <= nodeRect.left &&
+                        boxRect.right >= nodeRect.right &&
+                        boxRect.top <= nodeRect.top &&
+                        boxRect.bottom >= nodeRect.bottom
                     ) {
-                        console.log(`[Editor] Selecting node ${node.id}`);
-                        selector.add({
-                            id: node.id,
-                            label: 'node',
-                            translate: (dx, dy) => {
-                                const view = area.nodeViews.get(node.id);
-                                if (view) {
-                                    const current = view.position;
-                                    area.translate(node.id, { x: current.x + dx, y: current.y + dy });
-                                }
-                            },
-                            unmount: () => {},
-                            select: () => {
-                                const view = area.nodeViews.get(node.id);
-                                if (view) view.element.classList.add('selected');
-                            },
-                            unselect: () => {
-                                const view = area.nodeViews.get(node.id);
-                                if (view) view.element.classList.remove('selected');
-                            }
-                        }, true); // accumulate = true
-                        selectedCount++;
+                        nodesToSelect.push({ node, view });
                     }
                 }
             });
-            console.log(`[Editor] Selected ${selectedCount} nodes`);
+            
+            console.log(`[Editor] Found ${nodesToSelect.length} nodes in selection area`);
+            
+            // Select the nodes and track them for group movement
+            nodesToSelect.forEach(({ node, view }) => {
+                console.log(`[Editor] Selecting node ${node.id}`, view.element);
+                
+                // Track this node in our lasso selection
+                lassoSelectedNodes.add(node.id);
+                
+                // Add selected class for visual feedback
+                view.element.classList.add('selected');
+                
+                // Also try setting a direct style as backup
+                view.element.style.outline = '3px solid #00f3ff';
+                
+                selectedCount++;
+            });
+            
+            console.log(`[Editor] Selected ${selectedCount} nodes, tracked:`, Array.from(lassoSelectedNodes));
+        };
+        
+        // Function to clear lasso selection
+        const clearLassoSelection = () => {
+            if (lassoSelectedNodes.size > 0) {
+                console.log('[Editor] Clearing lasso selection');
+                lassoSelectedNodes.forEach(nodeId => {
+                    const view = area.nodeViews.get(nodeId);
+                    if (view && view.element) {
+                        view.element.classList.remove('selected');
+                        view.element.style.outline = '';
+                    }
+                });
+                lassoSelectedNodes.clear();
+            }
+        };
+        
+        // Click on empty canvas clears selection
+        const onCanvasClick = (e) => {
+            // Only clear if clicking directly on the canvas (not on a node)
+            // and not during a lasso selection operation
+            // and not holding Ctrl (which starts lasso)
+            if (!e.ctrlKey && !e.metaKey && !isSelecting) {
+                // Check if the click target is the canvas area itself
+                const target = e.target;
+                if (target === container || 
+                    target.classList.contains('rete-area') ||
+                    target.closest('[data-testid="area"]')) {
+                    clearLassoSelection();
+                }
+            }
         };
 
         container.addEventListener('pointerdown', onPointerDown, { capture: true });
+        container.addEventListener('click', onCanvasClick);
         window.addEventListener('pointermove', onPointerMove);
         window.addEventListener('pointerup', onPointerUp);
         // --------------------------------------
@@ -369,6 +439,213 @@ export function Editor() {
             return context;
         });
 
+        // --- Backdrop Node Group Movement Logic ---
+        // Track which nodes are being dragged and handle backdrop group movement
+        let backdropDragState = {
+            activeBackdropId: null,
+            initialPositions: new Map(),
+            isDragging: false,
+            lastBackdropPos: null
+        };
+        
+        // Guard to prevent infinite recursion during group moves
+        let isGroupMoving = false;
+
+        // Function to update which nodes are captured by which backdrops
+        function updateBackdropCaptures() {
+            const allNodes = editor.getNodes();
+            const backdrops = allNodes.filter(n => {
+                const def = nodeRegistry.getByInstance(n);
+                return def && def.isBackdrop;
+            });
+            const regularNodes = allNodes.filter(n => {
+                const def = nodeRegistry.getByInstance(n);
+                return !def || !def.isBackdrop;
+            });
+
+            backdrops.forEach(backdrop => {
+                const backdropView = area.nodeViews.get(backdrop.id);
+                if (!backdropView) return;
+                
+                // Ensure backdrop z-index is always low
+                if (backdropView.element) {
+                    backdropView.element.style.zIndex = '-10';
+                }
+                
+                const backdropPos = backdropView.position;
+                const capturedNodes = [];
+                const bWidth = backdrop.properties.width || 400;
+                const bHeight = backdrop.properties.height || 300;
+
+                regularNodes.forEach(node => {
+                    const nodeView = area.nodeViews.get(node.id);
+                    if (!nodeView) return;
+                    
+                    // Ensure regular nodes have positive z-index
+                    if (nodeView.element) {
+                        const currentZ = parseInt(nodeView.element.style.zIndex || '0', 10);
+                        if (currentZ < 0) {
+                            nodeView.element.style.zIndex = '1';
+                        }
+                    }
+                    
+                    const nodePos = nodeView.position;
+                    const nodeWidth = node.width || 180;
+                    const nodeHeight = node.height || 100;
+                    
+                    // Check if node center is inside backdrop bounds
+                    const nodeCenterX = nodePos.x + nodeWidth / 2;
+                    const nodeCenterY = nodePos.y + nodeHeight / 2;
+                    
+                    if (nodeCenterX >= backdropPos.x && 
+                        nodeCenterX <= backdropPos.x + bWidth &&
+                        nodeCenterY >= backdropPos.y && 
+                        nodeCenterY <= backdropPos.y + bHeight) {
+                        capturedNodes.push(node.id);
+                    }
+                });
+
+                // Update the backdrop's captured nodes list
+                const prevCount = backdrop.properties.capturedNodes.length;
+                backdrop.properties.capturedNodes = capturedNodes;
+                
+                // Trigger re-render to show node count if changed
+                if (prevCount !== capturedNodes.length && backdrop.changeCallback) {
+                    backdrop.changeCallback();
+                }
+            });
+        }
+
+        // Function to ensure backdrop nodes are always behind other nodes
+        function updateBackdropZIndex() {
+            editor.getNodes().forEach(node => {
+                const def = nodeRegistry.getByInstance(node);
+                if (def && def.isBackdrop) {
+                    const nodeView = area.nodeViews.get(node.id);
+                    if (nodeView && nodeView.element) {
+                        nodeView.element.style.zIndex = '-10';
+                    }
+                }
+            });
+        }
+
+        area.addPipe(context => {
+            // When a node is rendered, check if it's a backdrop and set z-index
+            if (context.type === 'render' && context.data?.payload) {
+                const payload = context.data.payload;
+                const def = nodeRegistry.getByInstance(payload);
+                if (def && def.isBackdrop) {
+                    // Schedule z-index update for after render completes
+                    setTimeout(() => {
+                        const nodeView = area.nodeViews.get(payload.id);
+                        if (nodeView && nodeView.element) {
+                            nodeView.element.style.zIndex = '-10';
+                            console.log('[Backdrop] Set z-index for:', payload.id);
+                        }
+                    }, 0);
+                }
+            }
+            
+            // Also update on rendered event
+            if (context.type === 'rendered') {
+                setTimeout(() => updateBackdropZIndex(), 10);
+            }
+            
+            // Use nodetranslate for real-time movement tracking
+            if (context.type === 'nodetranslate') {
+                // Skip if we're already doing a group move (prevents infinite recursion)
+                if (isGroupMoving) return context;
+                
+                const nodeId = context.data.id;
+                const node = editor.getNode(nodeId);
+                if (!node) return context;
+                
+                const newPos = context.data.position;
+                const prevPos = context.data.previous;
+                const deltaX = newPos.x - prevPos.x;
+                const deltaY = newPos.y - prevPos.y;
+                
+                if (deltaX === 0 && deltaY === 0) return context;
+                
+                // Handle lasso-selected group movement
+                if (lassoSelectedNodes.size > 1 && lassoSelectedNodes.has(nodeId)) {
+                    isGroupMoving = true;
+                    
+                    // Move other selected nodes using area.translate for proper connection updates
+                    const promises = [];
+                    lassoSelectedNodes.forEach(selectedId => {
+                        if (selectedId !== nodeId) {
+                            const selectedView = area.nodeViews.get(selectedId);
+                            if (selectedView) {
+                                const newX = selectedView.position.x + deltaX;
+                                const newY = selectedView.position.y + deltaY;
+                                // Use area.translate which properly updates connections
+                                promises.push(area.translate(selectedId, { x: newX, y: newY }));
+                            }
+                        }
+                    });
+                    
+                    // Wait for all translations to complete, then reset flag
+                    Promise.all(promises).then(() => {
+                        isGroupMoving = false;
+                    });
+                    
+                    return context; // Return early to avoid further processing
+                }
+                
+                // Check if this is a backdrop node
+                const def = nodeRegistry.getByInstance(node);
+                
+                if (def && def.isBackdrop) {
+                    // If we just started dragging this backdrop, update captures first
+                    if (backdropDragState.activeBackdropId !== nodeId) {
+                        backdropDragState.activeBackdropId = nodeId;
+                        backdropDragState.isDragging = true;
+                        
+                        // Update captures to get current nodes inside
+                        updateBackdropCaptures();
+                        console.log('[Backdrop] Started dragging, captured nodes:', node.properties.capturedNodes);
+                    }
+                    
+                    // Move all captured nodes by the same delta
+                    if (node.properties.capturedNodes.length > 0) {
+                        isGroupMoving = true;
+                        
+                        const promises = [];
+                        node.properties.capturedNodes.forEach(capturedId => {
+                            if (!lassoSelectedNodes.has(capturedId)) {
+                                const capturedView = area.nodeViews.get(capturedId);
+                                if (capturedView) {
+                                    const newX = capturedView.position.x + deltaX;
+                                    const newY = capturedView.position.y + deltaY;
+                                    promises.push(area.translate(capturedId, { x: newX, y: newY }));
+                                }
+                            }
+                        });
+                        
+                        Promise.all(promises).then(() => {
+                            isGroupMoving = false;
+                        });
+                        
+                        return context;
+                    }
+                }
+            }
+            
+            // Reset state when drag ends
+            if (context.type === 'nodedragged') {
+                console.log('[Backdrop] Drag ended, resetting state');
+                backdropDragState.isDragging = false;
+                backdropDragState.activeBackdropId = null;
+                
+                // Update captures after any node drag
+                updateBackdropCaptures();
+            }
+            
+            return context;
+        });
+        // --------------------------------------
+
         setEditorInstance(editor);
         setAreaInstance(area);
         setEngineInstance(engine);
@@ -376,6 +653,7 @@ export function Editor() {
         return {
             destroy: () => {
                 container.removeEventListener('pointerdown', onPointerDown, { capture: true });
+                container.removeEventListener('click', onCanvasClick);
                 window.removeEventListener('pointermove', onPointerMove);
                 window.removeEventListener('pointerup', onPointerUp);
                 window.removeEventListener('pointermove', onConnectionPanMove);

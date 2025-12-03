@@ -74,9 +74,9 @@ const MetricRow = ({
     socketKey, output, emit, nodeId,
     secondaryInfo // New prop for extra info like wind direction
 }) => {
-    // Simple Bar Graph
+    // Simple Bar Graph with scale labels
     const drawGraph = () => {
-        if (!history || history.length < 1) return <div className="weather-metric-graph" style={{ opacity: 0.3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>No Data</div>;
+        if (!history || history.length < 1) return <div className="weather-metric-graph-container"><div className="weather-metric-graph" style={{ opacity: 0.3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>No Data</div></div>;
         const twoHoursAgo = Date.now() - (120 * 60 * 1000);
         const recentData = history.filter(e => e.timestamp >= twoHoursAgo).slice(-40); // Last 40 points
         
@@ -86,33 +86,60 @@ const MetricRow = ({
              recentData.push(history[history.length - 1]);
         }
 
-        const logMax = Math.log(max + 1);
+        // Calculate actual data range for scale labels
+        const dataValues = recentData.map(e => e.value);
+        const dataMax = Math.max(...dataValues);
+        const dataMin = Math.min(...dataValues);
+        
+        // Add 15% headroom to max for display, with a minimum to avoid 0
+        const displayMax = Math.max(dataMax * 1.15, dataMax + 1, 1);
+        const displayMid = displayMax / 2;
+        
+        // Format numbers nicely (no decimals if large, 1-2 decimals if small)
+        const formatValue = (val) => {
+            if (val >= 100) return Math.round(val).toString();
+            if (val >= 10) return val.toFixed(1);
+            if (val >= 1) return val.toFixed(1);
+            return val.toFixed(2);
+        };
+
+        const logDisplayMax = Math.log(displayMax + 1);
         
         return (
-            <div className="weather-metric-graph">
-                {recentData.map((entry, i) => {
-                    const logValue = Math.log(entry.value + 0.5);
-                    const heightPercent = Math.min(100, Math.max(0, (logValue / logMax) * 100));
-                    // Dynamic width: if fewer points, make them wider to fill space, up to a limit
-                    const totalPoints = Math.max(recentData.length, 40); 
-                    const widthPercent = 100 / totalPoints;
-                    // Adjust left position based on index relative to total points
-                    // If we have fewer than 40 points, we want them to stack from the right? 
-                    // Or just fill from left? Let's fill from left for now as they arrive.
-                    const leftPercent = i * widthPercent;
+            <div className="weather-metric-graph-container" style={{ display: 'flex', alignItems: 'stretch', gap: '4px', height: '40px' }}>
+                {/* Scale labels on the left */}
+                <div className="weather-graph-scale" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', width: '40px', flexShrink: 0, fontSize: '10px', color: '#00f3ff' }}>
+                    <span>{formatValue(displayMax)}</span>
+                    <span>{formatValue(displayMid)}</span>
+                    <span>0</span>
+                </div>
+                
+                {/* The actual graph */}
+                <div className="weather-metric-graph" style={{ flex: 1, height: '40px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,243,255,0.1)', borderRadius: '2px', position: 'relative', overflow: 'hidden' }}>
+                    {recentData.map((entry, i) => {
+                        // Use linear scale relative to displayMax for better visibility
+                        const heightPercent = Math.min(100, Math.max(2, (entry.value / displayMax) * 100));
+                        // Each bar gets equal width, filling the full graph
+                        const widthPercent = 100 / recentData.length;
+                        const leftPercent = i * widthPercent;
 
-                    return (
-                        <div 
-                            key={i} 
-                            className="weather-bar"
-                            style={{
-                                left: `${leftPercent}%`,
-                                height: `${heightPercent}%`,
-                                width: `${widthPercent}%`
-                            }}
-                        />
-                    );
-                })}
+                        return (
+                            <div 
+                                key={i} 
+                                className="weather-bar"
+                                style={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: `${leftPercent}%`,
+                                    height: `${heightPercent}%`,
+                                    width: `calc(${widthPercent}% - 1px)`,
+                                    background: '#00f3ff',
+                                    minWidth: '2px'
+                                }}
+                            />
+                        );
+                    })}
+                </div>
             </div>
         );
     };

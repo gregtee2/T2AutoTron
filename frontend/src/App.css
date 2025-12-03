@@ -49,6 +49,28 @@ body {
   border: 1px solid #ff0000;
 }
 
+/* ============================================
+   Backdrop Node - Render behind other nodes
+   ============================================ */
+/* Target the Rete node wrapper that contains a backdrop-node */
+[data-testid="node"]:has(.backdrop-node) {
+  z-index: -10 !important;
+  pointer-events: none !important;
+}
+
+/* But allow the backdrop header and resize handle to receive clicks */
+[data-testid="node"]:has(.backdrop-node) .backdrop-header,
+[data-testid="node"]:has(.backdrop-node) .backdrop-resize-handle,
+[data-testid="node"]:has(.backdrop-node) .backdrop-color-picker,
+[data-testid="node"]:has(.backdrop-node) .backdrop-color-btn {
+  pointer-events: auto !important;
+}
+
+/* Fallback for browsers that don't support :has() */
+.backdrop-node-wrapper {
+  z-index: -10 !important;
+}
+
 /* FORCE NODE LAYOUT ORDER */
 /* Target the Rete.js node structure */
 [data-testid="node"] {
