@@ -1,0 +1,490 @@
+/* Tron / Sci-Fi Node Design */
+
+/* Main Node Container */
+.ha-node-tron {
+    background: rgba(10, 15, 20, 0.85) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid #00f3ff;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2), inset 0 0 20px rgba(0, 243, 255, 0.05);
+    border-radius: 12px;
+    color: #e0f7fa;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    min-width: 420px;
+    display: flex;
+    flex-direction: column;
+    /* overflow: hidden; Removed to allow sockets to extend if needed */
+    transition: all 0.3s ease;
+}
+
+.ha-node-tron:hover {
+    box-shadow: 0 0 25px rgba(0, 243, 255, 0.4), inset 0 0 30px rgba(0, 243, 255, 0.1);
+    border-color: #50ffff;
+}
+
+/* Header */
+.ha-node-header {
+    background: linear-gradient(90deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.0));
+    padding: 10px 15px;
+    border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ha-node-title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #00f2ff2a;
+    text-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
+}
+
+.ha-node-status {
+    font-size: 10px;
+    color: #a7ffeb;
+    margin-top: 4px;
+    opacity: 0.8;
+}
+
+/* Inputs & Outputs Area */
+.ha-io-container {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.ha-socket-label {
+    font-size: 11px;
+    color: #b2ebf2;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Controls Area */
+.ha-controls-container {
+    padding: 15px;
+    border-top: 1px solid rgba(0, 243, 255, 0.2);
+    background: rgba(0, 10, 15, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Dropdowns & Inputs */
+.ha-node-tron select,
+.ha-node-tron input {
+    background: rgba(0, 20, 30, 0.8);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    color: #00f3ff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    outline: none;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.ha-node-tron select:focus,
+.ha-node-tron input:focus {
+    border-color: #00f3ff;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+    background: rgba(0, 30, 40, 0.9);
+}
+
+/* Buttons */
+.ha-node-tron button {
+    background: rgba(0, 243, 255, 0.1);
+    border: 1px solid rgba(0, 243, 255, 0.4);
+    color: #00f3ff;
+    padding: 6px 12px;
+    border-radius: 20px;
+    /* Pill shape */
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+}
+
+.ha-node-tron button:hover {
+    background: rgba(0, 243, 255, 0.25);
+    box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+.ha-node-tron button:active {
+    transform: translateY(1px);
+}
+
+/* Device List Item (Compact) */
+.ha-device-item {
+    background: rgba(0, 20, 30, 0.6);
+    border: 1px solid rgba(0, 243, 255, 0.15);
+    border-left: 3px solid rgba(0, 243, 255, 0.5);
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    transition: all 0.2s;
+}
+
+.ha-device-item:hover {
+    background: rgba(0, 40, 50, 0.7);
+    border-color: rgba(0, 243, 255, 0.4);
+}
+
+/* Scrollbar */
+.ha-node-tron ::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ha-node-tron ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.ha-node-tron ::-webkit-scrollbar-thumb {
+    /* Tron / Sci-Fi Node Design */
+
+    /* Main Node Container */
+    .ha-node-tron {
+        background: rgba(10, 15, 20, 0.85) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid #00f3ff;
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.2), inset 0 0 20px rgba(0, 243, 255, 0.05);
+        border-radius: 12px;
+        color: #e0f7fa;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        min-width: 420px;
+        display: flex;
+        flex-direction: column;
+        /* overflow: hidden; Removed to allow sockets to extend if needed */
+        transition: all 0.3s ease;
+        user-select: none;
+        /* Prevent text selection during drag */
+    }
+
+    .ha-node-tron:hover {
+        box-shadow: 0 0 25px rgba(0, 243, 255, 0.4), inset 0 0 30px rgba(0, 243, 255, 0.1);
+        border-color: #50ffff;
+    }
+
+    /* Header */
+    .ha-node-header {
+        background: linear-gradient(90deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.0));
+        padding: 10px 15px;
+        border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .ha-node-title {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #00f2ff2a;
+        text-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
+    }
+
+    .ha-node-status {
+        font-size: 10px;
+        color: #a7ffeb;
+        margin-top: 4px;
+        opacity: 0.8;
+    }
+
+    /* Inputs & Outputs Area */
+    .ha-io-container {
+        display: flex;
+        justify-content: space-between;
+        padding: 15px;
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    .ha-socket-label {
+        font-size: 11px;
+        color: #b2ebf2;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Controls Area */
+    .ha-controls-container {
+        padding: 15px;
+        border-top: 1px solid rgba(0, 243, 255, 0.2);
+        background: rgba(0, 10, 15, 0.4);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* Dropdowns & Inputs */
+    .ha-node-tron select,
+    .ha-node-tron input {
+        background: rgba(0, 20, 30, 0.8);
+        border: 1px solid rgba(0, 243, 255, 0.3);
+        color: #00f3ff;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        outline: none;
+        transition: all 0.2s;
+        width: 100%;
+    }
+
+    .ha-node-tron select:focus,
+    .ha-node-tron input:focus {
+        border-color: #00f3ff;
+        box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        background: rgba(0, 30, 40, 0.9);
+    }
+
+    /* Buttons */
+    .ha-node-tron button {
+        background: rgba(0, 243, 255, 0.1);
+        border: 1px solid rgba(0, 243, 255, 0.4);
+        color: #00f3ff;
+        padding: 6px 12px;
+        border-radius: 20px;
+        /* Pill shape */
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.2s;
+        letter-spacing: 0.5px;
+    }
+
+    .ha-node-tron button:hover {
+        background: rgba(0, 243, 255, 0.25);
+        box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+        transform: translateY(-1px);
+    }
+
+    .ha-node-tron button:active {
+        transform: translateY(1px);
+    }
+
+    /* Device List Item (Compact) */
+    .ha-device-item {
+        background: rgba(0, 20, 30, 0.6);
+        border: 1px solid rgba(0, 243, 255, 0.15);
+        border-left: 3px solid rgba(0, 243, 255, 0.5);
+        border-radius: 4px;
+        padding: 6px 10px;
+        margin-bottom: 6px;
+        transition: all 0.2s;
+    }
+
+    .ha-device-item:hover {
+        background: rgba(0, 40, 50, 0.7);
+        border-color: rgba(0, 243, 255, 0.4);
+    }
+
+    /* Scrollbar */
+    .ha-node-tron ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .ha-node-tron ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .ha-node-tron ::-webkit-scrollbar-thumb {
+        background: rgba(0, 243, 255, 0.3);
+        border-radius: 3px;
+    }
+
+    /* Tron / Sci-Fi Node Design */
+
+    /* Main Node Container */
+    .ha-node-tron {
+        background: rgba(10, 15, 20, 0.85) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid #00f3ff;
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.2), inset 0 0 20px rgba(0, 243, 255, 0.05);
+        border-radius: 12px;
+        color: #e0f7fa;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        min-width: 420px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .ha-node-tron:hover {
+        box-shadow: 0 0 25px rgba(0, 243, 255, 0.4), inset 0 0 30px rgba(0, 243, 255, 0.1);
+        border-color: #50ffff;
+    }
+
+    /* Header */
+    .ha-node-header {
+        background: linear-gradient(90deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.0));
+        padding: 10px 15px;
+        border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .ha-node-title {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #00f3ff;
+        text-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
+    }
+
+    .ha-node-status {
+        font-size: 10px;
+        color: #a7ffeb;
+        margin-top: 4px;
+        opacity: 0.8;
+    }
+
+    /* Inputs & Outputs Area */
+    .ha-io-container {
+        display: flex;
+        justify-content: space-between;
+        padding: 15px;
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    .ha-socket-label {
+        font-size: 11px;
+        color: #b2ebf2;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Controls Area */
+    .ha-controls-container {
+        padding: 15px;
+        border-top: 1px solid rgba(0, 243, 255, 0.2);
+        background: rgba(0, 10, 15, 0.4);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* Dropdowns & Inputs */
+    .ha-node-tron select,
+    .ha-node-tron input {
+        background: rgba(0, 20, 30, 0.8);
+        border: 1px solid rgba(0, 243, 255, 0.3);
+        color: #00f3ff;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        outline: none;
+        transition: all 0.2s;
+        width: 100%;
+    }
+
+    .ha-node-tron select:focus,
+    .ha-node-tron input:focus {
+        border-color: #00f3ff;
+        box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        background: rgba(0, 30, 40, 0.9);
+    }
+
+    /* Buttons */
+    .ha-node-tron button {
+        background: rgba(0, 243, 255, 0.1);
+        border: 1px solid rgba(0, 243, 255, 0.4);
+        color: #00f3ff;
+        padding: 6px 12px;
+        border-radius: 20px;
+        /* Pill shape */
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.2s;
+        letter-spacing: 0.5px;
+    }
+
+    .ha-node-tron button:hover {
+        background: rgba(0, 243, 255, 0.25);
+        box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+        transform: translateY(-1px);
+    }
+
+    .ha-node-tron button:active {
+        transform: translateY(1px);
+    }
+
+    /* Device List Item (Compact) */
+    .ha-device-item {
+        background: rgba(0, 20, 30, 0.6);
+        border: 1px solid rgba(0, 243, 255, 0.15);
+        border-left: 3px solid rgba(0, 243, 255, 0.5);
+        border-radius: 4px;
+        padding: 6px 10px;
+        margin-bottom: 6px;
+        transition: all 0.2s;
+    }
+
+    .ha-device-item:hover {
+        background: rgba(0, 40, 50, 0.7);
+        border-color: rgba(0, 243, 255, 0.4);
+    }
+
+    /* Scrollbar */
+    .ha-node-tron ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .ha-node-tron ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .ha-node-tron ::-webkit-scrollbar-thumb {
+        background: rgba(0, 243, 255, 0.3);
+        border-radius: 3px;
+    }
+
+    .ha-node-tron ::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 243, 255, 0.6);
+    }
+
+    /* Sockets - Subtle Orange */
+    /* Sockets - Subtle Orange */
+    .ha-node-tron .socket,
+    .ha-node-tron .input-socket,
+    .ha-node-tron .output-socket,
+    .ha-node-tron div[title],
+    .ha-node-tron .rete-socket {
+        background: #915f15 !important;
+        /* Darker Orange */
+        border: 1px solid #f8833f !important;
+        width: 24px !important;
+        height: 24px !important;
+        z-index: 100 !important;
+        /* Force on top */
+        pointer-events: auto !important;
+        /* Ensure clickable */
+    }
+
+    .ha-node-tron .socket:hover,
+    .ha-node-tron .input-socket:hover,
+    .ha-node-tron .output-socket:hover,
+    .ha-node-tron div[title]:hover,
+    .ha-node-tron .rete-socket:hover {
+        background: #ff9900 !important;
+        border-color: #fff !important;
+        box-shadow: 0 0 8px #ff9800;
+    }
+
+    /* Make sockets interactive */
+    .ha-io-container .io-row {
+        pointer-events: auto;
+        z-index: 10;
+        position: relative;
+        /* Needed for z-index context */
+    }

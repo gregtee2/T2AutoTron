@@ -1,0 +1,168 @@
+/* AllInOneColorNode.css */
+
+/* Custom Slider Styling for Tron Theme */
+.aio-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.aio-slider-label {
+    width: 70px;
+    font-size: 11px;
+    color: #b2ebf2;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: right;
+}
+
+.aio-slider-value {
+    width: 35px;
+    font-size: 11px;
+    color: #00f3ff;
+    text-align: right;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* Range Input Styling */
+.aio-range-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(0, 243, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+    transition: background 0.2s;
+    flex: 1;
+}
+
+.aio-range-input:hover {
+    background: rgba(0, 243, 255, 0.3);
+}
+
+/* Slider Thumb */
+.aio-range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0a0f14;
+    border: 2px solid #00f3ff;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.5);
+    transition: all 0.2s ease;
+    margin-top: -5px; /* Center on track */
+}
+
+.aio-range-input::-webkit-slider-thumb:hover {
+    background: #00f3ff;
+    box-shadow: 0 0 12px rgba(0, 243, 255, 0.8);
+    transform: scale(1.1);
+}
+
+/* Firefox Support */
+.aio-range-input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0a0f14;
+    border: 2px solid #00f3ff;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.5);
+    transition: all 0.2s ease;
+}
+
+.aio-range-input::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(0, 243, 255, 0.2);
+    border-radius: 2px;
+}
+
+/* Section Headers */
+.aio-section-header {
+    font-size: 10px;
+    color: #50ffff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    margin-top: 4px;
+    border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+    padding-bottom: 2px;
+}
+
+/* Color Swatch */
+.aio-swatch {
+    height: 50px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin: 10px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Consolas', monospace;
+    font-size: 14px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    transition: background 0.1s;
+}
+
+/* Palette */
+.aio-palette-container {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 5px 0;
+}
+
+.aio-palette-item {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.aio-palette-item:hover {
+    transform: scale(1.1);
+    border-color: #fff;
+    box-shadow: 0 0 8px rgba(255,255,255,0.5);
+}
+
+/* Checkbox Styling */
+.aio-checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #b2ebf2;
+}
+
+.aio-checkbox {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid #00f3ff;
+    border-radius: 3px;
+    background: rgba(0, 20, 30, 0.5);
+    cursor: pointer;
+    position: relative;
+}
+
+.aio-checkbox:checked {
+    background: #00f3ff;
+}
+
+.aio-checkbox:checked::after {
+    content: '✔';
+    position: absolute;
+    top: -2px;
+    left: 1px;
+    font-size: 10px;
+    color: #000;
+}
