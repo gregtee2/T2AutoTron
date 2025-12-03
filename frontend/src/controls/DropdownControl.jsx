@@ -18,18 +18,38 @@ export class DropdownControl extends ClassicPreset.Control {
 }
 
 export function DropdownControlComponent({ data }) {
+    // Use a ref to track the current options and force updates when they change
+    const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+    
+    // Track current value in state for controlled input
     const [value, setValue] = React.useState(data.value);
 
+    // Sync value from data when it changes externally
     React.useEffect(() => {
         setValue(data.value);
     }, [data.value]);
 
+    // Force re-render when component mounts or data changes
+    // This ensures we always read the latest data.values
+    React.useEffect(() => {
+        forceUpdate();
+    }, [data]);
+
     const handleChange = (e) => {
         const val = e.target.value;
         setValue(val);
-        data.setValue(val);
+        // Safely call setValue if it exists
+        if (typeof data.setValue === 'function') {
+            data.setValue(val);
+        } else {
+            // Fallback: just set the value directly on the data object
+            data.value = val;
+        }
         if (data.onChange) data.onChange(val);
     };
+
+    // Always read options directly from data.values to get latest
+    const options = data.values || [];
 
     return (
         <div style={{ marginBottom: "5px" }}>
@@ -50,7 +70,7 @@ export function DropdownControlComponent({ data }) {
                     fontSize: "12px"
                 }}
             >
-                {data.values.map((v) => (
+                {options.map((v) => (
                     <option key={v} value={v} style={{ background: "#0a0f14", color: "#00f3ff" }}>
                         {v}
                     </option>

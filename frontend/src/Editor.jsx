@@ -28,6 +28,8 @@ import { StatusIndicatorControlComponent } from "./controls/StatusIndicatorContr
 import { ColorBarControlComponent } from "./controls/ColorBarControl";
 import { PowerStatsControlComponent } from "./controls/PowerStatsControl";
 
+// import { CustomMenuItem } from "./CustomContextMenu";
+
 // Register nodes immediately
 registerCoreNodes();
 
@@ -74,8 +76,15 @@ export function Editor() {
 
         // Dynamic Context Menu Generator
         const getMenuOptions = () => {
-            const registryItems = nodeRegistry.getAll().map(def => {
-                return [def.label, () => {
+            const nodes = nodeRegistry.getAll();
+            const grouped = {};
+
+            // Group by category
+            nodes.forEach(def => {
+                const category = def.category || "Other";
+                if (!grouped[category]) grouped[category] = [];
+                
+                grouped[category].push([def.label, () => {
                     let node;
                     const callback = () => {
                         if (def.updateStrategy === 'dataflow') {
@@ -86,9 +95,20 @@ export function Editor() {
                     };
                     node = def.factory(callback);
                     return node;
-                }];
+                }]);
             });
-            return ContextMenuPresets.classic.setup(registryItems);
+
+            // Convert to Rete Context Menu format
+            const menuItems = Object.entries(grouped).map(([category, items]) => {
+                // Sort items alphabetically
+                items.sort((a, b) => a[0].localeCompare(b[0]));
+                return [category, items];
+            });
+            
+            // Sort categories alphabetically
+            menuItems.sort((a, b) => a[0].localeCompare(b[0]));
+
+            return ContextMenuPresets.classic.setup(menuItems, { delay: 0 });
         };
 
         const contextMenu = new ContextMenuPlugin({
@@ -106,7 +126,14 @@ export function Editor() {
                             {
                                 label: 'Delete',
                                 key: 'delete',
-                                handler: () => editor.removeNode(context.id)
+                                handler: async () => {
+                                    const nodeId = context.id;
+                                    const connections = editor.getConnections().filter(c => c.source === nodeId || c.target === nodeId);
+                                    for (const conn of connections) {
+                                        await editor.removeConnection(conn.id);
+                                    }
+                                    await editor.removeNode(nodeId);
+                                }
                             }
                         ]
                     };
@@ -150,6 +177,8 @@ export function Editor() {
             }
         }));
 
+        // Use default context menu preset - styling is handled via App.css
+        // The hasSubitems warning is a known Rete issue and is harmless
         render.addPreset(Presets.contextMenu.setup());
         connection.addPreset(ConnectionPresets.classic.setup());
 
@@ -160,6 +189,64 @@ export function Editor() {
 
         AreaExtensions.simpleNodesOrder(area);
         AreaExtensions.showInputControl(area);
+
+        // --- Pan While Connecting Implementation ---
+        // Allows users to hold Ctrl while dragging a connection to pan the canvas
+        let isConnectionDragging = false;
+        let isPanningWhileConnecting = false;
+        let lastPanPosition = { x: 0, y: 0 };
+
+        // Listen for connection pick/drop events
+        connection.addPipe(context => {
+            if (context.type === 'connectionpick') {
+                isConnectionDragging = true;
+                console.log("[Editor] Connection pick - wire dragging started");
+            } else if (context.type === 'connectiondrop') {
+                isConnectionDragging = false;
+                isPanningWhileConnecting = false;
+                console.log("[Editor] Connection drop - wire dragging ended");
+            }
+            return context;
+        });
+
+        // Handle Ctrl+drag panning while connecting
+        const onConnectionPanMove = (e) => {
+            if (!isConnectionDragging) return;
+            
+            if (e.ctrlKey || e.metaKey) {
+                if (!isPanningWhileConnecting) {
+                    // Start panning
+                    isPanningWhileConnecting = true;
+                    lastPanPosition = { x: e.clientX, y: e.clientY };
+                    container.style.cursor = 'grab';
+                } else {
+                    // Continue panning - calculate delta and translate
+                    const dx = e.clientX - lastPanPosition.x;
+                    const dy = e.clientY - lastPanPosition.y;
+                    
+                    if (dx !== 0 || dy !== 0) {
+                        const transform = area.area.transform;
+                        area.area.translate(transform.x + dx, transform.y + dy);
+                        lastPanPosition = { x: e.clientX, y: e.clientY };
+                    }
+                }
+            } else if (isPanningWhileConnecting) {
+                // Released Ctrl, stop panning mode
+                isPanningWhileConnecting = false;
+                container.style.cursor = '';
+            }
+        };
+
+        const onConnectionPanKeyUp = (e) => {
+            if ((e.key === 'Control' || e.key === 'Meta') && isPanningWhileConnecting) {
+                isPanningWhileConnecting = false;
+                container.style.cursor = '';
+            }
+        };
+
+        window.addEventListener('pointermove', onConnectionPanMove);
+        window.addEventListener('keyup', onConnectionPanKeyUp);
+        // --------------------------------------
 
         // --- Lasso Selection Implementation ---
         const selectionBox = document.createElement('div');
@@ -291,6 +378,8 @@ export function Editor() {
                 container.removeEventListener('pointerdown', onPointerDown, { capture: true });
                 window.removeEventListener('pointermove', onPointerMove);
                 window.removeEventListener('pointerup', onPointerUp);
+                window.removeEventListener('pointermove', onConnectionPanMove);
+                window.removeEventListener('keyup', onConnectionPanKeyUp);
                 if (selectionBox.parentNode) selectionBox.parentNode.removeChild(selectionBox);
                 area.destroy();
             },
@@ -339,7 +428,12 @@ export function Editor() {
                         const entities = Array.from(selectorInstance.entities);
                         for (const entity of entities) {
                             if (entity.label === 'node') {
-                                await editorInstance.removeNode(entity.id);
+                                const nodeId = entity.id;
+                                const connections = editorInstance.getConnections().filter(c => c.source === nodeId || c.target === nodeId);
+                                for (const conn of connections) {
+                                    await editorInstance.removeConnection(conn.id);
+                                }
+                                await editorInstance.removeNode(nodeId);
                             }
                         }
                     }
@@ -551,12 +645,21 @@ export function Editor() {
     const handleSave = async () => {
         if (!editorInstance || !areaInstance) return;
         try {
-            const nodes = editorInstance.getNodes().map(n => ({
-                id: n.id,
-                label: n.label,
-                position: areaInstance.nodeViews.get(n.id)?.position || { x: 0, y: 0 },
-                data: n
-            }));
+            const nodes = editorInstance.getNodes().map(n => {
+                // Ensure properties are included in the saved data
+                // Rete's default toJSON might not include custom 'properties'
+                const serializedNode = typeof n.toJSON === 'function' ? n.toJSON() : { ...n };
+                if (n.properties) {
+                    serializedNode.properties = n.properties;
+                }
+                
+                return {
+                    id: n.id,
+                    label: n.label,
+                    position: areaInstance.nodeViews.get(n.id)?.position || { x: 0, y: 0 },
+                    data: serializedNode
+                };
+            });
             const connections = editorInstance.getConnections().map(c => ({
                 id: c.id,
                 source: c.source,
@@ -566,6 +669,10 @@ export function Editor() {
             }));
             const graphData = { nodes, connections };
             const jsonString = JSON.stringify(graphData, null, 2);
+
+            // Save to localStorage for quick reload
+            localStorage.setItem('saved-graph', jsonString);
+            console.log('Graph saved to localStorage');
 
             // Try File System Access API (Modern Browsers)
             if (window.showSaveFilePicker) {
@@ -688,12 +795,18 @@ export function Editor() {
     const handleExport = () => {
         if (!editorInstance || !areaInstance) return;
         try {
-            const nodes = editorInstance.getNodes().map(n => ({
-                id: n.id,
-                label: n.label,
-                position: areaInstance.nodeViews.get(n.id)?.position || { x: 0, y: 0 },
-                data: n
-            }));
+            const nodes = editorInstance.getNodes().map(n => {
+                const serializedNode = typeof n.toJSON === 'function' ? n.toJSON() : { ...n };
+                if (n.properties) {
+                    serializedNode.properties = n.properties;
+                }
+                return {
+                    id: n.id,
+                    label: n.label,
+                    position: areaInstance.nodeViews.get(n.id)?.position || { x: 0, y: 0 },
+                    data: serializedNode
+                };
+            });
             const connections = editorInstance.getConnections().map(c => ({
                 id: c.id,
                 source: c.source,

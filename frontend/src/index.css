@@ -81,3 +81,6 @@ button:focus-visible {
 .rete-node.selected {
     box-shadow: 0 0 0 2px #00f3ff !important;
 }
+
+/* Context menu styling is now in App.css */
+

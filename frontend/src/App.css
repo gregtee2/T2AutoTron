@@ -79,66 +79,93 @@ body {
   order: 3 !important;
 }
 
-/* Rete Context Menu */
-.rete-context-menu,
-.context-menu,
-[data-testid="context-menu"] {
-  background: rgba(15, 20, 25, 0.95) !important;
-  border: 1px solid #00f3ff !important;
-  border-radius: 6px !important;
-  padding: 5px 0 !important;
-  width: 180px !important;
-  box-shadow: 0 0 15px rgba(0, 243, 255, 0.2) !important;
-  z-index: 9999 !important;
-  position: absolute !important;
-  overflow: hidden !important;
-  display: block !important;
-  /* Ensure it's not hidden */
-}
+/* ============================================
+   Rete Context Menu - Dark Cyan Theme
+   Override styled-components with high specificity
+   ============================================ */
 
-.rete-context-menu .item,
-.context-menu .item,
-[data-testid="context-menu"] .item {
-  padding: 8px 15px !important;
-  color: #e0f7fa !important;
-  cursor: pointer !important;
+/* Target context menu items by data-testid attribute */
+[data-testid="context-menu-item"] {
+  background: linear-gradient(145deg, rgba(12, 18, 28, 0.98), rgba(8, 14, 22, 0.98)) !important;
+  color: #b8e6ea !important;
+  padding: 10px 16px !important;
   font-size: 13px !important;
+  font-weight: 500 !important;
   font-family: 'Segoe UI', sans-serif !important;
-  transition: all 0.2s !important;
-  border-bottom: 1px solid rgba(0, 243, 255, 0.1) !important;
-  display: block !important;
+  border-bottom: 1px solid rgba(0, 243, 255, 0.15) !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
+  border-radius: 0 !important;
 }
 
-.rete-context-menu .item:last-child,
-.context-menu .item:last-child,
-[data-testid="context-menu"] .item:last-child {
+[data-testid="context-menu-item"]:first-child {
+  border-top-left-radius: 8px !important;
+  border-top-right-radius: 8px !important;
+}
+
+[data-testid="context-menu-item"]:last-child {
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
   border-bottom: none !important;
 }
 
-.rete-context-menu .item:hover,
-.context-menu .item:hover,
-[data-testid="context-menu"] .item:hover {
-  background: rgba(0, 243, 255, 0.15) !important;
-  color: #fff !important;
-  padding-left: 20px !important;
+[data-testid="context-menu-item"]:hover {
+  background: linear-gradient(90deg, rgba(0, 243, 255, 0.25), rgba(0, 200, 255, 0.15)) !important;
+  color: #ffffff !important;
 }
 
-.rete-context-menu .search,
-.context-menu .search,
-[data-testid="context-menu"] .search {
-  border-bottom: 1px solid rgba(0, 243, 255, 0.3) !important;
-  margin-bottom: 5px !important;
-  display: block !important;
+/* Submenu arrow */
+[data-testid="context-menu-item"]::after {
+  color: rgba(0, 243, 255, 0.6) !important;
+  opacity: 0.8 !important;
 }
 
-.rete-context-menu .search input,
-.context-menu .search input,
-[data-testid="context-menu"] .search input {
-  background: transparent !important;
-  border: none !important;
+/* Subitem container (nested menu) */
+[data-testid="context-menu-item"] > div {
+  background: linear-gradient(145deg, rgba(12, 18, 28, 0.98), rgba(8, 14, 22, 0.98)) !important;
+  border: 1px solid rgba(0, 243, 255, 0.4) !important;
+  border-radius: 8px !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.9),
+    0 0 15px rgba(0, 243, 255, 0.15) !important;
+  backdrop-filter: blur(12px) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Main context menu container - the wrapper element */
+div[style*="position: fixed"][style*="display"] > div {
+  background: linear-gradient(145deg, rgba(12, 18, 28, 0.98), rgba(8, 14, 22, 0.98)) !important;
+  border: 1px solid rgba(0, 243, 255, 0.5) !important;
+  border-radius: 8px !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 243, 255, 0.2) !important;
+  backdrop-filter: blur(12px) !important;
+  padding: 0 !important;
+  min-width: 160px !important;
+  overflow: hidden !important;
+}
+
+/* Search input in context menu */
+div[style*="position: fixed"] input {
+  background: rgba(0, 15, 25, 0.9) !important;
+  border: 1px solid rgba(0, 243, 255, 0.3) !important;
+  border-radius: 6px !important;
   color: #00f3ff !important;
-  padding: 8px 15px !important;
-  width: 100% !important;
+  padding: 8px 12px !important;
+  margin: 8px !important;
+  width: calc(100% - 16px) !important;
   outline: none !important;
-  font-family: 'Segoe UI', sans-serif !important;
+  font-size: 13px !important;
+  box-sizing: border-box !important;
+}
+
+div[style*="position: fixed"] input:focus {
+  border-color: rgba(0, 243, 255, 0.6) !important;
+  box-shadow: 0 0 8px rgba(0, 243, 255, 0.2) !important;
+}
+
+div[style*="position: fixed"] input::placeholder {
+  color: rgba(0, 243, 255, 0.4) !important;
 }
