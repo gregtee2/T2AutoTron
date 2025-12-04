@@ -174,43 +174,12 @@
     }
 
     // -------------------------------------------------------------------------
-    // COLOR UTILS
+    // COLOR UTILS - Use shared ColorUtilsPlugin (window.ColorUtils)
     // -------------------------------------------------------------------------
-    const ColorUtils = {
-        hsvToRgb: (h, s, v) => {
-            const i = Math.floor(h * 6);
-            const f = h * 6 - i;
-            const p = v * (1 - s);
-            const q = v * (1 - f * s);
-            const t = v * (1 - (1 - f) * s);
-            let r, g, b;
-            switch (i % 6) {
-                case 0: r = v; g = t; b = p; break;
-                case 1: r = q; g = v; b = p; break;
-                case 2: r = p; g = v; b = t; break;
-                case 3: r = p; g = q; b = v; break;
-                case 4: r = t; g = p; b = v; break;
-                case 5: r = v; g = p; b = q; break;
-            }
-            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-        },
-        rgbToHsv: (r, g, b) => {
-            r /= 255; g /= 255; b /= 255;
-            const max = Math.max(r, g, b), min = Math.min(r, g, b);
-            const d = max - min;
-            const s = max === 0 ? 0 : d / max;
-            let h = 0;
-            if (max !== min) {
-                switch (max) {
-                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                    case g: h = (b - r) / d + 2; break;
-                    case b: h = (r - g) / d + 4; break;
-                }
-                h /= 6;
-            }
-            return { hue: h, saturation: s, brightness: max * 254 };
-        }
-    };
+    if (!window.ColorUtils) {
+        console.error("[HSVModifierNode] window.ColorUtils not found! Make sure 00_ColorUtilsPlugin.js loads first.");
+    }
+    const ColorUtils = window.ColorUtils;
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -418,21 +387,22 @@
         return React.createElement('div', { className: 'hsv-mod-node-tron' }, [
             // Header
             React.createElement('div', { key: 'header', className: 'hsv-mod-header' }, [
-                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+                React.createElement('div', { key: 'left', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
                     React.createElement('div', { 
                         key: 'toggle',
                         style: { cursor: "pointer", fontSize: "12px", color: '#b388ff' },
                         onPointerDown: (e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }
                     }, isCollapsed ? "▶" : "▼"),
-                    React.createElement('span', { className: 'hsv-mod-title' }, data.label)
+                    React.createElement('span', { key: 'title', className: 'hsv-mod-title' }, data.label)
                 ]),
-                React.createElement('label', { className: 'hsv-mod-checkbox' }, [
+                React.createElement('label', { key: 'right', className: 'hsv-mod-checkbox' }, [
                     React.createElement('input', {
+                        key: 'cb',
                         type: 'checkbox',
                         checked: state.enabled,
                         onChange: e => updateState({ enabled: e.target.checked })
                     }),
-                    React.createElement('span', {}, "Enabled")
+                    React.createElement('span', { key: 'lbl' }, "Enabled")
                 ])
             ]),
 
@@ -446,14 +416,14 @@
                                 init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: input.socket, nodeId: data.id, side: "input", key } }),
                                 unmount: ref => emit({ type: "unmount", data: { element: ref } })
                             }),
-                            React.createElement('span', { className: 'hsv-mod-socket-label' }, input.label)
+                            React.createElement('span', { key: 'lbl', className: 'hsv-mod-socket-label' }, input.label)
                         ])
                     )
                 ),
                 React.createElement('div', { key: 'out', style: { display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'flex-end' } }, 
                     Object.entries(data.outputs).map(([key, output]) => 
                         React.createElement('div', { key, style: { display: 'flex', alignItems: 'center', gap: '5px' } }, [
-                            React.createElement('span', { className: 'hsv-mod-socket-label' }, output.label),
+                            React.createElement('span', { key: 'lbl', className: 'hsv-mod-socket-label' }, output.label),
                             React.createElement(RefComponent, {
                                 key: 'ref',
                                 init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }),
@@ -472,9 +442,10 @@
             }, [
                 // Buffer Selectors
                 React.createElement('div', { key: 'bufs', style: { marginBottom: '10px', borderBottom: '1px solid rgba(179, 136, 255, 0.2)', paddingBottom: '5px' } }, [
-                    React.createElement('div', { className: 'hsv-mod-select-row' }, [
-                        React.createElement('span', { className: 'hsv-mod-slider-label' }, "Enable Buf:"),
+                    React.createElement('div', { key: 'enableRow', className: 'hsv-mod-select-row' }, [
+                        React.createElement('span', { key: 'lbl', className: 'hsv-mod-slider-label' }, "Enable Buf:"),
                         React.createElement('select', {
+                            key: 'sel',
                             className: 'hsv-mod-select',
                             value: state.selectedBuffer,
                             onChange: e => updateState({ selectedBuffer: e.target.value })
@@ -483,9 +454,10 @@
                             ...availableBuffers.filter(b => b.startsWith('[Trigger]')).map(b => React.createElement('option', { key: b, value: b }, b))
                         ])
                     ]),
-                    React.createElement('div', { className: 'hsv-mod-select-row' }, [
-                        React.createElement('span', { className: 'hsv-mod-slider-label' }, "HSV Buf:"),
+                    React.createElement('div', { key: 'hsvRow', className: 'hsv-mod-select-row' }, [
+                        React.createElement('span', { key: 'lbl', className: 'hsv-mod-slider-label' }, "HSV Buf:"),
                         React.createElement('select', {
+                            key: 'sel',
                             className: 'hsv-mod-select',
                             value: state.selectedHsvBuffer,
                             onChange: e => updateState({ selectedHsvBuffer: e.target.value })
@@ -526,8 +498,9 @@
 
                 // Presets
                 React.createElement('div', { key: 'presets', style: { marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' } }, [
-                    React.createElement('span', { className: 'hsv-mod-socket-label' }, "Presets:"),
+                    React.createElement('span', { key: 'lbl', className: 'hsv-mod-socket-label' }, "Presets:"),
                     React.createElement('select', {
+                        key: 'sel',
                         style: { flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid #b388ff', color: '#d1c4e9', padding: '2px', borderRadius: '4px' },
                         onChange: loadPreset
                     }, [

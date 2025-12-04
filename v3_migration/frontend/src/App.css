@@ -191,3 +191,200 @@ div[style*="position: fixed"] input:focus {
 div[style*="position: fixed"] input::placeholder {
   color: rgba(0, 243, 255, 0.4) !important;
 }
+
+/* ============================================
+   Premium Socket Styling - Modern Design
+   ============================================ */
+
+/* Base socket styling - applies to all sockets */
+.rete-socket {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative !important;
+  cursor: crosshair !important;
+}
+
+/* Socket outer glow ring */
+.rete-socket::before {
+  content: '' !important;
+  position: absolute !important;
+  top: -4px !important;
+  left: -4px !important;
+  right: -4px !important;
+  bottom: -4px !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  border: 2px solid transparent !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Socket inner highlight */
+.rete-socket::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 3px !important;
+  left: 3px !important;
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.3) !important;
+  transition: all 0.25s ease !important;
+}
+
+/* Boolean sockets - Green/Emerald */
+.rete-socket[data-socket-type="boolean"],
+.rete-socket[title*="boolean" i] {
+  background: linear-gradient(145deg, #10b981, #059669) !important;
+  border: 2px solid #34d399 !important;
+  box-shadow: 
+    0 0 12px rgba(16, 185, 129, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
+}
+
+.rete-socket[data-socket-type="boolean"]:hover,
+.rete-socket[title*="boolean" i]:hover {
+  transform: scale(1.2) !important;
+  box-shadow: 
+    0 0 20px rgba(16, 185, 129, 0.7),
+    0 0 0 4px rgba(16, 185, 129, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Number sockets - Blue/Cyan */
+.rete-socket[data-socket-type="number"],
+.rete-socket[title*="number" i] {
+  background: linear-gradient(145deg, #3b82f6, #2563eb) !important;
+  border: 2px solid #60a5fa !important;
+  box-shadow: 
+    0 0 12px rgba(59, 130, 246, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
+}
+
+.rete-socket[data-socket-type="number"]:hover,
+.rete-socket[title*="number" i]:hover {
+  transform: scale(1.2) !important;
+  box-shadow: 
+    0 0 20px rgba(59, 130, 246, 0.7),
+    0 0 0 4px rgba(59, 130, 246, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* String sockets - Orange/Amber */
+.rete-socket[data-socket-type="string"],
+.rete-socket[title*="string" i] {
+  background: linear-gradient(145deg, #f59e0b, #d97706) !important;
+  border: 2px solid #fbbf24 !important;
+  box-shadow: 
+    0 0 12px rgba(245, 158, 11, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
+}
+
+.rete-socket[data-socket-type="string"]:hover,
+.rete-socket[title*="string" i]:hover {
+  transform: scale(1.2) !important;
+  box-shadow: 
+    0 0 20px rgba(245, 158, 11, 0.7),
+    0 0 0 4px rgba(245, 158, 11, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* HSV Info sockets - Purple/Violet */
+.rete-socket[data-socket-type="hsv_info"],
+.rete-socket[title*="hsv" i] {
+  background: linear-gradient(145deg, #8b5cf6, #7c3aed) !important;
+  border: 2px solid #a78bfa !important;
+  box-shadow: 
+    0 0 12px rgba(139, 92, 246, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
+}
+
+.rete-socket[data-socket-type="hsv_info"]:hover,
+.rete-socket[title*="hsv" i]:hover {
+  transform: scale(1.2) !important;
+  box-shadow: 
+    0 0 20px rgba(139, 92, 246, 0.7),
+    0 0 0 4px rgba(139, 92, 246, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Object/Any sockets - Cyan/Teal */
+.rete-socket[data-socket-type="object"],
+.rete-socket[data-socket-type="any"],
+.rete-socket[title*="object" i],
+.rete-socket[title*="any" i] {
+  background: linear-gradient(145deg, #06b6d4, #0891b2) !important;
+  border: 2px solid #22d3ee !important;
+  box-shadow: 
+    0 0 12px rgba(6, 182, 212, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
+}
+
+.rete-socket[data-socket-type="object"]:hover,
+.rete-socket[data-socket-type="any"]:hover,
+.rete-socket[title*="object" i]:hover,
+.rete-socket[title*="any" i]:hover {
+  transform: scale(1.2) !important;
+  box-shadow: 
+    0 0 20px rgba(6, 182, 212, 0.7),
+    0 0 0 4px rgba(6, 182, 212, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Light Info sockets - Gold/Yellow */
+.rete-socket[data-socket-type="light_info"],
+.rete-socket[title*="light" i] {
+  background: linear-gradient(145deg, #eab308, #ca8a04) !important;
+  border: 2px solid #facc15 !important;
+  box-shadow: 
+    0 0 12px rgba(234, 179, 8, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
+}
+
+.rete-socket[data-socket-type="light_info"]:hover,
+.rete-socket[title*="light" i]:hover {
+  transform: scale(1.2) !important;
+  box-shadow: 
+    0 0 20px rgba(234, 179, 8, 0.7),
+    0 0 0 4px rgba(234, 179, 8, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Default/Unknown socket fallback - Slate */
+.rete-socket:not([data-socket-type]):not([title]) {
+  background: linear-gradient(145deg, #64748b, #475569) !important;
+  border: 2px solid #94a3b8 !important;
+  box-shadow: 
+    0 0 10px rgba(100, 116, 139, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.1) !important;
+}
+
+.rete-socket:not([data-socket-type]):not([title]):hover {
+  transform: scale(1.2) !important;
+  box-shadow: 
+    0 0 18px rgba(100, 116, 139, 0.6),
+    0 0 0 4px rgba(100, 116, 139, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Connected socket pulse animation */
+@keyframes socket-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 12px currentColor, inset 0 2px 4px rgba(255, 255, 255, 0.15);
+  }
+  50% { 
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor, inset 0 2px 4px rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Socket connection line styling */
+.rete-connection path {
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 4px currentColor) !important;
+}
+
+.rete-connection:hover path {
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 8px currentColor) !important;
+}

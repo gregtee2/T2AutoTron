@@ -207,65 +207,12 @@
     }
 
     // -------------------------------------------------------------------------
-    // COLOR UTILS
+    // COLOR UTILS - Use shared ColorUtilsPlugin (window.ColorUtils)
     // -------------------------------------------------------------------------
-    const ColorUtils = {
-        rgbToHsv: (r, g, b) => {
-            r /= 255; g /= 255; b /= 255;
-            const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
-            const s = max === 0 ? 0 : d / max;
-            let h = 0;
-            if (max !== min) {
-                switch (max) {
-                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                    case g: h = (b - r) / d + 2; break;
-                    case b: h = (r - g) / d + 4; break;
-                }
-                h /= 6;
-            }
-            return { hue: h, sat: s, val: max };
-        },
-        hsvToRgb: (h, s, v) => {
-            const i = Math.floor(h * 6), f = h * 6 - i;
-            const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
-            let r, g, b;
-            switch (i % 6) {
-                case 0: r = v; g = t; b = p; break;
-                case 1: r = q; g = v; b = p; break;
-                case 2: r = p; g = v; b = t; break;
-                case 3: r = p; g = q; b = v; break;
-                case 4: r = t; g = p; b = v; break;
-                case 5: r = v; g = p; b = q; break;
-            }
-            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-        },
-        kelvinToRGB: (kelvin) => {
-            kelvin = Math.max(1000, Math.min(40000, kelvin));
-            const t = kelvin / 100;
-            let r, g, b;
-            if (t <= 66) r = 255;
-            else { r = t - 60; r = 329.698727446 * Math.pow(r, -0.1332047592); r = Math.max(0, Math.min(255, r)); }
-            if (t <= 66) { g = 99.4708025861 * Math.log(t) - 161.1195681661; }
-            else { g = 288.1221695283 * Math.pow(t - 60, -0.0755148492); }
-            g = Math.max(0, Math.min(255, g));
-            if (t >= 66) b = 255;
-            else if (t <= 19) b = 0;
-            else { b = 138.5177312231 * Math.log(t - 10) - 305.0447927307; }
-            b = Math.max(0, Math.min(255, b));
-            return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
-        },
-        hexToRgb: (hex) => {
-            const s = hex.replace("#", "");
-            return {
-                r: parseInt(s.substr(0, 2), 16),
-                g: parseInt(s.substr(2, 2), 16),
-                b: parseInt(s.substr(4, 2), 16)
-            };
-        },
-        interpolate: (v, minV, maxV, start, end) => {
-            return start + ((v - minV) / (maxV - minV)) * (end - start);
-        }
-    };
+    if (!window.ColorUtils) {
+        console.error("[AllInOneColorNode] window.ColorUtils not found! Make sure 00_ColorUtilsPlugin.js loads first.");
+    }
+    const ColorUtils = window.ColorUtils;
 
     // -------------------------------------------------------------------------
     // NODE CLASS

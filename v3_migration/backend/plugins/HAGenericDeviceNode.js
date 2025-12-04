@@ -368,6 +368,21 @@
             this.startAutoRefresh();
         }
 
+        static compareNames(a = "", b = "") {
+            return a.localeCompare(b, undefined, { sensitivity: "base" });
+        }
+
+        normalizeSelectedDeviceNames() {
+            const uniqueDevices = this.getAllDevicesWithUniqueNames();
+            const displayNameMap = new Map(uniqueDevices.map(item => [item.device.id, item.displayName]));
+
+            this.properties.selectedDeviceIds.forEach((id, idx) => {
+                if (!id) return;
+                const displayName = displayNameMap.get(id);
+                if (displayName) this.properties.selectedDeviceNames[idx] = displayName;
+            });
+        }
+
         startAutoRefresh() {
             if (this.intervalId) clearInterval(this.intervalId);
             this.intervalId = setInterval(() => this.fetchDevices(), this.properties.autoRefreshInterval);
@@ -466,7 +481,10 @@
                 const response = await fetch('/api/lights/ha/', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                 const data = await response.json();
                 if (data.success && Array.isArray(data.devices)) {
-                    this.devices = data.devices;
+                    this.devices = [...data.devices].sort((a, b) =>
+                        HAGenericDeviceNode.compareNames(a.name || a.id, b.name || b.id)
+                    );
+                    this.normalizeSelectedDeviceNames();
                     this.updateStatus(`Loaded ${data.devices.length} devices`);
                     this.updateDeviceSelectorOptions();
                     this.triggerUpdate();
@@ -511,11 +529,20 @@
         }
 
         getAllDevicesWithUniqueNames() {
-            return (this.devices || []).map(d => {
-                const count = this.devices.filter(x => x.name === d.name).length;
-                const displayName = count > 1 ? `${d.name} (${d.id})` : d.name;
-                return { device: d, displayName };
-            });
+            const devices = this.devices || [];
+            const nameCounts = devices.reduce((acc, device) => {
+                const key = (device.name || device.id || "").trim();
+                acc[key] = (acc[key] || 0) + 1;
+                return acc;
+            }, {});
+
+            return devices
+                .map(device => {
+                    const baseName = (device.name || device.id || "").trim();
+                    const displayName = nameCounts[baseName] > 1 ? `${baseName} (${device.id})` : baseName;
+                    return { device, displayName };
+                })
+                .sort((a, b) => HAGenericDeviceNode.compareNames(a.displayName, b.displayName));
         }
 
         getDeviceOptions() {
@@ -532,9 +559,16 @@
                 const ctrl = this.controls[`device_${i}_select`];
                 if (!ctrl) return;
                 const current = ctrl.value || "Select Device";
-                const options = ["Select Device", ...this.getDeviceOptions()];
-                if (current !== "Select Device" && !options.includes(current)) options.push(current);
-                ctrl.values = options;
+                const baseOptions = this.getDeviceOptions();
+                let sortedOptions = [...baseOptions];
+
+                if (current !== "Select Device" && !baseOptions.includes(current)) {
+                    sortedOptions = [...sortedOptions, current].sort((a, b) =>
+                        HAGenericDeviceNode.compareNames(a, b)
+                    );
+                }
+
+                ctrl.values = ["Select Device", ...sortedOptions];
                 ctrl.value = current;
             });
         }
@@ -545,7 +579,7 @@
             if (!item) return;
             const dev = item.device;
             this.properties.selectedDeviceIds[index] = dev.id;
-            this.properties.selectedDeviceNames[index] = dev.name;
+            this.properties.selectedDeviceNames[index] = item.displayName || dev.name;
             const stateCtrl = this.controls[`device_${index}_state`];
             if (stateCtrl) stateCtrl.deviceId = dev.id;
             const colorbar = this.controls[`device_${index}_colorbar`];

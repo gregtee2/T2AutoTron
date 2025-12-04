@@ -13,11 +13,9 @@ import { ForecastPanel } from "./ui/ForecastPanel";
 
 // Registry
 import { nodeRegistry } from "./registries/NodeRegistry";
-import { registerCoreNodes } from "./nodes/registerNodes";
 import { loadPlugins } from "./registries/PluginLoader";
 
-// Controls (Still imported directly for now)
-import { StatusIndicatorControl, ColorBarControl, PowerStatsControl } from "./nodes/HAGenericDeviceNode";
+// Controls
 import { ButtonControlComponent } from "./controls/ButtonControl";
 import { DropdownControlComponent } from "./controls/DropdownControl";
 import { TextControlComponent } from "./controls/TextControl";
@@ -28,16 +26,30 @@ import { StatusIndicatorControlComponent } from "./controls/StatusIndicatorContr
 import { ColorBarControlComponent } from "./controls/ColorBarControl";
 import { PowerStatsControlComponent } from "./controls/PowerStatsControl";
 
-// import { CustomMenuItem } from "./CustomContextMenu";
-
-// Register nodes immediately
-registerCoreNodes();
+import { CustomMenuItem } from "./CustomContextMenu";
 
 export function Editor() {
     const ref = useRef(null);
     const [editorInstance, setEditorInstance] = useState(null);
     const [areaInstance, setAreaInstance] = useState(null);
     const [engineInstance, setEngineInstance] = useState(null);
+    const [selectorInstance, setSelectorInstance] = useState(null);
+    const programmaticMoveRef = useRef(false);
+    const lassoSelectedNodesRef = useRef(new Set());
+    
+    // Refs to hold current instances for keyboard handler (avoids stale closure issues)
+    const editorRef = useRef(null);
+    const areaRef = useRef(null);
+    const selectorRef = useRef(null);
+    
+    // Track mouse position for paste location
+    const mousePositionRef = useRef({ x: 0, y: 0 });
+    
+    // Track shift key state for accumulating selection
+    const shiftKeyRef = useRef(false);
+    
+    // Undo stack for deleted nodes
+    const undoStackRef = useRef([]);
 
     const createEditor = useCallback(async (container) => {
         const editor = new NodeEditor();
@@ -143,9 +155,6 @@ export function Editor() {
         });
 
         const selector = AreaExtensions.selector();
-        AreaExtensions.selectableNodes(area, selector, {
-            accumulating: AreaExtensions.accumulateOnCtrl()
-        });
 
         // Register Custom Components
         render.addPreset(Presets.classic.setup({
@@ -160,26 +169,35 @@ export function Editor() {
                 control(context) {
                     if (context.payload instanceof ClassicPreset.Control) {
                         const control = context.payload;
-                        if (control.constructor.name === "ButtonControl") return ButtonControlComponent;
-                        if (control.constructor.name === "DropdownControl") return DropdownControlComponent;
-                        if (control.constructor.name === "TextControl") return TextControlComponent;
-                        if (control.constructor.name === "SwitchControl") return SwitchControlComponent;
-                        if (control.constructor.name === "NumberControl") return NumberControlComponent;
-                        if (control.constructor.name === "DeviceStateControl") return DeviceStateControlComponent;
-
-                        // New Legacy Widgets
-                        if (control instanceof StatusIndicatorControl) return StatusIndicatorControlComponent;
-                        if (control instanceof ColorBarControl) return ColorBarControlComponent;
-                        if (control instanceof PowerStatsControl) return PowerStatsControlComponent;
+                        const name = control.constructor.name;
+                        
+                        // Match by constructor name (works after minification if names preserved)
+                        if (name === "ButtonControl") return ButtonControlComponent;
+                        if (name === "DropdownControl") return DropdownControlComponent;
+                        if (name === "TextControl") return TextControlComponent;
+                        if (name === "SwitchControl") return SwitchControlComponent;
+                        if (name === "NumberControl") return NumberControlComponent;
+                        if (name === "DeviceStateControl") return DeviceStateControlComponent;
+                        if (name === "StatusIndicatorControl") return StatusIndicatorControlComponent;
+                        if (name === "ColorBarControl") return ColorBarControlComponent;
+                        if (name === "PowerStatsControl") return PowerStatsControlComponent;
+                        
+                        // Debug: log unmatched controls
+                        console.warn('[Editor] Unmatched control type:', name, control);
                     }
                     return Presets.classic.Control;
                 }
             }
         }));
 
-        // Use default context menu preset - styling is handled via App.css
-        // The hasSubitems warning is a known Rete issue and is harmless
-        render.addPreset(Presets.contextMenu.setup());
+        // Use custom menu item component to filter hasSubitems prop from DOM
+        render.addPreset(Presets.contextMenu.setup({
+            customize: {
+                item() {
+                    return CustomMenuItem;
+                }
+            }
+        }));
         connection.addPreset(ConnectionPresets.classic.setup());
 
         editor.use(area);
@@ -187,8 +205,13 @@ export function Editor() {
         area.use(contextMenu);
         area.use(render);
 
+        // Set up node selection AFTER plugins are initialized
+        AreaExtensions.selectableNodes(area, selector, {
+            accumulating: AreaExtensions.accumulateOnCtrl()
+        });
+
         AreaExtensions.simpleNodesOrder(area);
-        AreaExtensions.showInputControl(area);
+        // AreaExtensions.showInputControl(area); // Disabled - was causing empty input boxes
 
         // Listen for node additions to set backdrop z-index
         editor.addPipe(context => {
@@ -275,8 +298,8 @@ export function Editor() {
         let isSelecting = false;
         let startPos = { x: 0, y: 0 };
         
-        // Track lasso-selected nodes for group movement
-        const lassoSelectedNodes = new Set();
+        // Use ref for lasso-selected nodes so keyboard handler can access it
+        const lassoSelectedNodes = lassoSelectedNodesRef.current;
 
         const onPointerDown = (e) => {
             // Enable Lasso on Ctrl + Left Click
@@ -382,6 +405,17 @@ export function Editor() {
                 // Track this node in our lasso selection
                 lassoSelectedNodes.add(node.id);
                 
+                // Also add to Rete's selector
+                selector.add({
+                    id: node.id,
+                    label: 'node',
+                    translate(dx, dy) {},
+                    unselect() {
+                        view.element.classList.remove('selected');
+                        view.element.style.outline = '';
+                    }
+                }, false); // false = don't accumulate, we already handle that
+                
                 // Add selected class for visual feedback
                 view.element.classList.add('selected');
                 
@@ -415,12 +449,24 @@ export function Editor() {
             // and not during a lasso selection operation
             // and not holding Ctrl (which starts lasso)
             if (!e.ctrlKey && !e.metaKey && !isSelecting) {
-                // Check if the click target is the canvas area itself
-                const target = e.target;
-                if (target === container || 
-                    target.classList.contains('rete-area') ||
-                    target.closest('[data-testid="area"]')) {
-                    clearLassoSelection();
+                // Check if click was on a node - if so, don't clear (onNodeClick handles it)
+                let clickedOnNode = false;
+                for (const [nodeId, view] of area.nodeViews) {
+                    if (view.element.contains(e.target)) {
+                        clickedOnNode = true;
+                        break;
+                    }
+                }
+                
+                if (!clickedOnNode) {
+                    // Check if the click target is the canvas area itself
+                    const target = e.target;
+                    const isCanvas = target === container || 
+                        target.classList.contains('rete-area') ||
+                        target.closest('[data-testid="area"]');
+                    if (isCanvas) {
+                        clearLassoSelection();
+                    }
                 }
             }
         };
@@ -516,6 +562,9 @@ export function Editor() {
             });
         }
 
+        // Expose capture refresh helper so save/load flows can call it
+        area.updateBackdropCaptures = updateBackdropCaptures;
+
         // Function to ensure backdrop nodes are always behind other nodes
         function updateBackdropZIndex() {
             editor.getNodes().forEach(node => {
@@ -528,6 +577,40 @@ export function Editor() {
                 }
             });
         }
+
+        // Handle single-click node selection via Rete's nodepicked event
+        area.addPipe(context => {
+            if (context.type === 'nodepicked') {
+                const nodeId = context.data.id;
+                console.log('[Editor] Node picked (Rete event):', nodeId, 'Shift held:', shiftKeyRef.current);
+                
+                // If Shift is NOT held and clicking a new node, clear previous selection
+                if (!shiftKeyRef.current && !lassoSelectedNodes.has(nodeId)) {
+                    // Clear previous selection visually
+                    lassoSelectedNodes.forEach(prevNodeId => {
+                        const view = area.nodeViews.get(prevNodeId);
+                        if (view && view.element) {
+                            view.element.classList.remove('selected');
+                            view.element.style.outline = '';
+                        }
+                    });
+                    lassoSelectedNodes.clear();
+                }
+                
+                // Add to our selection tracking
+                lassoSelectedNodes.add(nodeId);
+                
+                // Apply visual selection
+                const view = area.nodeViews.get(nodeId);
+                if (view && view.element) {
+                    view.element.classList.add('selected');
+                    view.element.style.outline = '3px solid #00f3ff';
+                }
+                
+                console.log('[Editor] Selection after pick:', Array.from(lassoSelectedNodes));
+            }
+            return context;
+        });
 
         area.addPipe(context => {
             // When a node is rendered, check if it's a backdrop and set z-index
@@ -553,6 +636,7 @@ export function Editor() {
             
             // Use nodetranslate for real-time movement tracking
             if (context.type === 'nodetranslate') {
+                if (programmaticMoveRef.current) return context;
                 // Skip if we're already doing a group move (prevents infinite recursion)
                 if (isGroupMoving) return context;
                 
@@ -634,6 +718,7 @@ export function Editor() {
             
             // Reset state when drag ends
             if (context.type === 'nodedragged') {
+                if (programmaticMoveRef.current) return context;
                 console.log('[Backdrop] Drag ended, resetting state');
                 backdropDragState.isDragging = false;
                 backdropDragState.activeBackdropId = null;
@@ -646,6 +731,11 @@ export function Editor() {
         });
         // --------------------------------------
 
+        // Update both state and refs
+        editorRef.current = editor;
+        areaRef.current = area;
+        selectorRef.current = selector;
+        
         setEditorInstance(editor);
         setAreaInstance(area);
         setEngineInstance(engine);
@@ -670,11 +760,6 @@ export function Editor() {
     }, []);
 
     useEffect(() => {
-        // Load external plugins on startup
-        loadPlugins().then(() => {
-            console.log("[Editor] External plugins loaded");
-        });
-
         const container = ref.current;
         if (!container) return;
 
@@ -682,81 +767,258 @@ export function Editor() {
         let areaInstance = null;
         let engineInstance = null;
         let selectorInstance = null;
+        let editorPromise = null;
 
-        let editorPromise = createEditor(container);
-
-        editorPromise.then((result) => {
+        // Load plugins FIRST, then create editor
+        editorPromise = loadPlugins().then(() => {
+            console.log("[Editor] External plugins loaded, now creating editor...");
+            return createEditor(container);
+        }).then((result) => {
             editorInstance = result.editor;
             areaInstance = result.area;
             engineInstance = result.engine;
             selectorInstance = result.selector;
+            
+            // Store in React state for other handlers
+            setEditorInstance(result.editor);
+            setAreaInstance(result.area);
+            setEngineInstance(result.engine);
+            setSelectorInstance(result.selector);
+            
+            return result;
         });
 
-        // Handle Key Down (Delete, Copy, Paste)
+        return () => {
+            editorPromise.then((result) => result.destroy());
+        };
+    }, [createEditor]);
+
+    // Separate useEffect for keyboard handling - uses refs to avoid stale closures
+    useEffect(() => {
+        if (!editorInstance || !areaInstance || !selectorInstance) return;
+
         const handleKeyDown = async (e) => {
             // Ignore inputs
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
 
             console.log(`[Editor] KeyDown: ${e.code} (Ctrl: ${e.ctrlKey}, Meta: ${e.metaKey})`);
+            
+            // Use refs to get current instances (avoids stale closure issues)
+            const editor = editorRef.current;
+            const area = areaRef.current;
+            const selector = selectorRef.current;
+            
+            if (!editor || !area) {
+                console.log('[Editor] No editor/area ref available');
+                return;
+            }
+
+            // Get selected node IDs from both the selector and our lasso tracking
+            const getSelectedNodeIds = () => {
+                const nodeIds = new Set();
+                
+                // First, check Rete's selector
+                if (selector && selector.entities) {
+                    if (selector.entities instanceof Map) {
+                        for (const [nodeId, metadata] of selector.entities) {
+                            if (editor.getNode(nodeId)) {
+                                nodeIds.add(nodeId);
+                            }
+                        }
+                    }
+                }
+                
+                // Also check our lasso selection ref (fallback)
+                for (const nodeId of lassoSelectedNodesRef.current) {
+                    const node = editor.getNode(nodeId);
+                    console.log(`[Editor] Checking node ${nodeId}: exists=${!!node}`);
+                    if (node) {
+                        nodeIds.add(nodeId);
+                    }
+                }
+                
+                console.log(`[Editor] Found ${nodeIds.size} selected nodes:`, Array.from(nodeIds));
+                return Array.from(nodeIds);
+            };
 
             // Delete
             if (e.code === 'Delete' || e.code === 'Backspace') {
-                if (editorInstance && selectorInstance) {
-                    if (selectorInstance.entities) {
-                        const entities = Array.from(selectorInstance.entities);
-                        for (const entity of entities) {
-                            if (entity.label === 'node') {
-                                const nodeId = entity.id;
-                                const connections = editorInstance.getConnections().filter(c => c.source === nodeId || c.target === nodeId);
-                                for (const conn of connections) {
-                                    await editorInstance.removeConnection(conn.id);
+                console.log(`[Editor] Delete key pressed. lassoSelectedNodesRef.current size:`, lassoSelectedNodesRef.current.size);
+                console.log(`[Editor] lassoSelectedNodesRef.current contents:`, Array.from(lassoSelectedNodesRef.current));
+                const nodeIds = getSelectedNodeIds();
+                console.log(`[Editor] Deleting ${nodeIds.length} nodes:`, nodeIds);
+                
+                if (nodeIds.length > 0) {
+                    // Save state for undo before deleting
+                    const deletedNodes = [];
+                    const deletedConnections = [];
+                    const nodeIdSet = new Set(nodeIds);
+                    
+                    // Capture all connections involving these nodes
+                    for (const conn of editor.getConnections()) {
+                        if (nodeIdSet.has(conn.source) || nodeIdSet.has(conn.target)) {
+                            deletedConnections.push({
+                                source: conn.source,
+                                target: conn.target,
+                                sourceOutput: conn.sourceOutput,
+                                targetInput: conn.targetInput
+                            });
+                        }
+                    }
+                    
+                    // Capture node data
+                    for (const nodeId of nodeIds) {
+                        const node = editor.getNode(nodeId);
+                        if (node) {
+                            deletedNodes.push({
+                                id: nodeId,
+                                label: node.label,
+                                position: area.nodeViews.get(nodeId)?.position || { x: 0, y: 0 },
+                                properties: JSON.parse(JSON.stringify(node.properties || {}))
+                            });
+                        }
+                    }
+                    
+                    // Push to undo stack
+                    undoStackRef.current.push({
+                        type: 'delete',
+                        nodes: deletedNodes,
+                        connections: deletedConnections
+                    });
+                    console.log('[Editor] Saved undo state:', undoStackRef.current.length, 'items in stack');
+                    
+                    // Now perform the deletion
+                    for (const nodeId of nodeIds) {
+                        const connections = editor.getConnections().filter(c => c.source === nodeId || c.target === nodeId);
+                        for (const conn of connections) {
+                            await editor.removeConnection(conn.id);
+                        }
+                        await editor.removeNode(nodeId);
+                        // Also remove from our tracking
+                        lassoSelectedNodesRef.current.delete(nodeId);
+                    }
+                }
+            }
+            
+            // Undo (Ctrl+Z)
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
+                e.preventDefault();
+                
+                if (undoStackRef.current.length === 0) {
+                    console.log('[Editor] Nothing to undo');
+                    return;
+                }
+                
+                const undoAction = undoStackRef.current.pop();
+                console.log('[Editor] Undoing:', undoAction.type, undoAction.nodes.length, 'nodes');
+                
+                if (undoAction.type === 'delete') {
+                    const idMap = {}; // Old ID -> New ID
+                    
+                    programmaticMoveRef.current = true;
+                    try {
+                        // Restore nodes
+                        for (const nodeData of undoAction.nodes) {
+                            const def = nodeRegistry.getByLabel(nodeData.label);
+                            if (def) {
+                                let node;
+                                const updateCallback = () => {
+                                    if (area) area.update("node", node.id);
+                                    if (engineInstance && editor) {
+                                        engineInstance.reset();
+                                        setTimeout(() => {
+                                            editor.getNodes().forEach(async (n) => {
+                                                try { await engineInstance.fetch(n.id); } catch (e) { }
+                                            });
+                                        }, 0);
+                                    }
+                                };
+                                
+                                const callback = () => {
+                                    if (def.updateStrategy === 'dataflow') {
+                                        if (engineInstance) engineInstance.reset();
+                                        if (engineInstance && editor) {
+                                            setTimeout(() => {
+                                                editor.getNodes().forEach(async (n) => {
+                                                    try { await engineInstance.fetch(n.id); } catch (e) { }
+                                                });
+                                            }, 0);
+                                        }
+                                    } else {
+                                        updateCallback();
+                                    }
+                                };
+                                
+                                node = def.factory(callback);
+                                
+                                // Restore properties
+                                if (nodeData.properties) {
+                                    Object.assign(node.properties, nodeData.properties);
                                 }
-                                await editorInstance.removeNode(nodeId);
+                                
+                                await editor.addNode(node);
+                                await area.translate(node.id, nodeData.position);
+                                
+                                idMap[nodeData.id] = node.id;
                             }
                         }
+                        
+                        // Restore connections
+                        for (const connData of undoAction.connections) {
+                            const newSourceId = idMap[connData.source] || connData.source;
+                            const newTargetId = idMap[connData.target] || connData.target;
+                            
+                            const source = editor.getNode(newSourceId);
+                            const target = editor.getNode(newTargetId);
+                            
+                            if (source && target) {
+                                try {
+                                    await editor.addConnection(new ClassicPreset.Connection(
+                                        source,
+                                        connData.sourceOutput,
+                                        target,
+                                        connData.targetInput
+                                    ));
+                                } catch (err) {
+                                    console.warn('[Editor] Could not restore connection:', err);
+                                }
+                            }
+                        }
+                        
+                        console.log('[Editor] Undo complete - restored', undoAction.nodes.length, 'nodes');
+                    } finally {
+                        programmaticMoveRef.current = false;
+                        area?.updateBackdropCaptures?.();
                     }
                 }
             }
 
             // Copy (Ctrl+C)
             if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC') {
-                if (!editorInstance || !selectorInstance) {
-                    console.warn("[Editor] Copy failed: Editor or Selector not initialized");
-                    return;
-                }
-                
                 try {
-                    const selectedNodes = [];
-                    const selectedNodeIds = new Set();
+                    const nodeIds = getSelectedNodeIds();
 
-                    // Check if selector has entities
-                    if (!selectorInstance.entities || selectorInstance.entities.size === 0) {
-                        console.log("[Editor] Nothing selected to copy (selector empty)");
+                    if (nodeIds.length === 0) {
+                        console.log("[Editor] Nothing selected to copy");
                         return;
                     }
 
-                    console.log(`[Editor] Processing ${selectorInstance.entities.size} entities for copy`);
+                    console.log(`[Editor] Copying ${nodeIds.length} nodes`);
 
-                    for (const entity of selectorInstance.entities) {
-                        // console.log("[Editor] Entity:", entity);
-                        if (entity.label === 'node') {
-                            const node = editorInstance.getNode(entity.id);
-                            // console.log(`[Editor] Node lookup for ${entity.id}:`, node ? "Found" : "Not Found");
-                            
-                            if (node) {
-                                // Serialize only safe data
-                                selectedNodes.push({
-                                    label: node.label,
-                                    position: areaInstance.nodeViews.get(node.id)?.position || { x: 0, y: 0 },
-                                    data: {
-                                        id: node.id,
-                                        properties: JSON.parse(JSON.stringify(node.properties || {})) // Deep copy properties
-                                    }
-                                });
-                                selectedNodeIds.add(node.id);
-                            }
-                        } else {
-                            console.log("[Editor] Skipping non-node entity:", entity.label);
+                    const selectedNodes = [];
+                    const selectedNodeIds = new Set(nodeIds);
+
+                    for (const nodeId of nodeIds) {
+                        const node = editor.getNode(nodeId);
+                        if (node) {
+                            selectedNodes.push({
+                                label: node.label,
+                                position: area.nodeViews.get(node.id)?.position || { x: 0, y: 0 },
+                                data: {
+                                    id: node.id,
+                                    properties: JSON.parse(JSON.stringify(node.properties || {}))
+                                }
+                            });
                         }
                     }
 
@@ -766,7 +1028,7 @@ export function Editor() {
                     }
 
                     const selectedConnections = [];
-                    for (const conn of editorInstance.getConnections()) {
+                    for (const conn of editor.getConnections()) {
                         if (selectedNodeIds.has(conn.source) && selectedNodeIds.has(conn.target)) {
                             selectedConnections.push({
                                 source: conn.source,
@@ -787,11 +1049,6 @@ export function Editor() {
 
             // Paste (Ctrl+V)
             if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV') {
-                if (!editorInstance || !areaInstance || !engineInstance) {
-                    console.warn("[Editor] Paste failed: Editor not initialized");
-                    return;
-                }
-
                 const clipboardText = localStorage.getItem('rete-clipboard');
                 if (!clipboardText) {
                     console.log("[Editor] Clipboard empty");
@@ -801,89 +1058,99 @@ export function Editor() {
                 try {
                     const data = JSON.parse(clipboardText);
                     const idMap = {}; // Old ID -> New ID
-
-                    // Deselect current selection
-                    if (selectorInstance) {
-                        Array.from(selectorInstance.entities).forEach(entity => selectorInstance.remove(entity));
+                    
+                    // Calculate paste position based on mouse location
+                    // Convert screen coordinates to canvas coordinates
+                    const container = areaRef.current?.container || ref.current;
+                    const containerRect = container?.getBoundingClientRect() || { left: 0, top: 0 };
+                    const transform = area.area.transform;
+                    
+                    // Mouse position relative to container, adjusted for canvas pan/zoom
+                    const pasteX = (mousePositionRef.current.x - containerRect.left - transform.x) / transform.k;
+                    const pasteY = (mousePositionRef.current.y - containerRect.top - transform.y) / transform.k;
+                    
+                    // Find the bounding box of copied nodes to center them at paste location
+                    let minX = Infinity, minY = Infinity;
+                    for (const nodeData of data.nodes) {
+                        minX = Math.min(minX, nodeData.position.x);
+                        minY = Math.min(minY, nodeData.position.y);
                     }
 
-                    for (const nodeData of data.nodes) {
-                        let node;
-                        const def = nodeRegistry.getByLabel(nodeData.label);
-                        
-                        if (def) {
-                            const updateCallback = () => {
-                                if (areaInstance) areaInstance.update("node", node.id);
-                                if (engineInstance && editorInstance) {
-                                    engineInstance.reset();
-                                    setTimeout(() => {
-                                        editorInstance.getNodes().forEach(async (n) => {
-                                            try { await engineInstance.fetch(n.id); } catch (e) { }
-                                        });
-                                    }, 0);
-                                }
-                            };
+                    // Deselect current selection
+                    if (selector && selector.entities) {
+                        Array.from(selector.entities).forEach(entity => selector.remove(entity));
+                    }
 
-                            // Special handling for dataflow-only nodes (like Color Node)
-                            // For paste, we generally want the full updateCallback to ensure everything is synced
-                            // But if we want to respect the strategy:
-                            const callback = () => {
-                                if (def.updateStrategy === 'dataflow') {
-                                    // For paste, we might still want area update initially?
-                                    // The original code for paste used a custom callback for ColorNode that did NOT do area.update?
-                                    // Actually, the original code for paste had a callback that did area.update.
-                                    // Wait, let's check the original code I replaced.
-                                    // Original paste code for ColorNode:
-                                    /*
-                                    else if (nodeData.label === "All-in-One Color Control") node = new AllInOneColorNode(() => {
-                                        if (engineInstance) engineInstance.reset();
-                                        if (engineInstance && editorInstance) { ... }
-                                    });
-                                    */
-                                    // It did NOT call area.update("node", node.id).
-                                    
-                                    if (engineInstance) engineInstance.reset();
-                                    if (engineInstance && editorInstance) {
+                    programmaticMoveRef.current = true;
+                    try {
+                        for (const nodeData of data.nodes) {
+                            let node;
+                            const def = nodeRegistry.getByLabel(nodeData.label);
+                            
+                            if (def) {
+                                const updateCallback = () => {
+                                    if (area) area.update("node", node.id);
+                                    if (engineInstance && editor) {
+                                        engineInstance.reset();
                                         setTimeout(() => {
-                                            editorInstance.getNodes().forEach(async (n) => {
+                                            editor.getNodes().forEach(async (n) => {
                                                 try { await engineInstance.fetch(n.id); } catch (e) { }
                                             });
                                         }, 0);
                                     }
-                                } else {
-                                    updateCallback();
+                                };
+
+                                const callback = () => {
+                                    if (def.updateStrategy === 'dataflow') {
+                                        if (engineInstance) engineInstance.reset();
+                                        if (engineInstance && editor) {
+                                            setTimeout(() => {
+                                                editor.getNodes().forEach(async (n) => {
+                                                    try { await engineInstance.fetch(n.id); } catch (e) { }
+                                                });
+                                            }, 0);
+                                        }
+                                    } else {
+                                        updateCallback();
+                                    }
+                                };
+
+                                node = def.factory(callback);
+                            }
+
+                            if (node) {
+                                // Restore properties
+                                if (typeof node.restore === 'function' && nodeData.data) {
+                                    node.restore(nodeData.data);
+                                } else if (nodeData.data && nodeData.data.properties) {
+                                    Object.assign(node.properties, nodeData.data.properties);
                                 }
-                            };
 
-                            node = def.factory(callback);
-                        }
+                                await editor.addNode(node);
+                                
+                                // Position relative to paste location (mouse position)
+                                // Offset from the group's top-left corner
+                                const offsetX = nodeData.position.x - minX;
+                                const offsetY = nodeData.position.y - minY;
+                                const newPos = { x: pasteX + offsetX, y: pasteY + offsetY };
+                                await area.translate(node.id, newPos);
 
-                        if (node) {
-                            // Restore properties
-                            if (typeof node.restore === 'function' && nodeData.data) {
-                                node.restore(nodeData.data);
-                            } else if (nodeData.data && nodeData.data.properties) {
-                                Object.assign(node.properties, nodeData.data.properties);
-                            }
-
-                            await editorInstance.addNode(node);
-                            
-                            // Offset position slightly (e.g., +20px)
-                            const newPos = { x: nodeData.position.x + 20, y: nodeData.position.y + 20 };
-                            await areaInstance.translate(node.id, newPos);
-
-                            idMap[nodeData.data.id] = node.id;
-                            
-                            // Select new node
-                            if (selectorInstance) {
-                                selectorInstance.add({
-                                    id: node.id,
-                                    label: 'node',
-                                    translate: () => {},
-                                    unmount: () => {}
-                                }, true);
+                                idMap[nodeData.data.id] = node.id;
+                                
+                                // Select new node
+                                if (selector) {
+                                    selector.add({
+                                        id: node.id,
+                                        label: 'node',
+                                        translate: () => {},
+                                        unmount: () => {}
+                                    }, true);
+                                }
                             }
                         }
+                    } finally {
+                        programmaticMoveRef.current = false;
+                        area?.updateBackdropCaptures?.();
                     }
 
                     // Restore internal connections
@@ -892,10 +1159,10 @@ export function Editor() {
                         const newTargetId = idMap[connData.target];
 
                         if (newSourceId && newTargetId) {
-                            const source = editorInstance.getNode(newSourceId);
-                            const target = editorInstance.getNode(newTargetId);
+                            const source = editor.getNode(newSourceId);
+                            const target = editor.getNode(newTargetId);
                             if (source && target) {
-                                await editorInstance.addConnection(new ClassicPreset.Connection(
+                                await editor.addConnection(new ClassicPreset.Connection(
                                     source,
                                     connData.sourceOutput,
                                     target,
@@ -911,14 +1178,37 @@ export function Editor() {
                 }
             }
         };
+        
+        // Track mouse position for paste location
+        const handleMouseMove = (e) => {
+            mousePositionRef.current = { x: e.clientX, y: e.clientY };
+        };
+        
+        // Track Shift key state for accumulating selection
+        const handleKeyDownForShift = (e) => {
+            if (e.key === 'Shift') {
+                shiftKeyRef.current = true;
+            }
+        };
+        
+        const handleKeyUpForShift = (e) => {
+            if (e.key === 'Shift') {
+                shiftKeyRef.current = false;
+            }
+        };
 
         window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keydown', handleKeyDownForShift);
+        window.addEventListener('keyup', handleKeyUpForShift);
+        window.addEventListener('mousemove', handleMouseMove);
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
-            editorPromise.then((result) => result.destroy());
+            window.removeEventListener('keydown', handleKeyDownForShift);
+            window.removeEventListener('keyup', handleKeyUpForShift);
+            window.removeEventListener('mousemove', handleMouseMove);
         };
-    }, [createEditor]);
+    }, [editorInstance, areaInstance, engineInstance, selectorInstance]);
 
     const handleSave = async () => {
         if (!editorInstance || !areaInstance) return;
@@ -998,55 +1288,60 @@ export function Editor() {
             }
             const graphData = JSON.parse(saved);
             await handleClear();
+            programmaticMoveRef.current = true;
+            try {
+                for (const nodeData of graphData.nodes) {
+                    let node;
+                    const def = nodeRegistry.getByLabel(nodeData.label);
 
-            for (const nodeData of graphData.nodes) {
-                let node;
-                const def = nodeRegistry.getByLabel(nodeData.label);
-
-                if (def) {
-                    const updateCallback = () => {
-                        if (areaInstance) areaInstance.update("node", nodeData.id);
-                        if (engineInstance && editorInstance) {
-                            engineInstance.reset();
-                            setTimeout(() => {
-                                editorInstance.getNodes().forEach(async (n) => {
-                                    try {
-                                        await engineInstance.fetch(n.id);
-                                    } catch (e) { }
-                                });
-                            }, 0);
-                        }
-                    };
-                    // For loading, we generally use the standard update callback
-                    node = def.factory(updateCallback);
-                }
-
-                if (node) {
-                    node.id = nodeData.id;
-
-                    // Restore properties and state
-                    if (typeof node.restore === 'function' && nodeData.data) {
-                        node.restore(nodeData.data);
-                    } else if (nodeData.data && nodeData.data.properties) {
-                        Object.assign(node.properties, nodeData.data.properties);
+                    if (def) {
+                        const updateCallback = () => {
+                            if (areaInstance) areaInstance.update("node", nodeData.id);
+                            if (engineInstance && editorInstance) {
+                                engineInstance.reset();
+                                setTimeout(() => {
+                                    editorInstance.getNodes().forEach(async (n) => {
+                                        try {
+                                            await engineInstance.fetch(n.id);
+                                        } catch (e) { }
+                                    });
+                                }, 0);
+                            }
+                        };
+                        // For loading, we generally use the standard update callback
+                        node = def.factory(updateCallback);
                     }
 
-                    await editorInstance.addNode(node);
-                    await areaInstance.translate(node.id, nodeData.position);
-                }
-            }
+                    if (node) {
+                        node.id = nodeData.id;
 
-            for (const connData of graphData.connections) {
-                const source = editorInstance.getNode(connData.source);
-                const target = editorInstance.getNode(connData.target);
-                if (source && target) {
-                    await editorInstance.addConnection(new ClassicPreset.Connection(
-                        source,
-                        connData.sourceOutput,
-                        target,
-                        connData.targetInput
-                    ));
+                        // Restore properties and state
+                        if (typeof node.restore === 'function' && nodeData.data) {
+                            node.restore(nodeData.data);
+                        } else if (nodeData.data && nodeData.data.properties) {
+                            Object.assign(node.properties, nodeData.data.properties);
+                        }
+
+                        await editorInstance.addNode(node);
+                        await areaInstance.translate(node.id, nodeData.position);
+                    }
                 }
+
+                for (const connData of graphData.connections) {
+                    const source = editorInstance.getNode(connData.source);
+                    const target = editorInstance.getNode(connData.target);
+                    if (source && target) {
+                        await editorInstance.addConnection(new ClassicPreset.Connection(
+                            source,
+                            connData.sourceOutput,
+                            target,
+                            connData.targetInput
+                        ));
+                    }
+                }
+            } finally {
+                programmaticMoveRef.current = false;
+                areaInstance?.updateBackdropCaptures?.();
             }
             console.log('Graph loaded from localStorage');
         } catch (err) {
@@ -1111,53 +1406,59 @@ export function Editor() {
         try {
             await handleClear();
 
-            for (const nodeData of graphData.nodes) {
-                let node;
-                const def = nodeRegistry.getByLabel(nodeData.label);
+            programmaticMoveRef.current = true;
+            try {
+                for (const nodeData of graphData.nodes) {
+                    let node;
+                    const def = nodeRegistry.getByLabel(nodeData.label);
 
-                if (def) {
-                    const updateCallback = () => {
-                        if (areaInstance) areaInstance.update("node", nodeData.id);
-                        if (engineInstance && editorInstance) {
-                            engineInstance.reset();
-                            setTimeout(() => {
-                                editorInstance.getNodes().forEach(async (n) => {
-                                    try {
-                                        await engineInstance.fetch(n.id);
-                                    } catch (e) { }
-                                });
-                            }, 0);
-                        }
-                    };
-                    node = def.factory(updateCallback);
-                }
-
-                if (node) {
-                    node.id = nodeData.id;
-
-                    // Restore properties and state
-                    if (typeof node.restore === 'function' && nodeData.data) {
-                        node.restore(nodeData.data);
-                    } else if (nodeData.data && nodeData.data.properties) {
-                        Object.assign(node.properties, nodeData.data.properties);
+                    if (def) {
+                        const updateCallback = () => {
+                            if (areaInstance) areaInstance.update("node", nodeData.id);
+                            if (engineInstance && editorInstance) {
+                                engineInstance.reset();
+                                setTimeout(() => {
+                                    editorInstance.getNodes().forEach(async (n) => {
+                                        try {
+                                            await engineInstance.fetch(n.id);
+                                        } catch (e) { }
+                                    });
+                                }, 0);
+                            }
+                        };
+                        node = def.factory(updateCallback);
                     }
 
-                    await editorInstance.addNode(node);
-                    await areaInstance.translate(node.id, nodeData.position);
-                }
-            }
+                    if (node) {
+                        node.id = nodeData.id;
 
-            for (const connData of graphData.connections) {
-                const source = editorInstance.getNode(connData.source);
-                const target = editorInstance.getNode(connData.target);
-                if (source && target) {
-                    await editorInstance.addConnection(new ClassicPreset.Connection(
-                        source,
-                        connData.sourceOutput,
-                        target,
-                        connData.targetInput
-                    ));
+                        // Restore properties and state
+                        if (typeof node.restore === 'function' && nodeData.data) {
+                            node.restore(nodeData.data);
+                        } else if (nodeData.data && nodeData.data.properties) {
+                            Object.assign(node.properties, nodeData.data.properties);
+                        }
+
+                        await editorInstance.addNode(node);
+                        await areaInstance.translate(node.id, nodeData.position);
+                    }
                 }
+
+                for (const connData of graphData.connections) {
+                    const source = editorInstance.getNode(connData.source);
+                    const target = editorInstance.getNode(connData.target);
+                    if (source && target) {
+                        await editorInstance.addConnection(new ClassicPreset.Connection(
+                            source,
+                            connData.sourceOutput,
+                            target,
+                            connData.targetInput
+                        ));
+                    }
+                }
+            } finally {
+                programmaticMoveRef.current = false;
+                areaInstance?.updateBackdropCaptures?.();
             }
             console.log('Graph imported');
         } catch (err) {

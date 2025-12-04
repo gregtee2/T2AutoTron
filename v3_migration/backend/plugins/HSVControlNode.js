@@ -209,83 +209,12 @@
     }
 
     // -------------------------------------------------------------------------
-    // COLOR UTILS (Ported from 2.0 Node)
+    // COLOR UTILS - Use shared ColorUtilsPlugin (window.ColorUtils)
     // -------------------------------------------------------------------------
-    const ColorUtils = {
-        hsvToRgb: (h, s, v) => {
-            const i = Math.floor(h * 6);
-            const f = h * 6 - i;
-            const p = v * (1 - s);
-            const q = v * (1 - f * s);
-            const t = v * (1 - (1 - f) * s);
-            let r, g, b;
-            switch (i % 6) {
-                case 0: r = v; g = t; b = p; break;
-                case 1: r = q; g = v; b = p; break;
-                case 2: r = p; g = v; b = t; break;
-                case 3: r = p; g = q; b = v; break;
-                case 4: r = t; g = p; b = v; break;
-                case 5: r = v; g = p; b = q; break;
-            }
-            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-        },
-        kelvinToHSV: (kelvin) => {
-            let r, g, b;
-            kelvin = Math.max(1000, Math.min(10000, kelvin));
-            const temp = kelvin / 100;
-            if (temp <= 66) {
-                r = 255;
-                g = Math.min(255, Math.max(0, 99.4708025861 * Math.log(temp) - 161.1195681661));
-                b = temp <= 19 ? 0 : Math.min(255, Math.max(0, 138.5177312231 * Math.log(temp - 10) - 305.0447927307));
-            } else {
-                r = Math.min(255, Math.max(0, 329.698727446 * Math.pow(temp - 60, -0.1332047592)));
-                g = Math.min(255, Math.max(0, 288.1221695283 * Math.pow(temp - 60, -0.0755148492)));
-                b = 255;
-            }
-            r /= 255; g /= 255; b /= 255;
-            const max = Math.max(r, g, b), min = Math.min(r, g, b);
-            const d = max - min;
-            const s = max === 0 ? 0 : d / max;
-            let h = 0;
-            if (max !== min) {
-                switch (max) {
-                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                    case g: h = (b - r) / d + 2; break;
-                    case b: h = (r - g) / d + 4; break;
-                }
-                h /= 6;
-            }
-            return {
-                hue: Math.round(h * 360),
-                saturation: Math.round(s * 100),
-                brightness: 254 // Default brightness for Kelvin conversion
-            };
-        },
-        hexToRgb: (hex) => {
-            const s = hex.replace("#", "");
-            return {
-                r: parseInt(s.substr(0, 2), 16),
-                g: parseInt(s.substr(2, 2), 16),
-                b: parseInt(s.substr(4, 2), 16)
-            };
-        },
-        rgbToHsv: (r, g, b) => {
-            r /= 255; g /= 255; b /= 255;
-            const max = Math.max(r, g, b), min = Math.min(r, g, b);
-            const d = max - min;
-            const s = max === 0 ? 0 : d / max;
-            let h = 0;
-            if (max !== min) {
-                switch (max) {
-                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                    case g: h = (b - r) / d + 2; break;
-                    case b: h = (r - g) / d + 4; break;
-                }
-                h /= 6;
-            }
-            return { hue: h, sat: s, val: max };
-        }
-    };
+    if (!window.ColorUtils) {
+        console.error("[HSVControlNode] window.ColorUtils not found! Make sure 00_ColorUtilsPlugin.js loads first.");
+    }
+    const ColorUtils = window.ColorUtils;
 
     // -------------------------------------------------------------------------
     // NODE CLASS

@@ -67,6 +67,9 @@
             .time-of-day-node .info-value { color: #a5d6a7; font-weight: 600; }
             .time-of-day-node .info-value.cycle { color: #ffeb3b; }
             .time-of-day-node .countdown { text-align: center; font-size: 14px; font-weight: bold; color: #4caf50; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(76, 175, 80, 0.2); }
+            .time-of-day-node .tod-outputs-section { display: flex; flex-direction: column; gap: 8px; padding: 10px 15px; border-bottom: 1px solid rgba(76, 175, 80, 0.2); background: rgba(76, 175, 80, 0.05); }
+            .time-of-day-node .tod-output-row { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+            .time-of-day-node .tod-output-label { font-size: 12px; color: #a5d6a7; }
         `;
         document.head.appendChild(style);
     }
@@ -83,6 +86,8 @@
 
             try {
                 this.addOutput('state', new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), 'State'));
+                this.addOutput('startTime', new ClassicPreset.Output(window.sockets.string || new ClassicPreset.Socket('string'), 'Start Time'));
+                this.addOutput('endTime', new ClassicPreset.Output(window.sockets.string || new ClassicPreset.Socket('string'), 'End Time'));
             } catch (e) { console.error("[TimeOfDayNode] Error adding output:", e); }
 
             this.properties = {
@@ -95,7 +100,15 @@
             };
         }
 
-        data() { return { state: this.properties.currentState }; }
+        data() {
+            const formatTime = (hour, minute, ampm) => {
+                const m = String(minute).padStart(2, '0');
+                return `${hour}:${m} ${ampm}`;
+            };
+            const startTime = formatTime(this.properties.start_hour, this.properties.start_minute, this.properties.start_ampm);
+            const endTime = formatTime(this.properties.stop_hour, this.properties.stop_minute, this.properties.stop_ampm);
+            return { state: this.properties.currentState, startTime: startTime, endTime: endTime };
+        }
         update() { if (this.change) this.change(); }
     }
 
@@ -203,15 +216,14 @@
         const outputs = Object.entries(data.outputs).map(([key, output]) => ({ key, ...output }));
 
         return React.createElement('div', { className: 'time-of-day-node' }, [
-            React.createElement('div', { key: 't', className: 'title' }, [
-                data.label,
-                React.createElement('div', { key: 'o', style: { float: 'right', display: 'flex', alignItems: 'center' } }, 
-                    outputs.map(output => React.createElement('div', { key: output.key, style: { display: "flex", alignItems: "center", gap: "8px" } }, [
-                        React.createElement('div', { key: 'l', className: 'output-label', style: { fontSize: '12px', marginRight: '5px' } }, output.label),
-                        React.createElement(RefComponent, { key: 'r', init: ref => emit({ type: 'render', data: { type: 'socket', element: ref, payload: output.socket, nodeId: data.id, side: 'output', key: output.key } }), unmount: ref => emit({ type: 'unmount', data: { element: ref } }) })
-                    ]))
-                )
-            ]),
+            React.createElement('div', { key: 't', className: 'title' }, data.label),
+            // Outputs Section
+            React.createElement('div', { key: 'os', className: 'tod-outputs-section' },
+                outputs.map(output => React.createElement('div', { key: output.key, className: 'tod-output-row' }, [
+                    React.createElement('span', { key: 'l', className: 'tod-output-label' }, output.label),
+                    React.createElement(RefComponent, { key: 'r', init: ref => emit({ type: 'render', data: { type: 'socket', element: ref, payload: output.socket, nodeId: data.id, side: 'output', key: output.key } }), unmount: ref => emit({ type: 'unmount', data: { element: ref } }) })
+                ]))
+            ),
             React.createElement('div', { key: 'c', className: 'content', onPointerDown: (e) => e.stopPropagation() }, [
                 // Pulse Mode
                 React.createElement('div', { key: 'pm', className: 'control-row' }, [

@@ -66,6 +66,9 @@
             .sunrise-sunset-node .info-label { color: #aaa; }
             .sunrise-sunset-node .info-value { color: #ffb74d; font-weight: 600; }
             .sunrise-sunset-node .countdown { text-align: center; font-size: 14px; font-weight: bold; color: #ffa500; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 140, 0, 0.2); }
+            .sunrise-sunset-node .ss-outputs-section { display: flex; flex-direction: column; gap: 8px; padding: 10px 15px; border-bottom: 1px solid rgba(255, 140, 0, 0.2); background: rgba(255, 140, 0, 0.05); }
+            .sunrise-sunset-node .ss-output-row { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+            .sunrise-sunset-node .ss-output-label { font-size: 12px; color: #ffb74d; }
         `;
         document.head.appendChild(style);
     }
@@ -82,6 +85,8 @@
 
             try {
                 this.addOutput('state', new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), 'State'));
+                this.addOutput('startTime', new ClassicPreset.Output(window.sockets.string || new ClassicPreset.Socket('string'), 'Start Time'));
+                this.addOutput('endTime', new ClassicPreset.Output(window.sockets.string || new ClassicPreset.Socket('string'), 'End Time'));
             } catch (e) { console.error("[SunriseSunsetNode] Error adding output:", e); }
 
             this.properties = {
@@ -96,7 +101,20 @@
             };
         }
 
-        data() { return { state: this.properties.currentState }; }
+        data() {
+            const formatTime = (date) => {
+                if (!date) return '';
+                const d = new Date(date);
+                let hours = d.getHours();
+                const minutes = String(d.getMinutes()).padStart(2, '0');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12 || 12;
+                return `${hours}:${minutes} ${ampm}`;
+            };
+            const startTime = formatTime(this.properties.next_on_date);
+            const endTime = formatTime(this.properties.next_off_date);
+            return { state: this.properties.currentState, startTime: startTime, endTime: endTime };
+        }
         update() { if (this.change) this.change(); }
     }
 
@@ -313,15 +331,14 @@
         const outputs = Object.entries(data.outputs).map(([key, output]) => ({ key, ...output }));
 
         return React.createElement('div', { className: 'sunrise-sunset-node' }, [
-            React.createElement('div', { key: 't', className: 'title' }, [
-                data.label,
-                React.createElement('div', { key: 'o', style: { float: 'right', display: 'flex', alignItems: 'center' } }, 
-                    outputs.map(output => React.createElement('div', { key: output.key, style: { display: "flex", alignItems: "center", gap: "8px" } }, [
-                        React.createElement('div', { key: 'l', className: 'output-label', style: { fontSize: '12px', marginRight: '5px' } }, output.label),
-                        React.createElement(RefComponent, { key: 'r', init: ref => emit({ type: 'render', data: { type: 'socket', element: ref, payload: output.socket, nodeId: data.id, side: 'output', key: output.key } }), unmount: ref => emit({ type: 'unmount', data: { element: ref } }) })
-                    ]))
-                )
-            ]),
+            React.createElement('div', { key: 't', className: 'title' }, data.label),
+            // Outputs Section
+            React.createElement('div', { key: 'os', className: 'ss-outputs-section' },
+                outputs.map(output => React.createElement('div', { key: output.key, className: 'ss-output-row' }, [
+                    React.createElement('span', { key: 'l', className: 'ss-output-label' }, output.label),
+                    React.createElement(RefComponent, { key: 'r', init: ref => emit({ type: 'render', data: { type: 'socket', element: ref, payload: output.socket, nodeId: data.id, side: 'output', key: output.key } }), unmount: ref => emit({ type: 'unmount', data: { element: ref } }) })
+                ]))
+            ),
             React.createElement('div', { key: 'c', className: 'content', onPointerDown: (e) => e.stopPropagation() }, [
                 // Pulse Mode
                 React.createElement('div', { key: 'pm', className: 'control-row' }, [
