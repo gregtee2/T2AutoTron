@@ -2005,6 +2005,37 @@
   background: rgba(0, 0, 0, 0.5);
 }
 
+/* Lock button - inline in header */
+.backdrop-node .backdrop-lock-btn {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--control-radius);
+  color: #fff;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-right: 8px;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.backdrop-node .backdrop-lock-btn:hover {
+  background: rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.backdrop-node .backdrop-lock-btn.locked {
+  background: rgba(255, 100, 100, 0.3);
+  border-color: rgba(255, 100, 100, 0.6);
+  box-shadow: 0 0 8px rgba(255, 100, 100, 0.4);
+}
+
+/* Locked state visual indicator */
+.backdrop-node.backdrop-locked {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
 .backdrop-node .backdrop-resize-handle {
   position: absolute;
   bottom: 0;

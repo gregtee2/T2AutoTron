@@ -44,7 +44,8 @@
                 fontSize: 16,
                 width: 400,
                 height: 300,
-                capturedNodes: []
+                capturedNodes: [],
+                locked: false
             };
         }
 
@@ -101,6 +102,7 @@
         const [isEditing, setIsEditing] = useState(false);
         const [showColorPicker, setShowColorPicker] = useState(false);
         const [fontSize, setFontSize] = useState(data.properties.fontSize || 16);
+        const [isLocked, setIsLocked] = useState(data.properties.locked || false);
         const inputRef = useRef(null);
 
         const currentColor = COLOR_PALETTE[colorIndex] || COLOR_PALETTE[0];
@@ -117,6 +119,7 @@
                 setTitle(data.properties.title);
                 setColorIndex(data.properties.colorIndex);
                 setFontSize(data.properties.fontSize || 16);
+                setIsLocked(data.properties.locked || false);
                 setDimensions({
                     width: data.properties.width,
                     height: data.properties.height
@@ -124,6 +127,20 @@
             };
             return () => { data.changeCallback = null; };
         }, [data]);
+
+        const handleLockToggle = (e) => {
+            e.stopPropagation();
+            const newLocked = !isLocked;
+            setIsLocked(newLocked);
+            data.properties.locked = newLocked;
+            
+            // Update the Rete wrapper element's pointer-events
+            if (window.updateBackdropLockState) {
+                window.updateBackdropLockState(data.id, newLocked);
+            }
+            
+            if (data.changeCallback) data.changeCallback();
+        };
 
         const handleTitleChange = (e) => {
             setTitle(e.target.value);
@@ -243,20 +260,30 @@
         };
 
         return React.createElement('div', {
-            className: 'backdrop-node',
+            className: `backdrop-node ${isLocked ? 'backdrop-locked' : ''}`,
             style: {
                 width: dimensions.width,
                 height: dimensions.height,
                 backgroundColor: currentColor.value,
-                borderColor: currentColor.border
+                borderColor: currentColor.border,
+                pointerEvents: isLocked ? 'none' : 'auto'
             }
         }, [
             // Header
             React.createElement('div', {
                 key: 'header',
                 className: 'backdrop-header',
-                style: { backgroundColor: currentColor.border }
+                style: { backgroundColor: currentColor.border, pointerEvents: 'auto' }
             }, [
+                // Lock button (first in header)
+                React.createElement('button', {
+                    key: 'lockBtn',
+                    className: `backdrop-lock-btn ${isLocked ? 'locked' : ''}`,
+                    onClick: handleLockToggle,
+                    onPointerDown: (e) => e.stopPropagation(),
+                    title: isLocked ? 'Unlock group (allow moving)' : 'Lock group (prevent moving)',
+                    style: { pointerEvents: 'auto' }
+                }, isLocked ? '🔒' : '🔓'),
                 isEditing
                     ? React.createElement('input', {
                         key: 'input',
@@ -297,7 +324,8 @@
                     className: 'backdrop-color-btn',
                     onClick: (e) => { e.stopPropagation(); setShowColorPicker(!showColorPicker); },
                     onPointerDown: (e) => e.stopPropagation(),
-                    title: 'Change color'
+                    title: 'Change color',
+                    style: { pointerEvents: 'auto' }
                 }, '🎨')
             ]),
 

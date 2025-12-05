@@ -584,6 +584,17 @@ export function Editor() {
         area.addPipe(context => {
             if (context.type === 'nodepicked') {
                 const nodeId = context.data.id;
+                const node = editor.getNode(nodeId);
+                
+                // If this is a locked backdrop, prevent picking entirely
+                if (node) {
+                    const def = nodeRegistry.getByInstance(node);
+                    if (def && def.isBackdrop && node.properties.locked) {
+                        console.log('[Editor] Blocked pick on locked backdrop:', nodeId);
+                        return; // Return undefined to block the event
+                    }
+                }
+                
                 console.log('[Editor] Node picked (Rete event):', nodeId, 'Shift held:', shiftKeyRef.current);
                 
                 // If Shift is NOT held and clicking a new node, clear previous selection
@@ -625,7 +636,13 @@ export function Editor() {
                         const nodeView = area.nodeViews.get(payload.id);
                         if (nodeView && nodeView.element) {
                             nodeView.element.style.zIndex = '-10';
-                            console.log('[Backdrop] Set z-index for:', payload.id);
+                            // Set pointer-events based on locked state
+                            if (payload.properties.locked) {
+                                nodeView.element.style.pointerEvents = 'none';
+                            } else {
+                                nodeView.element.style.pointerEvents = 'auto';
+                            }
+                            console.log('[Backdrop] Set z-index for:', payload.id, 'locked:', payload.properties.locked);
                         }
                     }, 0);
                 }
@@ -683,6 +700,18 @@ export function Editor() {
                 const def = nodeRegistry.getByInstance(node);
                 
                 if (def && def.isBackdrop) {
+                    // If backdrop is locked, prevent movement by returning previous position
+                    if (node.properties.locked) {
+                        // Block the movement by setting position back to previous
+                        return {
+                            ...context,
+                            data: {
+                                ...context.data,
+                                position: context.data.previous
+                            }
+                        };
+                    }
+                    
                     // If we just started dragging this backdrop, update captures first
                     if (backdropDragState.activeBackdropId !== nodeId) {
                         backdropDragState.activeBackdropId = nodeId;
@@ -737,6 +766,15 @@ export function Editor() {
         editorRef.current = editor;
         areaRef.current = area;
         selectorRef.current = selector;
+        
+        // Expose a global function for BackdropNode to update lock state on wrapper
+        window.updateBackdropLockState = (nodeId, locked) => {
+            const nodeView = area.nodeViews.get(nodeId);
+            if (nodeView && nodeView.element) {
+                nodeView.element.style.pointerEvents = locked ? 'none' : 'auto';
+                console.log('[Editor] Updated backdrop lock state:', nodeId, 'locked:', locked);
+            }
+        };
         
         setEditorInstance(editor);
         setAreaInstance(area);
