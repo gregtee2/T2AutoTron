@@ -799,7 +799,11 @@
             ]),
 
             // Collapsed View
-            isCollapsed && React.createElement('div', { key: 'collapsed', className: 'ha-controls-container' }, 
+            isCollapsed && React.createElement('div', { 
+                key: 'collapsed', 
+                className: 'ha-controls-container',
+                onWheel: (e) => e.stopPropagation()
+            }, 
                 Object.entries(deviceGroups).map(([index, groupControls]) => {
                     const select = groupControls.find(c => c.key.endsWith("_select"));
                     const indicator = groupControls.find(c => c.key.endsWith("_indicator"));
@@ -814,7 +818,11 @@
             ),
 
             // Expanded View
-            !isCollapsed && React.createElement('div', { key: 'expanded', className: 'ha-controls-container' }, [
+            !isCollapsed && React.createElement('div', { 
+                key: 'expanded', 
+                className: 'ha-controls-container',
+                onWheel: (e) => e.stopPropagation()
+            }, [
                 // Global Controls
                 ...globalControls.map(({ key, control }) => React.createElement(RefComponent, {
                     key: key,

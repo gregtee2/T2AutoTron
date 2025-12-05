@@ -95,6 +95,32 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 243, 255, 0.4) rgba(0, 20, 30, 0.3);
+}
+
+.ha-controls-container::-webkit-scrollbar,
+.hsv-controls-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ha-controls-container::-webkit-scrollbar-track,
+.hsv-controls-container::-webkit-scrollbar-track {
+  background: rgba(0, 20, 30, 0.3);
+  border-radius: 4px;
+}
+
+.ha-controls-container::-webkit-scrollbar-thumb,
+.hsv-controls-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 243, 255, 0.4);
+  border-radius: 4px;
+}
+
+.ha-controls-container::-webkit-scrollbar-thumb:hover,
+.hsv-controls-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 243, 255, 0.6);
 }
 
 .ha-device-item {
