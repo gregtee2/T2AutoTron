@@ -75,6 +75,39 @@ io.on('connection', (socket) => {
     logger.log('HA token received from client', 'info');
   });
 
+  // === HA CONNECTION STATUS REQUEST ===
+  socket.on('request-ha-status', () => {
+    console.log('[HA Status] Request received');
+    const haManager = deviceManagers.getManager('ha_');
+    console.log('[HA Status] haManager:', haManager);
+    console.log('[HA Status] haManager type:', typeof haManager);
+    console.log('[HA Status] haManager keys:', haManager ? Object.keys(haManager) : 'null');
+    
+    if (haManager && typeof haManager.getConnectionStatus === 'function') {
+      const status = haManager.getConnectionStatus();
+      console.log('[HA Status] getConnectionStatus returned:', status);
+      socket.emit('ha-connection-status', {
+        connected: status.isConnected,
+        wsConnected: status.wsConnected,
+        deviceCount: status.deviceCount,
+        host: status.host
+      });
+    } else {
+      console.log('[HA Status] getConnectionStatus not available, checking direct props');
+      // Try direct access as fallback
+      if (haManager) {
+        console.log('[HA Status] Direct isConnected:', haManager.isConnected);
+        console.log('[HA Status] Direct devices length:', haManager.devices?.length);
+      }
+      socket.emit('ha-connection-status', {
+        connected: false,
+        wsConnected: false,
+        deviceCount: 0,
+        host: 'Manager issue'
+      });
+    }
+  });
+
   // === 5-DAY FORECAST REQUEST ===
   socket.on('request-forecast', async () => {
     try {

@@ -70,4 +70,8 @@ function getAllDevices() {
   return sanitizedDevices;
 }
 
-module.exports = { initializeDevices, controlDevice, getAllDevices };
+function getManager(prefix) {
+  return managers[prefix] || null;
+}
+
+module.exports = { initializeDevices, controlDevice, getAllDevices, getManager };

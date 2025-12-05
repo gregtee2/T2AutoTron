@@ -12,83 +12,7 @@
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
 
-    // Inject CSS
-    const styleId = 'pushbutton-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .pushbutton-node {
-                background: #0a0f14;
-                border: 1px solid #00f3ff;
-                border-radius: 10px;
-                box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
-                color: #e0f7fa;
-                min-width: 200px;
-                font-family: monospace;
-                overflow: hidden;
-                text-align: center;
-                display: flex;
-                flex-direction: column;
-            }
-            .pushbutton-node .header {
-                background: linear-gradient(90deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.0));
-                padding: 8px 12px;
-                font-size: 14px;
-                font-weight: bold;
-                color: #00f3ff;
-                border-bottom: 1px solid rgba(0, 243, 255, 0.3);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .pushbutton-node .content {
-                padding: 15px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 15px;
-                background: rgba(0, 20, 30, 0.4);
-            }
-            .pushbutton-node .btn {
-                width: 80px;
-                height: 80px;
-                border-radius: 50%;
-                font-size: 18px;
-                font-weight: bold;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s ease;
-                outline: none;
-            }
-            .pushbutton-node .btn.active {
-                border: 3px solid #00f3ff;
-                background: rgba(0, 243, 255, 0.2);
-                color: #fff;
-                box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
-            }
-            .pushbutton-node .btn.inactive {
-                border: 3px solid rgba(0, 243, 255, 0.3);
-                background: rgba(0, 0, 0, 0.3);
-                color: rgba(0, 243, 255, 0.5);
-            }
-            .pushbutton-node .pulse-control {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 12px;
-                color: #00f3ff;
-            }
-            .pushbutton-node .io-row {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-        `;
-        document.head.appendChild(style);
-    }
+    // CSS is now loaded from node-styles.css via index.css
 
     class PushbuttonNode extends ClassicPreset.Node {
         constructor(changeCallback) {
@@ -116,6 +40,28 @@
 
         triggerUpdate() {
             if (this.changeCallback) this.changeCallback();
+        }
+
+        restore(state) {
+            if (state.properties) {
+                this.properties.state = state.properties.state || false;
+                this.properties.pulseMode = state.properties.pulseMode || false;
+            }
+        }
+
+        serialize() {
+            return {
+                state: this.properties.state,
+                pulseMode: this.properties.pulseMode
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
         }
     }
 

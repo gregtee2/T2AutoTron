@@ -289,6 +289,24 @@
             const setValueControl = this.controls.set_value;
             if (setValueControl) setValueControl.value = this.properties.setValue;
         }
+
+        serialize() {
+            return {
+                selectedDeviceId: this.properties.selectedDeviceId,
+                conditionOperator: this.properties.conditionOperator,
+                conditionValue: this.properties.conditionValue,
+                actionType: this.properties.actionType,
+                setValue: this.properties.setValue
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
+        }
     }
 
     // -------------------------------------------------------------------------

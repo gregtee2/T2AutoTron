@@ -117,6 +117,20 @@
             }
             this.updateInputs();
         }
+
+        serialize() {
+            return {
+                inputCount: this.properties.inputCount
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
+        }
     }
 
     // -------------------------------------------------------------------------

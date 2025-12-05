@@ -1,0 +1,169 @@
+/* ============================================================================
+   NODE THEME - CSS Variables for T2AutoTron Node Editor
+   ============================================================================
+   
+   USAGE: Tweak these colors to instantly change the look of all nodes!
+   
+   Each node type has its own color variable. Change one variable and all
+   nodes of that type update automatically.
+   
+   ============================================================================ */
+
+:root {
+  /* =========================================================================
+     NODE TYPE COLORS - Primary accent color for each node category
+     ========================================================================= */
+  
+  /* Device Nodes (HA Generic, AllInOne Color, HSV Control) */
+  --node-device-color: #00f3ff;
+  --node-device-color-rgb: 0, 243, 255;
+  --node-device-hover: #50ffff;
+  --node-device-text: #e0f7fa;
+  --node-device-text-secondary: #b2ebf2;
+  
+  /* Kasa Smart Plug Nodes */
+  --node-kasa-color: #2aa198;
+  --node-kasa-color-rgb: 42, 161, 152;
+  --node-kasa-hover: #35c9bf;
+  --node-kasa-text: #e0f7fa;
+  
+  /* Logic Nodes (AND, OR, XOR, Comparison, Logic Operations) */
+  --node-logic-color: #4fc3f7;
+  --node-logic-color-rgb: 79, 195, 247;
+  --node-logic-hover: #81d4fa;
+  --node-logic-text: #ffffff;
+  
+  /* Timer Nodes (Sunrise/Sunset) */
+  --node-timer-color: #ff8c00;
+  --node-timer-color-rgb: 255, 140, 0;
+  --node-timer-hover: #ffa500;
+  --node-timer-text: #e0e0e0;
+  --node-timer-text-secondary: #ffb74d;
+  
+  /* Time of Day Node */
+  --node-timeofday-color: #4caf50;
+  --node-timeofday-color-rgb: 76, 175, 80;
+  --node-timeofday-hover: #66bb6a;
+  --node-timeofday-text: #e0e0e0;
+  --node-timeofday-text-secondary: #a5d6a7;
+  
+  /* Weather Logic Node */
+  --node-weather-color: #00f3ff;
+  --node-weather-color-rgb: 0, 243, 255;
+  --node-weather-hover: #50ffff;
+  --node-weather-text: #e0f7fa;
+  
+  /* HSV Modifier Node (Purple theme) */
+  --node-hsv-modifier-color: #b388ff;
+  --node-hsv-modifier-color-rgb: 179, 136, 255;
+  --node-hsv-modifier-hover: #d1c4e9;
+  --node-hsv-modifier-text: #ede7f6;
+  --node-hsv-modifier-text-secondary: #d1c4e9;
+  
+  /* Wireless Nodes (Sender) */
+  --node-sender-color: #4fc3f7;
+  --node-sender-color-rgb: 79, 195, 247;
+  --node-sender-text: #e1f5fe;
+  --node-sender-text-secondary: #81d4fa;
+  
+  /* Wireless Nodes (Receiver) */
+  --node-receiver-color: #ffb74d;
+  --node-receiver-color-rgb: 255, 183, 77;
+  --node-receiver-text: #fff3e0;
+  --node-receiver-text-secondary: #ffe0b2;
+  
+  /* Pushbutton Node */
+  --node-pushbutton-color: #00f3ff;
+  --node-pushbutton-color-rgb: 0, 243, 255;
+  
+  /* Display Node */
+  --node-display-color: #777777;
+  --node-display-bg: #222222;
+  --node-display-text: #00ff00;
+  
+  /* =========================================================================
+     SHARED COLORS - Used across all nodes
+     ========================================================================= */
+  
+  /* Backgrounds */
+  --node-bg-dark: #0a0f14;
+  --node-bg-medium: rgba(30, 40, 50, 0.9);
+  --node-bg-light: rgba(0, 20, 30, 0.6);
+  --node-bg-controls: rgba(0, 10, 15, 0.4);
+  --node-bg-io: rgba(0, 0, 0, 0.2);
+  
+  /* Form Controls */
+  --control-bg: #222222;
+  --control-bg-dark: #333333;
+  --control-border: #555555;
+  --control-text: #ffffff;
+  
+  /* Status Colors */
+  --status-active: #00FF00;
+  --status-inactive: #888888;
+  --status-error: #f44336;
+  --status-info: #2196f3;
+  
+  /* Common Text */
+  --text-primary: #ffffff;
+  --text-secondary: #aaaaaa;
+  --text-muted: #666666;
+  
+  /* =========================================================================
+     EFFECTS
+     ========================================================================= */
+  
+  /* Glow intensity (0 = no glow, 1 = normal, 2 = intense) */
+  --glow-intensity: 1;
+  
+  /* Border radius */
+  --node-radius: 12px;
+  --node-radius-small: 8px;
+  --control-radius: 4px;
+  
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+}
+
+/* ============================================================================
+   DARK MODE OVERRIDES (if you want different colors in dark mode)
+   ============================================================================ */
+/*
+@media (prefers-color-scheme: dark) {
+  :root {
+    --node-bg-dark: #050a0d;
+  }
+}
+*/
+
+/* ============================================================================
+   EXAMPLE THEME PRESETS - Uncomment one to try a different look
+   ============================================================================ */
+
+/* --- NEON PINK THEME ---
+:root {
+  --node-device-color: #ff00ff;
+  --node-device-color-rgb: 255, 0, 255;
+  --node-logic-color: #ff69b4;
+  --node-logic-color-rgb: 255, 105, 180;
+}
+*/
+
+/* --- MATRIX GREEN THEME ---
+:root {
+  --node-device-color: #00ff00;
+  --node-device-color-rgb: 0, 255, 0;
+  --node-logic-color: #32cd32;
+  --node-logic-color-rgb: 50, 205, 50;
+}
+*/
+
+/* --- WARM ORANGE THEME ---
+:root {
+  --node-device-color: #ff6600;
+  --node-device-color-rgb: 255, 102, 0;
+  --node-logic-color: #ff9933;
+  --node-logic-color-rgb: 255, 153, 51;
+}
+*/

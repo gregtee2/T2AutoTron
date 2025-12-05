@@ -36,6 +36,7 @@ export function Editor() {
     const [selectorInstance, setSelectorInstance] = useState(null);
     const programmaticMoveRef = useRef(false);
     const lassoSelectedNodesRef = useRef(new Set());
+    const processImmediateRef = useRef(null);  // For graph load operations
     
     // Refs to hold current instances for keyboard handler (avoids stale closure issues)
     const editorRef = useRef(null);
@@ -61,10 +62,9 @@ export function Editor() {
         // Register engine with editor
         editor.use(engine);
 
+        // Process all nodes through the dataflow engine
         const process = async () => {
-            console.log("[Editor] process() called - resetting engine and fetching all nodes");
             engine.reset();
-            // Fetch all nodes to propagate data
             for (const node of editor.getNodes()) {
                 try {
                     await engine.fetch(node.id);
@@ -73,9 +73,11 @@ export function Editor() {
                 }
             }
         };
+        
+        // Alias for compatibility - same as process() but named for clarity
+        const processImmediate = process;
 
         const updateNode = (nodeId) => {
-            console.log(`[Editor] updateNode(${nodeId}) called`);
             area.update("node", nodeId);
             process();
         };
@@ -755,7 +757,8 @@ export function Editor() {
             editor,
             area,
             engine,
-            process
+            process,
+            processImmediate  // For graph load operations
         };
     }, []);
 
@@ -784,6 +787,9 @@ export function Editor() {
             setAreaInstance(result.area);
             setEngineInstance(result.engine);
             setSelectorInstance(result.selector);
+            
+            // Store processImmediate in ref for graph loading
+            processImmediateRef.current = result.processImmediate;
             
             return result;
         });
@@ -1122,7 +1128,7 @@ export function Editor() {
                                 // Restore properties
                                 if (typeof node.restore === 'function' && nodeData.data) {
                                     node.restore(nodeData.data);
-                                } else if (nodeData.data && nodeData.data.properties) {
+                                } else if (nodeData.data && nodeData.data.properties && node.properties) {
                                     Object.assign(node.properties, nodeData.data.properties);
                                 }
 
@@ -1177,6 +1183,16 @@ export function Editor() {
                     console.error("[Editor] Paste failed:", err);
                 }
             }
+            
+            // Home key - Reset viewport to origin
+            if (e.code === 'Home') {
+                e.preventDefault();
+                if (area.area) {
+                    area.area.zoom(1, 0, 0);
+                    area.area.translate(0, 0);
+                    console.log('[Editor] Viewport reset via Home key');
+                }
+            }
         };
         
         // Track mouse position for paste location
@@ -1196,6 +1212,25 @@ export function Editor() {
                 shiftKeyRef.current = false;
             }
         };
+        
+        // Handle delete from Electron IPC (when Delete/Backspace pressed in Electron)
+        const handleElectronDelete = () => {
+            console.log('[Editor] Received delete from Electron IPC');
+            // Simulate a Delete keydown event
+            const fakeEvent = {
+                code: 'Delete',
+                ctrlKey: false,
+                metaKey: false,
+                target: { tagName: 'DIV', isContentEditable: false }
+            };
+            handleKeyDown(fakeEvent);
+        };
+        
+        // Listen for Electron IPC delete command
+        let cleanupElectronDelete = null;
+        if (window.api && window.api.onDeleteKey) {
+            cleanupElectronDelete = window.api.onDeleteKey(handleElectronDelete);
+        }
 
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keydown', handleKeyDownForShift);
@@ -1207,6 +1242,7 @@ export function Editor() {
             window.removeEventListener('keydown', handleKeyDownForShift);
             window.removeEventListener('keyup', handleKeyUpForShift);
             window.removeEventListener('mousemove', handleMouseMove);
+            if (cleanupElectronDelete) cleanupElectronDelete();
         };
     }, [editorInstance, areaInstance, engineInstance, selectorInstance]);
 
@@ -1235,12 +1271,28 @@ export function Editor() {
                 sourceOutput: c.sourceOutput,
                 targetInput: c.targetInput
             }));
-            const graphData = { nodes, connections };
+            
+            // Save viewport state (zoom and pan position)
+            const viewport = areaInstance.area?.transform 
+                ? { x: areaInstance.area.transform.x, y: areaInstance.area.transform.y, k: areaInstance.area.transform.k }
+                : { x: 0, y: 0, k: 1 };
+            
+            const graphData = { nodes, connections, viewport };
             const jsonString = JSON.stringify(graphData, null, 2);
 
             // Save to localStorage for quick reload
-            localStorage.setItem('saved-graph', jsonString);
+            try { if (jsonString.length < 2000000) { localStorage.removeItem('saved-graph'); localStorage.setItem('saved-graph', jsonString); } } catch(e) { console.warn('localStorage skipped'); }
             console.log('Graph saved to localStorage');
+
+            // Also save to an Electron-accessible temp file so the desktop app can reload even if localStorage is empty
+            if (window.api?.saveTempFile) {
+                try {
+                    await window.api.saveTempFile('autotron_graph.json', jsonString);
+                    console.log('[handleSave] Saved temp file for Electron reload');
+                } catch (err) {
+                    console.warn('[handleSave] Failed to save temp file via Electron API', err);
+                }
+            }
 
             // Try File System Access API (Modern Browsers)
             if (window.showSaveFilePicker) {
@@ -1279,15 +1331,55 @@ export function Editor() {
     };
 
     const handleLoad = async () => {
-        if (!editorInstance || !areaInstance || !engineInstance) return;
+        if (!editorInstance || !areaInstance || !engineInstance) {
+            console.error('[handleLoad] Missing instances:', { 
+                editor: !!editorInstance, 
+                area: !!areaInstance, 
+                engine: !!engineInstance 
+            });
+            return;
+        }
         try {
-            const saved = localStorage.getItem('saved-graph');
+            let saved = localStorage.getItem('saved-graph');
+
+            // If localStorage is empty (common after Electron reload), try the Electron temp file
+            if (!saved && window.api?.readTempFile) {
+                try {
+                    const result = await window.api.readTempFile('autotron_graph.json');
+                    if (result?.success && result.content) {
+                        saved = result.content;
+                        console.log('[handleLoad] Loaded graph from Electron temp file');
+                    }
+                } catch (err) {
+                    console.warn('[handleLoad] Failed to read Electron temp file', err);
+                }
+            }
+
             if (!saved) {
                 alert('No saved graph found');
                 return;
             }
+
             const graphData = JSON.parse(saved);
+            console.log(`[handleLoad] Loading graph with ${graphData.nodes?.length} nodes`);
+            
+            // Clear existing graph first
             await handleClear();
+            
+            // Double-check clear worked
+            const existingNodes = editorInstance.getNodes();
+            if (existingNodes.length > 0) {
+                console.error('[handleLoad] Clear did not work! Still have', existingNodes.length, 'nodes');
+                // Force remove them
+                for (const node of existingNodes) {
+                    try {
+                        await editorInstance.removeNode(node.id);
+                    } catch (e) {
+                        console.error('[handleLoad] Force remove failed:', e);
+                    }
+                }
+            }
+            
             programmaticMoveRef.current = true;
             try {
                 for (const nodeData of graphData.nodes) {
@@ -1318,7 +1410,7 @@ export function Editor() {
                         // Restore properties and state
                         if (typeof node.restore === 'function' && nodeData.data) {
                             node.restore(nodeData.data);
-                        } else if (nodeData.data && nodeData.data.properties) {
+                        } else if (nodeData.data && nodeData.data.properties && node.properties) {
                             Object.assign(node.properties, nodeData.data.properties);
                         }
 
@@ -1343,6 +1435,36 @@ export function Editor() {
                 programmaticMoveRef.current = false;
                 areaInstance?.updateBackdropCaptures?.();
             }
+            
+            // CRITICAL: Process the entire graph immediately after loading
+            // This ensures all node data flows are established before UI interaction
+            if (processImmediateRef.current) {
+                console.log('[handleLoad] Processing graph immediately...');
+                await processImmediateRef.current();
+                console.log('[handleLoad] Graph processing complete');
+            }
+            
+            // Restore viewport state from saved graph (or default if not present)
+            setTimeout(() => {
+                if (areaInstance?.area) {
+                    const viewport = graphData.viewport || { x: 0, y: 0, k: 1 };
+                    // Set zoom level first, then translate
+                    areaInstance.area.zoom(viewport.k || 1, 0, 0);
+                    areaInstance.area.translate(viewport.x || 0, viewport.y || 0);
+                    console.log('[Editor] Viewport restored:', viewport);
+                    
+                    // Ensure focus returns to the editor container (fixes Electron pan/zoom issues)
+                    const container = areaInstance.container;
+                    if (container) {
+                        container.focus();
+                        // Also blur any focused inputs that might be stealing events
+                        if (document.activeElement && document.activeElement.tagName !== 'BODY') {
+                            document.activeElement.blur();
+                        }
+                    }
+                }
+            }, 100);
+            
             console.log('Graph loaded from localStorage');
         } catch (err) {
             console.error('Failed to load graph:', err);
@@ -1351,15 +1473,29 @@ export function Editor() {
     };
 
     const handleClear = async () => {
-        if (!editorInstance) return;
+        if (!editorInstance) {
+            console.warn('[handleClear] No editor instance!');
+            return;
+        }
         try {
-            for (const conn of editorInstance.getConnections()) {
+            const connections = editorInstance.getConnections();
+            const nodes = editorInstance.getNodes();
+            console.log(`[handleClear] Removing ${connections.length} connections and ${nodes.length} nodes`);
+            
+            for (const conn of connections) {
                 await editorInstance.removeConnection(conn.id);
             }
-            for (const node of editorInstance.getNodes()) {
+            for (const node of nodes) {
                 await editorInstance.removeNode(node.id);
             }
-            console.log('Graph cleared');
+            
+            // Verify clear succeeded
+            const remainingNodes = editorInstance.getNodes();
+            console.log(`[handleClear] Complete. Remaining nodes: ${remainingNodes.length}`);
+            
+            if (remainingNodes.length > 0) {
+                console.error('[handleClear] Failed to remove all nodes! Remaining:', remainingNodes.map(n => n.id));
+            }
         } catch (err) {
             console.error('Failed to clear graph:', err);
         }
@@ -1387,7 +1523,13 @@ export function Editor() {
                 sourceOutput: c.sourceOutput,
                 targetInput: c.targetInput
             }));
-            const graphData = { nodes, connections };
+            
+            // Include viewport state in export
+            const viewport = areaInstance.area?.transform 
+                ? { x: areaInstance.area.transform.x, y: areaInstance.area.transform.y, k: areaInstance.area.transform.k }
+                : { x: 0, y: 0, k: 1 };
+            
+            const graphData = { nodes, connections, viewport };
             const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1412,6 +1554,11 @@ export function Editor() {
                     let node;
                     const def = nodeRegistry.getByLabel(nodeData.label);
 
+                    if (!def) {
+                        console.warn(`[handleImport] No definition found for node label: "${nodeData.label}"`);
+                        continue;
+                    }
+
                     if (def) {
                         const updateCallback = () => {
                             if (areaInstance) areaInstance.update("node", nodeData.id);
@@ -1435,7 +1582,7 @@ export function Editor() {
                         // Restore properties and state
                         if (typeof node.restore === 'function' && nodeData.data) {
                             node.restore(nodeData.data);
-                        } else if (nodeData.data && nodeData.data.properties) {
+                        } else if (nodeData.data && nodeData.data.properties && node.properties) {
                             Object.assign(node.properties, nodeData.data.properties);
                         }
 
@@ -1454,12 +1601,30 @@ export function Editor() {
                             target,
                             connData.targetInput
                         ));
+                    } else {
+                        console.warn(`[handleImport] Connection skipped - missing node: source=${connData.source} (${!!source}), target=${connData.target} (${!!target})`);
                     }
                 }
             } finally {
                 programmaticMoveRef.current = false;
                 areaInstance?.updateBackdropCaptures?.();
             }
+            
+            // Process the graph after import
+            if (processImmediateRef.current) {
+                await processImmediateRef.current();
+            }
+            
+            // Restore viewport state from imported graph (or default if not present)
+            setTimeout(() => {
+                if (areaInstance?.area) {
+                    const viewport = graphData.viewport || { x: 0, y: 0, k: 1 };
+                    areaInstance.area.zoom(viewport.k || 1, 0, 0);
+                    areaInstance.area.translate(viewport.x || 0, viewport.y || 0);
+                    console.log('[handleImport] Viewport restored:', viewport);
+                }
+            }, 100);
+            
             console.log('Graph imported');
         } catch (err) {
             console.error('Failed to import graph:', err);

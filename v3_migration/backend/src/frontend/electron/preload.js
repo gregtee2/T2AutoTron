@@ -67,6 +67,10 @@ try {
             const result = await ipcRenderer.invoke('read-temp-file', filename);
             console.log("Preload - readTempFile result length:", result.content ? result.content.length : 0);
             return result;
+        },
+        onDeleteKey: (callback) => {
+            ipcRenderer.on('editor-delete-key', () => callback());
+            return () => ipcRenderer.removeAllListeners('editor-delete-key');
         }
     });
     console.log("Preload - Successfully exposed api object");

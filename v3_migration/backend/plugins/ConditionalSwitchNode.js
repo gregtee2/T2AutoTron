@@ -13,105 +13,8 @@
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'conditional-switch-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .conditional-switch-node {
-                background: linear-gradient(180deg, #1e3a5f 0%, #0d1f33 100%);
-                border: 1px solid #4a90d9;
-                border-radius: 8px;
-                box-shadow: 0 0 12px rgba(74, 144, 217, 0.25);
-                color: #e0e8f0;
-                min-width: 180px;
-                font-family: 'Segoe UI', sans-serif;
-                overflow: hidden;
-            }
-            .conditional-switch-node .header {
-                background: linear-gradient(90deg, rgba(74, 144, 217, 0.3) 0%, rgba(74, 144, 217, 0) 100%);
-                padding: 8px 12px;
-                font-size: 14px;
-                font-weight: 600;
-                color: #7db8f0;
-                border-bottom: 1px solid rgba(74, 144, 217, 0.3);
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .conditional-switch-node .content {
-                padding: 10px;
-            }
-            .conditional-switch-node .settings-row {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                margin-bottom: 8px;
-                font-size: 12px;
-            }
-            .conditional-switch-node .settings-row label {
-                color: #a0b8d0;
-            }
-            .conditional-switch-node .input-count {
-                width: 50px;
-                background: #0d1f33;
-                border: 1px solid #4a90d9;
-                color: #e0e8f0;
-                padding: 3px 6px;
-                border-radius: 4px;
-                font-size: 12px;
-                text-align: center;
-            }
-            .conditional-switch-node .input-count:focus {
-                outline: none;
-                border-color: #7db8f0;
-            }
-            .conditional-switch-node input[type="checkbox"] {
-                accent-color: #4a90d9;
-                width: 14px;
-                height: 14px;
-                cursor: pointer;
-            }
-            .conditional-switch-node .io-section {
-                margin-top: 8px;
-                border-top: 1px solid rgba(74, 144, 217, 0.2);
-                padding-top: 8px;
-            }
-            .conditional-switch-node .io-section.outputs {
-                margin-top: 12px;
-            }
-            .conditional-switch-node .io-row {
-                display: flex;
-                align-items: center;
-                margin-bottom: 6px;
-                gap: 8px;
-                padding: 2px 4px;
-                border-radius: 4px;
-                transition: background-color 0.2s, border-color 0.2s;
-            }
-            .conditional-switch-node .input-row {
-                justify-content: flex-start;
-            }
-            .conditional-switch-node .input-row.active {
-                background: rgba(0, 255, 100, 0.1);
-                border: 1px solid rgba(0, 255, 100, 0.4);
-            }
-            .conditional-switch-node .output-row {
-                justify-content: flex-end;
-            }
-            .conditional-switch-node .input-label,
-            .conditional-switch-node .output-label {
-                font-size: 11px;
-                color: #a0b8d0;
-            }
-            .conditional-switch-node .active-label {
-                color: #00ff64 !important;
-                font-weight: 600;
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -163,6 +66,22 @@
                 Object.assign(this.properties, state.properties);
                 this._rebuildDataInputs();
             }
+        }
+
+        serialize() {
+            return {
+                numberOfInputs: this.properties.numberOfInputs,
+                clampSelect: this.properties.clampSelect,
+                debug: this.properties.debug
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
         }
 
         data(inputs) {

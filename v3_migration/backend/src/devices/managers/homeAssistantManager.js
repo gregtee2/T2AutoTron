@@ -10,6 +10,9 @@ class HomeAssistantManager {
       token: process.env.HA_TOKEN,
     };
     this.ws = null;
+    this.io = null;
+    this.isConnected = false;
+    this.wsConnected = false;
     // Performance caching
     this.stateCache = new Map();
     this.deviceCache = null;
@@ -17,7 +20,19 @@ class HomeAssistantManager {
     this.DEVICE_CACHE_TTL = 30000; // 30 seconds for device list cache
   }
 
+  broadcastConnectionStatus() {
+    if (this.io) {
+      this.io.emit('ha-connection-status', {
+        connected: this.isConnected,
+        wsConnected: this.wsConnected,
+        deviceCount: this.devices.length,
+        host: this.config.host
+      });
+    }
+  }
+
   async initialize(io, notificationEmitter, log) {
+    this.io = io;
     try {
       await log('Initializing Home Assistant...', 'info', false, 'ha:init');
       const response = await fetch(`${this.config.host}/api/states`, {
@@ -30,6 +45,8 @@ class HomeAssistantManager {
         return ['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather'].includes(domain);
       });
 
+      this.isConnected = true;
+
       // Initialize device cache
       this.deviceCache = {
         data: this.getDevices(),
@@ -37,6 +54,7 @@ class HomeAssistantManager {
       };
 
       await log(`Initialized ${this.devices.length} HA devices`, 'info', false, 'ha:initialized');
+      this.broadcastConnectionStatus();
 
       if (io && notificationEmitter) {
         this.devices.forEach(device => {
@@ -55,11 +73,22 @@ class HomeAssistantManager {
         });
 
         // Initialize WebSocket for real-time updates
+        // Close existing WebSocket if reconnecting to prevent memory leak
+        if (this.ws) {
+          try {
+            this.ws.close();
+          } catch (e) {
+            // Ignore close errors
+          }
+          this.ws = null;
+        }
         this.ws = new WebSocket(`${this.config.host.replace('http', 'ws')}/api/websocket`);
         this.ws.on('open', () => {
           this.ws.send(JSON.stringify({ type: 'auth', access_token: this.config.token }));
           this.ws.send(JSON.stringify({ id: 1, type: 'subscribe_events', event_type: 'state_changed' }));
+          this.wsConnected = true;
           log(' HA WebSocket connected', 'info', false, 'ha:websocket');
+          this.broadcastConnectionStatus();
         });
         this.ws.on('message', (data) => {
           try {
@@ -91,12 +120,23 @@ class HomeAssistantManager {
             log(`HA WebSocket message error: ${err.message}`, 'error', false, 'ha:websocket:message');
           }
         });
-        this.ws.on('error', (err) => log(`HA WebSocket error: ${err.message}`, 'error', false, 'ha:websocket:error'));
-        this.ws.on('close', () => log('HA WebSocket closed', 'warn', false, 'ha:websocket:close'));
+        this.ws.on('error', (err) => {
+          this.wsConnected = false;
+          log(`HA WebSocket error: ${err.message}`, 'error', false, 'ha:websocket:error');
+          this.broadcastConnectionStatus();
+        });
+        this.ws.on('close', () => {
+          this.wsConnected = false;
+          log('HA WebSocket closed', 'warn', false, 'ha:websocket:close');
+          this.broadcastConnectionStatus();
+        });
       }
       return this.devices;
     } catch (error) {
+      this.isConnected = false;
+      this.wsConnected = false;
       await log(`HA initialization failed: ${error.message}`, 'error', false, 'ha:error');
+      this.broadcastConnectionStatus();
       return [];
     }
   }
@@ -264,5 +304,12 @@ module.exports = {
   updateState: (id, update) => instance.updateState(id, update),
   controlDevice: (deviceId, state) => instance.controlDevice(deviceId, state),
   getDevices: () => instance.getDevices(),
-  shutdown: () => instance.shutdown()
+  shutdown: () => instance.shutdown(),
+  // Expose connection status for status requests
+  getConnectionStatus: () => ({
+    isConnected: instance.isConnected,
+    wsConnected: instance.wsConnected,
+    deviceCount: instance.devices?.length || 0,
+    host: instance.config?.host || 'Not configured'
+  })
 };

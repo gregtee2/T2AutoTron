@@ -14,52 +14,8 @@
     const socket = window.socket;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'kasa-plug-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .kasa-node {
-                background: #002b36;
-                border: 1px solid #2aa198;
-                border-radius: 8px;
-                color: #e0f7fa;
-                min-width: 350px;
-                display: flex;
-                flex-direction: column;
-                box-shadow: 0 0 15px rgba(42, 161, 152, 0.2);
-                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                user-select: none;
-            }
-            .kasa-header {
-                padding: 10px;
-                background: linear-gradient(90deg, rgba(42, 161, 152, 0.2), rgba(0, 0, 0, 0));
-                border-bottom: 1px solid rgba(42, 161, 152, 0.3);
-                border-top-left-radius: 8px;
-                border-top-right-radius: 8px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .kasa-controls {
-                padding: 10px;
-                background: rgba(0, 20, 30, 0.4);
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
-            .kasa-plug-item {
-                border: 1px solid rgba(42, 161, 152, 0.2);
-                padding: 8px;
-                border-radius: 6px;
-                margin-top: 8px;
-                background: rgba(0, 43, 54, 0.4);
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // CONTROLS
@@ -184,9 +140,14 @@
 
         initializeSocketIO() {
             if (window.socket) {
-                window.socket.on("device-state-update", (data) => this.handleDeviceStateUpdate(data));
+                // Store bound handlers so we can remove them in destroy()
+                this._onDeviceStateUpdate = (data) => this.handleDeviceStateUpdate(data);
+                this._onConnect = () => this.fetchPlugs();
+                
+                window.socket.on("device-state-update", this._onDeviceStateUpdate);
+                window.socket.on("connect", this._onConnect);
+                
                 if (window.socket.connected) this.fetchPlugs();
-                window.socket.on("connect", () => this.fetchPlugs());
             }
         }
 
@@ -325,7 +286,38 @@
             });
         }
 
-        destroy() { if (this.intervalId) clearInterval(this.intervalId); super.destroy?.(); }
+        // -------------------------------------------------------------------------
+        // SERIALIZATION - Only save essential configuration, NOT runtime data
+        // -------------------------------------------------------------------------
+        serialize() {
+            return {
+                selectedPlugIds: this.properties.selectedPlugIds || [],
+                selectedPlugNames: this.properties.selectedPlugNames || [],
+                triggerMode: this.properties.triggerMode || "Follow",
+                autoRefreshInterval: this.properties.autoRefreshInterval || 5000
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
+        }
+
+        destroy() {
+            // Clear interval
+            if (this.intervalId) clearInterval(this.intervalId);
+            
+            // Remove socket listeners to prevent memory leaks
+            if (window.socket) {
+                if (this._onDeviceStateUpdate) window.socket.off("device-state-update", this._onDeviceStateUpdate);
+                if (this._onConnect) window.socket.off("connect", this._onConnect);
+            }
+            
+            super.destroy?.();
+        }
     }
 
     // -------------------------------------------------------------------------

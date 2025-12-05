@@ -34,7 +34,9 @@ function normalizeManager(manager, file) {
       initialize: manager.initialize,
       controlDevice: manager.controlDevice,
       getDevices: manager.getDevices,
-      shutdown: manager.shutdown || (async () => { })
+      shutdown: manager.shutdown || (async () => { }),
+      // Pass through connection status method if available
+      getConnectionStatus: manager.getConnectionStatus || null
     };
   }
 

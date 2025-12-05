@@ -108,18 +108,159 @@ async function fetchForecastData(forceRefresh = false, haToken = null) {
       if (!data?.list) throw new Error('No forecast list');
 
       // === FORMAT 5-DAY DATA ===
-      const daily = data.list
-        .filter((_, i) => i % 8 === 0)
+      // Group by day and calculate actual high/low from all readings
+      const dailyMap = {};
+      
+      // Get timezone offset from the API response (in seconds)
+      const timezoneOffsetSeconds = data.city?.timezone || 0;
+      const timezoneOffsetHours = timezoneOffsetSeconds / 3600;
+      
+      debugLog(`Timezone offset: ${timezoneOffsetHours} hours (${timezoneOffsetSeconds} seconds)`);
+      
+      data.list.forEach(entry => {
+        // Use local date based on timezone offset
+        const utcDate = new Date(entry.dt * 1000);
+        const localDate = new Date(utcDate.getTime() + timezoneOffsetSeconds * 1000);
+        const dateKey = localDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        if (!dailyMap[dateKey]) {
+          dailyMap[dateKey] = {
+            date: entry.dt * 1000,
+            temps: [],
+            conditions: [],
+            icons: [],
+            descriptions: [],
+            precips: [],
+            humidity: [],
+            wind: []
+          };
+        }
+        
+        dailyMap[dateKey].temps.push(entry.main.temp);
+        dailyMap[dateKey].conditions.push(entry.weather[0].main);
+        dailyMap[dateKey].icons.push(entry.weather[0].icon);
+        dailyMap[dateKey].descriptions.push(entry.weather[0].description);
+        dailyMap[dateKey].precips.push(entry.pop || 0);
+        dailyMap[dateKey].humidity.push(entry.main.humidity);
+        dailyMap[dateKey].wind.push(entry.wind?.speed || 0);
+      });
+
+      // Calculate sunrise/sunset times using NOAA algorithm
+      // Returns times in local timezone
+      const calcSunTimes = (timestamp, latitude, longitude, tzOffsetHours) => {
+        const date = new Date(timestamp);
+        
+        // Julian day calculation
+        const year = date.getUTCFullYear();
+        const month = date.getUTCMonth() + 1;
+        const day = date.getUTCDate();
+        
+        const a = Math.floor((14 - month) / 12);
+        const y = year + 4800 - a;
+        const m = month + 12 * a - 3;
+        const jdn = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+        
+        // Julian century
+        const jc = (jdn - 2451545) / 36525;
+        
+        // Solar calculations
+        const geomMeanLongSun = (280.46646 + jc * (36000.76983 + 0.0003032 * jc)) % 360;
+        const geomMeanAnomSun = 357.52911 + jc * (35999.05029 - 0.0001537 * jc);
+        const eccentEarthOrbit = 0.016708634 - jc * (0.000042037 + 0.0000001267 * jc);
+        
+        const sunEqOfCtr = Math.sin(geomMeanAnomSun * Math.PI / 180) * (1.914602 - jc * (0.004817 + 0.000014 * jc)) +
+                          Math.sin(2 * geomMeanAnomSun * Math.PI / 180) * (0.019993 - 0.000101 * jc) +
+                          Math.sin(3 * geomMeanAnomSun * Math.PI / 180) * 0.000289;
+        
+        const sunTrueLong = geomMeanLongSun + sunEqOfCtr;
+        const sunAppLong = sunTrueLong - 0.00569 - 0.00478 * Math.sin((125.04 - 1934.136 * jc) * Math.PI / 180);
+        
+        const meanObliqEcliptic = 23 + (26 + ((21.448 - jc * (46.815 + jc * (0.00059 - jc * 0.001813)))) / 60) / 60;
+        const obliqCorr = meanObliqEcliptic + 0.00256 * Math.cos((125.04 - 1934.136 * jc) * Math.PI / 180);
+        
+        const sunDeclin = Math.asin(Math.sin(obliqCorr * Math.PI / 180) * Math.sin(sunAppLong * Math.PI / 180)) * 180 / Math.PI;
+        
+        const varY = Math.tan((obliqCorr / 2) * Math.PI / 180) * Math.tan((obliqCorr / 2) * Math.PI / 180);
+        const eqOfTime = 4 * (varY * Math.sin(2 * geomMeanLongSun * Math.PI / 180) -
+                         2 * eccentEarthOrbit * Math.sin(geomMeanAnomSun * Math.PI / 180) +
+                         4 * eccentEarthOrbit * varY * Math.sin(geomMeanAnomSun * Math.PI / 180) * Math.cos(2 * geomMeanLongSun * Math.PI / 180) -
+                         0.5 * varY * varY * Math.sin(4 * geomMeanLongSun * Math.PI / 180) -
+                         1.25 * eccentEarthOrbit * eccentEarthOrbit * Math.sin(2 * geomMeanAnomSun * Math.PI / 180)) * 180 / Math.PI;
+        
+        // Hour angle for sunrise/sunset (with atmospheric refraction correction)
+        const haRad = Math.acos(
+          Math.cos(90.833 * Math.PI / 180) / (Math.cos(latitude * Math.PI / 180) * Math.cos(sunDeclin * Math.PI / 180)) -
+          Math.tan(latitude * Math.PI / 180) * Math.tan(sunDeclin * Math.PI / 180)
+        );
+        const haDeg = haRad * 180 / Math.PI;
+        
+        // Solar noon in local time (minutes from midnight)
+        const solarNoonMin = (720 - 4 * longitude - eqOfTime + tzOffsetHours * 60);
+        
+        // Sunrise and sunset times (minutes from midnight, local time)
+        const sunriseMin = solarNoonMin - haDeg * 4;
+        const sunsetMin = solarNoonMin + haDeg * 4;
+        
+        debugLog(`Sun calc for ${date.toISOString()}: sunrise=${sunriseMin.toFixed(2)}min, sunset=${sunsetMin.toFixed(2)}min, jdn=${jdn}`);
+        
+        const formatTime = (minutes) => {
+          let mins = Math.round(minutes);
+          if (mins < 0) mins += 1440;
+          if (mins >= 1440) mins -= 1440;
+          
+          const h = Math.floor(mins / 60);
+          const m = mins % 60;
+          const period = h >= 12 ? 'PM' : 'AM';
+          const displayHour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+          return `${displayHour}:${m.toString().padStart(2, '0')} ${period}`;
+        };
+        
+        return {
+          sunrise: formatTime(sunriseMin),
+          sunset: formatTime(sunsetMin),
+          solarNoon: formatTime(solarNoonMin)
+        };
+      };
+
+      const daily = Object.keys(dailyMap)
+        .sort()
         .slice(0, 5)
-        .map(entry => ({
-          date: entry.dt * 1000,
-          high: Math.round(entry.main.temp_max),
-          low: Math.round(entry.main.temp_min),
-          condition: entry.weather[0].main,
-          icon: entry.weather[0].icon,
-          description: entry.weather[0].description,
-          precip: Math.round((entry.pop || 0) * 100)
-        }));
+        .map((dateKey, index) => {
+          const dayData = dailyMap[dateKey];
+          const sunTimes = calcSunTimes(dayData.date, lat, lon, timezoneOffsetHours);
+          
+          // Get the most common condition (mode)
+          const conditionCounts = {};
+          dayData.conditions.forEach(c => conditionCounts[c] = (conditionCounts[c] || 0) + 1);
+          const mainCondition = Object.keys(conditionCounts).reduce((a, b) => 
+            conditionCounts[a] > conditionCounts[b] ? a : b
+          );
+          
+          // Get midday icon (around noon)
+          const middayIcon = dayData.icons[Math.floor(dayData.icons.length / 2)] || dayData.icons[0];
+          
+          // Most common description
+          const descCounts = {};
+          dayData.descriptions.forEach(d => descCounts[d] = (descCounts[d] || 0) + 1);
+          const mainDesc = Object.keys(descCounts).reduce((a, b) => 
+            descCounts[a] > descCounts[b] ? a : b
+          );
+
+          return {
+            date: dayData.date,
+            high: Math.round(Math.max(...dayData.temps)),
+            low: Math.round(Math.min(...dayData.temps)),
+            condition: mainCondition,
+            icon: middayIcon,
+            description: mainDesc,
+            precip: Math.round(Math.max(...dayData.precips) * 100),
+            humidity: Math.round(dayData.humidity.reduce((a, b) => a + b, 0) / dayData.humidity.length),
+            wind: Math.round(dayData.wind.reduce((a, b) => a + b, 0) / dayData.wind.length),
+            sunrise: sunTimes.sunrise,
+            sunset: sunTimes.sunset,
+            solarNoon: sunTimes.solarNoon
+          };
+        });
 
       cachedForecast = daily;
       lastFetchTime = Date.now();

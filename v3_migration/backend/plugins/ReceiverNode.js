@@ -13,92 +13,8 @@
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'receiver-node-css';
-    let style = document.getElementById(styleId);
-    if (!style) {
-        style = document.createElement('style');
-        style.id = styleId;
-        document.head.appendChild(style);
-    }
-    style.innerHTML = `
-            .receiver-node-tron {
-                background: rgba(30, 25, 20, 0.9) !important;
-                backdrop-filter: blur(12px);
-                border: 1px solid #ffb74d;
-                box-shadow: 0 0 15px rgba(255, 183, 77, 0.2);
-                border-radius: 12px;
-                color: #fff3e0;
-                font-family: 'Segoe UI', sans-serif;
-                width: 250px;
-                min-width: 250px;
-                max-width: 250px;
-                display: flex;
-                flex-direction: column;
-                user-select: none;
-            }
-            .receiver-header {
-                background: linear-gradient(90deg, rgba(255, 183, 77, 0.2), transparent);
-                padding: 8px 12px;
-                border-bottom: 1px solid rgba(255, 183, 77, 0.3);
-                font-weight: 600;
-                color: #ffb74d;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                font-size: 14px;
-            }
-            .receiver-content {
-                padding: 12px;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }
-            .receiver-row {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .receiver-label {
-                font-size: 11px;
-                color: #ffe0b2;
-                text-transform: uppercase;
-                width: 60px;
-            }
-            .receiver-select {
-                flex: 1;
-                background: rgba(0, 0, 0, 0.3);
-                border: 1px solid #ffb74d;
-                color: #fff;
-                padding: 4px;
-                border-radius: 4px;
-                font-size: 11px;
-                outline: none;
-                width: 100%;
-            }
-            .receiver-value-box {
-                background: rgba(0, 0, 0, 0.4);
-                border: 1px solid rgba(255, 183, 77, 0.3);
-                padding: 6px;
-                border-radius: 4px;
-                font-family: monospace;
-                font-size: 10px;
-                color: #ffcc80;
-                min-height: 20px;
-                max-height: 60px;
-                max-width: 220px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                display: block;
-            }
-            .receiver-socket-row {
-                display: flex;
-                align-items: center;
-                justify-content: flex-end;
-                gap: 8px;
-            }
-        `;
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -129,6 +45,26 @@
             return {
                 out: value,
                 change: hasChanged
+            };
+        }
+
+        restore(state) {
+            if (state.properties) {
+                this.properties.selectedBuffer = state.properties.selectedBuffer || "";
+            }
+        }
+
+        serialize() {
+            return {
+                selectedBuffer: this.properties.selectedBuffer
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
             };
         }
     }

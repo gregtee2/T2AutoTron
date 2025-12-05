@@ -13,200 +13,8 @@
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'hsv-control-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            /* Reusing Tron Style from AllInOneColorNode but scoped to hsv-node-tron */
-            .hsv-node-tron {
-                background: rgba(10, 15, 20, 0.85) !important;
-                backdrop-filter: blur(12px);
-                border: 1px solid #00f3ff;
-                box-shadow: 0 0 15px rgba(0, 243, 255, 0.2), inset 0 0 20px rgba(0, 243, 255, 0.05);
-                border-radius: 12px;
-                color: #e0f7fa;
-                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                min-width: 420px;
-                display: flex;
-                flex-direction: column;
-                transition: all 0.3s ease;
-                user-select: none;
-            }
-            .hsv-node-tron:hover {
-                box-shadow: 0 0 25px rgba(0, 243, 255, 0.4), inset 0 0 30px rgba(0, 243, 255, 0.1);
-                border-color: #50ffff;
-            }
-            .hsv-node-header {
-                background: linear-gradient(90deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.0));
-                padding: 10px 15px;
-                border-bottom: 1px solid rgba(0, 243, 255, 0.3);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            .hsv-node-title {
-                font-size: 16px;
-                font-weight: 600;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-                color: #00f3ff;
-                text-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
-            }
-            .hsv-io-container {
-                display: flex;
-                justify-content: space-between;
-                padding: 15px;
-                background: rgba(0, 0, 0, 0.2);
-            }
-            .hsv-socket-label {
-                font-size: 11px;
-                color: #b2ebf2;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .hsv-controls-container {
-                padding: 15px;
-                border-top: 1px solid rgba(0, 243, 255, 0.2);
-                background: rgba(0, 10, 15, 0.4);
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            /* Controls */
-            .hsv-slider-container {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                margin-bottom: 8px;
-            }
-            .hsv-slider-label {
-                width: 80px;
-                font-size: 11px;
-                color: #b2ebf2;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                text-align: right;
-            }
-            .hsv-slider-value {
-                width: 35px;
-                font-size: 11px;
-                color: #00f3ff;
-                text-align: right;
-                font-family: 'Consolas', 'Monaco', monospace;
-            }
-            .hsv-range-input {
-                -webkit-appearance: none;
-                appearance: none;
-                width: 100%;
-                height: 4px;
-                background: rgba(0, 243, 255, 0.2);
-                border-radius: 2px;
-                outline: none;
-                transition: background 0.2s;
-                flex: 1;
-            }
-            .hsv-range-input:hover { background: rgba(0, 243, 255, 0.3); }
-            .hsv-range-input::-webkit-slider-thumb {
-                -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%;
-                background: #0a0f14; border: 2px solid #00f3ff; cursor: pointer;
-                box-shadow: 0 0 8px rgba(0, 243, 255, 0.5); transition: all 0.2s ease; margin-top: -5px;
-            }
-            .hsv-range-input::-webkit-slider-thumb:hover {
-                background: #00f3ff; box-shadow: 0 0 12px rgba(0, 243, 255, 0.8); transform: scale(1.1);
-            }
-            .hsv-section-header {
-                font-size: 10px;
-                color: #50ffff;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                margin-bottom: 8px;
-                margin-top: 4px;
-                border-bottom: 1px solid rgba(0, 243, 255, 0.1);
-                padding-bottom: 2px;
-            }
-            .hsv-swatch {
-                height: 50px;
-                border-radius: 6px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                margin: 10px 15px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-family: 'Consolas', monospace;
-                font-size: 14px;
-                text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-                box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-                transition: background 0.1s;
-            }
-            .hsv-palette-container {
-                display: flex;
-                gap: 6px;
-                flex-wrap: wrap;
-                padding: 5px 0;
-            }
-            .hsv-palette-item {
-                width: 24px;
-                height: 24px;
-                border-radius: 4px;
-                cursor: pointer;
-                border: 1px solid rgba(255,255,255,0.1);
-                transition: transform 0.2s, border-color 0.2s;
-            }
-            .hsv-palette-item:hover {
-                transform: scale(1.1);
-                border-color: #fff;
-                box-shadow: 0 0 8px rgba(255,255,255,0.5);
-            }
-            .hsv-checkbox-container {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                cursor: pointer;
-                font-size: 11px;
-                color: #b2ebf2;
-            }
-            .hsv-checkbox {
-                appearance: none;
-                width: 14px;
-                height: 14px;
-                border: 1px solid #00f3ff;
-                border-radius: 3px;
-                background: rgba(0, 20, 30, 0.5);
-                cursor: pointer;
-                position: relative;
-            }
-            .hsv-checkbox:checked { background: #00f3ff; }
-            .hsv-checkbox:checked::after {
-                content: '✔'; position: absolute; top: -2px; left: 1px; font-size: 10px; color: #000;
-            }
-            .hsv-btn {
-                background: rgba(0, 243, 255, 0.1);
-                border: 1px solid #00f3ff;
-                color: #00f3ff;
-                padding: 4px 8px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 11px;
-                text-transform: uppercase;
-                transition: all 0.2s;
-            }
-            .hsv-btn:hover {
-                background: rgba(0, 243, 255, 0.3);
-                box-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
-            }
-            .hsv-btn-group {
-                display: flex;
-                gap: 8px;
-                margin-top: 8px;
-                flex-wrap: wrap;
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // COLOR UTILS - Use shared ColorUtilsPlugin (window.ColorUtils)
@@ -267,6 +75,27 @@
 
         restore(state) {
             if (state.properties) Object.assign(this.properties, state.properties);
+        }
+
+        serialize() {
+            return {
+                hueShift: this.properties.hueShift,
+                saturation: this.properties.saturation,
+                brightness: this.properties.brightness,
+                transitionTime: this.properties.transitionTime,
+                enableCommand: this.properties.enableCommand,
+                autoTriggerInterval: this.properties.autoTriggerInterval,
+                showColorOptions: this.properties.showColorOptions,
+                whiteAdjust: this.properties.whiteAdjust
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
         }
     }
 

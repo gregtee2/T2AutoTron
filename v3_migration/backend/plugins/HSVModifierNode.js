@@ -13,165 +13,8 @@
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'hsv-modifier-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .hsv-mod-node-tron {
-                background: rgba(15, 20, 25, 0.9) !important;
-                backdrop-filter: blur(12px);
-                border: 1px solid #b388ff;
-                box-shadow: 0 0 15px rgba(179, 136, 255, 0.2), inset 0 0 20px rgba(179, 136, 255, 0.05);
-                border-radius: 12px;
-                color: #ede7f6;
-                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                min-width: 400px;
-                display: flex;
-                flex-direction: column;
-                transition: all 0.3s ease;
-                user-select: none;
-            }
-            .hsv-mod-node-tron:hover {
-                box-shadow: 0 0 25px rgba(179, 136, 255, 0.4), inset 0 0 30px rgba(179, 136, 255, 0.1);
-                border-color: #d1c4e9;
-            }
-            .hsv-mod-header {
-                background: linear-gradient(90deg, rgba(179, 136, 255, 0.1), rgba(179, 136, 255, 0.0));
-                padding: 10px 15px;
-                border-bottom: 1px solid rgba(179, 136, 255, 0.3);
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-            }
-            .hsv-mod-title {
-                font-size: 16px;
-                font-weight: 600;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-                color: #b388ff;
-                text-shadow: 0 0 8px rgba(179, 136, 255, 0.6);
-            }
-            .hsv-mod-io {
-                display: flex;
-                justify-content: space-between;
-                padding: 15px;
-                background: rgba(0, 0, 0, 0.2);
-            }
-            .hsv-mod-socket-label {
-                font-size: 11px;
-                color: #d1c4e9;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .hsv-mod-controls {
-                padding: 15px;
-                border-top: 1px solid rgba(179, 136, 255, 0.2);
-                background: rgba(10, 15, 20, 0.4);
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }
-            .hsv-mod-slider-row {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                margin-bottom: 8px;
-            }
-            .hsv-mod-slider-label {
-                width: 90px;
-                font-size: 11px;
-                color: #d1c4e9;
-                text-transform: uppercase;
-                text-align: right;
-            }
-            .hsv-mod-slider-val {
-                width: 40px;
-                font-size: 11px;
-                color: #b388ff;
-                text-align: right;
-                font-family: monospace;
-            }
-            .hsv-mod-range {
-                -webkit-appearance: none;
-                appearance: none;
-                width: 100%;
-                height: 4px;
-                background: rgba(179, 136, 255, 0.2);
-                border-radius: 2px;
-                outline: none;
-                flex: 1;
-            }
-            .hsv-mod-range::-webkit-slider-thumb {
-                -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%;
-                background: #0a0f14; border: 2px solid #b388ff; cursor: pointer;
-                box-shadow: 0 0 8px rgba(179, 136, 255, 0.5); margin-top: -5px;
-            }
-            .hsv-mod-swatch-container {
-                display: flex;
-                gap: 10px;
-                margin-bottom: 10px;
-            }
-            .hsv-mod-swatch {
-                flex: 1;
-                height: 40px;
-                border-radius: 6px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 10px;
-                color: #fff;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-                background: #333;
-                transition: background 0.2s;
-            }
-            .hsv-mod-btn {
-                background: rgba(179, 136, 255, 0.1);
-                border: 1px solid #b388ff;
-                color: #b388ff;
-                padding: 4px 8px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 10px;
-                text-transform: uppercase;
-                transition: all 0.2s;
-            }
-            .hsv-mod-btn:hover {
-                background: rgba(179, 136, 255, 0.3);
-                box-shadow: 0 0 8px rgba(179, 136, 255, 0.4);
-            }
-            .hsv-mod-checkbox {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 11px;
-                color: #d1c4e9;
-                cursor: pointer;
-            }
-            .hsv-mod-checkbox input {
-                accent-color: #b388ff;
-            }
-            .hsv-mod-select-row {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 5px;
-            }
-            .hsv-mod-select {
-                flex: 1;
-                background: rgba(0, 0, 0, 0.3);
-                border: 1px solid #b388ff;
-                color: #d1c4e9;
-                padding: 2px;
-                border-radius: 4px;
-                font-size: 11px;
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // COLOR UTILS - Use shared ColorUtilsPlugin (window.ColorUtils)
@@ -250,6 +93,32 @@
                     saturation: saturation,
                     brightness: brightness
                 }
+            };
+        }
+
+        restore(state) {
+            if (state.properties) {
+                Object.assign(this.properties, state.properties);
+            }
+        }
+
+        serialize() {
+            return {
+                hueShift: this.properties.hueShift,
+                saturationScale: this.properties.saturationScale,
+                brightnessScale: this.properties.brightnessScale,
+                enabled: this.properties.enabled,
+                presets: this.properties.presets,
+                selectedBuffer: this.properties.selectedBuffer,
+                selectedHsvBuffer: this.properties.selectedHsvBuffer
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
             };
         }
     }

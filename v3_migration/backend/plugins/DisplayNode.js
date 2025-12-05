@@ -12,101 +12,7 @@
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
 
-    // Inject CSS
-    const styleId = 'display-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .display-node {
-                background: #222;
-                border: 1px solid #777;
-                border-radius: 8px;
-                color: #fff;
-                min-width: 180px;
-                min-height: 100px;
-                display: flex;
-                flex-direction: column;
-                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-                font-family: monospace;
-                user-select: none;
-                position: relative;
-            }
-            .display-node .header {
-                padding: 8px;
-                background: #333;
-                border-top-left-radius: 8px;
-                border-top-right-radius: 8px;
-                border-bottom: 1px solid #555;
-                font-weight: bold;
-                text-align: center;
-                flex-shrink: 0;
-            }
-            .display-node .content {
-                padding: 10px;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                flex: 1;
-                overflow: hidden;
-            }
-            .display-node .io-row {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                position: relative;
-                flex-shrink: 0;
-            }
-            .display-node .socket-wrapper {
-                width: 24px;
-                height: 24px;
-                display: inline-block;
-                position: relative;
-                z-index: 100;
-            }
-            .display-node .socket {
-                width: 20px !important;
-                height: 20px !important;
-                background: #999 !important;
-                border: 2px solid #fff !important;
-                border-radius: 50% !important;
-                pointer-events: auto !important;
-                cursor: crosshair;
-                z-index: 100 !important;
-            }
-            .display-node .socket:hover {
-                background: #fff !important;
-                border-color: #0f0 !important;
-            }
-            .display-node .display-box {
-                background: #000;
-                border: 1px solid #444;
-                border-radius: 4px;
-                padding: 8px;
-                word-break: break-all;
-                color: #0f0;
-                user-select: text;
-                cursor: text;
-                flex: 1;
-                overflow: auto;
-            }
-            .display-node .resize-handle {
-                position: absolute;
-                bottom: 0;
-                right: 0;
-                width: 15px;
-                height: 15px;
-                cursor: nwse-resize;
-                background: linear-gradient(135deg, transparent 50%, #777 50%);
-                border-bottom-right-radius: 8px;
-                z-index: 10;
-            }
-            .display-node .resize-handle:hover {
-                background: linear-gradient(135deg, transparent 50%, #fff 50%);
-            }
-        `;
-        document.head.appendChild(style);
-    }
+    // CSS is now loaded from node-styles.css via index.css
 
     class DisplayNode extends ClassicPreset.Node {
         constructor(changeCallback) {
@@ -131,6 +37,27 @@
                 if (this.changeCallback) this.changeCallback();
             }
             return {};
+        }
+
+        restore(state) {
+            if (state.width) this.width = state.width;
+            if (state.height) this.height = state.height;
+        }
+
+        serialize() {
+            return {
+                width: this.width,
+                height: this.height
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                width: this.width,
+                height: this.height
+            };
         }
     }
 

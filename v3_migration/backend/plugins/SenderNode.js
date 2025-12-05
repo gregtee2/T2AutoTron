@@ -42,84 +42,8 @@
     };
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'sender-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .sender-node-tron {
-                background: rgba(20, 30, 40, 0.9) !important;
-                backdrop-filter: blur(12px);
-                border: 1px solid #4fc3f7;
-                box-shadow: 0 0 15px rgba(79, 195, 247, 0.2);
-                border-radius: 12px;
-                color: #e1f5fe;
-                font-family: 'Segoe UI', sans-serif;
-                min-width: 250px;
-                display: flex;
-                flex-direction: column;
-                user-select: none;
-            }
-            .sender-header {
-                background: linear-gradient(90deg, rgba(79, 195, 247, 0.2), transparent);
-                padding: 8px 12px;
-                border-bottom: 1px solid rgba(79, 195, 247, 0.3);
-                font-weight: 600;
-                color: #4fc3f7;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                font-size: 14px;
-            }
-            .sender-content {
-                padding: 12px;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }
-            .sender-input-row {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .sender-label {
-                font-size: 11px;
-                color: #81d4fa;
-                text-transform: uppercase;
-                width: 60px;
-            }
-            .sender-text-input {
-                flex: 1;
-                background: rgba(0, 0, 0, 0.3);
-                border: 1px solid #4fc3f7;
-                color: #fff;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 12px;
-                outline: none;
-            }
-            .sender-text-input:focus {
-                box-shadow: 0 0 8px rgba(79, 195, 247, 0.4);
-            }
-            .sender-status {
-                font-size: 10px;
-                color: #b3e5fc;
-                margin-top: 4px;
-                font-style: italic;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            .sender-socket-row {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 5px;
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -167,6 +91,26 @@
             }
 
             return {};
+        }
+
+        restore(state) {
+            if (state.properties) {
+                this.properties.bufferName = state.properties.bufferName || "Default";
+            }
+        }
+
+        serialize() {
+            return {
+                bufferName: this.properties.bufferName
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
         }
     }
 

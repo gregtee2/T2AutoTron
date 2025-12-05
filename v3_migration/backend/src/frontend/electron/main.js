@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, crashReporter, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, session, crashReporter, dialog, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs'); // For synchronous operations
 const fsPromises = require('fs').promises; // For asynchronous operations
@@ -121,8 +121,16 @@ function initializeSocketIO() {
 
 async function clearCache() {
     try {
+        // Clear HTTP cache
         await session.defaultSession.clearCache();
-        console.log('Cache cleared successfully!');
+        
+        // Clear storage data that can cause stale code issues
+        // Note: NOT clearing 'localstorage' as it contains saved graphs
+        await session.defaultSession.clearStorageData({
+            storages: ['cachestorage', 'shadercache', 'serviceworkers']
+        });
+        
+        console.log('Cache and storage cleared successfully!');
     } catch (err) {
         console.error('Error clearing cache:', err);
     }
@@ -159,7 +167,28 @@ function createWindow() {
         console.error('Failed to load URL:', err);
     });
 
-    mainWindow.webContents.openDevTools();
+    // Don't auto-open DevTools - use F12 or Ctrl+Shift+I to open manually
+    // mainWindow.webContents.openDevTools();
+
+    // Register keyboard shortcuts
+    mainWindow.webContents.on('before-input-event', async (event, input) => {
+        // Ctrl+Shift+R for hard refresh (clear cache and reload)
+        if (input.control && input.shift && input.key.toLowerCase() === 'r') {
+            event.preventDefault();
+            console.log('Hard refresh triggered (Ctrl+Shift+R)');
+            await clearCache();
+            mainWindow.webContents.reloadIgnoringCache();
+            return;
+        }
+        
+        // Send Delete/Backspace to renderer via IPC for reliable node deletion
+        if ((input.key === 'Delete' || input.key === 'Backspace') && input.type === 'keyDown') {
+            if (!input.control && !input.alt && !input.meta) {
+                // Send to renderer process
+                mainWindow.webContents.send('editor-delete-key');
+            }
+        }
+    });
 
     mainWindow.on('closed', () => {
         mainWindow = null;

@@ -193,6 +193,21 @@
             if (this.controls.pulse_mode) this.controls.pulse_mode.value = this.properties.pulseMode;
             this.updateInputs();
         }
+
+        serialize() {
+            return {
+                inputCount: this.properties.inputCount,
+                pulseMode: this.properties.pulseMode
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
+        }
     }
 
     // -------------------------------------------------------------------------

@@ -133,6 +133,23 @@
             
             if (this.uiUpdateCallback) this.uiUpdateCallback();
         }
+
+        serialize() {
+            return {
+                startHour: this.properties.startHour,
+                startMinute: this.properties.startMinute,
+                endHour: this.properties.endHour,
+                endMinute: this.properties.endMinute
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
+        }
     }
 
     // -------------------------------------------------------------------------

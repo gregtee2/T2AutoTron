@@ -13,66 +13,8 @@
     const { DateTime } = window.luxon;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'time-of-day-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .time-of-day-node {
-                background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
-                border: 1px solid #4caf50;
-                border-radius: 10px;
-                box-shadow: 0 0 15px rgba(76, 175, 80, 0.2);
-                color: #e0e0e0;
-                min-width: 400px;
-                font-family: 'Segoe UI', sans-serif;
-                overflow: hidden;
-            }
-            .time-of-day-node .title {
-                background: linear-gradient(90deg, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0) 100%);
-                padding: 10px 15px;
-                font-size: 16px;
-                font-weight: 600;
-                color: #4caf50;
-                border-bottom: 1px solid rgba(76, 175, 80, 0.3);
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }
-            .time-of-day-node .content { padding: 15px; }
-            .time-of-day-node .section-header {
-                color: #a5d6a7; font-size: 14px; font-weight: 600; margin-top: 15px; margin-bottom: 8px;
-                padding-bottom: 4px; border-bottom: 1px solid rgba(76, 175, 80, 0.2); text-transform: uppercase; font-size: 0.85em;
-            }
-            .time-of-day-node .section-header:first-child { margin-top: 0; }
-            .time-of-day-node .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-            .time-of-day-node .control-label { font-size: 13px; color: #cccccc; flex: 1; }
-            .time-of-day-node input[type="text"], .time-of-day-node select, .time-of-day-node input[type="number"] {
-                background: #333; border: 1px solid #555; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 13px; outline: none; transition: border-color 0.2s;
-            }
-            .time-of-day-node input[type="text"]:focus, .time-of-day-node select:focus, .time-of-day-node input[type="number"]:focus { border-color: #4caf50; }
-            .time-of-day-node input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: #444; border-radius: 2px; outline: none; }
-            .time-of-day-node input[type="range"]::-webkit-slider-thumb {
-                -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #4caf50; cursor: pointer; transition: background 0.2s;
-            }
-            .time-of-day-node input[type="range"]::-webkit-slider-thumb:hover { background: #66bb6a; }
-            .time-of-day-node input[type="checkbox"] { accent-color: #4caf50; width: 16px; height: 16px; cursor: pointer; }
-            .time-of-day-node .status-text { font-size: 12px; margin-top: 5px; padding: 5px; border-radius: 4px; background: rgba(0, 0, 0, 0.2); text-align: center; }
-            .time-of-day-node .status-text.error { color: #f44336; border: 1px solid rgba(244, 67, 54, 0.3); }
-            .time-of-day-node .status-text.info { color: #2196f3; border: 1px solid rgba(33, 150, 243, 0.3); }
-            .time-of-day-node .info-display { background: rgba(76, 175, 80, 0.05); border: 1px solid rgba(76, 175, 80, 0.1); border-radius: 6px; padding: 10px; margin-top: 15px; }
-            .time-of-day-node .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
-            .time-of-day-node .info-label { color: #aaa; }
-            .time-of-day-node .info-value { color: #a5d6a7; font-weight: 600; }
-            .time-of-day-node .info-value.cycle { color: #ffeb3b; }
-            .time-of-day-node .countdown { text-align: center; font-size: 14px; font-weight: bold; color: #4caf50; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(76, 175, 80, 0.2); }
-            .time-of-day-node .tod-outputs-section { display: flex; flex-direction: column; gap: 8px; padding: 10px 15px; border-bottom: 1px solid rgba(76, 175, 80, 0.2); background: rgba(76, 175, 80, 0.05); }
-            .time-of-day-node .tod-output-row { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
-            .time-of-day-node .tod-output-label { font-size: 12px; color: #a5d6a7; }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -91,6 +33,7 @@
             } catch (e) { console.error("[TimeOfDayNode] Error adding output:", e); }
 
             this.properties = {
+                customName: '',
                 start_hour: 8, start_minute: 0, start_ampm: "AM", start_enabled: true,
                 stop_hour: 6, stop_minute: 0, stop_ampm: "PM", stop_enabled: true,
                 cycle_hour: 4, cycle_minute: 45, cycle_ampm: "AM", cycle_duration: 10, cycle_enabled: false,
@@ -110,6 +53,42 @@
             return { state: this.properties.currentState, startTime: startTime, endTime: endTime };
         }
         update() { if (this.change) this.change(); }
+
+        restore(state) {
+            if (state.properties) {
+                Object.assign(this.properties, state.properties);
+            }
+        }
+
+        serialize() {
+            return {
+                customName: this.properties.customName,
+                start_hour: this.properties.start_hour,
+                start_minute: this.properties.start_minute,
+                start_ampm: this.properties.start_ampm,
+                start_enabled: this.properties.start_enabled,
+                stop_hour: this.properties.stop_hour,
+                stop_minute: this.properties.stop_minute,
+                stop_ampm: this.properties.stop_ampm,
+                stop_enabled: this.properties.stop_enabled,
+                cycle_hour: this.properties.cycle_hour,
+                cycle_minute: this.properties.cycle_minute,
+                cycle_ampm: this.properties.cycle_ampm,
+                cycle_duration: this.properties.cycle_duration,
+                cycle_enabled: this.properties.cycle_enabled,
+                timezone: this.properties.timezone,
+                debug: this.properties.debug,
+                pulseMode: this.properties.pulseMode
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -213,6 +192,45 @@
 
         useEffect(() => { calculateTimes(); }, []);
 
+        // Register scheduled events with the global registry for the Upcoming Events panel
+        useEffect(() => {
+            if (window.registerScheduledEvents) {
+                const events = [];
+                const nodeName = data.properties.customName || 'Time of Day';
+                
+                if (data.properties.next_on_date) {
+                    events.push({
+                        time: data.properties.next_on_date,
+                        action: 'on',
+                        deviceName: `${nodeName} - Start`
+                    });
+                }
+                if (data.properties.next_off_date) {
+                    events.push({
+                        time: data.properties.next_off_date,
+                        action: 'off',
+                        deviceName: `${nodeName} - Stop`
+                    });
+                }
+                if (data.properties.next_cycle_date) {
+                    events.push({
+                        time: data.properties.next_cycle_date,
+                        action: 'pulse',
+                        deviceName: `${nodeName} - Cycle`
+                    });
+                }
+                
+                window.registerScheduledEvents(data.id, events);
+            }
+            
+            // Cleanup when component unmounts
+            return () => {
+                if (window.unregisterScheduledEvents) {
+                    window.unregisterScheduledEvents(data.id);
+                }
+            };
+        }, [data.properties.next_on_date, data.properties.next_off_date, data.properties.next_cycle_date, data.properties.customName, data.id]);
+
         const outputs = Object.entries(data.outputs).map(([key, output]) => ({ key, ...output }));
 
         return React.createElement('div', { className: 'time-of-day-node' }, [
@@ -225,6 +243,11 @@
                 ]))
             ),
             React.createElement('div', { key: 'c', className: 'content', onPointerDown: (e) => e.stopPropagation() }, [
+                // Custom Name
+                React.createElement('div', { key: 'cn', className: 'control-row' }, [
+                    React.createElement('span', { key: 'l', className: 'control-label' }, "Name"),
+                    React.createElement('input', { key: 'i', type: 'text', value: state.customName || '', onChange: (e) => updateProperty('customName', e.target.value), placeholder: "Timer Name", style: { width: '60%' } })
+                ]),
                 // Pulse Mode
                 React.createElement('div', { key: 'pm', className: 'control-row' }, [
                     React.createElement('span', { key: 'l', className: 'control-label' }, "Pulse Mode"),

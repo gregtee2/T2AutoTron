@@ -157,6 +157,21 @@
             this.controls.operator.value = this.properties.operator;
             this.controls.value.value = this.properties.compareValue;
         }
+
+        serialize() {
+            return {
+                operator: this.properties.operator,
+                compareValue: this.properties.compareValue
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
+        }
     }
 
     // -------------------------------------------------------------------------

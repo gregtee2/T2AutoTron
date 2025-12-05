@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 REM Batch file to sequentially start the T2AutoTron2.1 backend, frontend (Vite), and Electron
 REM Project directory: C:\X_T2_AutoTron2.1
 REM Backend port: 3000
@@ -64,7 +65,7 @@ timeout /t 2 /nobreak >nul
 REM Start the backend server
 echo Starting backend... >> "%LOGFILE%"
 cd v3_migration\backend
-start "Backend" cmd /k "npm start"
+start "Backend" /MIN cmd /k "npm start"
 if errorlevel 1 (
     echo ERROR: Failed to start backend. >> "%LOGFILE%"
     echo ERROR: Failed to start backend.
@@ -99,7 +100,7 @@ if %errorlevel% equ 0 (
 REM Start the Frontend (Vite)
 echo Starting Frontend (Vite)... >> "%LOGFILE%"
 cd v3_migration\frontend
-start "Frontend" cmd /k "npm run dev"
+start "Frontend" /MIN cmd /k "npm run dev"
 if errorlevel 1 (
     echo ERROR: Failed to start frontend. >> "%LOGFILE%"
     echo ERROR: Failed to start frontend.
@@ -114,7 +115,7 @@ timeout /t 5 /nobreak >nul
 REM Start Electron
 echo Starting Electron... >> "%LOGFILE%"
 cd v3_migration\backend
-start "Electron" cmd /k "npm run start:electron"
+start "Electron" /MIN cmd /k "npm run start:electron"
 if errorlevel 1 (
     echo ERROR: Failed to start Electron. >> "%LOGFILE%"
     echo ERROR: Failed to start Electron.

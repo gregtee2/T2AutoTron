@@ -13,65 +13,8 @@
     const { DateTime } = window.luxon;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'sunrise-sunset-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .sunrise-sunset-node {
-                background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
-                border: 1px solid #ff8c00;
-                border-radius: 10px;
-                box-shadow: 0 0 15px rgba(255, 140, 0, 0.2);
-                color: #e0e0e0;
-                min-width: 400px;
-                font-family: 'Segoe UI', sans-serif;
-                overflow: hidden;
-            }
-            .sunrise-sunset-node .title {
-                background: linear-gradient(90deg, rgba(255, 140, 0, 0.2) 0%, rgba(255, 140, 0, 0) 100%);
-                padding: 10px 15px;
-                font-size: 16px;
-                font-weight: 600;
-                color: #ffa500;
-                border-bottom: 1px solid rgba(255, 140, 0, 0.3);
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }
-            .sunrise-sunset-node .content { padding: 15px; }
-            .sunrise-sunset-node .section-header {
-                color: #ffb74d; font-size: 14px; font-weight: 600; margin-top: 15px; margin-bottom: 8px;
-                padding-bottom: 4px; border-bottom: 1px solid rgba(255, 140, 0, 0.2); text-transform: uppercase; font-size: 0.85em;
-            }
-            .sunrise-sunset-node .section-header:first-child { margin-top: 0; }
-            .sunrise-sunset-node .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-            .sunrise-sunset-node .control-label { font-size: 13px; color: #cccccc; flex: 1; }
-            .sunrise-sunset-node input[type="text"], .sunrise-sunset-node select {
-                background: #333; border: 1px solid #555; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 13px; outline: none; transition: border-color 0.2s;
-            }
-            .sunrise-sunset-node input[type="text"]:focus, .sunrise-sunset-node select:focus { border-color: #ff8c00; }
-            .sunrise-sunset-node input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: #444; border-radius: 2px; outline: none; }
-            .sunrise-sunset-node input[type="range"]::-webkit-slider-thumb {
-                -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #ff8c00; cursor: pointer; transition: background 0.2s;
-            }
-            .sunrise-sunset-node input[type="range"]::-webkit-slider-thumb:hover { background: #ffa500; }
-            .sunrise-sunset-node input[type="checkbox"] { accent-color: #ff8c00; width: 16px; height: 16px; cursor: pointer; }
-            .sunrise-sunset-node .status-text { font-size: 12px; margin-top: 5px; padding: 5px; border-radius: 4px; background: rgba(0, 0, 0, 0.2); text-align: center; }
-            .sunrise-sunset-node .status-text.error { color: #f44336; border: 1px solid rgba(244, 67, 54, 0.3); }
-            .sunrise-sunset-node .status-text.info { color: #2196f3; border: 1px solid rgba(33, 150, 243, 0.3); }
-            .sunrise-sunset-node .info-display { background: rgba(255, 140, 0, 0.05); border: 1px solid rgba(255, 140, 0, 0.1); border-radius: 6px; padding: 10px; margin-top: 15px; }
-            .sunrise-sunset-node .info-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
-            .sunrise-sunset-node .info-label { color: #aaa; }
-            .sunrise-sunset-node .info-value { color: #ffb74d; font-weight: 600; }
-            .sunrise-sunset-node .countdown { text-align: center; font-size: 14px; font-weight: bold; color: #ffa500; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 140, 0, 0.2); }
-            .sunrise-sunset-node .ss-outputs-section { display: flex; flex-direction: column; gap: 8px; padding: 10px 15px; border-bottom: 1px solid rgba(255, 140, 0, 0.2); background: rgba(255, 140, 0, 0.05); }
-            .sunrise-sunset-node .ss-output-row { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
-            .sunrise-sunset-node .ss-output-label { font-size: 12px; color: #ffb74d; }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -90,6 +33,7 @@
             } catch (e) { console.error("[SunriseSunsetNode] Error adding output:", e); }
 
             this.properties = {
+                customName: '',
                 on_offset_hours: 0, on_offset_minutes: 30, on_offset_direction: "Before", on_enabled: true,
                 fixed_on_hour: 6, fixed_on_minute: 0, fixed_on_ampm: "PM", fixed_on_enabled: false,
                 off_offset_hours: 0, off_offset_minutes: 0, off_offset_direction: "Before", off_enabled: true,
@@ -116,6 +60,48 @@
             return { state: this.properties.currentState, startTime: startTime, endTime: endTime };
         }
         update() { if (this.change) this.change(); }
+
+        restore(state) {
+            if (state.properties) {
+                Object.assign(this.properties, state.properties);
+            }
+        }
+
+        serialize() {
+            return {
+                customName: this.properties.customName,
+                on_offset_hours: this.properties.on_offset_hours,
+                on_offset_minutes: this.properties.on_offset_minutes,
+                on_offset_direction: this.properties.on_offset_direction,
+                on_enabled: this.properties.on_enabled,
+                fixed_on_hour: this.properties.fixed_on_hour,
+                fixed_on_minute: this.properties.fixed_on_minute,
+                fixed_on_ampm: this.properties.fixed_on_ampm,
+                fixed_on_enabled: this.properties.fixed_on_enabled,
+                off_offset_hours: this.properties.off_offset_hours,
+                off_offset_minutes: this.properties.off_offset_minutes,
+                off_offset_direction: this.properties.off_offset_direction,
+                off_enabled: this.properties.off_enabled,
+                fixed_stop_hour: this.properties.fixed_stop_hour,
+                fixed_stop_minute: this.properties.fixed_stop_minute,
+                fixed_stop_ampm: this.properties.fixed_stop_ampm,
+                fixed_stop_enabled: this.properties.fixed_stop_enabled,
+                latitude: this.properties.latitude,
+                longitude: this.properties.longitude,
+                city: this.properties.city,
+                timezone: this.properties.timezone,
+                debug: this.properties.debug,
+                pulseMode: this.properties.pulseMode
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -309,6 +295,38 @@
 
         useEffect(() => { fetchSunTimes(); }, []);
 
+        // Register scheduled events with the global registry for the Upcoming Events panel
+        useEffect(() => {
+            if (window.registerScheduledEvents) {
+                const events = [];
+                const nodeName = data.properties.customName || 'Sunrise/Sunset';
+                
+                if (data.properties.next_on_date) {
+                    events.push({
+                        time: data.properties.next_on_date,
+                        action: 'on',
+                        deviceName: `${nodeName} - On`
+                    });
+                }
+                if (data.properties.next_off_date) {
+                    events.push({
+                        time: data.properties.next_off_date,
+                        action: 'off',
+                        deviceName: `${nodeName} - Off`
+                    });
+                }
+                
+                window.registerScheduledEvents(data.id, events);
+            }
+            
+            // Cleanup when component unmounts
+            return () => {
+                if (window.unregisterScheduledEvents) {
+                    window.unregisterScheduledEvents(data.id);
+                }
+            };
+        }, [data.properties.next_on_date, data.properties.next_off_date, data.properties.customName, data.id]);
+
         const isFixedOnActive = state.fixed_on_enabled;
         const isOnOffsetActive = !state.fixed_on_enabled && state.on_enabled;
         const isFixedOffActive = state.fixed_stop_enabled;
@@ -340,6 +358,11 @@
                 ]))
             ),
             React.createElement('div', { key: 'c', className: 'content', onPointerDown: (e) => e.stopPropagation() }, [
+                // Custom Name
+                React.createElement('div', { key: 'cn', className: 'control-row' }, [
+                    React.createElement('span', { key: 'l', className: 'control-label' }, "Name"),
+                    React.createElement('input', { key: 'i', type: 'text', value: state.customName || '', onChange: (e) => updateProperty('customName', e.target.value), placeholder: "Trigger Name", style: { width: '60%' } })
+                ]),
                 // Pulse Mode
                 React.createElement('div', { key: 'pm', className: 'control-row' }, [
                     React.createElement('span', { key: 'l', className: 'control-label' }, "Pulse Mode"),

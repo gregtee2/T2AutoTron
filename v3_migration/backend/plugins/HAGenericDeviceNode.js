@@ -14,90 +14,8 @@
     const socket = window.socket; // Assuming global socket instance
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'ha-generic-device-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            /* Tron / Sci-Fi Node Design */
-            .ha-node-tron {
-                background: rgba(10, 15, 20, 0.85) !important;
-                backdrop-filter: blur(12px);
-                border: 1px solid #00f3ff;
-                box-shadow: 0 0 15px rgba(0, 243, 255, 0.2), inset 0 0 20px rgba(0, 243, 255, 0.05);
-                border-radius: 12px;
-                color: #e0f7fa;
-                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                min-width: 420px;
-                display: flex;
-                flex-direction: column;
-                transition: all 0.3s ease;
-                user-select: none;
-            }
-            .ha-node-tron:hover {
-                box-shadow: 0 0 25px rgba(0, 243, 255, 0.4), inset 0 0 30px rgba(0, 243, 255, 0.1);
-                border-color: #50ffff;
-            }
-            .ha-node-header {
-                background: linear-gradient(90deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.0));
-                padding: 10px 15px;
-                border-bottom: 1px solid rgba(0, 243, 255, 0.3);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            .ha-node-title {
-                font-size: 16px;
-                font-weight: 600;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-                color: #00f3ff;
-                text-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
-            }
-            .ha-node-status {
-                font-size: 10px;
-                color: #a7ffeb;
-                margin-top: 4px;
-                opacity: 0.8;
-            }
-            .ha-io-container {
-                display: flex;
-                justify-content: space-between;
-                padding: 15px;
-                background: rgba(0, 0, 0, 0.2);
-            }
-            .ha-socket-label {
-                font-size: 11px;
-                color: #b2ebf2;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .ha-controls-container {
-                padding: 15px;
-                border-top: 1px solid rgba(0, 243, 255, 0.2);
-                background: rgba(0, 10, 15, 0.4);
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }
-            .ha-device-item {
-                background: rgba(0, 20, 30, 0.6);
-                border: 1px solid rgba(0, 243, 255, 0.15);
-                border-left: 3px solid rgba(0, 243, 255, 0.5);
-                border-radius: 4px;
-                padding: 6px 10px;
-                margin-bottom: 6px;
-                transition: all 0.2s;
-            }
-            .ha-device-item:hover {
-                background: rgba(0, 40, 50, 0.7);
-                border-color: rgba(0, 243, 255, 0.4);
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // CONTROLS
@@ -341,6 +259,8 @@
                 selectedDeviceIds: [],
                 selectedDeviceNames: [],
                 status: "Initializing...",
+                haConnected: false,
+                haWsConnected: false,
                 debug: true,
                 haToken: localStorage.getItem('ha_token') || "",
                 transitionTime: 1000,
@@ -470,9 +390,31 @@
 
         initializeSocketIO() {
             if (window.socket) {
-                window.socket.on("device-state-update", (data) => this.handleDeviceStateUpdate(data));
+                // Store bound handlers so we can remove them in destroy()
+                this._onDeviceStateUpdate = (data) => this.handleDeviceStateUpdate(data);
+                this._onHaConnectionStatus = (data) => {
+                    this.properties.haConnected = data.connected;
+                    this.properties.haWsConnected = data.wsConnected;
+                    if (data.connected) {
+                        this.updateStatus(`HA Connected (${data.deviceCount} devices)`);
+                    } else {
+                        this.updateStatus("HA Disconnected");
+                    }
+                    this.triggerUpdate();
+                };
+                this._onConnect = () => {
+                    window.socket.emit("request-ha-status");
+                    this.fetchDevices();
+                };
+                
+                window.socket.on("device-state-update", this._onDeviceStateUpdate);
+                window.socket.on("ha-connection-status", this._onHaConnectionStatus);
+                window.socket.on("connect", this._onConnect);
+                
+                // Request current HA status
+                window.socket.emit("request-ha-status");
+                
                 if (window.socket.connected) this.fetchDevices();
-                window.socket.on("connect", () => this.fetchDevices());
             }
         }
 
@@ -708,7 +650,45 @@
             });
         }
 
-        destroy() { if (this.intervalId) clearInterval(this.intervalId); super.destroy?.(); }
+        // -------------------------------------------------------------------------
+        // SERIALIZATION - Only save essential configuration, NOT runtime data
+        // -------------------------------------------------------------------------
+        serialize() {
+            // Only return user-configurable settings that need to persist
+            return {
+                selectedDeviceIds: this.properties.selectedDeviceIds || [],
+                selectedDeviceNames: this.properties.selectedDeviceNames || [],
+                filterType: this.properties.filterType || "All",
+                triggerMode: this.properties.triggerMode || "Follow",
+                transitionTime: this.properties.transitionTime || 1000,
+                debug: this.properties.debug ?? true,
+                autoRefreshInterval: this.properties.autoRefreshInterval || 30000
+            };
+        }
+
+        toJSON() {
+            // Override default toJSON to prevent saving runtime data like devices[], perDeviceState, etc.
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+                // Note: inputs, outputs, controls are NOT saved - they are reconstructed on load
+            };
+        }
+
+        destroy() {
+            // Clear interval
+            if (this.intervalId) clearInterval(this.intervalId);
+            
+            // Remove socket listeners to prevent memory leaks
+            if (window.socket) {
+                if (this._onDeviceStateUpdate) window.socket.off("device-state-update", this._onDeviceStateUpdate);
+                if (this._onHaConnectionStatus) window.socket.off("ha-connection-status", this._onHaConnectionStatus);
+                if (this._onConnect) window.socket.off("connect", this._onConnect);
+            }
+            
+            super.destroy?.();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -744,13 +724,52 @@
         return React.createElement('div', { className: 'ha-node-tron' }, [
             // Header
             React.createElement('div', { key: 'header', className: 'ha-node-header' }, [
-                React.createElement('div', { key: 'row', style: { display: "flex", alignItems: "center", gap: "8px" } }, [
+                React.createElement('div', { key: 'row', style: { display: "flex", alignItems: "center", gap: "8px", width: "100%" } }, [
                     React.createElement('div', { 
                         key: 'toggle',
                         style: { cursor: "pointer", fontSize: "12px", userSelect: "none" },
                         onPointerDown: (e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }
                     }, isCollapsed ? "▶" : "▼"),
-                    React.createElement('div', { key: 'title', className: 'ha-node-title' }, data.label || "HA Generic Device")
+                    React.createElement('div', { key: 'title', className: 'ha-node-title', style: { flex: 1 } }, data.label || "HA Generic Device"),
+                    // HA Connection Status Indicator
+                    React.createElement('div', { 
+                        key: 'ha-status',
+                        style: { 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '6px',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            background: data.properties.haConnected 
+                                ? 'rgba(0, 255, 100, 0.15)' 
+                                : 'rgba(255, 50, 50, 0.15)',
+                            border: `1px solid ${data.properties.haConnected ? '#00ff64' : '#ff3232'}`
+                        }
+                    }, [
+                        React.createElement('div', { 
+                            key: 'dot',
+                            style: { 
+                                width: '8px', 
+                                height: '8px', 
+                                borderRadius: '50%',
+                                background: data.properties.haConnected ? '#00ff64' : '#ff3232',
+                                boxShadow: data.properties.haConnected 
+                                    ? '0 0 6px #00ff64' 
+                                    : '0 0 6px #ff3232',
+                                animation: data.properties.haConnected ? 'none' : 'blink 1s infinite'
+                            }
+                        }),
+                        React.createElement('span', { 
+                            key: 'label',
+                            style: { 
+                                fontSize: '9px', 
+                                fontWeight: 'bold',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                                color: data.properties.haConnected ? '#00ff64' : '#ff3232'
+                            }
+                        }, data.properties.haConnected ? 'HA' : 'HA ✕')
+                    ])
                 ]),
                 React.createElement('div', { key: 'status', className: 'ha-node-status' }, data.properties.status)
             ]),

@@ -13,73 +13,8 @@
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'logic-operations-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .logic-node {
-                background: rgba(30, 40, 50, 0.9);
-                border: 1px solid #4fc3f7;
-                border-radius: 8px;
-                color: white;
-                font-family: sans-serif;
-                min-width: 240px;
-                display: flex;
-                flex-direction: column;
-                box-shadow: 0 0 10px rgba(79, 195, 247, 0.2);
-            }
-            .logic-node .header {
-                background: rgba(79, 195, 247, 0.2);
-                padding: 8px 12px;
-                border-bottom: 1px solid rgba(79, 195, 247, 0.3);
-                font-weight: bold;
-                color: #4fc3f7;
-                text-align: center;
-            }
-            .logic-node .io-container {
-                padding: 10px;
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-            }
-            .logic-node .socket-row {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-            }
-            .logic-node .controls {
-                padding: 10px;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
-            .logic-node button {
-                background: rgba(79, 195, 247, 0.2);
-                border: 1px solid #4fc3f7;
-                color: #4fc3f7;
-                padding: 4px 8px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 12px;
-            }
-            .logic-node button:hover {
-                background: rgba(79, 195, 247, 0.4);
-            }
-            .logic-node select, .logic-node input {
-                background: #222;
-                color: white;
-                border: 1px solid #555;
-                padding: 4px;
-                border-radius: 4px;
-                width: 100%;
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // CONTROLS
@@ -426,6 +361,25 @@
             if (this.controls.set_variable) this.controls.set_variable.value = this.properties.setVariable;
             
             this.updateInputs(true);
+        }
+
+        serialize() {
+            return {
+                mode: this.properties.mode,
+                inputCount: this.properties.inputCount,
+                compareInputIndex: this.properties.compareInputIndex,
+                compareOperator: this.properties.compareOperator,
+                compareThreshold: this.properties.compareThreshold,
+                setVariable: this.properties.setVariable
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
         }
     }
 

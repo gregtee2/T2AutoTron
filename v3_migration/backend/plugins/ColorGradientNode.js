@@ -15,818 +15,9 @@
     const el = React.createElement;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
     // -------------------------------------------------------------------------
-    const styleId = 'color-gradient-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-/* ColorGradientNode.css - Premium Modern Design */
-
-/* ===== CSS Variables for consistent theming ===== */
-.color-gradient-node {
-    --cgn-bg-primary: #0f1419;
-    --cgn-bg-secondary: #1a1f2e;
-    --cgn-bg-tertiary: #252d3d;
-    --cgn-bg-glass: rgba(30, 41, 59, 0.7);
-    
-    --cgn-border-subtle: rgba(99, 179, 237, 0.15);
-    --cgn-border-normal: rgba(99, 179, 237, 0.25);
-    --cgn-border-accent: rgba(99, 179, 237, 0.5);
-    
-    --cgn-text-primary: #f1f5f9;
-    --cgn-text-secondary: #94a3b8;
-    --cgn-text-muted: #64748b;
-    
-    --cgn-accent-blue: #3b82f6;
-    --cgn-accent-cyan: #06b6d4;
-    --cgn-accent-green: #10b981;
-    --cgn-accent-orange: #f59e0b;
-    --cgn-accent-purple: #8b5cf6;
-    
-    --cgn-glow-blue: rgba(59, 130, 246, 0.4);
-    --cgn-glow-green: rgba(16, 185, 129, 0.4);
-    
-    --cgn-radius-sm: 6px;
-    --cgn-radius-md: 10px;
-    --cgn-radius-lg: 14px;
-    
-    --cgn-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --cgn-shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --cgn-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
-    --cgn-shadow-glow: 0 0 30px rgba(59, 130, 246, 0.2);
-}
-
-/* ===== Main Container ===== */
-.color-gradient-node {
-    background: linear-gradient(145deg, var(--cgn-bg-primary) 0%, var(--cgn-bg-secondary) 100%);
-    border: 1px solid var(--cgn-border-normal);
-    border-radius: var(--cgn-radius-lg);
-    padding: 16px;
-    min-width: 420px;
-    font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    color: var(--cgn-text-primary);
-    box-shadow: var(--cgn-shadow-lg), var(--cgn-shadow-glow);
-    backdrop-filter: blur(10px);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
-
-/* Subtle animated gradient overlay */
-.color-gradient-node::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, 
-        var(--cgn-accent-blue), 
-        var(--cgn-accent-cyan), 
-        var(--cgn-accent-purple),
-        var(--cgn-accent-blue)
-    );
-    background-size: 200% 100%;
-    animation: cgn-shimmer 3s linear infinite;
-    opacity: 0.7;
-}
-
-@keyframes cgn-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-.color-gradient-node:hover {
-    border-color: var(--cgn-border-accent);
-    box-shadow: var(--cgn-shadow-lg), 0 0 40px rgba(59, 130, 246, 0.3);
-}
-
-.color-gradient-node.active {
-    border-color: var(--cgn-accent-green);
-    box-shadow: var(--cgn-shadow-lg), 0 0 40px var(--cgn-glow-green);
-}
-
-.color-gradient-node.active::before {
-    background: linear-gradient(90deg, 
-        var(--cgn-accent-green), 
-        var(--cgn-accent-cyan), 
-        var(--cgn-accent-green)
-    );
-}
-
-.color-gradient-node.collapsed {
-    min-width: 240px;
-}
-
-/* ===== Header ===== */
-.cgn-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--cgn-border-subtle);
-}
-
-.cgn-collapse-toggle {
-    cursor: pointer;
-    font-size: 10px;
-    user-select: none;
-    color: var(--cgn-text-secondary);
-    padding: 6px 8px;
-    background: var(--cgn-bg-tertiary);
-    border-radius: var(--cgn-radius-sm);
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-}
-
-.cgn-collapse-toggle:hover {
-    color: var(--cgn-accent-cyan);
-    background: rgba(6, 182, 212, 0.1);
-    border-color: rgba(6, 182, 212, 0.3);
-    transform: scale(1.05);
-}
-
-.cgn-title {
-    font-size: 13px;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--cgn-accent-cyan), var(--cgn-accent-blue));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    flex: 1;
-}
-
-.color-gradient-node.collapsed .cgn-title {
-    margin-bottom: 0;
-    padding-bottom: 0;
-    border-bottom: none;
-}
-
-/* ===== Socket IO Container ===== */
-.cgn-io-container {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 0;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--cgn-border-subtle);
-}
-
-.cgn-inputs,
-.cgn-outputs {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.cgn-socket-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 0;
-    transition: all 0.2s ease;
-}
-
-.cgn-socket-row:hover .cgn-socket-label {
-    color: var(--cgn-text-primary);
-}
-
-.cgn-socket-row-right {
-    justify-content: flex-end;
-}
-
-.cgn-socket-label {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--cgn-text-secondary);
-    letter-spacing: 0.3px;
-    transition: color 0.2s ease;
-}
-
-/* ===== Status Section (always visible) ===== */
-.cgn-status-section {
-    background: var(--cgn-bg-glass);
-    border: 1px solid var(--cgn-border-subtle);
-    border-radius: var(--cgn-radius-md);
-    padding: 12px;
-    margin-bottom: 12px;
-    backdrop-filter: blur(8px);
-}
-
-/* ===== Form Controls ===== */
-.cgn-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.cgn-section {
-    margin-bottom: 12px;
-}
-
-.cgn-label {
-    display: flex;
-    align-items: center;
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--cgn-text-secondary);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-}
-
-/* ===== Premium Select Dropdowns ===== */
-.cgn-select {
-    width: 100%;
-    padding: 10px 14px;
-    background: linear-gradient(145deg, var(--cgn-bg-tertiary), var(--cgn-bg-secondary));
-    border: 1px solid var(--cgn-border-normal);
-    border-radius: var(--cgn-radius-sm);
-    color: var(--cgn-text-primary);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 36px;
-}
-
-.cgn-select:hover {
-    border-color: var(--cgn-accent-cyan);
-    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
-}
-
-.cgn-select:focus {
-    outline: none;
-    border-color: var(--cgn-accent-blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.1);
-}
-
-.cgn-select option {
-    background: var(--cgn-bg-secondary);
-    color: var(--cgn-text-primary);
-    padding: 8px;
-}
-
-/* ===== Tron-Style Sliders (matching AllInOneColorNode) ===== */
-.cgn-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 4px;
-    background: rgba(0, 243, 255, 0.2);
-    border-radius: 2px;
-    outline: none;
-    cursor: pointer;
-    transition: background 0.2s;
-    border: none;
-}
-
-.cgn-slider:hover {
-    background: rgba(0, 243, 255, 0.3);
-}
-
-/* Webkit (Chrome, Safari, Edge) */
-.cgn-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #0a0f14;
-    border: 2px solid #00f3ff;
-    cursor: pointer;
-    box-shadow: 0 0 8px rgba(0, 243, 255, 0.5);
-    transition: all 0.2s ease;
-    margin-top: -5px;
-}
-
-.cgn-slider::-webkit-slider-thumb:hover {
-    background: #00f3ff;
-    box-shadow: 0 0 12px rgba(0, 243, 255, 0.8);
-    transform: scale(1.1);
-}
-
-.cgn-slider::-webkit-slider-thumb:active {
-    background: #00f3ff;
-    box-shadow: 0 0 16px rgba(0, 243, 255, 1);
-    transform: scale(1.15);
-}
-
-/* Firefox */
-.cgn-slider::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #0a0f14;
-    border: 2px solid #00f3ff;
-    cursor: pointer;
-    box-shadow: 0 0 8px rgba(0, 243, 255, 0.5);
-    transition: all 0.2s ease;
-}
-
-.cgn-slider::-moz-range-thumb:hover {
-    background: #00f3ff;
-    box-shadow: 0 0 12px rgba(0, 243, 255, 0.8);
-}
-
-.cgn-slider::-moz-range-track {
-    width: 100%;
-    height: 4px;
-    background: rgba(0, 243, 255, 0.2);
-    border-radius: 2px;
-}
-
-/* ===== HSV Groups ===== */
-.cgn-hsv-group {
-    padding: 10px 12px;
-    background: linear-gradient(145deg, var(--cgn-bg-glass), transparent);
-    border-radius: var(--cgn-radius-sm);
-    border: 1px solid var(--cgn-border-subtle);
-    margin-bottom: 6px;
-    transition: all 0.2s ease;
-}
-
-.cgn-hsv-group:hover {
-    border-color: var(--cgn-border-normal);
-    background: var(--cgn-bg-glass);
-}
-
-/* Hue slider - rainbow gradient */
-.cgn-hsv-group:first-of-type .cgn-slider,
-.cgn-section:has(.cgn-label:contains("Hue")) .cgn-slider {
-    background: linear-gradient(to right, 
-        hsl(0, 100%, 50%), 
-        hsl(60, 100%, 50%), 
-        hsl(120, 100%, 50%), 
-        hsl(180, 100%, 50%), 
-        hsl(240, 100%, 50%), 
-        hsl(300, 100%, 50%), 
-        hsl(360, 100%, 50%)
-    ) !important;
-}
-
-/* ===== Number Inputs ===== */
-.cgn-number-input {
-    width: 100%;
-    padding: 10px 14px;
-    background: var(--cgn-bg-tertiary);
-    border: 1px solid var(--cgn-border-normal);
-    border-radius: var(--cgn-radius-sm);
-    color: var(--cgn-text-primary);
-    font-size: 13px;
-    font-weight: 500;
-    text-align: center;
-    transition: all 0.2s ease;
-}
-
-.cgn-number-input:focus {
-    outline: none;
-    border-color: var(--cgn-accent-blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-}
-
-/* ===== Time Inputs ===== */
-.cgn-time-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.cgn-time-inputs {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.cgn-time-inputs span {
-    color: var(--cgn-text-muted);
-    font-weight: 700;
-    font-size: 14px;
-}
-
-.cgn-time-input {
-    width: 54px;
-    padding: 8px 10px;
-    background: var(--cgn-bg-tertiary);
-    border: 1px solid var(--cgn-border-normal);
-    border-radius: var(--cgn-radius-sm);
-    color: var(--cgn-text-primary);
-    font-size: 13px;
-    font-weight: 600;
-    text-align: center;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    transition: all 0.2s ease;
-}
-
-.cgn-time-input:focus {
-    outline: none;
-    border-color: var(--cgn-accent-blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-}
-
-.cgn-period-select {
-    padding: 8px 12px;
-    background: var(--cgn-bg-tertiary);
-    border: 1px solid var(--cgn-border-normal);
-    border-radius: var(--cgn-radius-sm);
-    color: var(--cgn-text-primary);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.cgn-period-select:hover {
-    border-color: var(--cgn-accent-cyan);
-}
-
-/* ===== Toggle / Checkbox ===== */
-.cgn-toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background: var(--cgn-bg-glass);
-    border-radius: var(--cgn-radius-sm);
-    border: 1px solid var(--cgn-border-subtle);
-}
-
-.cgn-toggle-row .cgn-label {
-    margin-bottom: 0;
-}
-
-/* Custom Toggle Switch */
-.cgn-checkbox {
-    appearance: none;
-    width: 44px;
-    height: 24px;
-    background: var(--cgn-bg-primary);
-    border: 2px solid var(--cgn-border-normal);
-    border-radius: 12px;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.cgn-checkbox::before {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-    background: var(--cgn-text-secondary);
-    border-radius: 50%;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.cgn-checkbox:checked {
-    background: linear-gradient(135deg, var(--cgn-accent-green), var(--cgn-accent-cyan));
-    border-color: var(--cgn-accent-green);
-}
-
-.cgn-checkbox:checked::before {
-    left: 22px;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
-}
-
-.cgn-checkbox:hover {
-    border-color: var(--cgn-accent-cyan);
-}
-
-/* ===== Gradient Container ===== */
-.cgn-gradient-container {
-    margin: 8px 0;
-    padding: 4px;
-    background: var(--cgn-bg-primary);
-    border-radius: var(--cgn-radius-md);
-    border: 1px solid var(--cgn-border-normal);
-    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.cgn-gradient-canvas {
-    width: 100%;
-    height: 28px;
-    border-radius: var(--cgn-radius-sm);
-    display: block;
-}
-
-/* ===== Color Swatch ===== */
-.cgn-swatch-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 10px 12px;
-    background: var(--cgn-bg-glass);
-    border-radius: var(--cgn-radius-sm);
-    border: 1px solid var(--cgn-border-subtle);
-    margin: 8px 0;
-}
-
-.cgn-current-color {
-    width: 44px;
-    height: 44px;
-    border-radius: var(--cgn-radius-sm);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 
-        inset 0 2px 4px rgba(0, 0, 0, 0.2),
-        0 4px 12px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
-}
-
-.cgn-swatch-row:hover .cgn-current-color {
-    transform: scale(1.05);
-    box-shadow: 
-        inset 0 2px 4px rgba(0, 0, 0, 0.2),
-        0 6px 20px rgba(0, 0, 0, 0.4);
-}
-
-.cgn-status {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--cgn-text-secondary);
-    letter-spacing: 0.3px;
-}
-
-.color-gradient-node.active .cgn-status {
-    color: var(--cgn-accent-green);
-    text-shadow: 0 0 10px var(--cgn-glow-green);
-}
-
-/* ===== Tooltips ===== */
-.cgn-tooltip {
-    position: relative;
-    cursor: help;
-}
-
-.cgn-tooltip::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: calc(100% + 10px);
-    left: 50%;
-    transform: translateX(-50%) translateY(5px);
-    background: linear-gradient(145deg, var(--cgn-bg-secondary), var(--cgn-bg-primary));
-    color: var(--cgn-text-primary);
-    padding: 12px 16px;
-    border-radius: var(--cgn-radius-md);
-    font-size: 11px;
-    font-weight: 400;
-    line-height: 1.5;
-    white-space: normal;
-    width: max-content;
-    max-width: 260px;
-    box-shadow: var(--cgn-shadow-md), 0 0 20px rgba(0, 0, 0, 0.3);
-    border: 1px solid var(--cgn-border-normal);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1000;
-    pointer-events: none;
-}
-
-.cgn-tooltip::before {
-    content: '';
-    position: absolute;
-    bottom: calc(100% + 4px);
-    left: 50%;
-    transform: translateX(-50%);
-    border: 8px solid transparent;
-    border-top-color: var(--cgn-border-normal);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1001;
-}
-
-.cgn-tooltip:hover::after {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(-50%) translateY(0);
-}
-
-.cgn-tooltip:hover::before {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* ===== Info Icon ===== */
-.cgn-info-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    margin-left: 8px;
-    background: linear-gradient(135deg, var(--cgn-accent-blue), var(--cgn-accent-purple));
-    border-radius: 50%;
-    font-size: 10px;
-    font-weight: 700;
-    color: #ffffff;
-    cursor: help;
-    vertical-align: middle;
-    flex-shrink: 0;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
-}
-
-.cgn-tooltip:hover .cgn-info-icon {
-    background: linear-gradient(135deg, var(--cgn-accent-cyan), var(--cgn-accent-blue));
-    transform: scale(1.1);
-    box-shadow: 0 2px 10px rgba(6, 182, 212, 0.5);
-}
-
-/* ===== Section Groups (Ghosted States) ===== */
-.cgn-section-group {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 12px;
-    background: var(--cgn-bg-glass);
-    border-radius: var(--cgn-radius-md);
-    border: 1px solid var(--cgn-border-subtle);
-    margin-bottom: 12px;
-}
-
-.cgn-section-group.ghosted {
-    opacity: 0.3;
-    filter: grayscale(0.7) blur(0.5px);
-    pointer-events: none;
-    transform: scale(0.98);
-}
-
-.cgn-section-group.ghosted .cgn-label {
-    color: var(--cgn-text-muted);
-}
-
-.cgn-section-group.ghosted .cgn-slider {
-    cursor: not-allowed;
-}
-
-.cgn-section-group.ghosted .cgn-select {
-    cursor: not-allowed;
-}
-
-/* ===== Section Headers ===== */
-.cgn-section-header {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--cgn-accent-cyan);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--cgn-border-subtle);
-    display: flex;
-    align-items: center;
-}
-
-.cgn-section-group.ghosted .cgn-section-header {
-    color: var(--cgn-text-muted);
-    border-bottom-color: transparent;
-}
-
-/* ===== Input Override Styling ===== */
-.cgn-section-group.cgn-input-override {
-    opacity: 0.5;
-    pointer-events: none;
-    border-color: var(--cgn-accent-green);
-}
-
-.cgn-section-group.cgn-input-override .cgn-section-header {
-    color: var(--cgn-accent-green);
-}
-
-.cgn-override-notice {
-    font-size: 9px;
-    font-weight: 500;
-    color: var(--cgn-accent-green);
-    margin-left: 10px;
-    text-transform: none;
-    letter-spacing: 0.5px;
-    padding: 2px 8px;
-    background: rgba(16, 185, 129, 0.15);
-    border-radius: 4px;
-}
-
-/* ===== Time Display Panel ===== */
-.cgn-time-display {
-    padding: 12px 14px;
-    background: linear-gradient(145deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2));
-    border-radius: var(--cgn-radius-sm);
-    border: 1px solid var(--cgn-border-subtle);
-    margin-top: 8px;
-}
-
-.cgn-time-display-row {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--cgn-text-primary);
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-}
-
-.cgn-time-display-row:last-child {
-    margin-bottom: 0;
-}
-
-/* ===== Time Source Badges ===== */
-.cgn-input-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--cgn-accent-green), var(--cgn-accent-cyan));
-    color: #000;
-    font-size: 8px;
-    font-weight: 800;
-    padding: 3px 8px;
-    border-radius: 4px;
-    margin-right: 10px;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-}
-
-.cgn-local-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--cgn-bg-tertiary);
-    color: var(--cgn-text-secondary);
-    font-size: 8px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 4px;
-    margin-right: 10px;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    border: 1px solid var(--cgn-border-subtle);
-}
-
-.cgn-time-from-input {
-    color: var(--cgn-accent-green);
-}
-
-/* ===== Scrollbar Styling ===== */
-.color-gradient-node::-webkit-scrollbar {
-    width: 8px;
-}
-
-.color-gradient-node::-webkit-scrollbar-track {
-    background: var(--cgn-bg-primary);
-    border-radius: 4px;
-}
-
-.color-gradient-node::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, var(--cgn-accent-blue), var(--cgn-accent-purple));
-    border-radius: 4px;
-    border: 2px solid var(--cgn-bg-primary);
-}
-
-.color-gradient-node::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, var(--cgn-accent-cyan), var(--cgn-accent-blue));
-}
-
-/* ===== Focus Visible States for Accessibility ===== */
-.cgn-select:focus-visible,
-.cgn-slider:focus-visible,
-.cgn-checkbox:focus-visible,
-.cgn-number-input:focus-visible,
-.cgn-time-input:focus-visible {
-    outline: 2px solid var(--cgn-accent-cyan);
-    outline-offset: 2px;
-}
-
-/* ===== Animations ===== */
-@keyframes cgn-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
-.color-gradient-node.active .cgn-current-color {
-    animation: cgn-pulse 2s ease-in-out infinite;
-}
-
-/* ===== Spin Button Styling ===== */
-.color-gradient-node input[type="number"]::-webkit-inner-spin-button,
-.color-gradient-node input[type="number"]::-webkit-outer-spin-button {
-    opacity: 1;
-    background: var(--cgn-bg-tertiary);
-    border-radius: 4px;
-}
-
-`;
-        document.head.appendChild(style);
-    }
+    // CSS is now loaded from node-styles.css via index.css
+    // -------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
     // HELPER FUNCTIONS
@@ -866,34 +57,6 @@
         'cool': { startHue: 180, startSat: 90, startBri: 90, endHue: 240, endSat: 80, endBri: 90 },
         'warm-to-cool': { startHue: 0, startSat: 100, startBri: 100, endHue: 240, endSat: 80, endBri: 90 }
     };
-
-    const EASING_FUNCTIONS = {
-        'linear': (t) => t,
-        'ease-in': (t) => t * t,
-        'ease-out': (t) => t * (2 - t),
-        'ease-in-out': (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
-        'ease-in-cubic': (t) => t * t * t,
-        'ease-out-cubic': (t) => (--t) * t * t + 1,
-        'ease-in-out-cubic': (t) => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1,
-        'ease-in-quart': (t) => t * t * t * t,
-        'ease-out-quart': (t) => 1 - (--t) * t * t * t,
-        'ease-in-out-quart': (t) => t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t,
-        'ease-in-expo': (t) => t === 0 ? 0 : Math.pow(2, 10 * (t - 1)),
-        'ease-out-expo': (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t),
-        'ease-in-out-expo': (t) => {
-            if (t === 0) return 0;
-            if (t === 1) return 1;
-            if (t < 0.5) return Math.pow(2, 20 * t - 10) / 2;
-            return (2 - Math.pow(2, -20 * t + 10)) / 2;
-        },
-        'ease-in-back': (t) => { const c = 1.70158; return t * t * ((c + 1) * t - c); },
-        'ease-out-back': (t) => { const c = 1.70158; return 1 + (--t) * t * ((c + 1) * t + c); },
-    };
-
-    function applyEasing(position, easingType) {
-        const easingFn = EASING_FUNCTIONS[easingType] || EASING_FUNCTIONS['linear'];
-        return easingFn(Math.max(0, Math.min(1, position)));
-    }
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -938,11 +101,7 @@
             this.timeSteps = 60;
             this.useBrightnessOverride = false;
             this.brightnessOverride = 254;
-            this.easingType = 'linear';
-            this.gradientYPosition = 740;
             this.debug = false;
-            this.enableReconnect = false;
-            this.reconnectInterval = 600000;
 
             // Runtime state
             this.timerStart = null;
@@ -1068,14 +227,11 @@
                 }
             }
 
-            // Calculate HSV output
+            // Calculate HSV output (linear interpolation)
             if (this.isInRange || this.rangeMode === 'time') {
-                // Apply easing curve to position
-                const easedPosition = applyEasing(position, this.easingType);
-                
-                const h = this.startHue + easedPosition * (this.endHue - this.startHue);
-                const s = this.startSaturation + easedPosition * (this.endSaturation - this.startSaturation);
-                const v = this.startBrightness + easedPosition * (this.endBrightness - this.startBrightness);
+                const h = this.startHue + position * (this.endHue - this.startHue);
+                const s = this.startSaturation + position * (this.endSaturation - this.startSaturation);
+                const v = this.startBrightness + position * (this.endBrightness - this.startBrightness);
                 const brightness = this.useBrightnessOverride ? this.brightnessOverride : v * 2.54;
 
                 const rgb = ColorUtils.hsvToRgbDegrees(h, s, v);
@@ -1120,11 +276,7 @@
                 timeSteps: this.timeSteps,
                 useBrightnessOverride: this.useBrightnessOverride,
                 brightnessOverride: this.brightnessOverride,
-                easingType: this.easingType,
-                gradientYPosition: this.gradientYPosition,
-                debug: this.debug,
-                enableReconnect: this.enableReconnect,
-                reconnectInterval: this.reconnectInterval
+                debug: this.debug
             };
         }
 
@@ -1152,7 +304,6 @@
             if (data.timeSteps !== undefined) this.timeSteps = data.timeSteps;
             if (data.useBrightnessOverride !== undefined) this.useBrightnessOverride = data.useBrightnessOverride;
             if (data.brightnessOverride !== undefined) this.brightnessOverride = data.brightnessOverride;
-            if (data.easingType !== undefined) this.easingType = data.easingType;
             // Apply wedge preset if predefined mode
             if (this.colorMode === 'predefined' && WEDGE_PRESETS[this.predefinedWedge]) {
                 const preset = WEDGE_PRESETS[this.predefinedWedge];
@@ -1192,7 +343,6 @@
         const [timeSteps, setTimeSteps] = useState(data.timeSteps);
         const [useBrightnessOverride, setUseBrightnessOverride] = useState(data.useBrightnessOverride);
         const [brightnessOverride, setBrightnessOverride] = useState(data.brightnessOverride);
-        const [easingType, setEasingType] = useState(data.easingType || 'linear');
         const [position, setPosition] = useState(data.position || 0);
         const [isInRange, setIsInRange] = useState(data.isInRange || false);
         const [lastColor, setLastColor] = useState(data.lastColor);
@@ -1228,10 +378,9 @@
             setTimeSteps(data.timeSteps);
             setUseBrightnessOverride(data.useBrightnessOverride);
             setBrightnessOverride(data.brightnessOverride);
-            setEasingType(data.easingType || 'linear');
         }, [data]);
 
-        // Update gradient canvas with easing visualization
+        // Update gradient canvas
         useEffect(() => {
             const canvas = gradientCanvasRef.current;
             if (!canvas) return;
@@ -1257,14 +406,13 @@
             // Clear canvas
             ctx.clearRect(0, 0, width, height);
 
-            // Draw gradient with easing applied
+            // Draw gradient (linear interpolation)
             const steps = 100;
             for (let i = 0; i < steps; i++) {
                 const t = i / steps;
-                const easedT = applyEasing(t, easingType);
-                const hue = startHue + easedT * (endHue - startHue);
-                const sat = startSaturation + easedT * (endSaturation - startSaturation);
-                const bri = startBrightness + easedT * (endBrightness - startBrightness);
+                const hue = startHue + t * (endHue - startHue);
+                const sat = startSaturation + t * (endSaturation - startSaturation);
+                const bri = startBrightness + t * (endBrightness - startBrightness);
                 ctx.fillStyle = `hsl(${hue}, ${sat}%, ${Math.max(20, bri / 2)}%)`;
                 ctx.fillRect((i / steps) * width, 0, width / steps + 1, gradientHeight);
             }
@@ -1389,7 +537,7 @@
             ctx.lineTo(markerX, gradientHeight + 8);
             ctx.closePath();
             ctx.fill();
-        }, [startHue, startSaturation, startBrightness, endHue, endSaturation, endBrightness, position, isInRange, easingType, rangeMode, startValue, endValue, startTimeHours, startTimeMinutes, startTimePeriod, endTimeHours, endTimeMinutes, endTimePeriod, timerDuration, timerUnit]);
+        }, [startHue, startSaturation, startBrightness, endHue, endSaturation, endBrightness, position, isInRange, rangeMode, startValue, endValue, startTimeHours, startTimeMinutes, startTimePeriod, endTimeHours, endTimeMinutes, endTimePeriod, timerDuration, timerUnit]);
 
         // Periodic update for runtime state
         useEffect(() => {
@@ -1503,6 +651,9 @@
 
         // Stop pointer events from propagating to canvas (enables slider/dropdown interaction)
         const stopPropagation = (e) => e.stopPropagation();
+        
+        // Stop wheel events from propagating - allows scrolling in controls area without zooming canvas
+        const stopWheelPropagation = (e) => e.stopPropagation();
 
         // Get inputs and outputs for socket rendering
         const inputs = Object.entries(data.inputs || {});
@@ -1574,7 +725,7 @@
             ]),
 
             // Controls
-            !isCollapsed ? el('div', { key: 'controls', className: 'cgn-controls', onPointerDown: stopPropagation }, [
+            !isCollapsed ? el('div', { key: 'controls', className: 'cgn-controls', onPointerDown: stopPropagation, onWheel: stopWheelPropagation }, [
                 // Color Mode
                 el('div', { key: 'colorMode', className: 'cgn-section' }, [
                     el('label', { key: 'label', className: 'cgn-label cgn-tooltip', 'data-tooltip': "Predefined: Choose from preset color ranges (Warm, Cool, etc). Custom: Define your own start and end HSV colors." }, [
@@ -1711,30 +862,6 @@
                     el('div', { key: 'steps', className: 'cgn-section' }, [
                         el('label', { className: 'cgn-label' }, `Time Steps: ${timeSteps}`),
                         el('input', { type: 'range', min: 1, max: 120, value: timeSteps, onChange: createSliderHandler(setTimeSteps, 'timeSteps'), className: 'cgn-slider', style: getSliderStyle(timeSteps, 1, 120) })
-                    ])
-                ]),
-
-                // Easing Curve
-                el('div', { key: 'easing', className: 'cgn-section' }, [
-                    el('label', { key: 'label', className: 'cgn-label cgn-tooltip', 'data-tooltip': "Controls how colors transition. Linear: constant rate. Ease-In: starts slow. Ease-Out: ends slow. Back: slight overshoot. Higher orders (Cubic, Quart, Expo) are more dramatic." }, [
-                        el('span', { key: 'text' }, "Easing Curve"), el('span', { key: 'icon', className: 'cgn-info-icon' }, "?")
-                    ]),
-                    el('select', { key: 'select', className: 'cgn-select', value: easingType, onChange: (e) => { setEasingType(e.target.value); data.easingType = e.target.value; triggerUpdate(); } }, [
-                        el('option', { key: 'linear', value: 'linear' }, 'Linear'),
-                        el('option', { key: 'ease-in', value: 'ease-in' }, 'Ease In (Quad)'),
-                        el('option', { key: 'ease-out', value: 'ease-out' }, 'Ease Out (Quad)'),
-                        el('option', { key: 'ease-in-out', value: 'ease-in-out' }, 'Ease In-Out (Quad)'),
-                        el('option', { key: 'ease-in-cubic', value: 'ease-in-cubic' }, 'Ease In (Cubic)'),
-                        el('option', { key: 'ease-out-cubic', value: 'ease-out-cubic' }, 'Ease Out (Cubic)'),
-                        el('option', { key: 'ease-in-out-cubic', value: 'ease-in-out-cubic' }, 'Ease In-Out (Cubic)'),
-                        el('option', { key: 'ease-in-quart', value: 'ease-in-quart' }, 'Ease In (Quart)'),
-                        el('option', { key: 'ease-out-quart', value: 'ease-out-quart' }, 'Ease Out (Quart)'),
-                        el('option', { key: 'ease-in-out-quart', value: 'ease-in-out-quart' }, 'Ease In-Out (Quart)'),
-                        el('option', { key: 'ease-in-expo', value: 'ease-in-expo' }, 'Ease In (Expo)'),
-                        el('option', { key: 'ease-out-expo', value: 'ease-out-expo' }, 'Ease Out (Expo)'),
-                        el('option', { key: 'ease-in-out-expo', value: 'ease-in-out-expo' }, 'Ease In-Out (Expo)'),
-                        el('option', { key: 'ease-in-back', value: 'ease-in-back' }, 'Ease In (Back)'),
-                        el('option', { key: 'ease-out-back', value: 'ease-out-back' }, 'Ease Out (Back)')
                     ])
                 ]),
 

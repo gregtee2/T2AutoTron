@@ -11,38 +11,8 @@
     const RefComponent = window.RefComponent;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'test-plugin-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .test-node {
-                padding: 10px;
-                background: #333;
-                border: 2px solid #666;
-                border-radius: 8px;
-                color: white;
-                font-family: sans-serif;
-            }
-            .test-node .title {
-                margin-bottom: 10px;
-                font-weight: bold;
-            }
-            .test-node .socket-row {
-                display: flex;
-                align-items: center;
-            }
-            .test-node .socket-row.output {
-                justify-content: flex-end;
-            }
-            .test-node .socket-row.input {
-                justify-content: flex-start;
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // TEST SENDER NODE

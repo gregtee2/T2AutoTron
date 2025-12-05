@@ -13,129 +13,8 @@
     const socket = window.socket;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'weather-logic-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .weather-node-tron {
-                background: #0a0f14;
-                border: 1px solid #00f3ff;
-                border-radius: 8px;
-                color: #e0f7fa;
-                min-width: 650px;
-                display: flex;
-                flex-direction: column;
-                box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                user-select: none;
-            }
-            .weather-node-header {
-                padding: 10px;
-                background: linear-gradient(90deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.0));
-                border-bottom: 1px solid rgba(0, 243, 255, 0.3);
-                border-top-left-radius: 8px;
-                border-top-right-radius: 8px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .weather-node-title {
-                font-weight: bold;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                color: #00f3ff;
-                text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
-            }
-            .weather-io-container {
-                padding: 10px;
-                display: flex;
-                justify-content: space-between;
-                gap: 20px;
-                background: rgba(0, 0, 0, 0.2);
-            }
-            .weather-socket-label { font-size: 0.8em; color: #aaa; }
-            .weather-controls-container {
-                padding: 15px;
-                background: rgba(0, 10, 15, 0.4);
-                border-top: 1px solid rgba(0, 243, 255, 0.2);
-                border-bottom-left-radius: 8px;
-                border-bottom-right-radius: 8px;
-                display: flex;
-                flex-direction: column;
-                gap: 15px;
-            }
-            .weather-section-header {
-                font-size: 14px;
-                color: #00f3ff;
-                text-transform: uppercase;
-                border-bottom: 1px solid rgba(0, 243, 255, 0.3);
-                padding-bottom: 4px;
-                margin-bottom: 8px;
-                margin-top: 8px;
-            }
-            .weather-metric-row {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 8px;
-                background: rgba(0, 20, 30, 0.4);
-                border: 1px solid rgba(0, 243, 255, 0.1);
-                border-radius: 4px;
-            }
-            .weather-metric-info { flex: 0 0 200px; display: flex; flex-direction: column; }
-            .weather-metric-label { font-size: 16px; color: #fff; }
-            .weather-metric-value { font-size: 14px; color: #aaa; }
-            .weather-metric-trend { font-size: 20px; font-weight: bold; width: 20px; text-align: center; }
-            .weather-metric-range { font-size: 13px; color: #aaa; width: 80px; }
-            .weather-metric-graph {
-                width: 100%;
-                height: 40px;
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(0, 243, 255, 0.1);
-                border-radius: 2px;
-                position: relative;
-                overflow: hidden;
-                margin-bottom: 8px;
-                flex-shrink: 0;
-            }
-            .weather-bar {
-                position: absolute;
-                bottom: 0;
-                background: #00f3ff;
-                width: 2px;
-                transition: height 0.3s ease;
-                box-shadow: 0 0 2px rgba(0, 243, 255, 0.5);
-            }
-            .weather-slider-container { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
-            .weather-range-input {
-                -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
-                background: rgba(0, 243, 255, 0.2); border-radius: 2px; outline: none; transition: background 0.2s; flex: 1;
-            }
-            .weather-range-input:hover { background: rgba(0, 243, 255, 0.3); }
-            .weather-range-input::-webkit-slider-thumb {
-                -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%;
-                background: #0a0f14; border: 2px solid #00f3ff; cursor: pointer;
-                box-shadow: 0 0 8px rgba(0, 243, 255, 0.5); transition: all 0.2s ease; margin-top: -5px;
-            }
-            .weather-range-input::-webkit-slider-thumb:hover {
-                background: #00f3ff; box-shadow: 0 0 12px rgba(0, 243, 255, 0.8); transform: scale(1.1);
-            }
-            .weather-toggle-container { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-            .weather-toggle {
-                appearance: none; width: 30px; height: 16px; background: #333; border-radius: 8px; position: relative; outline: none; border: 1px solid #555;
-            }
-            .weather-toggle:checked { background: rgba(0, 243, 255, 0.3); border-color: #00f3ff; }
-            .weather-toggle::after {
-                content: ''; position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; background: #888; border-radius: 50%; transition: transform 0.2s;
-            }
-            .weather-toggle:checked::after { transform: translateX(14px); background: #00f3ff; box-shadow: 0 0 5px #00f3ff; }
-            .weather-status-indicator { width: 10px; height: 10px; border-radius: 50%; margin-right: 10px; }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -188,6 +67,53 @@
             if (state.properties) {
                 Object.assign(this.properties, state.properties);
             }
+        }
+
+        serialize() {
+            return {
+                solarEnabled: this.properties.solarEnabled,
+                solarThresholdHigh: this.properties.solarThresholdHigh,
+                solarThresholdLow: this.properties.solarThresholdLow,
+                solarInvert: this.properties.solarInvert,
+                solarLabel: this.properties.solarLabel,
+                tempEnabled: this.properties.tempEnabled,
+                tempThresholdHigh: this.properties.tempThresholdHigh,
+                tempThresholdLow: this.properties.tempThresholdLow,
+                tempInvert: this.properties.tempInvert,
+                tempLabel: this.properties.tempLabel,
+                humidityEnabled: this.properties.humidityEnabled,
+                humidityThresholdHigh: this.properties.humidityThresholdHigh,
+                humidityThresholdLow: this.properties.humidityThresholdLow,
+                humidityInvert: this.properties.humidityInvert,
+                humidityLabel: this.properties.humidityLabel,
+                windEnabled: this.properties.windEnabled,
+                windThresholdHigh: this.properties.windThresholdHigh,
+                windThresholdLow: this.properties.windThresholdLow,
+                windInvert: this.properties.windInvert,
+                windLabel: this.properties.windLabel,
+                hourlyRainEnabled: this.properties.hourlyRainEnabled,
+                hourlyRainThreshold: this.properties.hourlyRainThreshold,
+                hourlyRainInvert: this.properties.hourlyRainInvert,
+                hourlyRainLabel: this.properties.hourlyRainLabel,
+                eventRainEnabled: this.properties.eventRainEnabled,
+                eventRainThreshold: this.properties.eventRainThreshold,
+                eventRainInvert: this.properties.eventRainInvert,
+                eventRainLabel: this.properties.eventRainLabel,
+                dailyRainEnabled: this.properties.dailyRainEnabled,
+                dailyRainThreshold: this.properties.dailyRainThreshold,
+                dailyRainInvert: this.properties.dailyRainInvert,
+                dailyRainLabel: this.properties.dailyRainLabel,
+                logicType: this.properties.logicType,
+                hysteresis: this.properties.hysteresis
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
         }
     }
 

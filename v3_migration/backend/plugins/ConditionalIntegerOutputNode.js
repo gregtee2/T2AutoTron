@@ -13,94 +13,8 @@
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'conditional-integer-output-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .conditional-integer-output-node {
-                background: linear-gradient(180deg, #1e3a5f 0%, #0d1f33 100%);
-                border: 2px solid #4a90d9;
-                border-radius: 8px;
-                box-shadow: 0 0 12px rgba(74, 144, 217, 0.25);
-                color: #e0e8f0;
-                min-width: 200px;
-                font-family: 'Segoe UI', sans-serif;
-                overflow: hidden;
-                transition: border-color 0.3s;
-            }
-            .conditional-integer-output-node.output-false {
-                border-color: #ff4444;
-                box-shadow: 0 0 12px rgba(255, 68, 68, 0.3);
-            }
-            .conditional-integer-output-node.output-number {
-                border-color: #00ff64;
-                box-shadow: 0 0 12px rgba(0, 255, 100, 0.3);
-            }
-            .conditional-integer-output-node .header {
-                background: linear-gradient(90deg, rgba(74, 144, 217, 0.3) 0%, rgba(74, 144, 217, 0) 100%);
-                padding: 8px 12px;
-                font-size: 13px;
-                font-weight: 600;
-                color: #7db8f0;
-                border-bottom: 1px solid rgba(74, 144, 217, 0.3);
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .conditional-integer-output-node .content {
-                padding: 10px;
-            }
-            .conditional-integer-output-node .io-section {
-                margin-bottom: 8px;
-            }
-            .conditional-integer-output-node .io-section.outputs {
-                margin-top: 8px;
-                border-top: 1px solid rgba(74, 144, 217, 0.2);
-                padding-top: 8px;
-            }
-            .conditional-integer-output-node .io-row {
-                display: flex;
-                align-items: center;
-                margin-bottom: 6px;
-                gap: 8px;
-                padding: 2px 4px;
-                border-radius: 4px;
-                transition: background-color 0.2s;
-            }
-            .conditional-integer-output-node .input-row {
-                justify-content: flex-start;
-            }
-            .conditional-integer-output-node .input-row.active {
-                background: rgba(0, 255, 100, 0.1);
-                border: 1px solid rgba(0, 255, 100, 0.4);
-            }
-            .conditional-integer-output-node .output-row {
-                justify-content: flex-end;
-            }
-            .conditional-integer-output-node .input-label,
-            .conditional-integer-output-node .output-label {
-                font-size: 12px;
-                color: #a0b8d0;
-            }
-            .conditional-integer-output-node .active-label {
-                color: #00ff64 !important;
-                font-weight: 600;
-            }
-            .conditional-integer-output-node .output-display {
-                background: rgba(0, 0, 0, 0.3);
-                border: 1px solid rgba(74, 144, 217, 0.2);
-                border-radius: 4px;
-                padding: 6px 10px;
-                font-size: 12px;
-                color: #7db8f0;
-                text-align: center;
-                margin: 8px 0;
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -127,6 +41,20 @@
             if (state.properties) {
                 Object.assign(this.properties, state.properties);
             }
+        }
+
+        serialize() {
+            return {
+                debug: this.properties.debug
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
         }
 
         data(inputs) {

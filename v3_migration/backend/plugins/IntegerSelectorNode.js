@@ -13,122 +13,8 @@
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // CSS INJECTION
+    // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
-    const styleId = 'integer-selector-node-css';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .integer-selector-node {
-                background: linear-gradient(180deg, #2a3a2a 0%, #1a281a 100%);
-                border: 1px solid #4a9050;
-                border-radius: 8px;
-                box-shadow: 0 0 12px rgba(74, 144, 80, 0.25);
-                color: #e0f0e0;
-                min-width: 180px;
-                font-family: 'Segoe UI', sans-serif;
-                overflow: hidden;
-            }
-            .integer-selector-node .header {
-                background: linear-gradient(90deg, rgba(74, 144, 80, 0.3) 0%, rgba(74, 144, 80, 0) 100%);
-                padding: 8px 12px;
-                font-size: 14px;
-                font-weight: 600;
-                color: #7dc080;
-                border-bottom: 1px solid rgba(74, 144, 80, 0.3);
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .integer-selector-node .content {
-                padding: 10px;
-            }
-            .integer-selector-node .value-display {
-                background: rgba(0, 0, 0, 0.4);
-                border: 1px solid rgba(74, 144, 80, 0.3);
-                border-radius: 6px;
-                padding: 10px;
-                font-size: 24px;
-                font-weight: bold;
-                color: #7dc080;
-                text-align: center;
-                margin-bottom: 10px;
-                font-family: 'Consolas', monospace;
-            }
-            .integer-selector-node .slider {
-                width: 100%;
-                height: 8px;
-                -webkit-appearance: none;
-                appearance: none;
-                background: #1a281a;
-                border-radius: 4px;
-                outline: none;
-                margin-bottom: 10px;
-            }
-            .integer-selector-node .slider::-webkit-slider-thumb {
-                -webkit-appearance: none;
-                appearance: none;
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                background: #4a9050;
-                cursor: pointer;
-                border: 2px solid #7dc080;
-                transition: background 0.2s;
-            }
-            .integer-selector-node .slider::-webkit-slider-thumb:hover {
-                background: #5aa060;
-            }
-            .integer-selector-node .range-settings {
-                display: flex;
-                justify-content: space-between;
-                gap: 10px;
-                margin-bottom: 10px;
-            }
-            .integer-selector-node .range-input {
-                display: flex;
-                align-items: center;
-                gap: 5px;
-                flex: 1;
-            }
-            .integer-selector-node .range-input label {
-                font-size: 11px;
-                color: #a0c0a0;
-            }
-            .integer-selector-node .range-input input {
-                width: 50px;
-                background: #1a281a;
-                border: 1px solid #4a9050;
-                color: #e0f0e0;
-                padding: 4px 6px;
-                border-radius: 4px;
-                font-size: 12px;
-                text-align: center;
-            }
-            .integer-selector-node .range-input input:focus {
-                outline: none;
-                border-color: #7dc080;
-            }
-            .integer-selector-node .io-section.outputs {
-                margin-top: 8px;
-                border-top: 1px solid rgba(74, 144, 80, 0.2);
-                padding-top: 8px;
-            }
-            .integer-selector-node .io-row {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .integer-selector-node .output-row {
-                justify-content: flex-end;
-            }
-            .integer-selector-node .output-label {
-                font-size: 12px;
-                color: #a0c0a0;
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -156,6 +42,22 @@
                     Math.min(this.properties.max, this.properties.value)
                 );
             }
+        }
+
+        serialize() {
+            return {
+                value: this.properties.value,
+                min: this.properties.min,
+                max: this.properties.max
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
         }
 
         data() {

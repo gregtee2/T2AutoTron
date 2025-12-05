@@ -9,8 +9,30 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [graphExpanded, setGraphExpanded] = useState(true);
+    const [currentTime, setCurrentTime] = useState(new Date());
     const dockRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    // Update time every second
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Format date and time
+    const formatDateTime = () => {
+        const options = { 
+            weekday: 'short',
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        return currentTime.toLocaleDateString('en-US', options);
+    };
 
     useEffect(() => {
         localStorage.setItem('dock-position', JSON.stringify(position));
@@ -85,7 +107,8 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
             onMouseDown={handleMouseDown}
         >
             <div className="dock-header" style={{ cursor: 'grab' }}>
-                <span>⚙️ Control Panel</span>
+                <span className="dock-title">⚙️ Control Panel</span>
+                <span className="dock-datetime">{formatDateTime()}</span>
             </div>
 
             {/* Graph Tools Section */}
@@ -99,7 +122,8 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
                 {graphExpanded && (
                     <div className="dock-section-content">
                         <button onClick={onSave} className="dock-btn">💾 Save</button>
-                        <button onClick={handleImportClick} className="dock-btn">📂 Load</button>
+                        <button onClick={onLoad} className="dock-btn">↻ Load Last</button>
+                        <button onClick={handleImportClick} className="dock-btn">📂 Import File</button>
                         <button onClick={onClear} className="dock-btn">🗑️ Clear</button>
                         <input
                             ref={fileInputRef}
