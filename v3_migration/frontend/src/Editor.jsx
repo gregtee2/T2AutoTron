@@ -21,6 +21,7 @@ import { DropdownControlComponent } from "./controls/DropdownControl";
 import { TextControlComponent } from "./controls/TextControl";
 import { SwitchControlComponent } from "./controls/SwitchControl";
 import { NumberControlComponent } from "./controls/NumberControl";
+import { InputControlComponent } from "./controls/InputControl";
 import { DeviceStateControlComponent } from "./controls/DeviceStateControl";
 import { StatusIndicatorControlComponent } from "./controls/StatusIndicatorControl";
 import { ColorBarControlComponent } from "./controls/ColorBarControl";
@@ -180,13 +181,13 @@ export function Editor() {
                         if (name === "TextControl") return TextControlComponent;
                         if (name === "SwitchControl") return SwitchControlComponent;
                         if (name === "NumberControl") return NumberControlComponent;
+                        if (name === "InputControl") return InputControlComponent;
                         if (name === "DeviceStateControl") return DeviceStateControlComponent;
                         if (name === "StatusIndicatorControl") return StatusIndicatorControlComponent;
                         if (name === "ColorBarControl") return ColorBarControlComponent;
                         if (name === "PowerStatsControl") return PowerStatsControlComponent;
                         
-                        // Debug: log unmatched controls
-                        console.warn('[Editor] Unmatched control type:', name, control);
+                        // Silently use default for unmatched controls (avoid console flood)
                     }
                     return Presets.classic.Control;
                 }
@@ -569,16 +570,22 @@ export function Editor() {
         area.updateBackdropCaptures = updateBackdropCaptures;
 
         // Function to ensure backdrop nodes are always behind other nodes
+        // Debounced to avoid excessive calls during bulk operations
+        let backdropZIndexTimeout = null;
         function updateBackdropZIndex() {
-            editor.getNodes().forEach(node => {
-                const def = nodeRegistry.getByInstance(node);
-                if (def && def.isBackdrop) {
-                    const nodeView = area.nodeViews.get(node.id);
-                    if (nodeView && nodeView.element) {
-                        nodeView.element.style.zIndex = '-10';
+            if (backdropZIndexTimeout) return; // Already scheduled
+            backdropZIndexTimeout = setTimeout(() => {
+                backdropZIndexTimeout = null;
+                editor.getNodes().forEach(node => {
+                    const def = nodeRegistry.getByInstance(node);
+                    if (def && def.isBackdrop) {
+                        const nodeView = area.nodeViews.get(node.id);
+                        if (nodeView && nodeView.element) {
+                            nodeView.element.style.zIndex = '-10';
+                        }
                     }
-                }
-            });
+                });
+            }, 100);
         }
 
         // Handle single-click node selection via Rete's nodepicked event
@@ -647,11 +654,6 @@ export function Editor() {
                         }
                     }, 0);
                 }
-            }
-            
-            // Also update on rendered event
-            if (context.type === 'rendered') {
-                setTimeout(() => updateBackdropZIndex(), 10);
             }
             
             // Use nodetranslate for real-time movement tracking
@@ -1495,11 +1497,35 @@ export function Editor() {
             // Restore viewport state from saved graph (or default if not present)
             // Use a longer delay (300ms) to ensure all node rendering and state updates are complete
             // This is critical for Electron where timing issues can break pan/zoom
+            console.log('[handleLoad] Setting up viewport restoration timer...');
             setTimeout(() => {
+                console.log('[handleLoad] Viewport restoration timer fired, areaInstance:', !!areaInstance, 'area:', !!areaInstance?.area);
                 if (areaInstance?.area) {
                     const viewport = graphData.viewport || { x: 0, y: 0, k: 1 };
-                    areaInstance.area.zoom(viewport.k || 1, 0, 0);
-                    areaInstance.area.translate(viewport.x || 0, viewport.y || 0);
+                    const savedK = viewport.k || 1;
+                    const savedX = viewport.x || 0;
+                    const savedY = viewport.y || 0;
+                    
+                    console.log('[handleLoad] Restoring viewport:', { savedX, savedY, savedK });
+                    console.log('[handleLoad] Current transform before restore:', { ...areaInstance.area.transform });
+                    
+                    // Directly set the transform values (the area.transform object is mutable)
+                    const transform = areaInstance.area.transform;
+                    transform.k = savedK;
+                    transform.x = savedX;
+                    transform.y = savedY;
+                    
+                    // Force the area to update its visual representation
+                    // The area uses CSS transform on its container element
+                    const areaContainer = areaInstance.container?.querySelector('.rete-area');
+                    if (areaContainer) {
+                        areaContainer.style.transform = `translate(${savedX}px, ${savedY}px) scale(${savedK})`;
+                    }
+                    
+                    // Also emit a transformed event to notify any listeners
+                    areaInstance.emit({ type: 'transformed', data: { transform } });
+                    
+                    console.log('[handleLoad] Transform after restore:', { ...areaInstance.area.transform });
                     
                     const container = areaInstance.container;
                     if (container) {
@@ -1635,7 +1661,23 @@ export function Editor() {
     };
 
     const handleImport = async (graphData) => {
-        if (!editorInstance || !areaInstance || !engineInstance) return;
+        // Completely suppress console during import to prevent DevTools crash
+        const originalConsole = { log: console.log, warn: console.warn, error: console.error };
+        console.log = () => {};
+        console.warn = () => {};
+        // Keep errors but throttle them
+        let errorCount = 0;
+        console.error = (...args) => { if (errorCount++ < 10) originalConsole.error(...args); };
+        
+        originalConsole.log('%c🚀 IMPORT STARTED (console suppressed)', 'background: green; color: white; font-size: 16px;');
+        
+        // Set global flag to prevent nodes from making API calls during import
+        window.graphLoading = true;
+        
+        if (!editorInstance || !areaInstance || !engineInstance) {
+            Object.assign(console, originalConsole);
+            return;
+        }
         try {
             await handleClear();
 
@@ -1654,14 +1696,18 @@ export function Editor() {
                     if (def) {
                         const updateCallback = () => {
                             // During graph import, only update the visual, skip cascading data fetch
-                            if (loadingRef.current) {
+                            if (loadingRef.current || window.graphLoading) {
                                 if (areaInstance) areaInstance.update("node", nodeData.id);
                                 return;  // Skip cascading updates during import
                             }
                             if (areaInstance) areaInstance.update("node", nodeData.id);
                             if (engineInstance && editorInstance) {
+                                // Skip engine processing if graph is still loading
+                                if (window.graphLoading) return;
                                 engineInstance.reset();
                                 setTimeout(() => {
+                                    // Double-check loading state when timeout fires
+                                    if (window.graphLoading) return;
                                     editorInstance.getNodes().forEach(async (n) => {
                                         try {
                                             await engineInstance.fetch(n.id);
@@ -1707,79 +1753,28 @@ export function Editor() {
                 areaInstance?.updateBackdropCaptures?.();
             }
             
-            // Process the graph after import
-            if (processImmediateRef.current) {
-                await processImmediateRef.current();
-            }
-            
             // Re-enable cascading updates after import is complete
             loadingRef.current = false;
             
-            // Restore viewport state from imported graph (or default if not present)
-            // Use a longer delay to ensure all node rendering is complete
+            // Delay clearing graphLoading to let any queued setTimeout callbacks see it's still loading
+            // This prevents API flood from callbacks queued during import
             setTimeout(() => {
-                if (areaInstance?.area) {
-                    const viewport = graphData.viewport || { x: 0, y: 0, k: 1 };
-                    areaInstance.area.zoom(viewport.k || 1, 0, 0);
-                    areaInstance.area.translate(viewport.x || 0, viewport.y || 0);
-                    console.log('[handleImport] Viewport restored:', viewport);
-                    
-                    // Ensure focus returns to the editor container
-                    const container = areaInstance.container;
-                    if (container) {
-                        container.tabIndex = -1;
-                        container.focus();
-                        if (document.activeElement && document.activeElement !== container && 
-                            document.activeElement.tagName !== 'BODY') {
-                            document.activeElement.blur();
-                        }
-                        
-                        // ELECTRON FIX: Dispatch synthetic pointer events to reset area's drag state
-                        const resetAreaDragState = () => {
-                            const rect = container.getBoundingClientRect();
-                            const centerX = rect.left + rect.width / 2;
-                            const centerY = rect.top + rect.height / 2;
-                            
-                            const downEvent = new PointerEvent('pointerdown', {
-                                bubbles: true, cancelable: true,
-                                clientX: centerX, clientY: centerY,
-                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
-                                button: 0, buttons: 1
-                            });
-                            
-                            const upEvent = new PointerEvent('pointerup', {
-                                bubbles: true, cancelable: true,
-                                clientX: centerX, clientY: centerY,
-                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
-                                button: 0, buttons: 0
-                            });
-                            
-                            container.dispatchEvent(downEvent);
-                            setTimeout(() => container.dispatchEvent(upEvent), 50);
-                        };
-                        
-                        setTimeout(resetAreaDragState, 100);
-                    }
-                    
-                    // Release any stuck pointer captures
-                    editorInstance.getNodes().forEach(node => {
-                        const view = areaInstance.nodeViews.get(node.id);
-                        if (view?.element) {
-                            try {
-                                for (let i = 0; i < 10; i++) {
-                                    try { view.element.releasePointerCapture(i); } catch (e) {}
-                                }
-                            } catch (e) {}
-                        }
-                    });
-                }
-            }, 300);
+                window.graphLoading = false;
+                console.log('[handleImport] Graph loading complete - API calls now enabled');
+            }, 2000);  // 2 second delay to ensure all queued callbacks have fired
             
-            console.log('Graph imported');
+            // Restore console
+            Object.assign(console, originalConsole);
+            console.log('%c✅ IMPORT COMPLETE', 'background: green; color: white; font-size: 16px;');
+            console.log('Graph imported successfully. Pan/zoom should work now.');
+            
         } catch (err) {
+            // Restore console on error
+            window.graphLoading = false;  // Clear flag on error
+            if (typeof originalConsole !== 'undefined') Object.assign(console, originalConsole);
             console.error('Failed to import graph:', err);
             loadingRef.current = false;
-            alert('Failed to import graph');
+            alert('Failed to import graph: ' + err.message);
         }
     };
 

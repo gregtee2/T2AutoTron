@@ -356,6 +356,11 @@
         }
 
         async data(inputs) {
+            // Skip all processing during graph loading to prevent API flood
+            if (typeof window !== 'undefined' && window.graphLoading) {
+                return {};  // Return empty outputs during load
+            }
+            
             const hsvInput = inputs.hsv_info?.[0];
             const triggerRaw = inputs.trigger?.[0];
             const trigger = triggerRaw ?? false;
@@ -462,6 +467,8 @@
         }
 
         async fetchDevices() {
+            // Skip API calls during graph loading
+            if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
                 // Use /api/lights/ha/ to get all Home Assistant devices
                 const response = await fetch('/api/lights/ha/', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
@@ -584,6 +591,8 @@
 
         async fetchDeviceState(id) {
             if (!id) return;
+            // Skip API calls during graph loading
+            if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
                 const res = await fetch(`/api/lights/ha/${id}/state`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                 const data = await res.json();
@@ -597,6 +606,8 @@
 
         async applyHSVInput(info) {
             if (!info || typeof info !== "object") return;
+            // Skip API calls during graph loading
+            if (typeof window !== 'undefined' && window.graphLoading) return;
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
             const ids = this.properties.selectedDeviceIds.filter(Boolean);
             if (ids.length === 0) return;
@@ -637,6 +648,11 @@
         }
 
         async setDevicesState(turnOn) {
+            // Skip API calls during graph loading to prevent resource exhaustion
+            if (typeof window !== 'undefined' && window.graphLoading) {
+                console.log('[HAGenericDeviceNode] Skipping setDevicesState during graph load');
+                return;
+            }
             this.updateStatus(turnOn ? "Turning On..." : "Turning Off...");
             const ids = this.properties.selectedDeviceIds.filter(Boolean);
             if (ids.length === 0) return;

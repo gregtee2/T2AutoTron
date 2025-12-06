@@ -160,6 +160,8 @@
         }
 
         async fetchDevices() {
+            // Skip API calls during graph loading
+            if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
                 const response = await fetch('/api/lights/ha/', { 
                     headers: { 'Authorization': `Bearer ${this.properties.haToken}` } 
@@ -191,6 +193,8 @@
 
         async fetchDeviceState(id) {
             if (!id) return;
+            // Skip API calls during graph loading
+            if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
                 const res = await fetch(`/api/lights/ha/${id}/state`, { 
                     headers: { 'Authorization': `Bearer ${this.properties.haToken}` } 

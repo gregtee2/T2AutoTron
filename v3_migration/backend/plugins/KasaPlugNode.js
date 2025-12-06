@@ -109,6 +109,11 @@
         }
 
         async data(inputs) {
+            // Skip all processing during graph loading to prevent API flood
+            if (typeof window !== 'undefined' && window.graphLoading) {
+                return {};  // Return empty outputs during load
+            }
+            
             const triggerRaw = inputs.trigger?.[0];
             const trigger = triggerRaw ?? false;
             const risingEdge = trigger && !this.lastTriggerValue;
@@ -152,6 +157,8 @@
         }
 
         async fetchPlugs() {
+            // Skip API calls during graph loading
+            if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
                 const response = await fetch('/api/lights/kasa');
                 const data = await response.json();
@@ -215,6 +222,8 @@
 
         async fetchPlugState(id) {
             if (!id) return;
+            // Skip API calls during graph loading
+            if (typeof window !== 'undefined' && window.graphLoading) return;
             const cleanId = id.replace('kasa_', '');
             try {
                 const resState = await fetch(`/api/lights/kasa/${cleanId}/state`);
@@ -231,6 +240,8 @@
         }
 
         async setPlugsState(turnOn) {
+            // Skip API calls during graph loading
+            if (typeof window !== 'undefined' && window.graphLoading) return;
             const ids = this.properties.selectedPlugIds.filter(Boolean);
             if (ids.length === 0) return;
             await Promise.all(ids.map(async (id) => {
@@ -246,6 +257,8 @@
         }
 
         async onTrigger() {
+            // Skip API calls during graph loading
+            if (typeof window !== 'undefined' && window.graphLoading) return;
             const ids = this.properties.selectedPlugIds.filter(Boolean);
             if (ids.length === 0) return;
             await Promise.all(ids.map(async (id) => {

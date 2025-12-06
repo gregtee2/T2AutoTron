@@ -25,7 +25,7 @@ let socket;
 
 // Throttle log messages to avoid overloading the renderer
 let lastLogTime = 0;
-const LOG_THROTTLE_MS = 100; // Throttle logs to 100ms intervals
+const LOG_THROTTLE_MS = 0; // Disabled throttling - show all logs (was 100ms)
 
 const sendLogToRenderer = (message, fromRenderer = false) => {
     const now = Date.now();
@@ -81,30 +81,28 @@ function initializeSocketIO() {
     });
 
     socket.on('device-list-update', (devices) => {
-        console.log('Device list updated:', devices);
+        // Silent - avoid console flood
         if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('device-list-update', devices);
         }
     });
 
     socket.on('device-state-update', (state) => {
-        console.log('Device state updated:', state);
+        // Silent - too many updates flood the console
         if (mainWindow && !mainWindow.isDestroyed()) {
-            const sendStart = Date.now();
             mainWindow.webContents.send('device-state-update', state);
-            console.log(`Main: Sent device-state-update to renderer in ${Date.now() - sendStart}ms`);
         }
     });
 
     socket.on('weather-update', (weatherData) => {
-        console.log('Weather updated:', weatherData);
+        // Silent - avoid console flood
         if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('weather-update', weatherData);
         }
     });
 
     socket.on('forecast-update', (forecastData) => {
-        console.log('Forecast updated:', forecastData);
+        // Silent - avoid console flood
         if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('forecast-update', forecastData);
         }
@@ -167,8 +165,10 @@ function createWindow() {
         console.error('Failed to load URL:', err);
     });
 
-    // Don't auto-open DevTools - use F12 or Ctrl+Shift+I to open manually
-    // mainWindow.webContents.openDevTools();
+    // Auto-open DevTools to capture all logs from the start
+    // Set to 'right' for side panel, 'bottom' for bottom panel, or 'undocked' for separate window
+    // Comment out the next line to disable auto-open (then use F12 or Ctrl+Shift+I)
+    mainWindow.webContents.openDevTools({ mode: 'right' });
 
     // Register keyboard shortcuts
     mainWindow.webContents.on('before-input-event', async (event, input) => {
