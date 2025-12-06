@@ -37,6 +37,7 @@ export function Editor() {
     const programmaticMoveRef = useRef(false);
     const lassoSelectedNodesRef = useRef(new Set());
     const processImmediateRef = useRef(null);  // For graph load operations
+    const loadingRef = useRef(false);  // Prevents cascading updates during graph load
     
     // Refs to hold current instances for keyboard handler (avoids stale closure issues)
     const editorRef = useRef(null);
@@ -1419,6 +1420,7 @@ export function Editor() {
             }
             
             programmaticMoveRef.current = true;
+            loadingRef.current = true;  // Prevent cascading updates during load
             try {
                 for (const nodeData of graphData.nodes) {
                     let node;
@@ -1426,6 +1428,11 @@ export function Editor() {
 
                     if (def) {
                         const updateCallback = () => {
+                            // During graph load, only update the visual, skip cascading data fetch
+                            if (loadingRef.current) {
+                                if (areaInstance) areaInstance.update("node", nodeData.id);
+                                return;  // Skip cascading updates during load
+                            }
                             if (areaInstance) areaInstance.update("node", nodeData.id);
                             if (engineInstance && editorInstance) {
                                 engineInstance.reset();
@@ -1482,6 +1489,9 @@ export function Editor() {
                 console.log('[handleLoad] Graph processing complete');
             }
             
+            // Re-enable cascading updates after load is complete
+            loadingRef.current = false;
+            
             // Restore viewport state from saved graph (or default if not present)
             setTimeout(() => {
                 if (areaInstance?.area) {
@@ -1506,6 +1516,7 @@ export function Editor() {
             console.log('Graph loaded from localStorage');
         } catch (err) {
             console.error('Failed to load graph:', err);
+            loadingRef.current = false;  // Ensure loading state is reset on error
             alert('Failed to load graph');
         }
     };
@@ -1587,6 +1598,7 @@ export function Editor() {
             await handleClear();
 
             programmaticMoveRef.current = true;
+            loadingRef.current = true;  // Prevent cascading updates during import
             try {
                 for (const nodeData of graphData.nodes) {
                     let node;
@@ -1599,6 +1611,11 @@ export function Editor() {
 
                     if (def) {
                         const updateCallback = () => {
+                            // During graph import, only update the visual, skip cascading data fetch
+                            if (loadingRef.current) {
+                                if (areaInstance) areaInstance.update("node", nodeData.id);
+                                return;  // Skip cascading updates during import
+                            }
                             if (areaInstance) areaInstance.update("node", nodeData.id);
                             if (engineInstance && editorInstance) {
                                 engineInstance.reset();
@@ -1653,6 +1670,9 @@ export function Editor() {
                 await processImmediateRef.current();
             }
             
+            // Re-enable cascading updates after import is complete
+            loadingRef.current = false;
+            
             // Restore viewport state from imported graph (or default if not present)
             setTimeout(() => {
                 if (areaInstance?.area) {
@@ -1666,6 +1686,7 @@ export function Editor() {
             console.log('Graph imported');
         } catch (err) {
             console.error('Failed to import graph:', err);
+            loadingRef.current = false;  // Ensure loading state is reset on error
             alert('Failed to import graph');
         }
     };
