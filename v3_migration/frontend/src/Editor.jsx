@@ -1493,30 +1493,72 @@ export function Editor() {
             loadingRef.current = false;
             
             // Restore viewport state from saved graph (or default if not present)
+            // Use a longer delay (300ms) to ensure all node rendering and state updates are complete
+            // This is critical for Electron where timing issues can break pan/zoom
             setTimeout(() => {
                 if (areaInstance?.area) {
                     const viewport = graphData.viewport || { x: 0, y: 0, k: 1 };
-                    // Set zoom level first, then translate
                     areaInstance.area.zoom(viewport.k || 1, 0, 0);
                     areaInstance.area.translate(viewport.x || 0, viewport.y || 0);
-                    console.log('[Editor] Viewport restored:', viewport);
                     
-                    // Ensure focus returns to the editor container (fixes Electron pan/zoom issues)
                     const container = areaInstance.container;
                     if (container) {
+                        // Make container focusable and focus it
+                        container.tabIndex = -1;
                         container.focus();
-                        // Also blur any focused inputs that might be stealing events
-                        if (document.activeElement && document.activeElement.tagName !== 'BODY') {
+                        
+                        // Blur any focused inputs that might be stealing events
+                        if (document.activeElement && document.activeElement !== container && 
+                            document.activeElement.tagName !== 'BODY') {
                             document.activeElement.blur();
                         }
+                        
+                        // ELECTRON FIX: Dispatch synthetic pointer events to reset area's drag state
+                        // This fixes pan/zoom issues that occur after loading graphs in Electron
+                        const resetAreaDragState = () => {
+                            const rect = container.getBoundingClientRect();
+                            const centerX = rect.left + rect.width / 2;
+                            const centerY = rect.top + rect.height / 2;
+                            
+                            const downEvent = new PointerEvent('pointerdown', {
+                                bubbles: true, cancelable: true,
+                                clientX: centerX, clientY: centerY,
+                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
+                                button: 0, buttons: 1
+                            });
+                            
+                            const upEvent = new PointerEvent('pointerup', {
+                                bubbles: true, cancelable: true,
+                                clientX: centerX, clientY: centerY,
+                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
+                                button: 0, buttons: 0
+                            });
+                            
+                            container.dispatchEvent(downEvent);
+                            setTimeout(() => container.dispatchEvent(upEvent), 50);
+                        };
+                        
+                        setTimeout(resetAreaDragState, 100);
                     }
+                    
+                    // Release any stuck pointer captures on all nodes
+                    editorInstance.getNodes().forEach(node => {
+                        const view = areaInstance.nodeViews.get(node.id);
+                        if (view?.element) {
+                            try {
+                                for (let i = 0; i < 10; i++) {
+                                    try { view.element.releasePointerCapture(i); } catch (e) {}
+                                }
+                            } catch (e) {}
+                        }
+                    });
                 }
-            }, 100);
+            }, 300);
             
-            console.log('Graph loaded from localStorage');
+            console.log('Graph loaded');
         } catch (err) {
             console.error('Failed to load graph:', err);
-            loadingRef.current = false;  // Ensure loading state is reset on error
+            loadingRef.current = false;
             alert('Failed to load graph');
         }
     };
@@ -1674,19 +1716,69 @@ export function Editor() {
             loadingRef.current = false;
             
             // Restore viewport state from imported graph (or default if not present)
+            // Use a longer delay to ensure all node rendering is complete
             setTimeout(() => {
                 if (areaInstance?.area) {
                     const viewport = graphData.viewport || { x: 0, y: 0, k: 1 };
                     areaInstance.area.zoom(viewport.k || 1, 0, 0);
                     areaInstance.area.translate(viewport.x || 0, viewport.y || 0);
                     console.log('[handleImport] Viewport restored:', viewport);
+                    
+                    // Ensure focus returns to the editor container
+                    const container = areaInstance.container;
+                    if (container) {
+                        container.tabIndex = -1;
+                        container.focus();
+                        if (document.activeElement && document.activeElement !== container && 
+                            document.activeElement.tagName !== 'BODY') {
+                            document.activeElement.blur();
+                        }
+                        
+                        // ELECTRON FIX: Dispatch synthetic pointer events to reset area's drag state
+                        const resetAreaDragState = () => {
+                            const rect = container.getBoundingClientRect();
+                            const centerX = rect.left + rect.width / 2;
+                            const centerY = rect.top + rect.height / 2;
+                            
+                            const downEvent = new PointerEvent('pointerdown', {
+                                bubbles: true, cancelable: true,
+                                clientX: centerX, clientY: centerY,
+                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
+                                button: 0, buttons: 1
+                            });
+                            
+                            const upEvent = new PointerEvent('pointerup', {
+                                bubbles: true, cancelable: true,
+                                clientX: centerX, clientY: centerY,
+                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
+                                button: 0, buttons: 0
+                            });
+                            
+                            container.dispatchEvent(downEvent);
+                            setTimeout(() => container.dispatchEvent(upEvent), 50);
+                        };
+                        
+                        setTimeout(resetAreaDragState, 100);
+                    }
+                    
+                    // Release any stuck pointer captures
+                    editorInstance.getNodes().forEach(node => {
+                        const view = areaInstance.nodeViews.get(node.id);
+                        if (view?.element) {
+                            try {
+                                for (let i = 0; i < 10; i++) {
+                                    try { view.element.releasePointerCapture(i); } catch (e) {}
+                                }
+                            } catch (e) {}
+                        }
+                    });
                 }
-            }, 100);
+            }, 300);
             
             console.log('Graph imported');
         } catch (err) {
             console.error('Failed to import graph:', err);
-            loadingRef.current = false;  // Ensure loading state is reset on error
+            loadingRef.current = false;
             alert('Failed to import graph');
         }
     };
