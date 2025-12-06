@@ -64,6 +64,30 @@
   text-shadow: 0 0 8px rgba(var(--node-device-color-rgb), 0.6);
 }
 
+.ha-node-title-input {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--node-device-color);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(var(--node-device-color-rgb), 0.5);
+  border-radius: 4px;
+  padding: 4px 8px;
+  outline: none;
+  min-width: 100px;
+}
+
+.ha-node-title-input:focus {
+  border-color: var(--node-device-color);
+  box-shadow: 0 0 8px rgba(var(--node-device-color-rgb), 0.4);
+}
+
+.ha-node-title-input::placeholder {
+  color: rgba(var(--node-device-color-rgb), 0.5);
+  font-style: italic;
+}
+
 .ha-node-status {
   font-size: 10px;
   color: #a7ffeb;

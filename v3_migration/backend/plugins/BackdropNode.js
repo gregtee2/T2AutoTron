@@ -64,6 +64,7 @@
             if (data.width !== undefined) this.properties.width = data.width;
             if (data.height !== undefined) this.properties.height = data.height;
             if (data.capturedNodes !== undefined) this.properties.capturedNodes = data.capturedNodes;
+            if (data.locked !== undefined) this.properties.locked = data.locked;
             
             this.width = this.properties.width;
             this.height = this.properties.height;
@@ -72,6 +73,14 @@
         restore(state) {
             if (state.properties) {
                 this.deserialize(state.properties);
+            }
+            
+            // Update wrapper pointer-events after restore
+            if (this.properties.locked && window.updateBackdropLockState) {
+                // Delay to ensure node is rendered
+                setTimeout(() => {
+                    window.updateBackdropLockState(this.id, this.properties.locked);
+                }, 100);
             }
         }
 

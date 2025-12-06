@@ -70,8 +70,8 @@ function setupNotifications(io) {
     // Always show in UI
     io.emit('notification', message);
 
-    // Parse device updates
-    const match = message.match(/Update: (.*?) is (ON|OFF)(?:, Brightness: (\d+))?/);
+    // Parse device updates - handle emoji prefix (🔄, etc.)
+    const match = message.match(/(?:🔄\s*)?(?:HA|Kasa|Hue)?\s*Update:\s*(.*?)\s+is\s+(ON|OFF)(?:,\s*Brightness:\s*(\d+))?/i);
     if (!match) {
       // Non-device: only send errors/warnings
       if (message.includes('ERROR') || message.includes('Failed') || message.includes('WARNING')) {

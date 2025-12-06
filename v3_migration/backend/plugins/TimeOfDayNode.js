@@ -131,20 +131,91 @@
             }
         }, [data]);
 
+        // Helper to check if current time is within active window
+        const updateActiveWindowState = useCallback((now) => {
+            if (!data.properties.start_enabled || !data.properties.stop_enabled) return;
+            
+            // Convert 12-hour to 24-hour format
+            const to24Hour = (h, ampm) => {
+                let h24 = h % 12;
+                if (ampm === "PM") h24 += 12;
+                return h24;
+            };
+            
+            const getTodayTime = (h, m, ampm) => {
+                let h24 = to24Hour(h, ampm);
+                return now.set({ hour: h24, minute: m, second: 0, millisecond: 0 });
+            };
+            
+            const startTime = getTodayTime(data.properties.start_hour, data.properties.start_minute, data.properties.start_ampm);
+            const stopTime = getTodayTime(data.properties.stop_hour, data.properties.stop_minute, data.properties.stop_ampm);
+            
+            let isInActiveWindow = false;
+            
+            if (startTime < stopTime) {
+                // Same day: e.g., 8:00 AM to 6:00 PM
+                isInActiveWindow = now >= startTime && now < stopTime;
+            } else {
+                // Overnight: e.g., 10:00 PM to 6:00 AM
+                isInActiveWindow = now >= startTime || now < stopTime;
+            }
+            
+            if (isInActiveWindow !== data.properties.currentState) {
+                data.properties.currentState = isInActiveWindow;
+                log(`State updated to ${isInActiveWindow ? 'ON' : 'OFF'} (in active window)`);
+                data.update();
+            }
+        }, [data.properties]);
+
         const calculateTimes = useCallback(() => {
             const now = DateTime.local().setZone(data.properties.timezone);
 
-            const getNextDate = (h, m, ampm) => {
+            // Convert 12-hour to 24-hour format
+            const to24Hour = (h, ampm) => {
                 let h24 = h % 12;
                 if (ampm === "PM") h24 += 12;
+                return h24;
+            };
+
+            const getNextDate = (h, m, ampm) => {
+                let h24 = to24Hour(h, ampm);
                 let date = now.set({ hour: h24, minute: m, second: 0, millisecond: 0 });
                 if (date <= now) date = date.plus({ days: 1 });
                 return date;
             };
 
+            // Get today's start and stop times (without adding a day)
+            const getTodayTime = (h, m, ampm) => {
+                let h24 = to24Hour(h, ampm);
+                return now.set({ hour: h24, minute: m, second: 0, millisecond: 0 });
+            };
+
             let nextOn = data.properties.start_enabled ? getNextDate(data.properties.start_hour, data.properties.start_minute, data.properties.start_ampm) : null;
             let nextOff = data.properties.stop_enabled ? getNextDate(data.properties.stop_hour, data.properties.stop_minute, data.properties.stop_ampm) : null;
             let nextCycle = data.properties.cycle_enabled ? getNextDate(data.properties.cycle_hour, data.properties.cycle_minute, data.properties.cycle_ampm) : null;
+
+            // Calculate current state: are we currently between start and stop times?
+            // This handles the case where start time has passed but stop time hasn't
+            if (data.properties.start_enabled && data.properties.stop_enabled && !data.properties.pulseMode) {
+                const startTime = getTodayTime(data.properties.start_hour, data.properties.start_minute, data.properties.start_ampm);
+                const stopTime = getTodayTime(data.properties.stop_hour, data.properties.stop_minute, data.properties.stop_ampm);
+                
+                let isInActiveWindow = false;
+                
+                if (startTime < stopTime) {
+                    // Same day: e.g., 8:00 AM to 6:00 PM
+                    isInActiveWindow = now >= startTime && now < stopTime;
+                } else {
+                    // Overnight: e.g., 10:00 PM to 6:00 AM
+                    isInActiveWindow = now >= startTime || now < stopTime;
+                }
+                
+                if (isInActiveWindow !== data.properties.currentState) {
+                    data.properties.currentState = isInActiveWindow;
+                    log(`State updated to ${isInActiveWindow ? 'ON' : 'OFF'} (in active window: ${isInActiveWindow})`);
+                    data.update();
+                }
+            }
 
             updateProperty('next_on_date', nextOn ? nextOn.toJSDate() : null);
             updateProperty('next_off_date', nextOff ? nextOff.toJSDate() : null);
@@ -158,8 +229,18 @@
                 const nextOff = data.properties.next_off_date ? DateTime.fromJSDate(new Date(data.properties.next_off_date)).setZone(data.properties.timezone) : null;
                 const nextCycle = data.properties.next_cycle_date ? DateTime.fromJSDate(new Date(data.properties.next_cycle_date)).setZone(data.properties.timezone) : null;
 
-                if (nextOn && now >= nextOn) { log("Hit Start Time!"); triggerPulse(); calculateTimes(); }
-                if (nextOff && now >= nextOff) { log("Hit Stop Time!"); triggerPulse(); calculateTimes(); }
+                // In pulse mode, trigger pulses at start/stop times
+                if (data.properties.pulseMode) {
+                    if (nextOn && now >= nextOn) { log("Hit Start Time!"); triggerPulse(); calculateTimes(); }
+                    if (nextOff && now >= nextOff) { log("Hit Stop Time!"); triggerPulse(); calculateTimes(); }
+                } else {
+                    // In state mode, continuously check if we're in the active window
+                    updateActiveWindowState(now);
+                    // Still recalculate next times when events pass
+                    if (nextOn && now >= nextOn) { calculateTimes(); }
+                    if (nextOff && now >= nextOff) { calculateTimes(); }
+                }
+                
                 if (nextCycle && now >= nextCycle) {
                     log("Hit Cycle Time!");
                     triggerPulse();
@@ -190,7 +271,14 @@
             return () => clearInterval(timer);
         }, [data.properties.next_on_date, data.properties.next_off_date, data.properties.next_cycle_date, triggerPulse, calculateTimes]);
 
-        useEffect(() => { calculateTimes(); }, []);
+        useEffect(() => { 
+            calculateTimes(); 
+            // Also set initial state based on current time (for non-pulse mode)
+            if (!data.properties.pulseMode) {
+                const now = DateTime.local().setZone(data.properties.timezone);
+                updateActiveWindowState(now);
+            }
+        }, []);
 
         // Register scheduled events with the global registry for the Upcoming Events panel
         useEffect(() => {

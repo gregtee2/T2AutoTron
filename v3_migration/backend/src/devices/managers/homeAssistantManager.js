@@ -57,6 +57,8 @@ class HomeAssistantManager {
       this.broadcastConnectionStatus();
 
       if (io && notificationEmitter) {
+        // Emit device state updates to frontend (socket.io) but NOT to Telegram
+        // This prevents spam on server startup - only real state changes should notify
         this.devices.forEach(device => {
           const state = {
             id: `ha_${device.entity_id}`,
@@ -69,7 +71,7 @@ class HomeAssistantManager {
             attributes: device.attributes // Include attributes for power data
           };
           io.emit('device-state-update', state);
-          notificationEmitter.emit('notify', `🔄 HA Update: ${state.name} is ${state.on ? 'ON' : 'OFF'}`);
+          // REMOVED: notificationEmitter.emit - no Telegram spam on init
         });
 
         // Initialize WebSocket for real-time updates

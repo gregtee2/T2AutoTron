@@ -57,7 +57,24 @@
     }
     function DropdownControlComponent({ data }) {
         const [value, setValue] = useState(data.value);
-        useEffect(() => { setValue(data.value); }, [data.value]);
+        const [values, setValues] = useState(data.values);
+        const [seed, setSeed] = useState(0);
+        
+        useEffect(() => { 
+            setValue(data.value);
+            setValues(data.values);
+        }, [data.value, data.values]);
+        
+        // Allow external updates to trigger re-render
+        useEffect(() => {
+            data.updateDropdown = () => {
+                setValues([...data.values]);
+                setValue(data.value);
+                setSeed(s => s + 1);
+            };
+            return () => { data.updateDropdown = null; };
+        }, [data]);
+        
         const handleChange = (e) => {
             const val = e.target.value;
             setValue(val);
@@ -73,7 +90,7 @@
                 onPointerDown: (e) => e.stopPropagation(),
                 onDoubleClick: (e) => e.stopPropagation(),
                 style: { width: "100%", background: "#0a0f14", color: "#00f3ff", border: "1px solid rgba(0, 243, 255, 0.3)", padding: "6px", borderRadius: "4px", outline: "none", fontSize: "12px" }
-            }, data.values.map(v => React.createElement('option', { key: v, value: v, style: { background: "#0a0f14", color: "#00f3ff" } }, v)))
+            }, values.map(v => React.createElement('option', { key: v, value: v, style: { background: "#0a0f14", color: "#00f3ff" } }, v)))
         ]);
     }
 
@@ -266,7 +283,8 @@
                 transitionTime: 1000,
                 filterType: "All",
                 triggerMode: "Follow",
-                autoRefreshInterval: 30000
+                autoRefreshInterval: 30000,
+                customTitle: ""  // User-editable title for the node
             };
 
             this.lastTriggerValue = false;
@@ -274,6 +292,7 @@
             this.devices = [];
             this.perDeviceState = {};
             this.intervalId = null;
+            this.skipInitialTrigger = true; // Skip first trigger processing after load
 
             try {
                 this.addInput("trigger", new ClassicPreset.Input(sockets.boolean || new ClassicPreset.Socket('boolean'), "Trigger"));
@@ -311,6 +330,9 @@
         restore(state) {
             if (state.properties) Object.assign(this.properties, state.properties);
             
+            // Skip trigger processing on first data() call after restore
+            this.skipInitialTrigger = true;
+            
             if (this.controls.filter) this.controls.filter.value = this.properties.filterType;
             if (this.controls.trigger_mode) this.controls.trigger_mode.value = this.properties.triggerMode || "Toggle";
             if (this.controls.transition) this.controls.transition.value = this.properties.transitionTime;
@@ -339,25 +361,46 @@
             const trigger = triggerRaw ?? false;
             let needsUpdate = false;
 
-            if (hsvInput && typeof hsvInput === 'object') {
-                const hsvString = JSON.stringify(hsvInput);
-                if (hsvString !== this.lastHsvInfo) {
-                    this.lastHsvInfo = hsvString;
-                    await this.applyHSVInput(hsvInput);
-                    needsUpdate = true;
+            // On first call after load, apply current state to devices (sync devices to input)
+            if (this.skipInitialTrigger) {
+                this.skipInitialTrigger = false;
+                this.lastTriggerValue = !!trigger;
+                
+                // Sync HSV state
+                if (hsvInput && typeof hsvInput === 'object') {
+                    this.lastHsvInfo = JSON.stringify(hsvInput);
                 }
+                
+                // In Follow mode, apply the current trigger state to all devices
+                const mode = this.properties.triggerMode || "Toggle";
+                if (mode === "Follow") {
+                    // Small delay to ensure connections are established
+                    setTimeout(async () => {
+                        await this.setDevicesState(!!trigger);
+                    }, 500);
+                }
+                // For other modes (Toggle, Turn On, Turn Off), don't act on load - wait for user action
+            } else {
+                if (hsvInput && typeof hsvInput === 'object') {
+                    const hsvString = JSON.stringify(hsvInput);
+                    if (hsvString !== this.lastHsvInfo) {
+                        this.lastHsvInfo = hsvString;
+                        await this.applyHSVInput(hsvInput);
+                        needsUpdate = true;
+                    }
+                }
+
+                const risingEdge = trigger && !this.lastTriggerValue;
+                const fallingEdge = !trigger && this.lastTriggerValue;
+                const mode = this.properties.triggerMode || "Toggle";
+
+                if (mode === "Toggle" && risingEdge) { await this.onTrigger(); needsUpdate = true; }
+                else if (mode === "Follow" && (risingEdge || fallingEdge)) { await this.setDevicesState(trigger); needsUpdate = true; }
+                else if (mode === "Turn On" && risingEdge) { await this.setDevicesState(true); needsUpdate = true; }
+                else if (mode === "Turn Off" && risingEdge) { await this.setDevicesState(false); needsUpdate = true; }
+
+                this.lastTriggerValue = !!trigger;
             }
-
-            const risingEdge = trigger && !this.lastTriggerValue;
-            const fallingEdge = !trigger && this.lastTriggerValue;
-            const mode = this.properties.triggerMode || "Toggle";
-
-            if (mode === "Toggle" && risingEdge) { await this.onTrigger(); needsUpdate = true; }
-            else if (mode === "Follow" && (risingEdge || fallingEdge)) { await this.setDevicesState(trigger); needsUpdate = true; }
-            else if (mode === "Turn On" && risingEdge) { await this.setDevicesState(true); needsUpdate = true; }
-            else if (mode === "Turn Off" && risingEdge) { await this.setDevicesState(false); needsUpdate = true; }
-
-            this.lastTriggerValue = !!trigger;
 
             const outputs = {};
             const selectedStates = [];
@@ -420,14 +463,19 @@
 
         async fetchDevices() {
             try {
+                // Use /api/lights/ha/ to get all Home Assistant devices
                 const response = await fetch('/api/lights/ha/', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                 const data = await response.json();
                 if (data.success && Array.isArray(data.devices)) {
-                    this.devices = [...data.devices].sort((a, b) =>
+                    this.devices = data.devices.map(d => ({
+                        ...d,
+                        // Normalize the type field - extract from id if needed (handle ha_ prefix)
+                        type: d.type || (d.id?.includes('.') ? d.id.split('.')[0].replace(/^ha_/, '') : 'unknown')
+                    })).sort((a, b) =>
                         HAGenericDeviceNode.compareNames(a.name || a.id, b.name || b.id)
                     );
                     this.normalizeSelectedDeviceNames();
-                    this.updateStatus(`Loaded ${data.devices.length} devices`);
+                    this.updateStatus(`Loaded ${this.devices.length} devices`);
                     this.updateDeviceSelectorOptions();
                     this.triggerUpdate();
                 } else {
@@ -512,6 +560,8 @@
 
                 ctrl.values = ["Select Device", ...sortedOptions];
                 ctrl.value = current;
+                // Trigger React re-render of the dropdown
+                if (ctrl.updateDropdown) ctrl.updateDropdown();
             });
         }
 
@@ -525,7 +575,9 @@
             const stateCtrl = this.controls[`device_${index}_state`];
             if (stateCtrl) stateCtrl.deviceId = dev.id;
             const colorbar = this.controls[`device_${index}_colorbar`];
-            if (colorbar) colorbar.data.entityType = dev.id.split('.')[0];
+            // Use the device's type field, or extract from id (handling ha_ prefix)
+            const entityType = dev.type || (dev.id?.includes('.') ? dev.id.split('.')[0].replace(/^ha_/, '') : 'light');
+            if (colorbar) colorbar.data.entityType = entityType;
             await this.fetchDeviceState(dev.id);
             this.triggerUpdate();
         }
@@ -662,7 +714,8 @@
                 triggerMode: this.properties.triggerMode || "Follow",
                 transitionTime: this.properties.transitionTime || 1000,
                 debug: this.properties.debug ?? true,
-                autoRefreshInterval: this.properties.autoRefreshInterval || 30000
+                autoRefreshInterval: this.properties.autoRefreshInterval || 30000,
+                customTitle: this.properties.customTitle || ""
             };
         }
 
@@ -697,11 +750,45 @@
     function HAGenericDeviceNodeComponent({ data, emit }) {
         const [seed, setSeed] = useState(0);
         const [isCollapsed, setIsCollapsed] = useState(false);
+        const [customTitle, setCustomTitle] = useState(data.properties.customTitle || "");
+        const [isEditingTitle, setIsEditingTitle] = useState(false);
+        const titleInputRef = useRef(null);
 
         useEffect(() => {
-            data.changeCallback = () => setSeed(s => s + 1);
+            data.changeCallback = () => {
+                setSeed(s => s + 1);
+                setCustomTitle(data.properties.customTitle || "");
+            };
             return () => { data.changeCallback = null; };
         }, [data]);
+
+        useEffect(() => {
+            if (isEditingTitle && titleInputRef.current) {
+                titleInputRef.current.focus();
+                titleInputRef.current.select();
+            }
+        }, [isEditingTitle]);
+
+        const handleTitleChange = (e) => {
+            setCustomTitle(e.target.value);
+            data.properties.customTitle = e.target.value;
+        };
+
+        const handleTitleBlur = () => {
+            setIsEditingTitle(false);
+            if (data.changeCallback) data.changeCallback();
+        };
+
+        const handleTitleKeyDown = (e) => {
+            if (e.key === 'Enter') {
+                setIsEditingTitle(false);
+                if (data.changeCallback) data.changeCallback();
+            }
+            if (e.key === 'Escape') {
+                setCustomTitle(data.properties.customTitle || "");
+                setIsEditingTitle(false);
+            }
+        };
 
         const inputs = Object.entries(data.inputs);
         const outputs = Object.entries(data.outputs);
@@ -730,7 +817,29 @@
                         style: { cursor: "pointer", fontSize: "12px", userSelect: "none" },
                         onPointerDown: (e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }
                     }, isCollapsed ? "▶" : "▼"),
-                    React.createElement('div', { key: 'title', className: 'ha-node-title', style: { flex: 1 } }, data.label || "HA Generic Device"),
+                    // Editable custom title
+                    isEditingTitle
+                        ? React.createElement('input', {
+                            key: 'title-input',
+                            ref: titleInputRef,
+                            type: 'text',
+                            className: 'ha-node-title-input',
+                            value: customTitle,
+                            placeholder: data.label || "HA Generic Device",
+                            onChange: handleTitleChange,
+                            onBlur: handleTitleBlur,
+                            onKeyDown: handleTitleKeyDown,
+                            onPointerDown: (e) => e.stopPropagation(),
+                            style: { flex: 1 }
+                        })
+                        : React.createElement('div', { 
+                            key: 'title', 
+                            className: 'ha-node-title', 
+                            style: { flex: 1, cursor: 'text' },
+                            onDoubleClick: (e) => { e.stopPropagation(); setIsEditingTitle(true); },
+                            onPointerDown: (e) => e.stopPropagation(),
+                            title: 'Double-click to edit title'
+                        }, customTitle || data.label || "HA Generic Device"),
                     // HA Connection Status Indicator
                     React.createElement('div', { 
                         key: 'ha-status',

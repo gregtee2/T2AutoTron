@@ -78,38 +78,116 @@
             // Output
             this.addOutput("hsvInfo", new ClassicPreset.Output(hsvInfoSocket, "HSV Info"));
 
-            // Node state/properties
-            this.colorMode = 'custom';
-            this.predefinedWedge = 'warm-to-cool';
-            this.startHue = 0;
-            this.startSaturation = 100;
-            this.startBrightness = 100;
-            this.endHue = 240;
-            this.endSaturation = 80;
-            this.endBrightness = 90;
-            this.rangeMode = 'numerical';
-            this.startValue = 20;
-            this.endValue = 30;
-            this.startTimeHours = 10;
-            this.startTimeMinutes = 0;
-            this.startTimePeriod = 'AM';
-            this.endTimeHours = 2;
-            this.endTimeMinutes = 0;
-            this.endTimePeriod = 'PM';
-            this.timerDurationValue = 1;
-            this.timerUnit = 'hours';
-            this.timeSteps = 60;
-            this.useBrightnessOverride = false;
-            this.brightnessOverride = 254;
-            this.debug = false;
+            // Properties object for serialization (used by Editor.jsx save/load)
+            this.properties = {
+                colorMode: 'custom',
+                predefinedWedge: 'warm-to-cool',
+                startHue: 0,
+                startSaturation: 100,
+                startBrightness: 100,
+                endHue: 240,
+                endSaturation: 80,
+                endBrightness: 90,
+                rangeMode: 'numerical',
+                startValue: 20,
+                endValue: 30,
+                startTimeHours: 10,
+                startTimeMinutes: 0,
+                startTimePeriod: 'AM',
+                endTimeHours: 2,
+                endTimeMinutes: 0,
+                endTimePeriod: 'PM',
+                timerDurationValue: 1,
+                timerUnit: 'hours',
+                timeSteps: 60,
+                useBrightnessOverride: false,
+                brightnessOverride: 254,
+                debug: false
+            };
 
-            // Runtime state
+            // Mirror properties to instance for component access
+            this.syncFromProperties();
+
+            // Runtime state (not serialized)
             this.timerStart = null;
             this.currentStep = 0;
             this.lastTimeStep = null;
             this.position = 0;
             this.isInRange = false;
             this.lastColor = null;
+        }
+
+        // Sync instance vars from properties
+        syncFromProperties() {
+            this.colorMode = this.properties.colorMode;
+            this.predefinedWedge = this.properties.predefinedWedge;
+            this.startHue = this.properties.startHue;
+            this.startSaturation = this.properties.startSaturation;
+            this.startBrightness = this.properties.startBrightness;
+            this.endHue = this.properties.endHue;
+            this.endSaturation = this.properties.endSaturation;
+            this.endBrightness = this.properties.endBrightness;
+            this.rangeMode = this.properties.rangeMode;
+            this.startValue = this.properties.startValue;
+            this.endValue = this.properties.endValue;
+            this.startTimeHours = this.properties.startTimeHours;
+            this.startTimeMinutes = this.properties.startTimeMinutes;
+            this.startTimePeriod = this.properties.startTimePeriod;
+            this.endTimeHours = this.properties.endTimeHours;
+            this.endTimeMinutes = this.properties.endTimeMinutes;
+            this.endTimePeriod = this.properties.endTimePeriod;
+            this.timerDurationValue = this.properties.timerDurationValue;
+            this.timerUnit = this.properties.timerUnit;
+            this.timeSteps = this.properties.timeSteps;
+            this.useBrightnessOverride = this.properties.useBrightnessOverride;
+            this.brightnessOverride = this.properties.brightnessOverride;
+            this.debug = this.properties.debug;
+        }
+
+        // Sync properties from instance vars (call after UI changes)
+        syncToProperties() {
+            this.properties.colorMode = this.colorMode;
+            this.properties.predefinedWedge = this.predefinedWedge;
+            this.properties.startHue = this.startHue;
+            this.properties.startSaturation = this.startSaturation;
+            this.properties.startBrightness = this.startBrightness;
+            this.properties.endHue = this.endHue;
+            this.properties.endSaturation = this.endSaturation;
+            this.properties.endBrightness = this.endBrightness;
+            this.properties.rangeMode = this.rangeMode;
+            this.properties.startValue = this.startValue;
+            this.properties.endValue = this.endValue;
+            this.properties.startTimeHours = this.startTimeHours;
+            this.properties.startTimeMinutes = this.startTimeMinutes;
+            this.properties.startTimePeriod = this.startTimePeriod;
+            this.properties.endTimeHours = this.endTimeHours;
+            this.properties.endTimeMinutes = this.endTimeMinutes;
+            this.properties.endTimePeriod = this.endTimePeriod;
+            this.properties.timerDurationValue = this.timerDurationValue;
+            this.properties.timerUnit = this.timerUnit;
+            this.properties.timeSteps = this.timeSteps;
+            this.properties.useBrightnessOverride = this.useBrightnessOverride;
+            this.properties.brightnessOverride = this.brightnessOverride;
+            this.properties.debug = this.debug;
+        }
+
+        // Called by Editor.jsx after loading graph
+        restore(state) {
+            if (state.properties) {
+                Object.assign(this.properties, state.properties);
+                this.syncFromProperties();
+                
+                // Apply wedge preset if predefined mode
+                if (this.colorMode === 'predefined' && WEDGE_PRESETS[this.predefinedWedge]) {
+                    const preset = WEDGE_PRESETS[this.predefinedWedge];
+                    this.startHue = preset.startHue;
+                    this.startSaturation = preset.startSat;
+                    this.startBrightness = preset.startBri;
+                    this.endHue = preset.endHue;
+                    this.endSaturation = preset.endSat;
+                    this.endBrightness = preset.endBri;
+                }
+            }
         }
 
         data(inputs) {
@@ -554,6 +632,8 @@
         }, [data]);
 
         const triggerUpdate = useCallback(() => {
+            // Sync instance vars to properties for serialization
+            if (data.syncToProperties) data.syncToProperties();
             if (data.changeCallback) data.changeCallback();
         }, [data]);
 

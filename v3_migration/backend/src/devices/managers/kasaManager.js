@@ -64,6 +64,13 @@ async function refreshDeviceStatus(device, io, notificationEmitter) {
         } else if (device.deviceType === 'plug') {
             await logger.log('warn', `Device ${device.alias} does not support energy metering`, null, `kasa:energy:unsupported:${device.deviceId}`);
         }
+        
+        // Check if state actually changed before notifying
+        const oldState = device.state;
+        const stateChanged = !oldState || 
+            oldState.on !== state.on || 
+            oldState.brightness !== state.brightness;
+        
         device.state = state;
         device.energy = energy;
         await logger.log('info', `🔄 Refreshed: ${device.alias} - State: ${JSON.stringify(state)}, Energy: ${JSON.stringify(energy)}`, null, `kasa:refresh:${device.deviceId}`);
@@ -78,8 +85,12 @@ async function refreshDeviceStatus(device, io, notificationEmitter) {
                 ...(state.saturation !== 0 && { saturation: state.saturation }),
                 ...(energy && { energyUsage: energy })
             };
+            // Always emit socket update for UI
             io.emit('device-state-update', stateToEmit);
-            notificationEmitter.emit('notify', `🔄 Kasa Update: ${device.alias} is ${state.on ? 'ON' : 'OFF'}${state.brightness ? `, Brightness: ${state.brightness}` : ''}${energy ? `, Power: ${energy.power.toFixed(2)} W` : ''}`);
+            // Only notify Telegram on actual state changes
+            if (stateChanged) {
+                notificationEmitter.emit('notify', `🔄 Kasa Update: ${device.alias} is ${state.on ? 'ON' : 'OFF'}${state.brightness ? `, Brightness: ${state.brightness}` : ''}${energy ? `, Power: ${energy.power.toFixed(2)} W` : ''}`);
+            }
         }
     } catch (err) {
         await logger.log(`Refresh error for ${device?.alias || 'unknown'}: ${err.message}`, 'error', false, `kasa:error:${device?.deviceId || 'unknown'}`);
