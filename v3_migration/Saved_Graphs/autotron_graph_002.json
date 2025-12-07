@@ -970,13 +970,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 58,
-        "position": 0.9666666666666667,
+        "lastTimeStep": 59,
+        "position": 0.9833333333333333,
         "isInRange": true,
         "lastColor": {
-          "r": 39,
+          "r": 38,
           "g": 22,
-          "b": 9
+          "b": 8
         },
         "inputStartTime": "5:30 PM",
         "inputEndTime": "10:30 PM"
@@ -1232,7 +1232,7 @@
           "selectedDeviceNames": [
             "Bathroom"
           ],
-          "status": "Loaded 808 devices",
+          "status": "Control applied to 1 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": true,
@@ -1365,12 +1365,12 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 36,
-        "position": 0.6,
+        "lastTimeStep": 37,
+        "position": 0.6166666666666667,
         "isInRange": true,
         "lastColor": {
-          "r": 50,
-          "g": 93,
+          "r": 53,
+          "g": 92,
           "b": 0
         },
         "inputStartTime": "5:30 PM",
@@ -1577,13 +1577,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 36,
-        "position": 0.6,
+        "lastTimeStep": 37,
+        "position": 0.6166666666666667,
         "isInRange": true,
         "lastColor": {
           "r": 73,
-          "g": 52,
-          "b": 38
+          "g": 51,
+          "b": 37
         },
         "inputStartTime": "5:30 PM",
         "inputEndTime": "1:30 AM"
@@ -3120,11 +3120,11 @@
         "timerStart": null,
         "currentStep": 0,
         "lastTimeStep": null,
-        "position": 0.28,
+        "position": 0.2757142857142857,
         "isInRange": true,
         "lastColor": {
           "r": 12,
-          "g": 155,
+          "g": 152,
           "b": 219
         }
       }
@@ -3181,7 +3181,7 @@
             "temperature"
           ],
           "lastOutputValues": {
-            "temperature": 49.6
+            "temperature": 49.3
           }
         }
       }
@@ -3199,7 +3199,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_temperature",
           "selectedDeviceName": "Sunshine terrace  Temperature",
-          "status": "✅ Sunshine terrace  Temperature: 49.5",
+          "status": "✅ Sunshine terrace  Temperature: 49.3",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -3220,9 +3220,9 @@
         "properties": {
           "bufferName": "Bar Lamp Temp Color",
           "lastValue": {
-            "hue": 0.551,
-            "saturation": 0.9440000000000001,
-            "brightness": 217.7288,
+            "hue": 0.5541309523809523,
+            "saturation": 0.9448571428571428,
+            "brightness": 218.28397142857145,
             "hueStart": 272,
             "hueEnd": 9
           },
@@ -3274,9 +3274,9 @@
         "properties": {
           "selectedBuffer": "[HSV]Bar Lamp Temp Color",
           "lastValue": {
-            "hue": 0.551,
-            "saturation": 0.9440000000000001,
-            "brightness": 217.7288,
+            "hue": 0.5541309523809523,
+            "saturation": 0.9448571428571428,
+            "brightness": 218.28397142857145,
             "hueStart": 272,
             "hueEnd": 9
           }
@@ -4324,8 +4324,8 @@
     }
   ],
   "viewport": {
-    "x": -1762.847736358653,
-    "y": 142.96974135935227,
-    "k": 0.26218345818999605
+    "x": 469.9778017043991,
+    "y": 378.94324008524353,
+    "k": 0.0602509534489612
   }
 }

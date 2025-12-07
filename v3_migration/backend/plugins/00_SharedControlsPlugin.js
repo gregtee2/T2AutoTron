@@ -477,6 +477,122 @@
     }
 
     // =========================================================================
+    // DEVICE STATE CONTROL (for HA device nodes)
+    // =========================================================================
+    class DeviceStateControl extends ClassicPreset.Control {
+        constructor(deviceId, getState) {
+            super();
+            this.deviceId = deviceId;
+            this.getState = getState;
+        }
+    }
+
+    function DeviceStateControlComponent({ data }) {
+        const state = data.getState ? data.getState(data.deviceId) : null;
+        if (!state) {
+            return React.createElement('div', { 
+                style: { 
+                    padding: "4px 8px", 
+                    background: THEME.backgroundAlt, 
+                    borderRadius: "4px", 
+                    marginBottom: "4px", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "space-between", 
+                    minHeight: "24px", 
+                    border: `1px solid ${THEME.primaryRgba(0.1)}` 
+                } 
+            }, 
+                React.createElement('span', { 
+                    style: { fontSize: "11px", color: THEME.primaryRgba(0.5) } 
+                }, "No state data")
+            );
+        }
+        const isOn = state.on || state.state === 'on';
+        const brightness = state.brightness ? Math.round((state.brightness / 255) * 100) : 0;
+        const hsColor = state.hs_color || [0, 0];
+        const [hue, saturation] = hsColor;
+        let color = THEME.error;
+        if (isOn) {
+            color = (saturation === 0) ? THEME.warning : `hsl(${hue}, ${saturation}%, 50%)`;
+        }
+        return React.createElement('div', { 
+            style: { 
+                padding: "6px 8px", 
+                background: THEME.backgroundAlt, 
+                borderRadius: "4px", 
+                marginBottom: "4px", 
+                border: `1px solid ${THEME.primaryRgba(0.2)}`, 
+                display: "flex", 
+                flexDirection: "column" 
+            } 
+        }, [
+            React.createElement('div', { 
+                key: 'top', 
+                style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isOn ? "4px" : "0" } 
+            }, [
+                React.createElement('div', { 
+                    key: 'left', 
+                    style: { display: "flex", alignItems: "center", flex: 1, overflow: "hidden" } 
+                }, [
+                    React.createElement('div', { 
+                        key: 'ind', 
+                        style: { 
+                            width: "14px", 
+                            height: "14px", 
+                            borderRadius: "50%", 
+                            background: color, 
+                            border: "1px solid rgba(255,255,255,0.3)", 
+                            marginRight: "8px", 
+                            flexShrink: 0, 
+                            boxShadow: isOn ? `0 0 5px ${color}` : "none" 
+                        } 
+                    }),
+                    React.createElement('span', { 
+                        key: 'name', 
+                        style: { 
+                            fontSize: "12px", 
+                            color: THEME.text, 
+                            whiteSpace: "nowrap", 
+                            overflow: "hidden", 
+                            textOverflow: "ellipsis", 
+                            marginRight: "8px" 
+                        } 
+                    }, state.name || data.deviceId)
+                ]),
+                React.createElement('span', { 
+                    key: 'val', 
+                    style: { 
+                        fontSize: "10px", 
+                        color: THEME.primary, 
+                        fontFamily: "monospace", 
+                        whiteSpace: "nowrap" 
+                    } 
+                }, isOn ? `${brightness}%` : "Off")
+            ]),
+            isOn && React.createElement('div', { 
+                key: 'bar', 
+                style: { 
+                    width: "100%", 
+                    height: "4px", 
+                    background: THEME.primaryRgba(0.1), 
+                    borderRadius: "2px", 
+                    overflow: "hidden" 
+                } 
+            }, 
+                React.createElement('div', { 
+                    style: { 
+                        width: `${brightness}%`, 
+                        height: "100%", 
+                        background: `linear-gradient(90deg, ${THEME.primaryRgba(0.2)}, ${color})`, 
+                        transition: "width 0.3s ease-out" 
+                    } 
+                })
+            )
+        ]);
+    }
+
+    // =========================================================================
     // EXPOSE TO WINDOW
     // =========================================================================
     window.T2Controls = {
@@ -489,6 +605,7 @@
         StatusIndicatorControl,
         ColorBarControl,
         PowerStatsControl,
+        DeviceStateControl,
 
         // Control Components (for custom rendering)
         ButtonControlComponent,
@@ -499,6 +616,7 @@
         StatusIndicatorControlComponent,
         ColorBarControlComponent,
         PowerStatsControlComponent,
+        DeviceStateControlComponent,
 
         // Reusable UI Components
         Slider: SliderComponent,

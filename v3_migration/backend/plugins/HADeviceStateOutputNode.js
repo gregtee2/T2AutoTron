@@ -1,13 +1,14 @@
 (function() {
     console.log("[HADeviceStateOutputNode] Loading plugin...");
 
-    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
+    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls || !window.T2HAUtils) {
         console.error("[HADeviceStateOutputNode] Missing dependencies", {
             Rete: !!window.Rete,
             React: !!window.React,
             RefComponent: !!window.RefComponent,
             sockets: !!window.sockets,
-            T2Controls: !!window.T2Controls
+            T2Controls: !!window.T2Controls,
+            T2HAUtils: !!window.T2HAUtils
         });
         return;
     }
@@ -24,32 +25,17 @@
     const { DropdownControl, ButtonControl, SwitchControl } = window.T2Controls;
 
     // -------------------------------------------------------------------------
-    // FILTER MAPS
+    // Import shared HA utilities from T2HAUtils (DRY)
     // -------------------------------------------------------------------------
-    const filterTypeMap = {
-        All: "all",
-        Light: "light",
-        Switch: "switch",
-        Sensor: "sensor",
-        "Binary Sensor": "binary_sensor",
-        "Media Player": "media_player",
-        Weather: "weather",
-        Fan: "fan",
-        Cover: "cover"
-    };
-
-    const letterRanges = {
-        "All Letters": { start: "A", end: "Z" },
-        "ABC": { start: "A", end: "C" },
-        "DEF": { start: "D", end: "F" },
-        "GHI": { start: "G", end: "I" },
-        "JKL": { start: "J", end: "L" },
-        "MNO": { start: "M", end: "O" },
-        "PQR": { start: "P", end: "R" },
-        "STU": { start: "S", end: "U" },
-        "VWX": { start: "V", end: "X" },
-        "YZ": { start: "Y", end: "Z" }
-    };
+    const { 
+        filterTypeMap, 
+        letterRanges, 
+        formatTime, 
+        filterDevices,
+        normalizeHADevice,
+        initializeSocketListeners,
+        removeSocketListeners
+    } = window.T2HAUtils;
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -150,17 +136,7 @@
             console.log(`[HADeviceStateOutputNode] ${key}: ${message}`);
         }
 
-        formatTime(utcTime) {
-            if (!utcTime || typeof utcTime !== "string") return "Invalid";
-            try {
-                const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                const date = new Date(utcTime.endsWith("Z") ? utcTime : `${utcTime}Z`);
-                if (isNaN(date.getTime())) return "Invalid";
-                return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "numeric", hour12: true, timeZone: userTimeZone });
-            } catch (error) {
-                return utcTime;
-            }
-        }
+        // formatTime is now imported from T2HAUtils (DRY)
 
         initializeSocketIO() {
             if (window.socket) {
@@ -243,37 +219,15 @@
         }
 
         getDeviceOptions() {
-            const filterType = this.properties.filterType;
-            const letterFilter = this.properties.letterFilter;
-            const normalizedFilterType = filterTypeMap[filterType] || "all";
+            // Use shared filterDevices utility (DRY)
+            const filtered = filterDevices(
+                this.devices, 
+                this.properties.filterType, 
+                this.properties.letterFilter,
+                false // exclude auxiliary entities
+            );
 
-            console.log(`[HADeviceStateOutputNode] getDeviceOptions: filterType=${filterType}, letterFilter=${letterFilter}, normalized=${normalizedFilterType}, deviceCount=${this.devices.length}`);
-
-            const filtered = this.devices.filter(device => {
-                // Type filter
-                const deviceType = device.entityType ? device.entityType.toLowerCase() : "unknown";
-                const typeMatch = normalizedFilterType === "all" || deviceType === normalizedFilterType;
-                if (!typeMatch) {
-                    return false;
-                }
-                
-                // Letter filter
-                if (letterFilter === "All Letters") {
-                    return true;
-                }
-                
-                const range = letterRanges[letterFilter];
-                if (!range) {
-                    console.log(`[HADeviceStateOutputNode] No range found for letterFilter: ${letterFilter}`);
-                    return true;
-                }
-                
-                const firstLetter = device.name.trim().toUpperCase().charAt(0);
-                const letterMatch = firstLetter >= range.start && firstLetter <= range.end;
-                return letterMatch;
-            });
-
-            console.log(`[HADeviceStateOutputNode] getDeviceOptions: Filtered to ${filtered.length} devices: ${filtered.slice(0,3).map(d => d.name).join(', ')}...`);
+            console.log(`[HADeviceStateOutputNode] getDeviceOptions: filterType=${this.properties.filterType}, letterFilter=${this.properties.letterFilter}, deviceCount=${this.devices.length}, filtered=${filtered.length}`);
 
             return this.deviceManagerReady && filtered.length
                 ? filtered.map(d => d.name).sort((a, b) => a.localeCompare(b))

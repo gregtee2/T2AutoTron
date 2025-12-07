@@ -6,9 +6,13 @@
         return;
     }
 
-    // Check for shared controls
+    // Check for shared controls and HA utilities
     if (!window.T2Controls) {
         console.error("[HAGenericDeviceNode] Missing T2Controls - ensure 00_SharedControlsPlugin.js loads first");
+        return;
+    }
+    if (!window.T2HAUtils) {
+        console.error("[HAGenericDeviceNode] Missing T2HAUtils - ensure 00_HABasePlugin.js loads first");
         return;
     }
 
@@ -28,125 +32,18 @@
         StatusIndicatorControl,
         ColorBarControl,
         PowerStatsControl,
+        DeviceStateControl,
         THEME,
         stopPropagation
     } = window.T2Controls;
 
-    // -------------------------------------------------------------------------
-    // DEVICE STATE CONTROL (specific to this node)
-    // -------------------------------------------------------------------------
-    class DeviceStateControl extends ClassicPreset.Control {
-        constructor(deviceId, getState) {
-            super();
-            this.deviceId = deviceId;
-            this.getState = getState;
-        }
-    }
-    
-    function DeviceStateControlComponent({ data }) {
-        const state = data.getState ? data.getState(data.deviceId) : null;
-        if (!state) {
-            return React.createElement('div', { 
-                style: { 
-                    padding: "4px 8px", 
-                    background: THEME.backgroundAlt, 
-                    borderRadius: "4px", 
-                    marginBottom: "4px", 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "space-between", 
-                    minHeight: "24px", 
-                    border: `1px solid ${THEME.primaryRgba(0.1)}` 
-                } 
-            }, 
-                React.createElement('span', { 
-                    style: { fontSize: "11px", color: THEME.primaryRgba(0.5) } 
-                }, "No state data")
-            );
-        }
-        const isOn = state.on || state.state === 'on';
-        const brightness = state.brightness ? Math.round((state.brightness / 255) * 100) : 0;
-        const hsColor = state.hs_color || [0, 0];
-        const [hue, saturation] = hsColor;
-        let color = THEME.error;
-        if (isOn) {
-            color = (saturation === 0) ? THEME.warning : `hsl(${hue}, ${saturation}%, 50%)`;
-        }
-        return React.createElement('div', { 
-            style: { 
-                padding: "6px 8px", 
-                background: THEME.backgroundAlt, 
-                borderRadius: "4px", 
-                marginBottom: "4px", 
-                border: `1px solid ${THEME.primaryRgba(0.2)}`, 
-                display: "flex", 
-                flexDirection: "column" 
-            } 
-        }, [
-            React.createElement('div', { 
-                key: 'top', 
-                style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isOn ? "4px" : "0" } 
-            }, [
-                React.createElement('div', { 
-                    key: 'left', 
-                    style: { display: "flex", alignItems: "center", flex: 1, overflow: "hidden" } 
-                }, [
-                    React.createElement('div', { 
-                        key: 'ind', 
-                        style: { 
-                            width: "14px", 
-                            height: "14px", 
-                            borderRadius: "50%", 
-                            background: color, 
-                            border: "1px solid rgba(255,255,255,0.3)", 
-                            marginRight: "8px", 
-                            flexShrink: 0, 
-                            boxShadow: isOn ? `0 0 5px ${color}` : "none" 
-                        } 
-                    }),
-                    React.createElement('span', { 
-                        key: 'name', 
-                        style: { 
-                            fontSize: "12px", 
-                            color: THEME.text, 
-                            whiteSpace: "nowrap", 
-                            overflow: "hidden", 
-                            textOverflow: "ellipsis", 
-                            marginRight: "8px" 
-                        } 
-                    }, state.name || data.deviceId)
-                ]),
-                React.createElement('span', { 
-                    key: 'val', 
-                    style: { 
-                        fontSize: "10px", 
-                        color: THEME.primary, 
-                        fontFamily: "monospace", 
-                        whiteSpace: "nowrap" 
-                    } 
-                }, isOn ? `${brightness}%` : "Off")
-            ]),
-            isOn && React.createElement('div', { 
-                key: 'bar', 
-                style: { 
-                    width: "100%", 
-                    height: "4px", 
-                    background: THEME.primaryRgba(0.1), 
-                    borderRadius: "2px", 
-                    overflow: "hidden" 
-                } 
-            }, 
-                React.createElement('div', { 
-                    style: { 
-                        width: `${brightness}%`, 
-                        height: "100%", 
-                        background: `linear-gradient(90deg, ${THEME.primaryRgba(0.2)}, ${color})`, 
-                        transition: "width 0.3s ease-out" 
-                    } 
-                })
-            )
-        ]);
-    }
+    // Import shared HA utilities from T2HAUtils (DRY)
+    const {
+        getDeviceApiInfo,
+        compareNames,
+        isAuxiliaryEntity,
+        filterDevices
+    } = window.T2HAUtils;
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -193,26 +90,15 @@
             this.startAutoRefresh();
         }
 
+        // compareNames is now imported from T2HAUtils (DRY)
         static compareNames(a = "", b = "") {
-            return a.localeCompare(b, undefined, { sensitivity: "base" });
+            return compareNames(a, b);
         }
 
-        // Helper to get the correct API endpoint and clean ID for a device
+        // getDeviceApiInfo is now imported from T2HAUtils (DRY)
         getDeviceApiInfo(id) {
-            if (!id) return null;
-            if (id.startsWith('ha_')) {
-                return { endpoint: '/api/lights/ha', cleanId: id };
-            } else if (id.startsWith('kasa_')) {
-                return { endpoint: '/api/lights/kasa', cleanId: id.replace('kasa_', '') };
-            } else if (id.startsWith('hue_')) {
-                return { endpoint: '/api/lights/hue', cleanId: id.replace('hue_', '') };
-            } else if (id.startsWith('shelly_')) {
-                return { endpoint: '/api/lights/shelly', cleanId: id.replace('shelly_', '') };
-            }
-            // Default to HA endpoint for unrecognized prefixes
-            return { endpoint: '/api/lights/ha', cleanId: id };
+            return getDeviceApiInfo(id);
         }
-
         normalizeSelectedDeviceNames() {
             const uniqueDevices = this.getAllDevicesWithUniqueNames();
             const displayNameMap = new Map(uniqueDevices.map(item => [item.device.id, item.displayName]));
@@ -480,33 +366,10 @@
         getAllDevicesWithUniqueNames() {
             const devices = this.devices || [];
             
-            // Filter out auxiliary HA entities (LED indicators, firmware updates, diagnostics, etc.)
-            const auxiliaryPatterns = [
-                / LED$/i,
-                / Auto-update enabled$/i,
-                / Firmware$/i,
-                / Restart$/i,
-                / Identify$/i,
-                / Power on behavior$/i,
-                / Signal strength$/i,
-                / Uptime$/i,
-                / Last seen$/i,
-                / Battery$/i,
-                / Temperature$/i,          // Sensor entities for device temperature
-                / Link quality$/i,
-                / Update available$/i,
-                / OTA Progress$/i,
-                /_update$/i,               // entity_id patterns
-                /_led$/i,
-                /_identify$/i,
-                /_restart$/i,
-                /_firmware$/i,
-            ];
-            
+            // Filter out auxiliary HA entities using shared utility (DRY)
             const filteredDevices = devices.filter(device => {
                 const name = (device.name || device.id || "").trim();
-                // Check if name matches any auxiliary pattern
-                return !auxiliaryPatterns.some(pattern => pattern.test(name));
+                return !isAuxiliaryEntity(name);
             });
             
             const nameCounts = filteredDevices.reduce((acc, device) => {

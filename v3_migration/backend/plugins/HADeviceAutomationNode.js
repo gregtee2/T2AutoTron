@@ -1,13 +1,14 @@
 (function() {
     console.log("[HADeviceAutomationNode] Loading plugin...");
 
-    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
+    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls || !window.T2HAUtils) {
         console.error("[HADeviceAutomationNode] Missing dependencies", {
             Rete: !!window.Rete,
             React: !!window.React,
             RefComponent: !!window.RefComponent,
             sockets: !!window.sockets,
-            T2Controls: !!window.T2Controls
+            T2Controls: !!window.T2Controls,
+            T2HAUtils: !!window.T2HAUtils
         });
         return;
     }
@@ -24,20 +25,9 @@
     const { ButtonControl, DropdownControl, SwitchControl } = window.T2Controls;
 
     // -------------------------------------------------------------------------
-    // FIELD MAPPING - Available fields per entity type
+    // Import shared HA utilities from T2HAUtils (DRY)
     // -------------------------------------------------------------------------
-    const fieldMapping = {
-        light: ["state", "hue", "saturation", "brightness"],
-        switch: ["state", "open"],
-        fan: ["state", "on", "percentage"],
-        cover: ["state", "position"],
-        media_player: ["state", "volume_level", "media_title", "media_content_type", "media_artist", "shuffle", "repeat", "supported_features"],
-        binary_sensor: ["state", "battery"],
-        sensor: ["value", "unit", "temperature", "pressure", "battery_level"],
-        weather: ["temperature", "humidity", "condition", "pressure", "wind_speed"],
-        device_tracker: ["state", "zone", "latitude", "longitude"],
-        unknown: ["state"]
-    };
+    const { fieldMapping, getFieldsForEntityType } = window.T2HAUtils;
 
     // -------------------------------------------------------------------------
     // NODE CLASS
