@@ -1,75 +1,70 @@
+// ============================================================================
+// XorNode.js - XOR Gate using shared T2LogicGate base
+// Refactored to use DRY principles with shared controls and base class
+// ============================================================================
+
 (function() {
     console.log("[XorNode] Loading plugin...");
 
-    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[XorNode] Missing dependencies");
+    // Use shared dependency checker
+    if (!window.T2LogicGate) {
+        console.error("[XorNode] T2LogicGate not found - ensure 00_LogicGateBasePlugin.js loads first");
         return;
     }
 
+    const { 
+        BaseLogicGateNode, 
+        createComponent 
+    } = window.T2LogicGate;
+
     const { ClassicPreset } = window.Rete;
-    const React = window.React;
-    const RefComponent = window.RefComponent;
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // NODE CLASS
+    // NODE CLASS - Extends shared base (fixed 2 inputs for XOR)
     // -------------------------------------------------------------------------
-    class XorNode extends ClassicPreset.Node {
+    class XorNode extends BaseLogicGateNode {
         constructor(changeCallback) {
-            super("XOR Gate");
-            this.changeCallback = changeCallback;
-            this.width = 180;
+            super("XOR Gate", changeCallback, {
+                gateType: 'xor',
+                inputCount: 2
+            });
 
-            this.addInput("in1", new ClassicPreset.Input(sockets.boolean || new ClassicPreset.Socket('boolean'), "Input 1"));
-            this.addInput("in2", new ClassicPreset.Input(sockets.boolean || new ClassicPreset.Socket('boolean'), "Input 2"));
-            
-            this.addOutput("result", new ClassicPreset.Output(sockets.boolean || new ClassicPreset.Socket('boolean'), "Result"));
+            // XOR always has exactly 2 inputs, add them directly
+            this.addInput("in0", new ClassicPreset.Input(
+                sockets?.boolean || new ClassicPreset.Socket('boolean'), 
+                "Input 1"
+            ));
+            this.addInput("in1", new ClassicPreset.Input(
+                sockets?.boolean || new ClassicPreset.Socket('boolean'), 
+                "Input 2"
+            ));
+        }
+
+        // Override - XOR doesn't support dynamic inputs
+        updateInputs() {
+            // No-op for XOR (fixed 2 inputs)
         }
 
         data(inputs) {
-            const val1 = !!inputs.in1?.[0];
-            const val2 = !!inputs.in2?.[0];
-
+            const val1 = !!inputs.in0?.[0];
+            const val2 = !!inputs.in1?.[0];
+            
+            // XOR logic: exactly one input must be true
             const result = val1 !== val2;
 
-            return {
-                result: result
-            };
+            return { result };
         }
     }
 
     // -------------------------------------------------------------------------
-    // COMPONENT
+    // COMPONENT - Use shared factory
     // -------------------------------------------------------------------------
-    function XorNodeComponent({ data, emit }) {
-        const inputs = Object.entries(data.inputs);
-        const outputs = Object.entries(data.outputs);
+    const XorNodeComponent = createComponent('xor');
 
-        return React.createElement('div', { className: 'logic-node' }, [
-            React.createElement('div', { className: 'header' }, data.label),
-            
-            React.createElement('div', { className: 'io-container' }, 
-                inputs.map(([key, input]) => React.createElement('div', { key: key, className: 'socket-row' }, [
-                    React.createElement(RefComponent, {
-                        init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: input.socket, nodeId: data.id, side: "input", key } }),
-                        unmount: ref => emit({ type: "unmount", data: { element: ref } })
-                    }),
-                    React.createElement('span', { style: { marginLeft: '10px', fontSize: '12px' } }, input.label)
-                ]))
-            ),
-
-            React.createElement('div', { className: 'io-container' }, 
-                outputs.map(([key, output]) => React.createElement('div', { key: key, className: 'socket-row', style: { justifyContent: 'flex-end' } }, [
-                    React.createElement('span', { style: { marginRight: '10px', fontSize: '12px' } }, output.label),
-                    React.createElement(RefComponent, {
-                        init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }),
-                        unmount: ref => emit({ type: "unmount", data: { element: ref } })
-                    })
-                ]))
-            )
-        ]);
-    }
-
+    // -------------------------------------------------------------------------
+    // REGISTRATION
+    // -------------------------------------------------------------------------
     window.nodeRegistry.register('XorNode', {
         label: "XOR Gate",
         category: "Logic",
@@ -78,5 +73,5 @@
         component: XorNodeComponent
     });
 
-    console.log("[XorNode] Registered");
+    console.log("[XorNode] Registered (DRY refactored)");
 })();

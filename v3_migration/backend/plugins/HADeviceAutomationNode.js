@@ -1,8 +1,14 @@
 (function() {
     console.log("[HADeviceAutomationNode] Loading plugin...");
 
-    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[HADeviceAutomationNode] Missing dependencies");
+    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
+        console.error("[HADeviceAutomationNode] Missing dependencies", {
+            Rete: !!window.Rete,
+            React: !!window.React,
+            RefComponent: !!window.RefComponent,
+            sockets: !!window.sockets,
+            T2Controls: !!window.T2Controls
+        });
         return;
     }
 
@@ -11,6 +17,11 @@
     const { useState, useEffect, useRef } = React;
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
+
+    // -------------------------------------------------------------------------
+    // Import shared controls from T2Controls
+    // -------------------------------------------------------------------------
+    const { ButtonControl, DropdownControl, SwitchControl } = window.T2Controls;
 
     // -------------------------------------------------------------------------
     // FIELD MAPPING - Available fields per entity type
@@ -27,127 +38,6 @@
         device_tracker: ["state", "zone", "latitude", "longitude"],
         unknown: ["state"]
     };
-
-    // -------------------------------------------------------------------------
-    // CONTROLS
-    // -------------------------------------------------------------------------
-    class ButtonControl extends ClassicPreset.Control {
-        constructor(label, onClick) {
-            super();
-            this.label = label;
-            this.onClick = onClick;
-        }
-    }
-
-    function ButtonControlComponent({ data }) {
-        return React.createElement('button', {
-            onPointerDown: (e) => e.stopPropagation(),
-            onClick: data.onClick,
-            style: {
-                padding: '6px 12px',
-                background: 'rgba(0, 243, 255, 0.1)',
-                border: '1px solid rgba(0, 243, 255, 0.4)',
-                color: '#00f3ff',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '11px',
-                textTransform: 'uppercase'
-            }
-        }, data.label);
-    }
-
-    class DropdownControl extends ClassicPreset.Control {
-        constructor(label, values, initialValue, onChange) {
-            super();
-            this.label = label;
-            this.values = values;
-            this.value = initialValue;
-            this.onChange = onChange;
-        }
-    }
-
-    function DropdownControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-        const [values, setValues] = useState(data.values);
-
-        useEffect(() => {
-            setValue(data.value);
-            setValues(data.values);
-        }, [data.value, data.values]);
-
-        useEffect(() => {
-            data.updateDropdown = () => {
-                setValues([...data.values]);
-                setValue(data.value);
-            };
-            return () => { data.updateDropdown = null; };
-        }, [data]);
-
-        const handleChange = (e) => {
-            const val = e.target.value;
-            setValue(val);
-            data.value = val;
-            if (data.onChange) data.onChange(val);
-        };
-
-        return React.createElement('div', {
-            style: { marginBottom: '5px' },
-            onPointerDown: (e) => e.stopPropagation()
-        }, [
-            data.label && React.createElement('label', {
-                key: 'l',
-                style: { display: 'block', fontSize: '10px', color: '#00f3ff', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }
-            }, data.label),
-            React.createElement('select', {
-                key: 's',
-                value: value,
-                onChange: handleChange,
-                onPointerDown: (e) => e.stopPropagation(),
-                style: { width: '100%', background: '#0a0f14', color: '#00f3ff', border: '1px solid rgba(0, 243, 255, 0.3)', padding: '6px', borderRadius: '4px', outline: 'none', fontSize: '12px' }
-            }, values.map(v => React.createElement('option', { key: v, value: v, style: { background: '#0a0f14', color: '#00f3ff' } }, v)))
-        ]);
-    }
-
-    class SwitchControl extends ClassicPreset.Control {
-        constructor(label, initialValue, onChange) {
-            super();
-            this.label = label;
-            this.value = initialValue;
-            this.onChange = onChange;
-        }
-    }
-
-    function SwitchControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-
-        useEffect(() => { setValue(data.value); }, [data.value]);
-
-        const handleChange = (e) => {
-            const val = e.target.checked;
-            setValue(val);
-            data.value = val;
-            if (data.onChange) data.onChange(val);
-        };
-
-        return React.createElement('div', {
-            style: { display: 'flex', alignItems: 'center', marginBottom: '5px' },
-            onPointerDown: (e) => e.stopPropagation()
-        }, [
-            React.createElement('input', {
-                key: 'i',
-                type: 'checkbox',
-                checked: value,
-                onChange: handleChange,
-                onPointerDown: (e) => e.stopPropagation(),
-                style: { accentColor: '#00f3ff', marginRight: '8px' }
-            }),
-            React.createElement('span', {
-                key: 's',
-                style: { fontSize: '11px', color: '#00f3ff', textTransform: 'uppercase' }
-            }, data.label)
-        ]);
-    }
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -701,12 +591,7 @@
         ]);
     }
 
-    // Register control components
-    if (window.ReteControlRenderers) {
-        window.ReteControlRenderers.set(ButtonControl, ButtonControlComponent);
-        window.ReteControlRenderers.set(DropdownControl, DropdownControlComponent);
-        window.ReteControlRenderers.set(SwitchControl, SwitchControlComponent);
-    }
+    // Note: Control components are already registered by 00_SharedControlsPlugin.js
 
     // -------------------------------------------------------------------------
     // REGISTER

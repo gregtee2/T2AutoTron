@@ -1,8 +1,14 @@
 (function() {
     console.log("[KasaPlugNode] Loading plugin...");
 
-    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[KasaPlugNode] Missing dependencies");
+    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
+        console.error("[KasaPlugNode] Missing dependencies", {
+            Rete: !!window.Rete,
+            React: !!window.React,
+            RefComponent: !!window.RefComponent,
+            sockets: !!window.sockets,
+            T2Controls: !!window.T2Controls
+        });
         return;
     }
 
@@ -14,57 +20,14 @@
     const socket = window.socket;
 
     // -------------------------------------------------------------------------
-    // CSS is now loaded from node-styles.css via index.css
+    // Import shared controls from T2Controls
     // -------------------------------------------------------------------------
-
-    // -------------------------------------------------------------------------
-    // CONTROLS
-    // -------------------------------------------------------------------------
-    class ButtonControl extends ClassicPreset.Control {
-        constructor(label, onClick) { super(); this.label = label; this.onClick = onClick; }
-    }
-    function ButtonControlComponent({ data }) {
-        return React.createElement('button', {
-            onPointerDown: (e) => e.stopPropagation(),
-            onClick: data.onClick,
-            style: { width: "100%", padding: "8px", marginBottom: "5px", background: "rgba(42, 161, 152, 0.1)", border: "1px solid rgba(42, 161, 152, 0.4)", color: "#2aa198", borderRadius: "20px", cursor: "pointer", fontWeight: "600", textTransform: "uppercase", fontSize: "12px" }
-        }, data.label);
-    }
-
-    class DropdownControl extends ClassicPreset.Control {
-        constructor(label, values, initialValue, onChange) { super(); this.label = label; this.values = values; this.value = initialValue; this.onChange = onChange; }
-    }
-    function DropdownControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-        useEffect(() => { setValue(data.value); }, [data.value]);
-        const handleChange = (e) => { const val = e.target.value; setValue(val); data.value = val; if (data.onChange) data.onChange(val); };
-        return React.createElement('div', { style: { marginBottom: "5px" } }, [
-            data.label && React.createElement('label', { key: 'l', style: { display: "block", fontSize: "10px", color: "#2aa198", marginBottom: "2px", textTransform: "uppercase" } }, data.label),
-            React.createElement('select', {
-                key: 's', value: value, onChange: handleChange, onPointerDown: (e) => e.stopPropagation(),
-                style: { width: "100%", background: "#002b36", color: "#2aa198", border: "1px solid rgba(42, 161, 152, 0.3)", padding: "6px", borderRadius: "4px", outline: "none", fontSize: "12px" }
-            }, data.values.map(v => React.createElement('option', { key: v, value: v }, v)))
-        ]);
-    }
-
-    class StatusIndicatorControl extends ClassicPreset.Control { constructor(data) { super(); this.data = data; } }
-    function StatusIndicatorControlComponent({ data }) {
-        const { state } = data.data || {};
-        const isOn = state === 'on';
-        return React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px' } }, 
-            React.createElement('div', { style: { width: '12px', height: '12px', borderRadius: '50%', backgroundColor: isOn ? '#2aa198' : '#333', boxShadow: isOn ? '0 0 10px #2aa198' : 'none', border: '1px solid rgba(42, 161, 152, 0.3)' } })
-        );
-    }
-
-    class PowerStatsControl extends ClassicPreset.Control { constructor(data) { super(); this.data = data; } }
-    function PowerStatsControlComponent({ data }) {
-        const { power, energy } = data.data || {};
-        if (power === null && energy === null) return React.createElement('div', { style: { fontSize: '10px', color: '#777', fontFamily: 'monospace' } }, '-- W / -- kWh');
-        return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', fontSize: '10px', color: '#e0f7fa', fontFamily: 'monospace' } }, [
-            React.createElement('div', { key: 'p' }, `PWR: ${power !== null ? power + ' W' : '--'}`),
-            energy !== null && React.createElement('div', { key: 'e' }, `NRG: ${energy} kWh`)
-        ]);
-    }
+    const {
+        ButtonControl,
+        DropdownControl,
+        StatusIndicatorControl,
+        PowerStatsControl
+    } = window.T2Controls;
 
     // -------------------------------------------------------------------------
     // NODE CLASS

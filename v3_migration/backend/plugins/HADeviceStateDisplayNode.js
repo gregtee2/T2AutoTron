@@ -1,8 +1,14 @@
 (function() {
     console.log("[HADeviceStateDisplayNode] Loading plugin...");
 
-    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[HADeviceStateDisplayNode] Missing dependencies");
+    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
+        console.error("[HADeviceStateDisplayNode] Missing dependencies", {
+            Rete: !!window.Rete,
+            React: !!window.React,
+            RefComponent: !!window.RefComponent,
+            sockets: !!window.sockets,
+            T2Controls: !!window.T2Controls
+        });
         return;
     }
 
@@ -13,49 +19,9 @@
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // CONTROLS
+    // Import shared controls from T2Controls
     // -------------------------------------------------------------------------
-    class SwitchControl extends ClassicPreset.Control {
-        constructor(label, initialValue, onChange) {
-            super();
-            this.label = label;
-            this.value = initialValue;
-            this.onChange = onChange;
-        }
-    }
-
-    function SwitchControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-        
-        useEffect(() => {
-            setValue(data.value);
-        }, [data.value]);
-        
-        const handleChange = (e) => {
-            const val = e.target.checked;
-            setValue(val);
-            data.value = val;
-            if (data.onChange) data.onChange(val);
-        };
-
-        return React.createElement('div', { 
-            style: { display: 'flex', alignItems: 'center', marginBottom: '5px' },
-            onPointerDown: (e) => e.stopPropagation()
-        }, [
-            React.createElement('input', {
-                key: 'input',
-                type: 'checkbox',
-                checked: value,
-                onChange: handleChange,
-                onPointerDown: (e) => e.stopPropagation(),
-                style: { accentColor: '#00f3ff', marginRight: '8px' }
-            }),
-            React.createElement('span', { 
-                key: 'label',
-                style: { fontSize: '11px', color: '#00f3ff', textTransform: 'uppercase' } 
-            }, data.label)
-        ]);
-    }
+    const { SwitchControl } = window.T2Controls;
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -274,10 +240,7 @@
         ]);
     }
 
-    // Register control component
-    if (window.ReteControlRenderers) {
-        window.ReteControlRenderers.set(SwitchControl, SwitchControlComponent);
-    }
+    // Note: SwitchControl component is already registered by 00_SharedControlsPlugin.js
 
     // -------------------------------------------------------------------------
     // REGISTER

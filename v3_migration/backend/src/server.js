@@ -163,9 +163,20 @@ app.get('/api/plugins', async (req, res) => {
     }
 
     const files = await fs.readdir(pluginsDir);
-    const jsFiles = files.filter(file => file.endsWith('.js')).map(file => `plugins/${file}`);
-    console.log('Found plugins:', jsFiles);
-    res.json(jsFiles);
+    const jsFiles = files.filter(file => file.endsWith('.js'));
+    
+    // Sort: 00_ infrastructure files first (alphabetically), then other files alphabetically
+    jsFiles.sort((a, b) => {
+      const aIsInfra = a.startsWith('00_');
+      const bIsInfra = b.startsWith('00_');
+      if (aIsInfra && !bIsInfra) return -1;  // a comes first
+      if (!aIsInfra && bIsInfra) return 1;   // b comes first
+      return a.localeCompare(b);              // alphabetical within same type
+    });
+    
+    const pluginPaths = jsFiles.map(file => `plugins/${file}`);
+    console.log('Found plugins (sorted):', pluginPaths);
+    res.json(pluginPaths);
   } catch (error) {
     logger.log(`Failed to list plugins: ${error.message}`, 'error', false, 'plugins:error', { stack: error.stack });
     console.error(`Failed to list plugins: ${error.message}`);

@@ -6,227 +6,35 @@
         return;
     }
 
+    // Check for shared controls
+    if (!window.T2Controls) {
+        console.error("[HAGenericDeviceNode] Missing T2Controls - ensure 00_SharedControlsPlugin.js loads first");
+        return;
+    }
+
     const { ClassicPreset } = window.Rete;
     const React = window.React;
     const { useState, useEffect, useRef } = React;
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
-    const socket = window.socket; // Assuming global socket instance
+    const socket = window.socket;
+
+    // Import shared controls from T2Controls (DRY)
+    const {
+        ButtonControl,
+        DropdownControl,
+        SwitchControl,
+        NumberControl,
+        StatusIndicatorControl,
+        ColorBarControl,
+        PowerStatsControl,
+        THEME,
+        stopPropagation
+    } = window.T2Controls;
 
     // -------------------------------------------------------------------------
-    // CSS is now loaded from node-styles.css via index.css
+    // DEVICE STATE CONTROL (specific to this node)
     // -------------------------------------------------------------------------
-
-    // -------------------------------------------------------------------------
-    // CONTROLS
-    // -------------------------------------------------------------------------
-    
-    // Button Control
-    class ButtonControl extends ClassicPreset.Control {
-        constructor(label, onClick) {
-            super();
-            this.label = label;
-            this.onClick = onClick;
-        }
-    }
-    function ButtonControlComponent({ data }) {
-        return React.createElement('button', {
-            onPointerDown: (e) => e.stopPropagation(),
-            onDoubleClick: (e) => e.stopPropagation(),
-            onClick: data.onClick,
-            style: {
-                width: "100%", padding: "8px", marginBottom: "5px",
-                background: "rgba(0, 243, 255, 0.1)", border: "1px solid rgba(0, 243, 255, 0.4)",
-                color: "#00f3ff", borderRadius: "20px", cursor: "pointer",
-                fontWeight: "600", textTransform: "uppercase", fontSize: "12px", transition: "all 0.2s"
-            },
-            onMouseOver: (e) => { e.currentTarget.style.background = "rgba(0, 243, 255, 0.25)"; e.currentTarget.style.boxShadow = "0 0 12px rgba(0, 243, 255, 0.4)"; },
-            onMouseOut: (e) => { e.currentTarget.style.background = "rgba(0, 243, 255, 0.1)"; e.currentTarget.style.boxShadow = "none"; }
-        }, data.label);
-    }
-
-    // Dropdown Control
-    class DropdownControl extends ClassicPreset.Control {
-        constructor(label, values, initialValue, onChange) {
-            super();
-            this.label = label;
-            this.values = values;
-            this.value = initialValue;
-            this.onChange = onChange;
-        }
-    }
-    function DropdownControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-        const [values, setValues] = useState(data.values);
-        const [seed, setSeed] = useState(0);
-        
-        useEffect(() => { 
-            setValue(data.value);
-            setValues(data.values);
-        }, [data.value, data.values]);
-        
-        // Allow external updates to trigger re-render
-        useEffect(() => {
-            data.updateDropdown = () => {
-                setValues([...data.values]);
-                setValue(data.value);
-                setSeed(s => s + 1);
-            };
-            return () => { data.updateDropdown = null; };
-        }, [data]);
-        
-        const handleChange = (e) => {
-            const val = e.target.value;
-            setValue(val);
-            data.value = val;
-            if (data.onChange) data.onChange(val);
-        };
-        return React.createElement('div', { style: { marginBottom: "5px" } }, [
-            data.label && React.createElement('label', { key: 'l', style: { display: "block", fontSize: "10px", color: "#00f3ff", marginBottom: "2px", textTransform: "uppercase", letterSpacing: "0.5px" } }, data.label),
-            React.createElement('select', {
-                key: 's',
-                value: value,
-                onChange: handleChange,
-                onPointerDown: (e) => e.stopPropagation(),
-                onDoubleClick: (e) => e.stopPropagation(),
-                style: { width: "100%", background: "#0a0f14", color: "#00f3ff", border: "1px solid rgba(0, 243, 255, 0.3)", padding: "6px", borderRadius: "4px", outline: "none", fontSize: "12px" }
-            }, values.map(v => React.createElement('option', { key: v, value: v, style: { background: "#0a0f14", color: "#00f3ff" } }, v)))
-        ]);
-    }
-
-    // Switch Control
-    class SwitchControl extends ClassicPreset.Control {
-        constructor(label, initialValue, onChange) {
-            super();
-            this.label = label;
-            this.value = initialValue;
-            this.onChange = onChange;
-        }
-    }
-    function SwitchControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-        const handleChange = (e) => {
-            const val = e.target.checked;
-            setValue(val);
-            data.value = val;
-            if (data.onChange) data.onChange(val);
-        };
-        return React.createElement('div', { style: { display: "flex", alignItems: "center", marginBottom: "5px" } }, [
-            React.createElement('input', {
-                key: 'i',
-                type: 'checkbox',
-                checked: value,
-                onChange: handleChange,
-                onPointerDown: (e) => e.stopPropagation(),
-                onDoubleClick: (e) => e.stopPropagation(),
-                style: { accentColor: "#00f3ff" }
-            }),
-            React.createElement('span', { key: 's', style: { marginLeft: "5px", fontSize: "12px", color: "#00f3ff", textTransform: "uppercase", letterSpacing: "0.5px" } }, data.label)
-        ]);
-    }
-
-    // Number Control
-    class NumberControl extends ClassicPreset.Control {
-        constructor(label, initialValue, onChange, options = {}) {
-            super();
-            this.label = label;
-            this.value = initialValue;
-            this.onChange = onChange;
-            this.options = options;
-        }
-    }
-    function NumberControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-        const handleChange = (e) => {
-            const val = Number(e.target.value);
-            setValue(val);
-            data.value = val;
-            if (data.onChange) data.onChange(val);
-        };
-        return React.createElement('div', { style: { marginBottom: "5px" } }, [
-            data.label && React.createElement('label', { key: 'l', style: { display: "block", fontSize: "10px", color: "#00f3ff", marginBottom: "2px", textTransform: "uppercase", letterSpacing: "0.5px" } }, data.label),
-            React.createElement('input', {
-                key: 'i',
-                type: 'number',
-                value: value,
-                onChange: handleChange,
-                min: data.options.min,
-                max: data.options.max,
-                step: data.options.step,
-                onPointerDown: (e) => e.stopPropagation(),
-                onDoubleClick: (e) => e.stopPropagation(),
-                style: { width: "100%", background: "#0a0f14", color: "#00f3ff", border: "1px solid rgba(0, 243, 255, 0.3)", padding: "6px", borderRadius: "4px", outline: "none", fontSize: "12px" }
-            })
-        ]);
-    }
-
-    // Status Indicator Control
-    class StatusIndicatorControl extends ClassicPreset.Control {
-        constructor(data) { super(); this.data = data; }
-    }
-    function StatusIndicatorControlComponent({ data }) {
-        const { state, color } = data.data || {};
-        const isOn = state === 'on' || state === 'open' || state === 'playing';
-        const activeColor = color || (isOn ? '#00f3ff' : '#333');
-        return React.createElement('div', {
-            style: { display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px', width: '100%' },
-            onPointerDown: (e) => e.stopPropagation()
-        }, React.createElement('div', {
-            style: {
-                width: '12px', height: '12px', borderRadius: '50%',
-                backgroundColor: isOn ? activeColor : 'rgba(0, 20, 30, 0.8)',
-                boxShadow: isOn ? `0 0 10px ${activeColor}, 0 0 20px ${activeColor}` : 'none',
-                transition: 'all 0.3s ease', border: '1px solid rgba(0, 243, 255, 0.3)'
-            }
-        }));
-    }
-
-    // Color Bar Control
-    class ColorBarControl extends ClassicPreset.Control {
-        constructor(data) { super(); this.data = data; }
-    }
-    function ColorBarControlComponent({ data }) {
-        const { brightness, hs_color, entityType } = data.data || {};
-        let barColor = '#444';
-        if (hs_color && hs_color.length === 2) {
-            barColor = `hsl(${hs_color[0]}, ${hs_color[1]}%, 50%)`;
-        } else if (entityType === 'light') {
-            barColor = '#ffaa00';
-        }
-        const widthPercent = brightness ? (brightness / 255) * 100 : 0;
-        return React.createElement('div', {
-            style: { width: '100%', height: '8px', backgroundColor: 'rgba(0, 20, 30, 0.6)', borderRadius: '4px', overflow: 'hidden', marginTop: '5px', border: '1px solid rgba(0, 243, 255, 0.2)' },
-            onPointerDown: (e) => e.stopPropagation()
-        }, React.createElement('div', {
-            style: { width: `${widthPercent}%`, height: '100%', backgroundColor: barColor, transition: 'all 0.3s ease', boxShadow: `0 0 10px ${barColor}` }
-        }));
-    }
-
-    // Power Stats Control
-    class PowerStatsControl extends ClassicPreset.Control {
-        constructor(data) { super(); this.data = data; }
-    }
-    function PowerStatsControlComponent({ data }) {
-        const { power, energy } = data.data || {};
-        if (power === null && energy === null) {
-            return React.createElement('div', { style: { fontSize: '10px', color: '#777', marginTop: '5px', fontFamily: 'monospace' } }, '-- W / -- kWh');
-        }
-        return React.createElement('div', {
-            style: { display: 'flex', flexDirection: 'column', fontSize: '10px', color: '#e0f7fa', marginTop: '5px', fontFamily: 'monospace' },
-            onPointerDown: (e) => e.stopPropagation()
-        }, [
-            React.createElement('div', { key: 'p', style: { display: 'flex', justifyContent: 'space-between' } }, [
-                React.createElement('span', { key: 'l' }, 'PWR:'),
-                React.createElement('span', { key: 'v', style: { color: '#00f3ff' } }, power !== null ? `${power} W` : '--')
-            ]),
-            energy !== null && React.createElement('div', { key: 'e', style: { display: 'flex', justifyContent: 'space-between' } }, [
-                React.createElement('span', { key: 'l' }, 'NRG:'),
-                React.createElement('span', { key: 'v', style: { color: '#ffaa00' } }, `${energy} kWh`)
-            ])
-        ]);
-    }
-
-    // Device State Control
     class DeviceStateControl extends ClassicPreset.Control {
         constructor(deviceId, getState) {
             super();
@@ -234,31 +42,108 @@
             this.getState = getState;
         }
     }
+    
     function DeviceStateControlComponent({ data }) {
         const state = data.getState ? data.getState(data.deviceId) : null;
         if (!state) {
-            return React.createElement('div', { style: { padding: "4px 8px", background: "rgba(0, 20, 30, 0.6)", borderRadius: "4px", marginBottom: "4px", display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: "24px", border: "1px solid rgba(0, 243, 255, 0.1)" } }, 
-                React.createElement('span', { style: { fontSize: "11px", color: "rgba(0, 243, 255, 0.5)" } }, "No state data")
+            return React.createElement('div', { 
+                style: { 
+                    padding: "4px 8px", 
+                    background: THEME.backgroundAlt, 
+                    borderRadius: "4px", 
+                    marginBottom: "4px", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "space-between", 
+                    minHeight: "24px", 
+                    border: `1px solid ${THEME.primaryRgba(0.1)}` 
+                } 
+            }, 
+                React.createElement('span', { 
+                    style: { fontSize: "11px", color: THEME.primaryRgba(0.5) } 
+                }, "No state data")
             );
         }
         const isOn = state.on || state.state === 'on';
         const brightness = state.brightness ? Math.round((state.brightness / 255) * 100) : 0;
         const hsColor = state.hs_color || [0, 0];
         const [hue, saturation] = hsColor;
-        let color = "#e74c3c";
+        let color = THEME.error;
         if (isOn) {
-            color = (saturation === 0) ? "#f1c40f" : `hsl(${hue}, ${saturation}%, 50%)`;
+            color = (saturation === 0) ? THEME.warning : `hsl(${hue}, ${saturation}%, 50%)`;
         }
-        return React.createElement('div', { style: { padding: "6px 8px", background: "rgba(0, 20, 30, 0.6)", borderRadius: "4px", marginBottom: "4px", border: "1px solid rgba(0, 243, 255, 0.2)", display: "flex", flexDirection: "column" } }, [
-            React.createElement('div', { key: 'top', style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isOn ? "4px" : "0" } }, [
-                React.createElement('div', { key: 'left', style: { display: "flex", alignItems: "center", flex: 1, overflow: "hidden" } }, [
-                    React.createElement('div', { key: 'ind', style: { width: "14px", height: "14px", borderRadius: "50%", background: color, border: "1px solid rgba(255,255,255,0.3)", marginRight: "8px", flexShrink: 0, boxShadow: isOn ? `0 0 5px ${color}` : "none" } }),
-                    React.createElement('span', { key: 'name', style: { fontSize: "12px", color: "#e0f7fa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginRight: "8px" } }, state.name || data.deviceId)
+        return React.createElement('div', { 
+            style: { 
+                padding: "6px 8px", 
+                background: THEME.backgroundAlt, 
+                borderRadius: "4px", 
+                marginBottom: "4px", 
+                border: `1px solid ${THEME.primaryRgba(0.2)}`, 
+                display: "flex", 
+                flexDirection: "column" 
+            } 
+        }, [
+            React.createElement('div', { 
+                key: 'top', 
+                style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isOn ? "4px" : "0" } 
+            }, [
+                React.createElement('div', { 
+                    key: 'left', 
+                    style: { display: "flex", alignItems: "center", flex: 1, overflow: "hidden" } 
+                }, [
+                    React.createElement('div', { 
+                        key: 'ind', 
+                        style: { 
+                            width: "14px", 
+                            height: "14px", 
+                            borderRadius: "50%", 
+                            background: color, 
+                            border: "1px solid rgba(255,255,255,0.3)", 
+                            marginRight: "8px", 
+                            flexShrink: 0, 
+                            boxShadow: isOn ? `0 0 5px ${color}` : "none" 
+                        } 
+                    }),
+                    React.createElement('span', { 
+                        key: 'name', 
+                        style: { 
+                            fontSize: "12px", 
+                            color: THEME.text, 
+                            whiteSpace: "nowrap", 
+                            overflow: "hidden", 
+                            textOverflow: "ellipsis", 
+                            marginRight: "8px" 
+                        } 
+                    }, state.name || data.deviceId)
                 ]),
-                React.createElement('span', { key: 'val', style: { fontSize: "10px", color: "#00f3ff", fontFamily: "monospace", whiteSpace: "nowrap" } }, isOn ? `${brightness}%` : "Off")
+                React.createElement('span', { 
+                    key: 'val', 
+                    style: { 
+                        fontSize: "10px", 
+                        color: THEME.primary, 
+                        fontFamily: "monospace", 
+                        whiteSpace: "nowrap" 
+                    } 
+                }, isOn ? `${brightness}%` : "Off")
             ]),
-            isOn && React.createElement('div', { key: 'bar', style: { width: "100%", height: "4px", background: "rgba(0, 243, 255, 0.1)", borderRadius: "2px", overflow: "hidden" } }, 
-                React.createElement('div', { style: { width: `${brightness}%`, height: "100%", background: `linear-gradient(90deg, rgba(0, 243, 255, 0.2), ${color})`, transition: "width 0.3s ease-out" } })
+            isOn && React.createElement('div', { 
+                key: 'bar', 
+                style: { 
+                    width: "100%", 
+                    height: "4px", 
+                    background: THEME.primaryRgba(0.1), 
+                    borderRadius: "2px", 
+                    overflow: "hidden" 
+                } 
+            }, 
+                React.createElement('div', { 
+                    style: { 
+                        width: `${brightness}%`, 
+                        height: "100%", 
+                        background: `linear-gradient(90deg, ${THEME.primaryRgba(0.2)}, ${color})`, 
+                        transition: "width 0.3s ease-out" 
+                    } 
+                })
             )
         ]);
     }
@@ -310,6 +195,22 @@
 
         static compareNames(a = "", b = "") {
             return a.localeCompare(b, undefined, { sensitivity: "base" });
+        }
+
+        // Helper to get the correct API endpoint and clean ID for a device
+        getDeviceApiInfo(id) {
+            if (!id) return null;
+            if (id.startsWith('ha_')) {
+                return { endpoint: '/api/lights/ha', cleanId: id };
+            } else if (id.startsWith('kasa_')) {
+                return { endpoint: '/api/lights/kasa', cleanId: id.replace('kasa_', '') };
+            } else if (id.startsWith('hue_')) {
+                return { endpoint: '/api/lights/hue', cleanId: id.replace('hue_', '') };
+            } else if (id.startsWith('shelly_')) {
+                return { endpoint: '/api/lights/shelly', cleanId: id.replace('shelly_', '') };
+            }
+            // Default to HA endpoint for unrecognized prefixes
+            return { endpoint: '/api/lights/ha', cleanId: id };
         }
 
         normalizeSelectedDeviceNames() {
@@ -381,9 +282,16 @@
                 this.lastTriggerValue = trigger;
                 this.hadConnection = hasConnection;
                 
-                // Sync HSV state
+                // Sync HSV state AND apply it immediately if connected
                 if (hsvInput && typeof hsvInput === 'object') {
                     this.lastHsvInfo = JSON.stringify(hsvInput);
+                    // Apply HSV immediately on first connection
+                    setTimeout(async () => {
+                        if (this.properties.debug) {
+                            console.log(`[HAGenericDeviceNode] Initial HSV sync - applying color immediately`);
+                        }
+                        await this.applyHSVInput(hsvInput);
+                    }, 500);
                 }
                 
                 // In Follow mode, apply the current trigger state to all devices
@@ -452,7 +360,8 @@
         triggerUpdate() { if (this.changeCallback) this.changeCallback(); }
 
         setupControls() {
-            this.addControl("filter", new DropdownControl("Filter Devices", ["All", "Light", "Switch"], "All", (v) => { this.properties.filterType = v; this.updateDeviceSelectorOptions(); this.triggerUpdate(); }));
+            // Filter options: All, Light, Switch (includes HA switches and Kasa plugs/wall switches)
+            this.addControl("filter", new DropdownControl("Filter Devices", ["All", "Light", "Switch", "Plug"], "All", (v) => { this.properties.filterType = v; this.updateDeviceSelectorOptions(); this.triggerUpdate(); }));
             this.addControl("trigger_mode", new DropdownControl("Input Mode", ["Toggle", "Follow", "Turn On", "Turn Off"], "Follow", (v) => { this.properties.triggerMode = v; }));
             this.addControl("add_device", new ButtonControl("➕ Add Device", () => this.onAddDevice()));
             this.addControl("remove_device", new ButtonControl("➖ Remove Device", () => this.onRemoveDevice()));
@@ -496,15 +405,32 @@
             // Skip API calls during graph loading
             if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
-                // Use /api/lights/ha/ to get all Home Assistant devices
-                const response = await fetch('/api/lights/ha/', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
+                // Use unified /api/devices to get ALL devices (HA, Kasa, Hue, Shelly, etc.)
+                const response = await fetch('/api/devices', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                 const data = await response.json();
-                if (data.success && Array.isArray(data.devices)) {
-                    this.devices = data.devices.map(d => ({
-                        ...d,
-                        // Normalize the type field - extract from id if needed (handle ha_ prefix)
-                        type: d.type || (d.id?.includes('.') ? d.id.split('.')[0].replace(/^ha_/, '') : 'unknown')
-                    })).sort((a, b) =>
+                if (data.success && data.devices) {
+                    // Combine all device sources into a single flat list
+                    const allDevices = [];
+                    for (const [prefix, devices] of Object.entries(data.devices)) {
+                        if (Array.isArray(devices)) {
+                            devices.forEach(d => {
+                                // Normalize device type for filtering
+                                let deviceType = d.type || 'unknown';
+                                // Handle HA device types (ha_light.xxx -> light)
+                                if (d.id?.startsWith('ha_') && d.id.includes('.')) {
+                                    deviceType = d.id.split('.')[0].replace(/^ha_/, '');
+                                }
+                                // Kasa plugs (wall switches) should show as 'plug' type
+                                // Kasa bulbs show as 'bulb' type
+                                allDevices.push({
+                                    ...d,
+                                    type: deviceType,
+                                    source: prefix.replace('_', '') // 'ha', 'kasa', 'hue', 'shelly', etc.
+                                });
+                            });
+                        }
+                    }
+                    this.devices = allDevices.sort((a, b) =>
                         HAGenericDeviceNode.compareNames(a.name || a.id, b.name || b.id)
                     );
                     this.normalizeSelectedDeviceNames();
@@ -553,13 +479,43 @@
 
         getAllDevicesWithUniqueNames() {
             const devices = this.devices || [];
-            const nameCounts = devices.reduce((acc, device) => {
+            
+            // Filter out auxiliary HA entities (LED indicators, firmware updates, diagnostics, etc.)
+            const auxiliaryPatterns = [
+                / LED$/i,
+                / Auto-update enabled$/i,
+                / Firmware$/i,
+                / Restart$/i,
+                / Identify$/i,
+                / Power on behavior$/i,
+                / Signal strength$/i,
+                / Uptime$/i,
+                / Last seen$/i,
+                / Battery$/i,
+                / Temperature$/i,          // Sensor entities for device temperature
+                / Link quality$/i,
+                / Update available$/i,
+                / OTA Progress$/i,
+                /_update$/i,               // entity_id patterns
+                /_led$/i,
+                /_identify$/i,
+                /_restart$/i,
+                /_firmware$/i,
+            ];
+            
+            const filteredDevices = devices.filter(device => {
+                const name = (device.name || device.id || "").trim();
+                // Check if name matches any auxiliary pattern
+                return !auxiliaryPatterns.some(pattern => pattern.test(name));
+            });
+            
+            const nameCounts = filteredDevices.reduce((acc, device) => {
                 const key = (device.name || device.id || "").trim();
                 acc[key] = (acc[key] || 0) + 1;
                 return acc;
             }, {});
 
-            return devices
+            return filteredDevices
                 .map(device => {
                     const baseName = (device.name || device.id || "").trim();
                     const displayName = nameCounts[baseName] > 1 ? `${baseName} (${device.id})` : baseName;
@@ -571,8 +527,19 @@
         getDeviceOptions() {
             let list = this.getAllDevicesWithUniqueNames();
             if (this.properties.filterType !== "All") {
-                const type = this.properties.filterType.toLowerCase();
-                list = list.filter(item => item.device.type?.toLowerCase() === type);
+                const filterType = this.properties.filterType.toLowerCase();
+                list = list.filter(item => {
+                    const deviceType = item.device.type?.toLowerCase() || '';
+                    // "Switch" filter matches 'switch' (HA switches), 'plug' (Kasa wall switches), and 'light' (dimmable switches/lights)
+                    if (filterType === 'switch') {
+                        return deviceType === 'switch' || deviceType === 'plug' || deviceType === 'light';
+                    }
+                    // "Light" filter also matches lights (same devices, different filter name)
+                    if (filterType === 'light') {
+                        return deviceType === 'light' || deviceType === 'plug';
+                    }
+                    return deviceType === filterType;
+                });
             }
             return list.map(item => item.displayName);
         }
@@ -620,7 +587,9 @@
             // Skip API calls during graph loading
             if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
-                const res = await fetch(`/api/lights/ha/${id}/state`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
+                const apiInfo = this.getDeviceApiInfo(id);
+                if (!apiInfo) return;
+                const res = await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                 const data = await res.json();
                 if (data.success && data.state) {
                     this.perDeviceState[id] = data.state;
@@ -639,8 +608,14 @@
             if (ids.length === 0) return;
             this.updateStatus("Applying control...");
             await Promise.all(ids.map(async (id) => {
-                const entityType = id.split('.')[0];
-                const isLight = entityType === "light" || entityType === "ha_light";
+                const apiInfo = this.getDeviceApiInfo(id);
+                if (!apiInfo) return;
+                
+                const device = this.devices.find(d => d.id === id);
+                const deviceType = device?.type || (id.includes('.') ? id.split('.')[0].replace(/^ha_/, '') : 'light');
+                const isLight = deviceType === "light" || deviceType === "bulb";
+                const isKasa = id.startsWith('kasa_');
+                
                 let turnOn = info.on ?? true;
                 let hs_color = null;
                 let color_temp_kelvin = null;
@@ -655,17 +630,47 @@
                 if (info.brightness !== undefined) brightness = info.brightness;
                 else if (info.v !== undefined) brightness = Math.round((info.v ?? 0) * 255);
                 if (brightness === 0) turnOn = false;
-                const payload = { on: turnOn, state: turnOn ? "on" : "off" };
-                if (turnOn && isLight) {
-                    if (color_temp_kelvin) payload.color_temp_kelvin = color_temp_kelvin;
-                    else if (hs_color) payload.hs_color = hs_color;
-                    if (brightness !== null) payload.brightness = Math.max(0, Math.min(255, Math.round(brightness)));
+                
+                let payload;
+                if (isKasa) {
+                    // Kasa uses hsv format with hue (0-360), saturation (0-100), brightness (0-100)
+                    payload = { on: turnOn };
+                    if (turnOn && isLight && hs_color) {
+                        payload.hsv = {
+                            hue: Math.round(hs_color[0]),
+                            saturation: Math.round(hs_color[1]),
+                            brightness: brightness !== null ? Math.round((brightness / 255) * 100) : 100
+                        };
+                    }
                     if (transitionMs) payload.transition = transitionMs;
+                } else {
+                    // HA format
+                    payload = { on: turnOn, state: turnOn ? "on" : "off" };
+                    if (turnOn && isLight) {
+                        if (color_temp_kelvin) payload.color_temp_kelvin = color_temp_kelvin;
+                        else if (hs_color) payload.hs_color = hs_color;
+                        if (brightness !== null) payload.brightness = Math.max(0, Math.min(255, Math.round(brightness)));
+                        if (transitionMs) payload.transition = transitionMs;
+                    }
                 }
                 try {
-                    await fetch(`/api/lights/ha/${id}/state`, { method: "PUT", headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, body: JSON.stringify(payload) });
+                    // For Kasa devices, use POST to /on or /off endpoint
+                    if (isKasa) {
+                        const action = turnOn ? 'on' : 'off';
+                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
+                            method: "POST", 
+                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
+                            body: JSON.stringify(payload) 
+                        });
+                    } else {
+                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                            method: "PUT", 
+                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
+                            body: JSON.stringify(payload) 
+                        });
+                    }
                     const current = this.perDeviceState[id] || {};
-                    this.perDeviceState[id] = { ...current, on: turnOn, state: payload.state, ...(hs_color ? { hs_color } : {}), ...(color_temp_kelvin ? { color_temp_kelvin } : {}), ...(brightness !== null ? { brightness } : {}) };
+                    this.perDeviceState[id] = { ...current, on: turnOn, state: turnOn ? "on" : "off", ...(hs_color ? { hs_color } : {}), ...(color_temp_kelvin ? { color_temp_kelvin } : {}), ...(brightness !== null ? { brightness } : {}) };
                     this.updateDeviceControls(id, this.perDeviceState[id]);
                 } catch (e) { console.error(`Control apply failed for ${id}`, e); }
             }));
@@ -684,10 +689,28 @@
             if (ids.length === 0) return;
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
             await Promise.all(ids.map(async (id) => {
+                const apiInfo = this.getDeviceApiInfo(id);
+                if (!apiInfo) return;
+                const isKasa = id.startsWith('kasa_');
+                
                 const payload = { on: turnOn, state: turnOn ? "on" : "off" };
                 if (turnOn && transitionMs) payload.transition = transitionMs;
                 try {
-                    await fetch(`/api/lights/ha/${id}/state`, { method: "PUT", headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, body: JSON.stringify(payload) });
+                    if (isKasa) {
+                        // Kasa uses POST to /on or /off endpoint
+                        const action = turnOn ? 'on' : 'off';
+                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
+                            method: "POST", 
+                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
+                            body: JSON.stringify(payload) 
+                        });
+                    } else {
+                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                            method: "PUT", 
+                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
+                            body: JSON.stringify(payload) 
+                        });
+                    }
                     this.perDeviceState[id] = { ...this.perDeviceState[id], on: turnOn, state: payload.state };
                     this.updateDeviceControls(id, this.perDeviceState[id]);
                 } catch (e) { console.error(`Set state failed for ${id}`, e); }
@@ -702,12 +725,28 @@
             if (ids.length === 0) { this.updateStatus("No devices selected"); return; }
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
             await Promise.all(ids.map(async (id) => {
+                const apiInfo = this.getDeviceApiInfo(id);
+                if (!apiInfo) return;
+                const isKasa = id.startsWith('kasa_');
+                
                 const current = this.perDeviceState[id] || { on: false };
                 const newOn = !current.on;
                 const payload = { on: newOn, state: newOn ? "on" : "off" };
                 if (newOn && transitionMs) payload.transition = transitionMs;
                 try {
-                    await fetch(`/api/lights/ha/${id}/state`, { method: "PUT", headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, body: JSON.stringify(payload) });
+                    if (isKasa) {
+                        // Kasa uses POST to /on, /off, or /toggle endpoint
+                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/toggle`, { 
+                            method: "POST", 
+                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }
+                        });
+                    } else {
+                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                            method: "PUT", 
+                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
+                            body: JSON.stringify(payload) 
+                        });
+                    }
                     this.perDeviceState[id] = { ...this.perDeviceState[id], on: newOn, state: payload.state };
                     this.updateDeviceControls(id, this.perDeviceState[id]);
                 } catch (e) { console.error(`Toggle failed for ${id}`, e); }

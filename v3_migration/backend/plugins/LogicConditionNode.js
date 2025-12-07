@@ -1,8 +1,14 @@
 (function() {
     console.log("[LogicConditionNode] Loading plugin...");
 
-    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[LogicConditionNode] Missing dependencies");
+    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
+        console.error("[LogicConditionNode] Missing dependencies", {
+            Rete: !!window.Rete,
+            React: !!window.React,
+            RefComponent: !!window.RefComponent,
+            sockets: !!window.sockets,
+            T2Controls: !!window.T2Controls
+        });
         return;
     }
 
@@ -13,93 +19,9 @@
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // CONTROLS
+    // Import shared controls from T2Controls
     // -------------------------------------------------------------------------
-    class DropdownControl extends ClassicPreset.Control {
-        constructor(label, values, initialValue, onChange) {
-            super();
-            this.label = label;
-            this.values = values;
-            this.value = initialValue;
-            this.onChange = onChange;
-        }
-    }
-
-    function DropdownControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-        
-        // Update local state if data.value changes externally
-        useEffect(() => {
-            setValue(data.value);
-        }, [data.value]);
-
-        // Update options if data.values changes
-        const [options, setOptions] = useState(data.values);
-        useEffect(() => {
-            setOptions(data.values);
-        }, [data.values]);
-
-        const handleChange = (e) => {
-            const val = e.target.value;
-            setValue(val);
-            data.value = val;
-            if (data.onChange) data.onChange(val);
-        };
-
-        return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' } }, [
-            React.createElement('label', { style: { fontSize: '10px', color: '#aaa' } }, data.label),
-            React.createElement('select', {
-                value: value,
-                onChange: handleChange,
-                onPointerDown: (e) => e.stopPropagation(),
-                onDoubleClick: (e) => e.stopPropagation()
-            }, options.map(v => React.createElement('option', { key: v, value: v }, v)))
-        ]);
-    }
-
-    class InputControl extends ClassicPreset.Control {
-        constructor(label, initialValue, onChange, type = "text") {
-            super();
-            this.label = label;
-            this.value = initialValue;
-            this.onChange = onChange;
-            this.type = type;
-        }
-    }
-
-    function InputControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-
-        useEffect(() => {
-            setValue(data.value);
-        }, [data.value]);
-
-        const handleChange = (e) => {
-            const val = e.target.value;
-            setValue(val);
-            data.value = val;
-            if (data.onChange) data.onChange(val);
-        };
-
-        return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' } }, [
-            React.createElement('label', { style: { fontSize: '10px', color: '#aaa' } }, data.label),
-            React.createElement('input', {
-                type: data.type,
-                value: value,
-                onChange: handleChange,
-                onPointerDown: (e) => e.stopPropagation(),
-                onDoubleClick: (e) => e.stopPropagation(),
-                style: {
-                    background: '#222',
-                    color: 'white',
-                    border: '1px solid #555',
-                    padding: '4px',
-                    borderRadius: '4px',
-                    width: '100%'
-                }
-            })
-        ]);
-    }
+    const { DropdownControl, InputControl } = window.T2Controls;
 
     // -------------------------------------------------------------------------
     // NODE CLASS

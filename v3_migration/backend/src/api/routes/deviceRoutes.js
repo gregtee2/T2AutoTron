@@ -26,12 +26,17 @@ module.exports = (io, deviceService) => {
           formattedDevices[prefix] = [];
           continue;
         }
-        formattedDevices[prefix] = devices.map(device => {
+        // Ensure devices is always an array (some managers may return undefined/object)
+        const deviceArray = Array.isArray(devices) ? devices : [];
+        formattedDevices[prefix] = deviceArray.map(device => {
           const id = device.id || `${prefix}${device.entity_id || device.deviceId || device.mac || device.id}`;
+          // For HA devices, extract type from entity_id (e.g., "light.kitchen" -> "light")
+          // For other managers, use manager.type or device.type
+          const entityType = device.entity_id?.split('.')[0] || device.type || device.deviceType || manager.type || 'unknown';
           return {
             id,
             name: device.name || device.attributes?.friendly_name || device.alias || device.entity_id?.split('.')[1] || id,
-            type: manager.type || device.type || device.deviceType || device.entity_id?.split('.')[0] || 'unknown',
+            type: entityType,
             state: device.state || { on: device.state === 'on' },
             capabilities: {
               brightness: !!(

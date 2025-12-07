@@ -1,8 +1,14 @@
+// ============================================================================
+// PushbuttonNode.js - Pushbutton node using shared T2 infrastructure
+// Refactored to use DRY principles with shared components
+// ============================================================================
+
 (function() {
     console.log("[PushbuttonNode] Loading plugin...");
 
+    // Dependency checks
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[PushbuttonNode] Missing dependencies");
+        console.error("[PushbuttonNode] Missing core dependencies");
         return;
     }
 
@@ -12,8 +18,19 @@
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
 
-    // CSS is now loaded from node-styles.css via index.css
+    // Get shared components
+    const T2Components = window.T2Components || {};
+    const { createSocketRef, StatusBadge } = T2Components;
+    const THEME = T2Components.THEME || window.T2Controls?.THEME || {
+        primary: '#00f3ff',
+        primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
+        border: 'rgba(0, 243, 255, 0.3)',
+        success: '#00ff88'
+    };
 
+    // -------------------------------------------------------------------------
+    // NODE CLASS
+    // -------------------------------------------------------------------------
     class PushbuttonNode extends ClassicPreset.Node {
         constructor(changeCallback) {
             super("Pushbutton");
@@ -22,19 +39,17 @@
 
             this.properties = {
                 state: false,
-                pulseMode: false, // Default to Latch mode (Pulse Off)
-                lastCommand: false, // Track last command for display
+                pulseMode: false,
+                lastCommand: false
             };
 
-            try {
-                const socket = sockets.boolean || new ClassicPreset.Socket('boolean');
-                this.addOutput("state", new ClassicPreset.Output(socket, "State"));
-            } catch (e) {
-                console.error("[PushbuttonNode] Error adding output:", e);
-            }
+            this.addOutput("state", new ClassicPreset.Output(
+                sockets.boolean || new ClassicPreset.Socket('boolean'), 
+                "State"
+            ));
         }
 
-        data(inputs) {
+        data() {
             return { state: this.properties.state };
         }
 
@@ -44,8 +59,7 @@
 
         restore(state) {
             if (state.properties) {
-                this.properties.state = state.properties.state || false;
-                this.properties.pulseMode = state.properties.pulseMode || false;
+                Object.assign(this.properties, state.properties);
             }
         }
 
@@ -57,16 +71,14 @@
         }
 
         toJSON() {
-            return {
-                id: this.id,
-                label: this.label,
-                properties: this.serialize()
-            };
+            return { id: this.id, label: this.label, properties: this.serialize() };
         }
     }
 
-    function PushbuttonNodeComponent(props) {
-        const { data, emit } = props;
+    // -------------------------------------------------------------------------
+    // COMPONENT
+    // -------------------------------------------------------------------------
+    function PushbuttonNodeComponent({ data, emit }) {
         const [displayState, setDisplayState] = useState(data.properties.lastCommand);
         const [pulseMode, setPulseMode] = useState(data.properties.pulseMode);
         const pulseTimeoutRef = useRef(null);
@@ -82,20 +94,20 @@
         }, [data]);
 
         const handleToggle = (e) => {
-            e.stopPropagation(); // Prevent node selection when clicking button
+            e.stopPropagation();
             
             const newState = !displayState;
 
             if (pulseMode) {
                 // Pulse Mode: Flash ON then OFF
-                data.properties.lastCommand = true; // Update lastCommand so the callback doesn't revert UI
+                data.properties.lastCommand = true;
                 setDisplayState(true);
                 data.properties.state = true;
                 if (data.triggerUpdate) data.triggerUpdate();
 
                 if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
                 pulseTimeoutRef.current = setTimeout(() => {
-                    data.properties.lastCommand = false; // Revert lastCommand
+                    data.properties.lastCommand = false;
                     setDisplayState(false);
                     data.properties.state = false;
                     if (data.triggerUpdate) data.triggerUpdate();
@@ -114,7 +126,6 @@
             data.properties.pulseMode = newMode;
             setPulseMode(newMode);
             
-            // Reset state when switching modes
             if (newMode) {
                 data.properties.state = false;
                 setDisplayState(false);
@@ -123,66 +134,121 @@
         };
 
         const outputs = Object.entries(data.outputs);
+        const buttonColor = displayState ? THEME.success : THEME.primary;
 
-        return React.createElement('div', { className: 'pushbutton-node' }, [
-            React.createElement('div', { key: 'header', className: 'header' }, [
-                React.createElement('div', { key: 'title', style: { display: 'flex', flexDirection: 'column', gap: '4px' } }, 
-                    React.createElement('span', null, data.label)
-                ),
-                React.createElement('div', { key: 'outputs', style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' } },
-                    outputs.map(([key, output]) => 
-                        React.createElement('div', { key: key, className: 'io-row' }, [
-                            React.createElement('span', { key: 'label', style: { fontSize: '10px', opacity: 0.7 } }, output.label),
-                            React.createElement(RefComponent, {
-                                key: 'ref',
-                                init: ref => emit({
-                                    type: "render",
-                                    data: {
-                                        type: "socket",
-                                        element: ref,
-                                        payload: output.socket,
-                                        nodeId: data.id,
-                                        side: "output",
-                                        key
-                                    }
-                                }),
+        return React.createElement('div', { 
+            className: 'pushbutton-node',
+            style: {
+                background: 'linear-gradient(180deg, rgba(10,20,30,0.95) 0%, rgba(5,15,25,0.98) 100%)',
+                border: `1px solid ${THEME.border}`,
+                borderRadius: '8px',
+                minWidth: '200px'
+            }
+        }, [
+            // Header with outputs
+            React.createElement('div', { 
+                key: 'header',
+                style: {
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: THEME.primaryRgba(0.1),
+                    borderBottom: `1px solid ${THEME.border}`,
+                    padding: '8px 12px',
+                    borderRadius: '7px 7px 0 0'
+                }
+            }, [
+                React.createElement('span', { 
+                    key: 'title',
+                    style: { color: THEME.primary, fontWeight: '600', fontSize: '13px', textTransform: 'uppercase' }
+                }, data.label),
+                
+                // Output sockets
+                React.createElement('div', { 
+                    key: 'outputs',
+                    style: { display: 'flex', alignItems: 'center', gap: '8px' }
+                }, outputs.map(([key, output]) => 
+                    React.createElement('div', { 
+                        key, 
+                        style: { display: 'flex', alignItems: 'center', gap: '4px' }
+                    }, [
+                        React.createElement('span', { 
+                            key: 'label',
+                            style: { fontSize: '10px', color: '#aaa' }
+                        }, output.label),
+                        createSocketRef 
+                            ? createSocketRef(emit, output.socket, data.id, 'output', key)
+                            : React.createElement(RefComponent, {
+                                key: 'socket',
+                                init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }),
                                 unmount: ref => emit({ type: "unmount", data: { element: ref } })
                             })
-                        ])
-                    )
-                )
+                    ])
+                ))
             ]),
+
+            // Content
             React.createElement('div', { 
-                key: 'content', 
-                className: 'content',
+                key: 'content',
+                style: { padding: '12px' },
                 onPointerDown: (e) => e.stopPropagation()
             }, [
+                // Big Push Button
                 React.createElement('button', {
-                    key: 'btn',
-                    className: `btn ${displayState ? 'active' : 'inactive'}`,
-                    onClick: handleToggle
-                }, pulseMode ? (displayState ? "TRIG" : "PUSH") : (displayState ? "ON" : "OFF")),
-                React.createElement('div', { key: 'pulse', className: 'pulse-control' }, [
+                    key: 'button',
+                    onClick: handleToggle,
+                    style: {
+                        width: '100%',
+                        padding: '16px',
+                        background: displayState ? `${buttonColor}30` : 'transparent',
+                        border: `2px solid ${buttonColor}`,
+                        borderRadius: '8px',
+                        color: buttonColor,
+                        fontSize: '14px',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: displayState ? `0 0 20px ${buttonColor}40` : 'none'
+                    }
+                }, displayState ? '● ON' : '○ OFF'),
+
+                // Pulse Mode Toggle
+                React.createElement('label', {
+                    key: 'pulseMode',
+                    style: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginTop: '12px',
+                        fontSize: '12px',
+                        color: '#aaa',
+                        cursor: 'pointer'
+                    }
+                }, [
                     React.createElement('input', {
-                        key: 'check',
+                        key: 'checkbox',
                         type: 'checkbox',
                         checked: pulseMode,
                         onChange: handlePulseModeChange,
-                        style: { accentColor: "#00f3ff" }
+                        style: { accentColor: THEME.primary }
                     }),
-                    React.createElement('span', { key: 'label' }, "Pulse Mode")
+                    React.createElement('span', { key: 'label' }, pulseMode ? 'Pulse Mode' : 'Latch Mode')
                 ])
             ])
         ]);
     }
 
+    // -------------------------------------------------------------------------
+    // REGISTRATION
+    // -------------------------------------------------------------------------
     window.nodeRegistry.register('PushbuttonNode', {
         label: "Pushbutton",
-        category: "Inputs",
+        category: "Input",
         nodeClass: PushbuttonNode,
         factory: (cb) => new PushbuttonNode(cb),
         component: PushbuttonNodeComponent
     });
 
-    console.log("[PushbuttonNode] Registered");
+    console.log("[PushbuttonNode] Registered (DRY refactored)");
 })();

@@ -1,8 +1,14 @@
 (function() {
     console.log("[LogicOperationsNode] Loading plugin...");
 
-    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[LogicOperationsNode] Missing dependencies");
+    if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
+        console.error("[LogicOperationsNode] Missing dependencies", {
+            Rete: !!window.Rete,
+            React: !!window.React,
+            RefComponent: !!window.RefComponent,
+            sockets: !!window.sockets,
+            T2Controls: !!window.T2Controls
+        });
         return;
     }
 
@@ -13,107 +19,9 @@
     const sockets = window.sockets;
 
     // -------------------------------------------------------------------------
-    // CSS is now loaded from node-styles.css via index.css
+    // Import shared controls from T2Controls
     // -------------------------------------------------------------------------
-
-    // -------------------------------------------------------------------------
-    // CONTROLS
-    // -------------------------------------------------------------------------
-    class DropdownControl extends ClassicPreset.Control {
-        constructor(label, values, initialValue, onChange) {
-            super();
-            this.label = label;
-            this.values = values;
-            this.value = initialValue;
-            this.onChange = onChange;
-        }
-
-        setValue(val) {
-            this.value = val;
-        }
-    }
-
-    function DropdownControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-        const [options, setOptions] = useState(data.values);
-
-        useEffect(() => {
-            setValue(data.value);
-        }, [data.value]);
-
-        useEffect(() => {
-            setOptions(data.values);
-        }, [data.values]);
-        
-        const handleChange = (e) => {
-            const val = e.target.value;
-            setValue(val);
-            data.value = val;
-            if (data.onChange) data.onChange(val);
-        };
-
-        return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } }, [
-            React.createElement('label', { style: { fontSize: '10px', color: '#aaa' } }, data.label),
-            React.createElement('select', {
-                value: value,
-                onChange: handleChange,
-                onPointerDown: (e) => e.stopPropagation(),
-                onDoubleClick: (e) => e.stopPropagation()
-            }, options.map(v => React.createElement('option', { key: v, value: v }, v)))
-        ]);
-    }
-
-    class InputControl extends ClassicPreset.Control {
-        constructor(label, initialValue, onChange, type = "text") {
-            super();
-            this.label = label;
-            this.value = initialValue;
-            this.onChange = onChange;
-            this.type = type;
-        }
-    }
-
-    function InputControlComponent({ data }) {
-        const [value, setValue] = useState(data.value);
-
-        useEffect(() => {
-            setValue(data.value);
-        }, [data.value]);
-
-        const handleChange = (e) => {
-            const val = e.target.value;
-            setValue(val);
-            data.value = val;
-            if (data.onChange) data.onChange(val);
-        };
-
-        return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } }, [
-            React.createElement('label', { style: { fontSize: '10px', color: '#aaa' } }, data.label),
-            React.createElement('input', {
-                type: data.type,
-                value: value,
-                onChange: handleChange,
-                onPointerDown: (e) => e.stopPropagation(),
-                onDoubleClick: (e) => e.stopPropagation()
-            })
-        ]);
-    }
-
-    class ButtonControl extends ClassicPreset.Control {
-        constructor(label, onClick) {
-            super();
-            this.label = label;
-            this.onClick = onClick;
-        }
-    }
-
-    function ButtonControlComponent({ data }) {
-        return React.createElement('button', {
-            onClick: data.onClick,
-            onPointerDown: (e) => e.stopPropagation(),
-            onDoubleClick: (e) => e.stopPropagation()
-        }, data.label);
-    }
+    const { DropdownControl, InputControl, ButtonControl } = window.T2Controls;
 
     // -------------------------------------------------------------------------
     // NODE CLASS

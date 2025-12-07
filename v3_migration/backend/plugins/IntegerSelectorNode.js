@@ -1,8 +1,14 @@
+// ============================================================================
+// IntegerSelectorNode.js - Integer selector using shared T2 infrastructure
+// Refactored to use DRY principles with shared components
+// ============================================================================
+
 (function() {
     console.log("[IntegerSelectorNode] Loading plugin...");
 
+    // Dependency checks
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[IntegerSelectorNode] Missing dependencies");
+        console.error("[IntegerSelectorNode] Missing core dependencies");
         return;
     }
 
@@ -12,9 +18,15 @@
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
 
-    // -------------------------------------------------------------------------
-    // CSS is now loaded from node-styles.css via index.css
-    // -------------------------------------------------------------------------
+    // Get shared components
+    const T2Components = window.T2Components || {};
+    const { createSocketRef, LabeledSlider } = T2Components;
+    const THEME = T2Components.THEME || window.T2Controls?.THEME || {
+        primary: '#00f3ff',
+        primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
+        border: 'rgba(0, 243, 255, 0.3)',
+        background: '#0a0f14'
+    };
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -31,33 +43,10 @@
                 max: 10
             };
 
-            this.addOutput("value", new ClassicPreset.Output(sockets.number, "Value"));
-        }
-
-        restore(state) {
-            if (state.properties) {
-                Object.assign(this.properties, state.properties);
-                this.properties.value = Math.max(
-                    this.properties.min,
-                    Math.min(this.properties.max, this.properties.value)
-                );
-            }
-        }
-
-        serialize() {
-            return {
-                value: this.properties.value,
-                min: this.properties.min,
-                max: this.properties.max
-            };
-        }
-
-        toJSON() {
-            return {
-                id: this.id,
-                label: this.label,
-                properties: this.serialize()
-            };
+            this.addOutput("value", new ClassicPreset.Output(
+                sockets.number || new ClassicPreset.Socket('number'), 
+                "Value"
+            ));
         }
 
         data() {
@@ -87,6 +76,28 @@
             }
             if (this.changeCallback) this.changeCallback();
         }
+
+        restore(state) {
+            if (state.properties) {
+                Object.assign(this.properties, state.properties);
+                this.properties.value = Math.max(
+                    this.properties.min,
+                    Math.min(this.properties.max, this.properties.value)
+                );
+            }
+        }
+
+        serialize() {
+            return {
+                value: this.properties.value,
+                min: this.properties.min,
+                max: this.properties.max
+            };
+        }
+
+        toJSON() {
+            return { id: this.id, label: this.label, properties: this.serialize() };
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -106,8 +117,7 @@
             return () => { data.changeCallback = null; };
         }, [data]);
 
-        const handleSliderChange = (e) => {
-            const val = parseInt(e.target.value, 10);
+        const handleSliderChange = (val) => {
             setValue(val);
             data.setValue(val);
         };
@@ -129,88 +139,167 @@
         };
 
         const outputs = Object.entries(data.outputs);
+        const stopProp = (e) => e.stopPropagation();
 
-        return React.createElement('div', { className: 'integer-selector-node' }, [
-            React.createElement('div', { key: 'header', className: 'header' }, 'Integer Selector'),
+        const inputStyle = {
+            width: '50px',
+            background: THEME.background,
+            color: THEME.primary,
+            border: `1px solid ${THEME.border}`,
+            borderRadius: '4px',
+            padding: '4px',
+            fontSize: '11px',
+            textAlign: 'center'
+        };
+
+        return React.createElement('div', { 
+            className: 'integer-selector-node',
+            style: {
+                background: 'linear-gradient(180deg, rgba(10,20,30,0.95) 0%, rgba(5,15,25,0.98) 100%)',
+                border: `1px solid ${THEME.border}`,
+                borderRadius: '8px',
+                minWidth: '180px'
+            }
+        }, [
+            // Header
             React.createElement('div', { 
-                key: 'content', 
-                className: 'content',
-                onPointerDown: (e) => e.stopPropagation()
+                key: 'header',
+                style: {
+                    background: THEME.primaryRgba(0.1),
+                    borderBottom: `1px solid ${THEME.border}`,
+                    padding: '8px 12px',
+                    borderRadius: '7px 7px 0 0',
+                    color: THEME.primary,
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    textTransform: 'uppercase'
+                }
+            }, 'Integer Selector'),
+
+            // Content
+            React.createElement('div', { 
+                key: 'content',
+                style: { padding: '12px' },
+                onPointerDown: stopProp
             }, [
-                // Value Display
-                React.createElement('div', { key: 'value', className: 'value-display' }, value),
-                
+                // Large value display
+                React.createElement('div', { 
+                    key: 'valueDisplay',
+                    style: {
+                        fontSize: '32px',
+                        fontWeight: '700',
+                        color: THEME.primary,
+                        textAlign: 'center',
+                        marginBottom: '12px',
+                        fontFamily: 'monospace',
+                        textShadow: `0 0 20px ${THEME.primaryRgba(0.5)}`
+                    }
+                }, value),
+
                 // Slider
-                React.createElement('input', {
-                    key: 'slider',
-                    type: 'range',
-                    className: 'slider',
-                    min: min,
-                    max: max,
-                    step: 1,
-                    value: value,
-                    onChange: handleSliderChange
-                }),
-                
-                // Range Settings
-                React.createElement('div', { key: 'range', className: 'range-settings' }, [
-                    React.createElement('div', { key: 'minInput', className: 'range-input' }, [
-                        React.createElement('label', { key: 'minLabel' }, 'Min:'),
+                LabeledSlider 
+                    ? React.createElement(LabeledSlider, {
+                        key: 'slider',
+                        label: '',
+                        value,
+                        min,
+                        max,
+                        step: 1,
+                        onChange: handleSliderChange
+                    })
+                    : React.createElement('input', {
+                        key: 'slider',
+                        type: 'range',
+                        min, max,
+                        step: 1,
+                        value,
+                        onChange: (e) => handleSliderChange(Number(e.target.value)),
+                        style: { width: '100%', accentColor: THEME.primary }
+                    }),
+
+                // Min/Max settings
+                React.createElement('div', { 
+                    key: 'range',
+                    style: {
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginTop: '12px',
+                        paddingTop: '8px',
+                        borderTop: `1px solid ${THEME.border}`
+                    }
+                }, [
+                    React.createElement('div', { 
+                        key: 'min',
+                        style: { display: 'flex', alignItems: 'center', gap: '6px' }
+                    }, [
+                        React.createElement('label', { 
+                            key: 'label',
+                            style: { fontSize: '10px', color: '#aaa', textTransform: 'uppercase' }
+                        }, 'Min'),
                         React.createElement('input', {
-                            key: 'min',
+                            key: 'input',
                             type: 'number',
                             value: min,
-                            onChange: handleMinChange
+                            onChange: handleMinChange,
+                            style: inputStyle
                         })
                     ]),
-                    React.createElement('div', { key: 'maxInput', className: 'range-input' }, [
-                        React.createElement('label', { key: 'maxLabel' }, 'Max:'),
+                    React.createElement('div', { 
+                        key: 'max',
+                        style: { display: 'flex', alignItems: 'center', gap: '6px' }
+                    }, [
+                        React.createElement('label', { 
+                            key: 'label',
+                            style: { fontSize: '10px', color: '#aaa', textTransform: 'uppercase' }
+                        }, 'Max'),
                         React.createElement('input', {
-                            key: 'max',
+                            key: 'input',
                             type: 'number',
                             value: max,
-                            onChange: handleMaxChange
+                            onChange: handleMaxChange,
+                            style: inputStyle
                         })
                     ])
-                ]),
-                
-                // Outputs
-                React.createElement('div', { key: 'outputs', className: 'io-section outputs' },
-                    outputs.map(([key, output]) =>
-                        React.createElement('div', { key, className: 'io-row output-row' }, [
-                            React.createElement('span', { key: 'label', className: 'output-label' }, output.label || key),
-                            React.createElement(RefComponent, {
-                                key: 'socket',
-                                init: ref => emit({
-                                    type: "render",
-                                    data: {
-                                        type: "socket",
-                                        element: ref,
-                                        payload: output.socket,
-                                        nodeId: data.id,
-                                        side: "output",
-                                        key
-                                    }
-                                }),
-                                unmount: ref => emit({ type: "unmount", data: { element: ref } })
-                            })
-                        ])
-                    )
-                )
-            ])
+                ])
+            ]),
+
+            // Output
+            React.createElement('div', { 
+                key: 'outputs',
+                style: {
+                    padding: '8px 12px',
+                    borderTop: `1px solid ${THEME.border}`,
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                    gap: '8px'
+                }
+            }, outputs.map(([key, output]) => [
+                React.createElement('span', { 
+                    key: 'label',
+                    style: { fontSize: '11px', color: '#aaa' }
+                }, output.label),
+                createSocketRef 
+                    ? createSocketRef(emit, output.socket, data.id, 'output', key)
+                    : React.createElement(RefComponent, {
+                        key: 'socket',
+                        init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }),
+                        unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                    })
+            ]))
         ]);
     }
 
     // -------------------------------------------------------------------------
-    // REGISTER
+    // REGISTRATION
     // -------------------------------------------------------------------------
     window.nodeRegistry.register('IntegerSelectorNode', {
         label: "Integer Selector",
-        category: "Inputs",
+        category: "Input",
         nodeClass: IntegerSelectorNode,
-        component: IntegerSelectorNodeComponent,
-        factory: (cb) => new IntegerSelectorNode(cb)
+        factory: (cb) => new IntegerSelectorNode(cb),
+        component: IntegerSelectorNodeComponent
     });
 
-    console.log("[IntegerSelectorNode] Registered");
+    console.log("[IntegerSelectorNode] Registered (DRY refactored)");
 })();
