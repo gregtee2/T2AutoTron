@@ -1,5 +1,5 @@
 (function() {
-    console.log("[TimeRangeNode] Loading plugin...");
+    console.log("[DayOfWeekComparisonNode] Loading plugin...");
 
     // =========================================================================
     // CSS is now loaded from node-styles.css via index.css
@@ -7,7 +7,7 @@
     // =========================================================================
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[TimeRangeNode] Missing dependencies");
+        console.error("[DayOfWeekComparisonNode] Missing dependencies");
         return;
     }
 
@@ -17,35 +17,25 @@
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
 
-    // -------------------------------------------------------------------------
-    // HELPERS
-    // -------------------------------------------------------------------------
-    function formatAmPm(hour24, minute) {
-        const ampm = hour24 < 12 ? "AM" : "PM";
-        let hour12 = hour24 % 12;
-        if (hour12 === 0) hour12 = 12;
-        const minuteStr = minute < 10 ? `0${minute}` : `${minute}`;
-        return `${hour12}:${minuteStr} ${ampm}`;
-    }
-
-    function timeToMinutes(h, m) {
-        return (h * 60) + m;
-    }
+    const DAY_NAMES = [
+        "Sunday", "Monday", "Tuesday", "Wednesday",
+        "Thursday", "Friday", "Saturday"
+    ];
 
     // -------------------------------------------------------------------------
     // NODE CLASS
     // -------------------------------------------------------------------------
-    class TimeRangeNode extends ClassicPreset.Node {
+    class DayOfWeekComparisonNode extends ClassicPreset.Node {
         constructor(changeCallback) {
-            super("Time Range (Continuous)");
+            super("Day of Week Comparison");
             this.width = 380;
             this.changeCallback = changeCallback;
 
             this.properties = {
-                startHour: 19,
-                startMinute: 0,
-                endHour: 21,
-                endMinute: 0,
+                mode: "single",      // "single", "range", or "all"
+                singleDay: 1,        // Monday (0=Sunday, 1=Monday, etc.)
+                startDay: 1,         // Monday
+                endDay: 5,           // Friday
                 debug: false
             };
 
@@ -58,29 +48,31 @@
 
         log(message) {
             if (this.properties.debug) {
-                console.log(`[TimeRangeNode] ${message}`);
+                console.log(`[DayOfWeekComparisonNode] ${message}`);
             }
         }
 
         data() {
             const now = new Date();
-            const currentMinutes = timeToMinutes(now.getHours(), now.getMinutes());
-            const startMinutes = timeToMinutes(this.properties.startHour, this.properties.startMinute);
-            const endMinutes = timeToMinutes(this.properties.endHour, this.properties.endMinute);
+            const currentDayOfWeek = now.getDay(); // 0=Sunday, 1=Monday, etc.
 
             let isInRange = false;
-            if (startMinutes < endMinutes) {
-                // Normal case (e.g., 08:00 to 18:00)
-                isInRange = (currentMinutes >= startMinutes) && (currentMinutes < endMinutes);
-            } else if (startMinutes > endMinutes) {
-                // Cross midnight (e.g., 22:00 to 02:00 next day)
-                isInRange = (currentMinutes >= startMinutes) || (currentMinutes < endMinutes);
-            } else {
-                // Same start/end => entire day
-                isInRange = true;
+            switch (this.properties.mode) {
+                case "all":
+                    isInRange = true;
+                    break;
+                case "single":
+                    isInRange = (currentDayOfWeek === this.properties.singleDay);
+                    break;
+                case "range":
+                    let s = this.properties.startDay;
+                    let e = this.properties.endDay;
+                    if (s > e) [s, e] = [e, s];
+                    isInRange = (currentDayOfWeek >= s && currentDayOfWeek <= e);
+                    break;
             }
 
-            this.log(`hour=${now.getHours()}:${now.getMinutes()}, range=[${this.properties.startHour}:${this.properties.startMinute}, ${this.properties.endHour}:${this.properties.endMinute}), inRange=${isInRange}`);
+            this.log(`MODE=${this.properties.mode.toUpperCase()}, Current=${DAY_NAMES[currentDayOfWeek]}, Result=${isInRange}`);
 
             return { isInRange };
         }
@@ -93,10 +85,10 @@
 
         serialize() {
             return {
-                startHour: this.properties.startHour,
-                startMinute: this.properties.startMinute,
-                endHour: this.properties.endHour,
-                endMinute: this.properties.endMinute,
+                mode: this.properties.mode,
+                singleDay: this.properties.singleDay,
+                startDay: this.properties.startDay,
+                endDay: this.properties.endDay,
                 debug: this.properties.debug
             };
         }
@@ -147,9 +139,62 @@
     };
 
     // -------------------------------------------------------------------------
+    // MODE SELECTOR COMPONENT
+    // -------------------------------------------------------------------------
+    const ModeSelector = ({ value, onChange }) => {
+        const modes = ["single", "range", "all"];
+        
+        return React.createElement('div', { 
+            style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                marginBottom: '12px'
+            } 
+        }, [
+            React.createElement('span', { 
+                key: 'label', 
+                style: { fontSize: '11px', color: 'rgba(167, 255, 235, 0.7)', width: '80px' } 
+            }, 'Mode'),
+            React.createElement('button', {
+                key: 'prev',
+                onClick: () => {
+                    const idx = modes.indexOf(value);
+                    const newIdx = idx === 0 ? modes.length - 1 : idx - 1;
+                    onChange(modes[newIdx]);
+                },
+                onPointerDown: (e) => e.stopPropagation(),
+                className: 'hsv-btn',
+                style: { padding: '4px 8px', fontSize: '12px' }
+            }, '◀'),
+            React.createElement('span', { 
+                key: 'value',
+                style: { 
+                    flex: 1, 
+                    textAlign: 'center', 
+                    fontSize: '12px',
+                    color: '#00ffc8',
+                    textTransform: 'capitalize'
+                }
+            }, value),
+            React.createElement('button', {
+                key: 'next',
+                onClick: () => {
+                    const idx = modes.indexOf(value);
+                    const newIdx = idx === modes.length - 1 ? 0 : idx + 1;
+                    onChange(modes[newIdx]);
+                },
+                onPointerDown: (e) => e.stopPropagation(),
+                className: 'hsv-btn',
+                style: { padding: '4px 8px', fontSize: '12px' }
+            }, '▶')
+        ]);
+    };
+
+    // -------------------------------------------------------------------------
     // COMPONENT
     // -------------------------------------------------------------------------
-    function TimeRangeNodeComponent({ data, emit }) {
+    function DayOfWeekComparisonNodeComponent({ data, emit }) {
         const [state, setState] = useState({ ...data.properties });
         const lastUpdateRef = useRef(0);
         const timeoutRef = useRef(null);
@@ -183,22 +228,28 @@
 
         // Calculate current status
         const now = new Date();
-        const currentMinutes = timeToMinutes(now.getHours(), now.getMinutes());
-        const startMinutes = timeToMinutes(state.startHour, state.startMinute);
-        const endMinutes = timeToMinutes(state.endHour, state.endMinute);
+        const currentDayOfWeek = now.getDay();
 
         let isInRange = false;
-        if (startMinutes < endMinutes) {
-            isInRange = (currentMinutes >= startMinutes) && (currentMinutes < endMinutes);
-        } else if (startMinutes > endMinutes) {
-            isInRange = (currentMinutes >= startMinutes) || (currentMinutes < endMinutes);
-        } else {
-            isInRange = true;
+        let statusText = "";
+        
+        switch (state.mode) {
+            case "all":
+                isInRange = true;
+                statusText = "All Week: Always True";
+                break;
+            case "single":
+                isInRange = (currentDayOfWeek === state.singleDay);
+                statusText = `Single Day: ${DAY_NAMES[state.singleDay]}`;
+                break;
+            case "range":
+                let s = state.startDay;
+                let e = state.endDay;
+                if (s > e) [s, e] = [e, s];
+                isInRange = (currentDayOfWeek >= s && currentDayOfWeek <= e);
+                statusText = `Range: ${DAY_NAMES[state.startDay]} - ${DAY_NAMES[state.endDay]}`;
+                break;
         }
-
-        const startLabel = formatAmPm(state.startHour, state.startMinute);
-        const endLabel = formatAmPm(state.endHour, state.endMinute);
-        const statusText = `${startLabel} to ${endLabel}`;
 
         const outputs = Object.entries(data.outputs);
 
@@ -230,41 +281,58 @@
 
             // Controls container
             React.createElement('div', { key: 'controls', className: 'ha-controls-container' }, [
-                // Start Time
-                React.createElement('div', { key: 'startSection', className: 'hsv-section-header' }, 'Start Time'),
-                React.createElement(Slider, {
-                    key: 'startHour',
-                    label: 'Hour',
-                    value: state.startHour,
-                    min: 0, max: 23,
-                    onChange: (v) => updateState({ startHour: v })
-                }),
-                React.createElement(Slider, {
-                    key: 'startMinute',
-                    label: 'Minute',
-                    value: state.startMinute,
-                    min: 0, max: 59,
-                    displayValue: state.startMinute < 10 ? `0${state.startMinute}` : state.startMinute,
-                    onChange: (v) => updateState({ startMinute: v })
+                // Mode selector
+                React.createElement(ModeSelector, {
+                    key: 'mode',
+                    value: state.mode,
+                    onChange: (v) => updateState({ mode: v })
                 }),
 
-                // End Time
-                React.createElement('div', { key: 'endSection', className: 'hsv-section-header', style: { marginTop: '12px' } }, 'End Time'),
-                React.createElement(Slider, {
-                    key: 'endHour',
-                    label: 'Hour',
-                    value: state.endHour,
-                    min: 0, max: 23,
-                    onChange: (v) => updateState({ endHour: v })
-                }),
-                React.createElement(Slider, {
-                    key: 'endMinute',
-                    label: 'Minute',
-                    value: state.endMinute,
-                    min: 0, max: 59,
-                    displayValue: state.endMinute < 10 ? `0${state.endMinute}` : state.endMinute,
-                    onChange: (v) => updateState({ endMinute: v })
-                }),
+                // Single Day Mode
+                state.mode === 'single' && React.createElement('div', { key: 'single' }, [
+                    React.createElement('div', { key: 'section', className: 'hsv-section-header' }, 'Single Day'),
+                    React.createElement(Slider, {
+                        key: 'singleDay',
+                        label: 'Day',
+                        value: state.singleDay,
+                        min: 0, max: 6,
+                        displayValue: DAY_NAMES[state.singleDay],
+                        onChange: (v) => updateState({ singleDay: v })
+                    })
+                ]),
+
+                // Range Mode
+                state.mode === 'range' && React.createElement('div', { key: 'range' }, [
+                    React.createElement('div', { key: 'startSection', className: 'hsv-section-header' }, 'Start Day'),
+                    React.createElement(Slider, {
+                        key: 'startDay',
+                        label: 'Day',
+                        value: state.startDay,
+                        min: 0, max: 6,
+                        displayValue: DAY_NAMES[state.startDay],
+                        onChange: (v) => updateState({ startDay: v })
+                    }),
+                    React.createElement('div', { key: 'endSection', className: 'hsv-section-header', style: { marginTop: '12px' } }, 'End Day'),
+                    React.createElement(Slider, {
+                        key: 'endDay',
+                        label: 'Day',
+                        value: state.endDay,
+                        min: 0, max: 6,
+                        displayValue: DAY_NAMES[state.endDay],
+                        onChange: (v) => updateState({ endDay: v })
+                    })
+                ]),
+
+                // All mode - just show info
+                state.mode === 'all' && React.createElement('div', { 
+                    key: 'all',
+                    style: { 
+                        padding: '12px', 
+                        textAlign: 'center', 
+                        color: 'rgba(0, 255, 200, 0.7)',
+                        fontSize: '12px'
+                    }
+                }, 'Matches every day of the week'),
 
                 // Debug toggle
                 React.createElement('div', { key: 'debug', style: { marginTop: '12px', borderTop: '1px solid rgba(0, 255, 200, 0.1)', paddingTop: '8px' } },
@@ -289,7 +357,10 @@
                 }
             }, [
                 React.createElement('span', { key: 'icon', style: { marginRight: '8px' } }, isInRange ? '✅' : '❌'),
-                React.createElement('span', { key: 'text' }, `Time Range: ${statusText}`)
+                React.createElement('span', { key: 'text' }, statusText),
+                React.createElement('span', { key: 'today', style: { marginLeft: '10px', opacity: 0.7 } }, 
+                    `(Today: ${DAY_NAMES[currentDayOfWeek]})`
+                )
             ])
         ]);
     }
@@ -297,13 +368,13 @@
     // -------------------------------------------------------------------------
     // REGISTRATION
     // -------------------------------------------------------------------------
-    window.nodeRegistry.register('TimeRangeNode', {
-        label: "Time Range (Continuous)",
+    window.nodeRegistry.register('DayOfWeekComparisonNode', {
+        label: "Day of Week Comparison",
         category: "Logic",
-        nodeClass: TimeRangeNode,
-        factory: (cb) => new TimeRangeNode(cb),
-        component: TimeRangeNodeComponent
+        nodeClass: DayOfWeekComparisonNode,
+        factory: (cb) => new DayOfWeekComparisonNode(cb),
+        component: DayOfWeekComparisonNodeComponent
     });
 
-    console.log("[TimeRangeNode] Registered");
+    console.log("[DayOfWeekComparisonNode] Registered");
 })();

@@ -1,11 +1,10 @@
-Starting batch file at Fri 12/05/2025 22:46:22.02 
+Starting batch file at Sat 12/06/2025 11:01:37.83 
 Navigating to project directory... 
 Successfully navigated to C:\X_T2_AutoTron2.1 
 Checking for Node.js and npm... 
 Node.js and npm are available. 
 Terminating existing Node.js processes... 
-ERROR: The process "node.exe" not found.
-WARNING: Failed to terminate Node.js processes. 
+Terminated Node.js processes. 
 Terminating existing Electron processes... 
 ERROR: The process "electron.exe" not found.
 WARNING: Failed to terminate Electron processes. 

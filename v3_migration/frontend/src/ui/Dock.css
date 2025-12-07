@@ -112,6 +112,17 @@
     box-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
 }
 
+.dock-btn-settings {
+    background: linear-gradient(135deg, rgba(255, 170, 0, 0.1), rgba(200, 120, 0, 0.1));
+    border-color: #ffaa00;
+    color: #ffaa00;
+}
+
+.dock-btn-settings:hover {
+    background: linear-gradient(135deg, rgba(255, 170, 0, 0.2), rgba(200, 120, 0, 0.2));
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+}
+
 .forecast-table {
     width: 100%;
     border-collapse: collapse;

@@ -288,6 +288,7 @@
             };
 
             this.lastTriggerValue = false;
+            this.hadConnection = false;  // Track if trigger input had a connection
             this.lastHsvInfo = null;
             this.devices = [];
             this.perDeviceState = {};
@@ -363,13 +364,22 @@
             
             const hsvInput = inputs.hsv_info?.[0];
             const triggerRaw = inputs.trigger?.[0];
-            const trigger = triggerRaw ?? false;
+            // Ensure trigger is always a boolean for consistent edge detection
+            const trigger = !!triggerRaw;
+            // Track if we have an actual connection (triggerRaw is not undefined)
+            const hasConnection = triggerRaw !== undefined;
             let needsUpdate = false;
+
+            // Debug logging when enabled
+            if (this.properties.debug) {
+                console.log(`[HAGenericDeviceNode] data() - triggerRaw: ${triggerRaw}, trigger: ${trigger}, lastTriggerValue: ${this.lastTriggerValue}, hasConnection: ${hasConnection}, hadConnection: ${this.hadConnection}, mode: ${this.properties.triggerMode}`);
+            }
 
             // On first call after load, apply current state to devices (sync devices to input)
             if (this.skipInitialTrigger) {
                 this.skipInitialTrigger = false;
-                this.lastTriggerValue = !!trigger;
+                this.lastTriggerValue = trigger;
+                this.hadConnection = hasConnection;
                 
                 // Sync HSV state
                 if (hsvInput && typeof hsvInput === 'object') {
@@ -378,10 +388,13 @@
                 
                 // In Follow mode, apply the current trigger state to all devices
                 const mode = this.properties.triggerMode || "Toggle";
-                if (mode === "Follow") {
+                if (mode === "Follow" && hasConnection) {
                     // Small delay to ensure connections are established
                     setTimeout(async () => {
-                        await this.setDevicesState(!!trigger);
+                        if (this.properties.debug) {
+                            console.log(`[HAGenericDeviceNode] Initial Follow mode sync - setting devices to: ${trigger}`);
+                        }
+                        await this.setDevicesState(trigger);
                     }, 500);
                 }
                 // For other modes (Toggle, Turn On, Turn Off), don't act on load - wait for user action
@@ -397,14 +410,27 @@
 
                 const risingEdge = trigger && !this.lastTriggerValue;
                 const fallingEdge = !trigger && this.lastTriggerValue;
+                // Detect when a new connection is made (had no connection, now has one)
+                const newConnection = hasConnection && !this.hadConnection;
                 const mode = this.properties.triggerMode || "Toggle";
 
+                if (this.properties.debug && (risingEdge || fallingEdge || newConnection)) {
+                    console.log(`[HAGenericDeviceNode] Edge detected - rising: ${risingEdge}, falling: ${fallingEdge}, newConnection: ${newConnection}, mode: ${mode}`);
+                }
+
                 if (mode === "Toggle" && risingEdge) { await this.onTrigger(); needsUpdate = true; }
-                else if (mode === "Follow" && (risingEdge || fallingEdge)) { await this.setDevicesState(trigger); needsUpdate = true; }
+                else if (mode === "Follow" && (risingEdge || fallingEdge || newConnection)) { 
+                    if (this.properties.debug) {
+                        console.log(`[HAGenericDeviceNode] Follow mode - setting devices to: ${trigger}`);
+                    }
+                    await this.setDevicesState(trigger); 
+                    needsUpdate = true; 
+                }
                 else if (mode === "Turn On" && risingEdge) { await this.setDevicesState(true); needsUpdate = true; }
                 else if (mode === "Turn Off" && risingEdge) { await this.setDevicesState(false); needsUpdate = true; }
 
-                this.lastTriggerValue = !!trigger;
+                this.lastTriggerValue = trigger;
+                this.hadConnection = hasConnection;
             }
 
             const outputs = {};

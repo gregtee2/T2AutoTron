@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Dock.css';
+import { SettingsModal } from './SettingsModal';
 
 export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [position, setPosition] = useState(() => {
         const saved = localStorage.getItem('dock-position');
         return saved ? JSON.parse(saved) : { x: 20, y: 20 };
@@ -135,6 +137,21 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
                     </div>
                 )}
             </div>
+
+            {/* Settings Section */}
+            <div className="dock-section">
+                <div className="dock-section-content">
+                    <button onClick={() => setSettingsOpen(true)} className="dock-btn dock-btn-settings">
+                        🔧 Settings & API Keys
+                    </button>
+                </div>
+            </div>
+
+            {/* Settings Modal */}
+            <SettingsModal 
+                isOpen={settingsOpen} 
+                onClose={() => setSettingsOpen(false)} 
+            />
         </div>
     );
 }

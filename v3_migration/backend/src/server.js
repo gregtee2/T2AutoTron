@@ -280,6 +280,259 @@ app.get('/api/sun/times', async (req, res) => {
   }
 });
 
+// ============================================================================
+// SETTINGS API - Read/Write .env file
+// ============================================================================
+
+// Allowlist of settings that can be read/written via API
+const ALLOWED_SETTINGS = [
+  'PORT', 'LOG_LEVEL', 'VERBOSE_LOGGING',
+  'HA_HOST', 'HA_TOKEN',
+  'OPENWEATHERMAP_API_KEY',
+  'AMBIENT_API_KEY', 'AMBIENT_APPLICATION_KEY', 'AMBIENT_MAC_ADDRESS',
+  'HUE_BRIDGE_IP', 'HUE_USERNAME',
+  'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID',
+  'KASA_POLLING_INTERVAL'
+];
+
+// GET current settings (masked secrets)
+app.get('/api/settings', async (req, res) => {
+  try {
+    const envPath = path.join(__dirname, '../.env');
+    const envContent = await fs.readFile(envPath, 'utf-8');
+    
+    const settings = {};
+    const lines = envContent.split('\n');
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const eqIndex = trimmed.indexOf('=');
+        if (eqIndex > 0) {
+          const key = trimmed.substring(0, eqIndex).trim();
+          const value = trimmed.substring(eqIndex + 1).trim();
+          
+          // Only return allowed settings
+          if (ALLOWED_SETTINGS.includes(key)) {
+            settings[key] = value;
+          }
+        }
+      }
+    }
+    
+    res.json({ success: true, settings });
+    logger.log('Settings fetched via API', 'info', false, 'settings:read');
+  } catch (error) {
+    logger.log(`Failed to read settings: ${error.message}`, 'error', false, 'settings:read');
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST update settings
+app.post('/api/settings', express.json(), async (req, res) => {
+  try {
+    const { settings: newSettings } = req.body;
+    
+    if (!newSettings || typeof newSettings !== 'object') {
+      return res.status(400).json({ success: false, error: 'Invalid settings data' });
+    }
+    
+    const envPath = path.join(__dirname, '../.env');
+    let envContent = await fs.readFile(envPath, 'utf-8');
+    
+    // Process each setting update
+    for (const [key, value] of Object.entries(newSettings)) {
+      // Security: Only allow whitelisted keys
+      if (!ALLOWED_SETTINGS.includes(key)) {
+        logger.log(`Blocked attempt to set non-allowed key: ${key}`, 'warn', false, 'settings:blocked');
+        continue;
+      }
+      
+      // Sanitize value (prevent injection)
+      const sanitizedValue = String(value).replace(/[\r\n]/g, '');
+      
+      // Check if key exists in file
+      const regex = new RegExp(`^${key}=.*$`, 'm');
+      if (regex.test(envContent)) {
+        // Update existing key
+        envContent = envContent.replace(regex, `${key}=${sanitizedValue}`);
+      } else {
+        // Append new key
+        envContent = envContent.trimEnd() + `\n${key}=${sanitizedValue}\n`;
+      }
+    }
+    
+    // Write back to .env file
+    await fs.writeFile(envPath, envContent, 'utf-8');
+    
+    // Update process.env for immediate effect (some settings)
+    for (const [key, value] of Object.entries(newSettings)) {
+      if (ALLOWED_SETTINGS.includes(key)) {
+        process.env[key] = String(value);
+      }
+    }
+    
+    res.json({ success: true, message: 'Settings saved successfully' });
+    logger.log('Settings updated via API', 'info', false, 'settings:write');
+  } catch (error) {
+    logger.log(`Failed to save settings: ${error.message}`, 'error', false, 'settings:write');
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST test connection for a service
+app.post('/api/settings/test', express.json(), async (req, res) => {
+  const { service, settings } = req.body;
+  
+  try {
+    let result = { success: false, message: 'Unknown service' };
+    
+    switch (service) {
+      case 'ha': {
+        // Test Home Assistant connection
+        const host = settings.HA_HOST || process.env.HA_HOST;
+        const token = settings.HA_TOKEN || process.env.HA_TOKEN;
+        
+        if (!host || !token) {
+          result = { success: false, message: 'Missing HA_HOST or HA_TOKEN' };
+          break;
+        }
+        
+        try {
+          const response = await fetch(`${host}/api/`, {
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 10000
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            result = { 
+              success: true, 
+              message: 'Connected to Home Assistant!',
+              details: `Version: ${data.version || 'Unknown'}`
+            };
+          } else {
+            result = { success: false, message: `HTTP ${response.status}: ${response.statusText}` };
+          }
+        } catch (err) {
+          result = { success: false, message: `Connection failed: ${err.message}` };
+        }
+        break;
+      }
+      
+      case 'weather': {
+        // Test OpenWeatherMap API
+        const apiKey = settings.OPENWEATHERMAP_API_KEY || process.env.OPENWEATHERMAP_API_KEY;
+        
+        if (!apiKey) {
+          result = { success: false, message: 'Missing OPENWEATHERMAP_API_KEY' };
+          break;
+        }
+        
+        try {
+          const response = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?q=London&appid=${apiKey}`,
+            { timeout: 10000 }
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            result = { 
+              success: true, 
+              message: 'OpenWeatherMap API connected!',
+              details: `Test location: ${data.name}, ${data.sys?.country}`
+            };
+          } else if (response.status === 401) {
+            result = { success: false, message: 'Invalid API key' };
+          } else {
+            result = { success: false, message: `HTTP ${response.status}: ${response.statusText}` };
+          }
+        } catch (err) {
+          result = { success: false, message: `Connection failed: ${err.message}` };
+        }
+        break;
+      }
+      
+      case 'hue': {
+        // Test Philips Hue Bridge
+        const bridgeIp = settings.HUE_BRIDGE_IP || process.env.HUE_BRIDGE_IP;
+        const username = settings.HUE_USERNAME || process.env.HUE_USERNAME;
+        
+        if (!bridgeIp || !username) {
+          result = { success: false, message: 'Missing HUE_BRIDGE_IP or HUE_USERNAME' };
+          break;
+        }
+        
+        try {
+          const response = await fetch(`http://${bridgeIp}/api/${username}/lights`, { timeout: 10000 });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.error || (Array.isArray(data) && data[0]?.error)) {
+              const error = data.error || data[0].error;
+              result = { success: false, message: `Bridge error: ${error.description}` };
+            } else {
+              const lightCount = Object.keys(data).length;
+              result = { 
+                success: true, 
+                message: 'Connected to Hue Bridge!',
+                details: `Found ${lightCount} light(s)`
+              };
+            }
+          } else {
+            result = { success: false, message: `HTTP ${response.status}: ${response.statusText}` };
+          }
+        } catch (err) {
+          result = { success: false, message: `Connection failed: ${err.message}` };
+        }
+        break;
+      }
+      
+      case 'telegram': {
+        // Test Telegram Bot
+        const botToken = settings.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+        const chatId = settings.TELEGRAM_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
+        
+        if (!botToken) {
+          result = { success: false, message: 'Missing TELEGRAM_BOT_TOKEN' };
+          break;
+        }
+        
+        try {
+          const response = await fetch(`https://api.telegram.org/bot${botToken}/getMe`, { timeout: 10000 });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.ok) {
+              result = { 
+                success: true, 
+                message: 'Telegram Bot connected!',
+                details: `Bot: @${data.result.username}${chatId ? `, Chat ID: ${chatId}` : ''}`
+              };
+            } else {
+              result = { success: false, message: 'Invalid bot token' };
+            }
+          } else {
+            result = { success: false, message: `HTTP ${response.status}: ${response.statusText}` };
+          }
+        } catch (err) {
+          result = { success: false, message: `Connection failed: ${err.message}` };
+        }
+        break;
+      }
+      
+      default:
+        result = { success: false, message: `Unknown service: ${service}` };
+    }
+    
+    res.json(result);
+    logger.log(`Settings test for ${service}: ${result.success ? 'success' : 'failed'}`, 'info', false, 'settings:test');
+  } catch (error) {
+    logger.log(`Settings test failed: ${error.message}`, 'error', false, 'settings:test');
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.use(express.json());
 app.use(require('./api/middleware/csp'));
 app.use(require('./config/cors'));

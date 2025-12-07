@@ -1,5 +1,5 @@
 (function() {
-    console.log("[TimeRangeNode] Loading plugin...");
+    console.log("[DateComparisonNode] Loading plugin...");
 
     // =========================================================================
     // CSS is now loaded from node-styles.css via index.css
@@ -7,7 +7,7 @@
     // =========================================================================
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[TimeRangeNode] Missing dependencies");
+        console.error("[DateComparisonNode] Missing dependencies");
         return;
     }
 
@@ -17,70 +17,72 @@
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
 
-    // -------------------------------------------------------------------------
-    // HELPERS
-    // -------------------------------------------------------------------------
-    function formatAmPm(hour24, minute) {
-        const ampm = hour24 < 12 ? "AM" : "PM";
-        let hour12 = hour24 % 12;
-        if (hour12 === 0) hour12 = 12;
-        const minuteStr = minute < 10 ? `0${minute}` : `${minute}`;
-        return `${hour12}:${minuteStr} ${ampm}`;
-    }
-
-    function timeToMinutes(h, m) {
-        return (h * 60) + m;
-    }
+    const MONTH_NAMES = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
 
     // -------------------------------------------------------------------------
     // NODE CLASS
     // -------------------------------------------------------------------------
-    class TimeRangeNode extends ClassicPreset.Node {
+    class DateComparisonNode extends ClassicPreset.Node {
         constructor(changeCallback) {
-            super("Time Range (Continuous)");
+            super("Date Comparison");
             this.width = 380;
             this.changeCallback = changeCallback;
 
             this.properties = {
-                startHour: 19,
-                startMinute: 0,
-                endHour: 21,
-                endMinute: 0,
+                useRange: false,
+                month: 4,
+                day: 17,
+                startMonth: 4,
+                startDay: 10,
+                endMonth: 4,
+                endDay: 20,
                 debug: false
             };
 
             // Output
             this.addOutput("isInRange", new ClassicPreset.Output(
                 sockets.boolean || new ClassicPreset.Socket('boolean'),
-                "IsInRange"
+                "Is In Range"
             ));
         }
 
         log(message) {
             if (this.properties.debug) {
-                console.log(`[TimeRangeNode] ${message}`);
+                console.log(`[DateComparisonNode] ${message}`);
             }
         }
 
         data() {
             const now = new Date();
-            const currentMinutes = timeToMinutes(now.getHours(), now.getMinutes());
-            const startMinutes = timeToMinutes(this.properties.startHour, this.properties.startMinute);
-            const endMinutes = timeToMinutes(this.properties.endHour, this.properties.endMinute);
+            const currentMonth = now.getMonth() + 1;
+            const currentDay = now.getDate();
 
             let isInRange = false;
-            if (startMinutes < endMinutes) {
-                // Normal case (e.g., 08:00 to 18:00)
-                isInRange = (currentMinutes >= startMinutes) && (currentMinutes < endMinutes);
-            } else if (startMinutes > endMinutes) {
-                // Cross midnight (e.g., 22:00 to 02:00 next day)
-                isInRange = (currentMinutes >= startMinutes) || (currentMinutes < endMinutes);
-            } else {
-                // Same start/end => entire day
-                isInRange = true;
-            }
 
-            this.log(`hour=${now.getHours()}:${now.getMinutes()}, range=[${this.properties.startHour}:${this.properties.startMinute}, ${this.properties.endHour}:${this.properties.endMinute}), inRange=${isInRange}`);
+            if (!this.properties.useRange) {
+                isInRange = (
+                    currentMonth === this.properties.month &&
+                    currentDay === this.properties.day
+                );
+                this.log(`SINGLE DATE: Wanted=${this.properties.month}/${this.properties.day}, Current=${currentMonth}/${currentDay}, Result=${isInRange}`);
+            } else {
+                const currentYear = now.getFullYear();
+
+                let startDate = new Date(currentYear, this.properties.startMonth - 1, this.properties.startDay);
+                let endDate = new Date(currentYear, this.properties.endMonth - 1, this.properties.endDay);
+
+                if (startDate > endDate) {
+                    [startDate, endDate] = [endDate, startDate];
+                }
+
+                const todayMidnight = new Date(currentYear, currentMonth - 1, currentDay);
+                isInRange = (todayMidnight >= startDate && todayMidnight <= endDate);
+
+                this.log(`RANGE: Start=${this.properties.startMonth}/${this.properties.startDay}, End=${this.properties.endMonth}/${this.properties.endDay}, Current=${currentMonth}/${currentDay}, Result=${isInRange}`);
+            }
 
             return { isInRange };
         }
@@ -93,10 +95,13 @@
 
         serialize() {
             return {
-                startHour: this.properties.startHour,
-                startMinute: this.properties.startMinute,
-                endHour: this.properties.endHour,
-                endMinute: this.properties.endMinute,
+                useRange: this.properties.useRange,
+                month: this.properties.month,
+                day: this.properties.day,
+                startMonth: this.properties.startMonth,
+                startDay: this.properties.startDay,
+                endMonth: this.properties.endMonth,
+                endDay: this.properties.endDay,
                 debug: this.properties.debug
             };
         }
@@ -125,7 +130,7 @@
                 onPointerDown: (e) => e.stopPropagation(),
                 className: 'hsv-range-input'
             }),
-            React.createElement('span', { key: 'val', className: 'hsv-slider-value' }, displayValue !== undefined ? displayValue : value)
+            React.createElement('span', { key: 'val', className: 'hsv-slider-value' }, displayValue || value)
         ]);
     };
 
@@ -149,7 +154,7 @@
     // -------------------------------------------------------------------------
     // COMPONENT
     // -------------------------------------------------------------------------
-    function TimeRangeNodeComponent({ data, emit }) {
+    function DateComparisonNodeComponent({ data, emit }) {
         const [state, setState] = useState({ ...data.properties });
         const lastUpdateRef = useRef(0);
         const timeoutRef = useRef(null);
@@ -181,24 +186,25 @@
             return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
         }, []);
 
-        // Calculate current status
+        // Calculate current match status
         const now = new Date();
-        const currentMinutes = timeToMinutes(now.getHours(), now.getMinutes());
-        const startMinutes = timeToMinutes(state.startHour, state.startMinute);
-        const endMinutes = timeToMinutes(state.endHour, state.endMinute);
-
+        const currentMonth = now.getMonth() + 1;
+        const currentDay = now.getDate();
         let isInRange = false;
-        if (startMinutes < endMinutes) {
-            isInRange = (currentMinutes >= startMinutes) && (currentMinutes < endMinutes);
-        } else if (startMinutes > endMinutes) {
-            isInRange = (currentMinutes >= startMinutes) || (currentMinutes < endMinutes);
-        } else {
-            isInRange = true;
-        }
+        let statusText = "";
 
-        const startLabel = formatAmPm(state.startHour, state.startMinute);
-        const endLabel = formatAmPm(state.endHour, state.endMinute);
-        const statusText = `${startLabel} to ${endLabel}`;
+        if (!state.useRange) {
+            isInRange = (currentMonth === state.month && currentDay === state.day);
+            statusText = `${MONTH_NAMES[state.month - 1]} ${state.day}`;
+        } else {
+            const currentYear = now.getFullYear();
+            let startDate = new Date(currentYear, state.startMonth - 1, state.startDay);
+            let endDate = new Date(currentYear, state.endMonth - 1, state.endDay);
+            if (startDate > endDate) [startDate, endDate] = [endDate, startDate];
+            const todayMidnight = new Date(currentYear, currentMonth - 1, currentDay);
+            isInRange = (todayMidnight >= startDate && todayMidnight <= endDate);
+            statusText = `${MONTH_NAMES[state.startMonth - 1]} ${state.startDay} → ${MONTH_NAMES[state.endMonth - 1]} ${state.endDay}`;
+        }
 
         const outputs = Object.entries(data.outputs);
 
@@ -210,6 +216,7 @@
                 style: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }
             }, [
                 React.createElement('div', { key: 'title', className: 'hsv-node-title' }, data.label),
+                // Output socket in header
                 outputs.map(([key, output]) => 
                     React.createElement('div', { 
                         key, 
@@ -230,41 +237,70 @@
 
             // Controls container
             React.createElement('div', { key: 'controls', className: 'ha-controls-container' }, [
-                // Start Time
-                React.createElement('div', { key: 'startSection', className: 'hsv-section-header' }, 'Start Time'),
-                React.createElement(Slider, {
-                    key: 'startHour',
-                    label: 'Hour',
-                    value: state.startHour,
-                    min: 0, max: 23,
-                    onChange: (v) => updateState({ startHour: v })
-                }),
-                React.createElement(Slider, {
-                    key: 'startMinute',
-                    label: 'Minute',
-                    value: state.startMinute,
-                    min: 0, max: 59,
-                    displayValue: state.startMinute < 10 ? `0${state.startMinute}` : state.startMinute,
-                    onChange: (v) => updateState({ startMinute: v })
-                }),
+                // Mode toggle
+                React.createElement('div', { key: 'mode', style: { marginBottom: '12px' } },
+                    React.createElement(Checkbox, {
+                        label: 'Use Date Range',
+                        checked: state.useRange,
+                        onChange: (v) => updateState({ useRange: v })
+                    })
+                ),
 
-                // End Time
-                React.createElement('div', { key: 'endSection', className: 'hsv-section-header', style: { marginTop: '12px' } }, 'End Time'),
-                React.createElement(Slider, {
-                    key: 'endHour',
-                    label: 'Hour',
-                    value: state.endHour,
-                    min: 0, max: 23,
-                    onChange: (v) => updateState({ endHour: v })
-                }),
-                React.createElement(Slider, {
-                    key: 'endMinute',
-                    label: 'Minute',
-                    value: state.endMinute,
-                    min: 0, max: 59,
-                    displayValue: state.endMinute < 10 ? `0${state.endMinute}` : state.endMinute,
-                    onChange: (v) => updateState({ endMinute: v })
-                }),
+                // Single Date Mode
+                !state.useRange && React.createElement('div', { key: 'single' }, [
+                    React.createElement('div', { key: 'section', className: 'hsv-section-header' }, 'Single Date'),
+                    React.createElement(Slider, {
+                        key: 'month',
+                        label: 'Month',
+                        value: state.month,
+                        min: 1, max: 12,
+                        displayValue: MONTH_NAMES[state.month - 1],
+                        onChange: (v) => updateState({ month: v })
+                    }),
+                    React.createElement(Slider, {
+                        key: 'day',
+                        label: 'Day',
+                        value: state.day,
+                        min: 1, max: 31,
+                        onChange: (v) => updateState({ day: v })
+                    })
+                ]),
+
+                // Range Mode
+                state.useRange && React.createElement('div', { key: 'range' }, [
+                    React.createElement('div', { key: 'startSection', className: 'hsv-section-header' }, 'Start Date'),
+                    React.createElement(Slider, {
+                        key: 'startMonth',
+                        label: 'Month',
+                        value: state.startMonth,
+                        min: 1, max: 12,
+                        displayValue: MONTH_NAMES[state.startMonth - 1],
+                        onChange: (v) => updateState({ startMonth: v })
+                    }),
+                    React.createElement(Slider, {
+                        key: 'startDay',
+                        label: 'Day',
+                        value: state.startDay,
+                        min: 1, max: 31,
+                        onChange: (v) => updateState({ startDay: v })
+                    }),
+                    React.createElement('div', { key: 'endSection', className: 'hsv-section-header', style: { marginTop: '12px' } }, 'End Date'),
+                    React.createElement(Slider, {
+                        key: 'endMonth',
+                        label: 'Month',
+                        value: state.endMonth,
+                        min: 1, max: 12,
+                        displayValue: MONTH_NAMES[state.endMonth - 1],
+                        onChange: (v) => updateState({ endMonth: v })
+                    }),
+                    React.createElement(Slider, {
+                        key: 'endDay',
+                        label: 'Day',
+                        value: state.endDay,
+                        min: 1, max: 31,
+                        onChange: (v) => updateState({ endDay: v })
+                    })
+                ]),
 
                 // Debug toggle
                 React.createElement('div', { key: 'debug', style: { marginTop: '12px', borderTop: '1px solid rgba(0, 255, 200, 0.1)', paddingTop: '8px' } },
@@ -289,7 +325,10 @@
                 }
             }, [
                 React.createElement('span', { key: 'icon', style: { marginRight: '8px' } }, isInRange ? '✅' : '❌'),
-                React.createElement('span', { key: 'text' }, `Time Range: ${statusText}`)
+                React.createElement('span', { key: 'text' }, statusText),
+                React.createElement('span', { key: 'today', style: { marginLeft: '10px', opacity: 0.7 } }, 
+                    `(Today: ${MONTH_NAMES[currentMonth - 1]} ${currentDay})`
+                )
             ])
         ]);
     }
@@ -297,13 +336,13 @@
     // -------------------------------------------------------------------------
     // REGISTRATION
     // -------------------------------------------------------------------------
-    window.nodeRegistry.register('TimeRangeNode', {
-        label: "Time Range (Continuous)",
+    window.nodeRegistry.register('DateComparisonNode', {
+        label: "Date Comparison",
         category: "Logic",
-        nodeClass: TimeRangeNode,
-        factory: (cb) => new TimeRangeNode(cb),
-        component: TimeRangeNodeComponent
+        nodeClass: DateComparisonNode,
+        factory: (cb) => new DateComparisonNode(cb),
+        component: DateComparisonNodeComponent
     });
 
-    console.log("[TimeRangeNode] Registered");
+    console.log("[DateComparisonNode] Registered");
 })();
