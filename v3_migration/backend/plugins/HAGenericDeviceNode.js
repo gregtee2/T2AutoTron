@@ -467,7 +467,19 @@
                 const isLight = deviceType === "light" || deviceType === "bulb";
                 const isKasa = id.startsWith('kasa_');
                 
-                let turnOn = info.on ?? true;
+                // BUG FIX: HSV input should NOT turn on a device that is off
+                // Only the Trigger input can change device on/off state
+                // Check current device state - if off, skip this device entirely
+                const currentState = this.perDeviceState[id];
+                const isCurrentlyOn = currentState?.on || currentState?.state === 'on';
+                
+                // If device is off, don't apply HSV (and don't turn it on!)
+                if (!isCurrentlyOn) {
+                    return; // Skip this device - it's off, HSV shouldn't turn it on
+                }
+                
+                // Device is on, apply color/brightness changes but keep it on
+                let turnOn = true; // Device is already on, keep it on
                 let hs_color = null;
                 let color_temp_kelvin = null;
                 let brightness = null;
@@ -480,7 +492,9 @@
                 }
                 if (info.brightness !== undefined) brightness = info.brightness;
                 else if (info.v !== undefined) brightness = Math.round((info.v ?? 0) * 255);
-                if (brightness === 0) turnOn = false;
+                // BUG FIX: Don't turn off device if brightness is 0 - just set brightness to minimum (1)
+                // HSV input should NEVER change on/off state
+                if (brightness === 0) brightness = 1;
                 
                 let payload;
                 if (isKasa) {
