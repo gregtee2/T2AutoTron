@@ -16,24 +16,82 @@ window.nodeRegistry = nodeRegistry;
 window.sockets = sockets;
 window.socket = socket;
 
+// Plugin loading state for UI feedback
+let loadingState = {
+    isLoading: false,
+    progress: 0,
+    status: 'Ready',
+    loadedCount: 0,
+    totalCount: 0,
+    failedPlugins: [],
+    error: null
+};
+
+// Callbacks for progress updates
+const progressCallbacks = new Set();
+
+export function onPluginProgress(callback) {
+    progressCallbacks.add(callback);
+    // Immediately send current state
+    callback({ ...loadingState });
+    return () => progressCallbacks.delete(callback);
+}
+
+function updateProgress(updates) {
+    loadingState = { ...loadingState, ...updates };
+    progressCallbacks.forEach(cb => cb({ ...loadingState }));
+}
+
+export function getLoadingState() {
+    return { ...loadingState };
+}
+
 export async function loadPlugins() {
+    updateProgress({ isLoading: true, progress: 0, status: 'Fetching plugin list...', error: null, failedPlugins: [] });
+    
     try {
         const response = await fetch('/api/plugins');
         if (!response.ok) throw new Error('Failed to fetch plugin list');
         
         const plugins = await response.json();
-        console.log('[PluginLoader] Found plugins:', plugins);
+        const total = plugins.length;
+        
+        updateProgress({ totalCount: total, status: `Loading ${total} plugins...` });
 
+        let loaded = 0;
         for (const pluginUrl of plugins) {
+            const pluginName = pluginUrl.split('/').pop().replace('.js', '');
+            updateProgress({ status: `Loading ${pluginName}...` });
+            
             try {
                 await loadScript(pluginUrl);
-                console.log(`[PluginLoader] Loaded ${pluginUrl}`);
+                loaded++;
+                updateProgress({ 
+                    loadedCount: loaded, 
+                    progress: Math.round((loaded / total) * 100)
+                });
             } catch (e) {
                 console.error(`[PluginLoader] Failed to load ${pluginUrl}`, e);
+                loadingState.failedPlugins.push({ name: pluginName, error: e.message });
             }
         }
+        
+        const failCount = loadingState.failedPlugins.length;
+        updateProgress({ 
+            isLoading: false, 
+            progress: 100, 
+            status: failCount > 0 
+                ? `Loaded ${loaded} plugins (${failCount} failed)` 
+                : `Loaded ${loaded} plugins`
+        });
+        
     } catch (e) {
         console.error('[PluginLoader] Error loading plugins:', e);
+        updateProgress({ 
+            isLoading: false, 
+            error: e.message, 
+            status: 'Failed to load plugins'
+        });
     }
 }
 

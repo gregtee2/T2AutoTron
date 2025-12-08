@@ -1,7 +1,10 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Editor } from './Editor';
 import { socket, connectSocket, disconnectSocket } from './socket';
+import { onPluginProgress } from './registries/PluginLoader';
 import ErrorBoundary from './ErrorBoundary';
+import { ToastContainer, useToast } from './ui/Toast';
+import { LoadingOverlay } from './ui/LoadingOverlay';
 import './App.css';
 import './test-sockets.js'; // Test socket patch
 
@@ -17,14 +20,34 @@ function App() {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [panelHeight, setPanelHeight] = useState(() => parseInt(localStorage.getItem('panelHeight')) || 150);
   const [panelFontSize, setPanelFontSize] = useState(() => parseInt(localStorage.getItem('panelFontSize')) || 11);
+  const [pluginLoading, setPluginLoading] = useState({ isLoading: true, progress: 0, status: 'Starting...', loadedCount: 0, totalCount: 0, error: null });
   const eventLogRef = useRef(null);
   const resizeRef = useRef(null);
   const maxLogEntries = 100;
+  const toast = useToast();
+
+  // Subscribe to plugin loading progress
+  useEffect(() => {
+    const unsubscribe = onPluginProgress((state) => {
+      setPluginLoading(state);
+      // Show toast on completion
+      if (!state.isLoading && state.progress === 100) {
+        if (state.failedPlugins?.length > 0) {
+          toast.warning(`Loaded ${state.loadedCount} plugins (${state.failedPlugins.length} failed)`);
+        }
+      }
+      if (state.error) {
+        toast.error(`Plugin loading failed: ${state.error}`);
+      }
+    });
+    return unsubscribe;
+  }, [toast]);
 
   useEffect(() => {
     function onConnect() {
       setIsConnected(true);
-      console.log('Socket connected');
+      // Debug: console.log('Socket connected');
+      toast.success('Connected to server');
       addEventLog('system', 'Socket connected to server');
       // Clear state tracking on reconnect to get fresh data
       lastKnownState.clear();
@@ -35,13 +58,14 @@ function App() {
     function onDisconnect() {
       setIsConnected(false);
       setHaStatus({ connected: false, wsConnected: false, deviceCount: 0 });
-      console.log('Socket disconnected');
+      // Debug: console.log('Socket disconnected');
+      toast.warning('Disconnected from server');
       addEventLog('system', 'Socket disconnected from server');
     }
 
     function onHaConnectionStatus(data) {
       setHaStatus(data);
-      console.log('HA connection status:', data);
+      // Debug: console.log('HA connection status:', data);
     }
 
     // Listen for device state changes from backend (real-time HA WebSocket updates)
@@ -168,12 +192,14 @@ function App() {
     registerScheduledEvents(nodeId, []);
   }, [registerScheduledEvents]);
 
-  // Expose addEventLog globally for nodes to use
+  // Expose addEventLog and toast globally for nodes to use
   useEffect(() => {
     window.addEventLog = addEventLog;
     window.setUpcomingEvents = setUpcomingEvents;
     window.registerScheduledEvents = registerScheduledEvents;
     window.unregisterScheduledEvents = unregisterScheduledEvents;
+    // Expose toast for plugins: window.T2Toast.success('message'), .error(), .warning(), .info()
+    window.T2Toast = toast;
     // Expose pending commands tracker for nodes to register their commands
     window.registerPendingCommand = (deviceId, nodeTitle, action) => {
       pendingCommands.set(deviceId, { nodeTitle, action, timestamp: Date.now() });
@@ -184,8 +210,9 @@ function App() {
       delete window.registerScheduledEvents;
       delete window.unregisterScheduledEvents;
       delete window.registerPendingCommand;
+      delete window.T2Toast;
     };
-  }, [registerScheduledEvents, unregisterScheduledEvents]);
+  }, [registerScheduledEvents, unregisterScheduledEvents, toast]);
 
   // Format time for upcoming events - shows relative time and absolute time
   const formatEventTime = (timestamp) => {
@@ -214,6 +241,16 @@ function App() {
 
   return (
     <div className="app-container">
+      {/* Loading Overlay - shows during plugin loading */}
+      <LoadingOverlay 
+        isLoading={pluginLoading.isLoading}
+        progress={pluginLoading.progress}
+        status={pluginLoading.status}
+        loadedCount={pluginLoading.loadedCount}
+        totalCount={pluginLoading.totalCount}
+        error={pluginLoading.error}
+      />
+      
       <div className="status-indicators">
         <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
           {isConnected ? 'Backend' : 'Backend ✕'}
@@ -298,11 +335,13 @@ function App() {
   );
 }
 
-// Wrap App with ErrorBoundary for crash protection
+// Wrap App with ErrorBoundary and ToastContainer for crash protection and notifications
 function AppWithErrorBoundary() {
   return (
     <ErrorBoundary>
-      <App />
+      <ToastContainer>
+        <App />
+      </ToastContainer>
     </ErrorBoundary>
   );
 }
