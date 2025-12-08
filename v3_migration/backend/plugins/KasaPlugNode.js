@@ -207,6 +207,13 @@
             if (typeof window !== 'undefined' && window.graphLoading) return;
             const ids = this.properties.selectedPlugIds.filter(Boolean);
             if (ids.length === 0) return;
+            
+            // Register pending commands so the Event Log knows this change came from the app
+            const nodeTitle = this.label || 'Kasa Plug';
+            if (typeof window !== 'undefined' && window.registerPendingCommand) {
+                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off'));
+            }
+            
             await Promise.all(ids.map(async (id) => {
                 const cleanId = id.replace('kasa_', '');
                 const action = turnOn ? 'on' : 'off';
@@ -224,6 +231,13 @@
             if (typeof window !== 'undefined' && window.graphLoading) return;
             const ids = this.properties.selectedPlugIds.filter(Boolean);
             if (ids.length === 0) return;
+            
+            // Register pending commands so the Event Log knows this change came from the app
+            const nodeTitle = this.label || 'Kasa Plug';
+            if (typeof window !== 'undefined' && window.registerPendingCommand) {
+                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'toggle'));
+            }
+            
             await Promise.all(ids.map(async (id) => {
                 const current = this.perPlugState[id] || { on: false };
                 const newOn = !current.on;

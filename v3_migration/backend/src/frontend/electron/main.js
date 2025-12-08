@@ -167,8 +167,8 @@ function createWindow() {
 
     // Auto-open DevTools to capture all logs from the start
     // Set to 'right' for side panel, 'bottom' for bottom panel, or 'undocked' for separate window
-    // Comment out the next line to disable auto-open (then use F12 or Ctrl+Shift+I)
-    mainWindow.webContents.openDevTools({ mode: 'right' });
+    // Uncomment the next line for development debugging (or use F12 / Ctrl+Shift+I)
+    // mainWindow.webContents.openDevTools({ mode: 'right' });
 
     // Register keyboard shortcuts
     mainWindow.webContents.on('before-input-event', async (event, input) => {

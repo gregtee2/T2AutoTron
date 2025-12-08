@@ -4,12 +4,13 @@ import { NodeEditor, ClassicPreset } from "rete";
 import { AreaPlugin, AreaExtensions } from "rete-area-plugin";
 import { ConnectionPlugin, Presets as ConnectionPresets } from "rete-connection-plugin";
 import { ReactPlugin, Presets } from "rete-react-plugin";
-import { ContextMenuPlugin, Presets as ContextMenuPresets } from "rete-context-menu-plugin";
+// Removed slow rete-context-menu-plugin - using FastContextMenu instead
 import { DataflowEngine } from "rete-engine";
 import "./sockets"; // Import socket patch globally
 
 import { Dock } from "./ui/Dock";
 import { ForecastPanel } from "./ui/ForecastPanel";
+import { FastContextMenu } from "./FastContextMenu";
 
 // Registry
 import { nodeRegistry } from "./registries/NodeRegistry";
@@ -26,8 +27,6 @@ import { DeviceStateControlComponent } from "./controls/DeviceStateControl";
 import { StatusIndicatorControlComponent } from "./controls/StatusIndicatorControl";
 import { ColorBarControlComponent } from "./controls/ColorBarControl";
 import { PowerStatsControlComponent } from "./controls/PowerStatsControl";
-
-import { CustomMenuItem } from "./CustomContextMenu";
 
 export function Editor() {
     const ref = useRef(null);
@@ -53,8 +52,31 @@ export function Editor() {
     
     // Undo stack for deleted nodes
     const undoStackRef = useRef([]);
+    
+    // Fast context menu state
+    const [contextMenu, setContextMenu] = useState({
+        visible: false,
+        position: { x: 0, y: 0 },
+        items: [],
+        nodeContext: null  // If right-clicking on a node
+    });
 
     const createEditor = useCallback(async (container) => {
+        // Wait for container to have proper dimensions (fixes race condition in Electron)
+        // This ensures the AreaPlugin initializes with correct viewport size
+        await new Promise((resolve) => {
+            const checkReady = () => {
+                const rect = container.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                    resolve();
+                } else {
+                    requestAnimationFrame(checkReady);
+                }
+            };
+            // Use requestAnimationFrame to ensure DOM is laid out
+            requestAnimationFrame(checkReady);
+        });
+        
         const editor = new NodeEditor();
         const area = new AreaPlugin(container);
         const connection = new ConnectionPlugin();
@@ -64,8 +86,45 @@ export function Editor() {
         // Register engine with editor
         editor.use(engine);
 
-        // Process all nodes through the dataflow engine
+        // Debounced process to prevent excessive graph evaluation
+        let processTimeout = null;
+        let processScheduled = false;
+        
+        // Process all nodes through the dataflow engine (debounced version)
         const process = async () => {
+            // If already scheduled, skip
+            if (processScheduled) return;
+            processScheduled = true;
+            
+            // Clear any pending timeout
+            if (processTimeout) {
+                clearTimeout(processTimeout);
+            }
+            
+            // Schedule process for next frame (batches multiple rapid calls)
+            processTimeout = setTimeout(async () => {
+                processScheduled = false;
+                processTimeout = null;
+                
+                engine.reset();
+                for (const node of editor.getNodes()) {
+                    try {
+                        await engine.fetch(node.id);
+                    } catch (e) {
+                        // Silently ignore nodes without data() method
+                    }
+                }
+            }, 16); // ~60fps - batches calls within same frame
+        };
+        
+        // Immediate process for when we need synchronous graph evaluation (e.g., after load)
+        const processImmediate = async () => {
+            if (processTimeout) {
+                clearTimeout(processTimeout);
+                processTimeout = null;
+            }
+            processScheduled = false;
+            
             engine.reset();
             for (const node of editor.getNodes()) {
                 try {
@@ -75,13 +134,31 @@ export function Editor() {
                 }
             }
         };
-        
-        // Alias for compatibility - same as process() but named for clarity
-        const processImmediate = process;
 
+        // Debounced node update map to batch rapid updates to the same node
+        const pendingNodeUpdates = new Set();
+        let nodeUpdateTimeout = null;
+        
         const updateNode = (nodeId) => {
+            pendingNodeUpdates.add(nodeId);
+            
+            if (!nodeUpdateTimeout) {
+                nodeUpdateTimeout = setTimeout(() => {
+                    nodeUpdateTimeout = null;
+                    // Update all pending nodes
+                    pendingNodeUpdates.forEach(id => {
+                        area.update("node", id);
+                    });
+                    pendingNodeUpdates.clear();
+                    process();
+                }, 16); // ~60fps batching
+            }
+        };
+        
+        // Immediate update for when batching is not desired
+        const updateNodeImmediate = (nodeId) => {
             area.update("node", nodeId);
-            process();
+            processImmediate();
         };
 
         const triggerDataFlow = () => {
@@ -90,8 +167,8 @@ export function Editor() {
             process();
         };
 
-        // Dynamic Context Menu Generator
-        const getMenuOptions = () => {
+        // Dynamic Context Menu Generator - returns items for FastContextMenu
+        const getMenuItems = () => {
             const nodes = nodeRegistry.getAll();
             const grouped = {};
 
@@ -100,63 +177,44 @@ export function Editor() {
                 const category = def.category || "Other";
                 if (!grouped[category]) grouped[category] = [];
                 
-                grouped[category].push([def.label, () => {
-                    let node;
-                    const callback = () => {
-                        if (def.updateStrategy === 'dataflow') {
-                            triggerDataFlow();
-                        } else {
-                            updateNode(node.id);
-                        }
-                    };
-                    node = def.factory(callback);
-                    return node;
-                }]);
+                grouped[category].push({
+                    label: def.label,
+                    handler: async (position) => {
+                        let node;
+                        const callback = () => {
+                            if (def.updateStrategy === 'dataflow') {
+                                triggerDataFlow();
+                            } else {
+                                updateNode(node.id);
+                            }
+                        };
+                        node = def.factory(callback);
+                        await editor.addNode(node);
+                        
+                        // Position the node at click location (converted to editor coordinates)
+                        const transform = area.area.transform;
+                        const editorX = (position.x - transform.x) / transform.k;
+                        const editorY = (position.y - transform.y) / transform.k;
+                        await area.translate(node.id, { x: editorX, y: editorY });
+                    }
+                });
             });
 
-            // Convert to Rete Context Menu format
-            const menuItems = Object.entries(grouped).map(([category, items]) => {
-                // Sort items alphabetically
-                items.sort((a, b) => a[0].localeCompare(b[0]));
-                return [category, items];
-            });
-            
-            // Sort categories alphabetically
-            menuItems.sort((a, b) => a[0].localeCompare(b[0]));
+            // Convert to FastContextMenu format with sorted categories
+            const menuItems = Object.entries(grouped)
+                .map(([category, items]) => ({
+                    label: category,
+                    subitems: items.sort((a, b) => a.label.localeCompare(b.label))
+                }))
+                .sort((a, b) => a.label.localeCompare(b.label));
 
-            return ContextMenuPresets.classic.setup(menuItems, { delay: 0 });
+            return menuItems;
         };
 
-        const contextMenu = new ContextMenuPlugin({
-            items: (context, plugin) => {
-                if (context === 'root') {
-                    const createItems = getMenuOptions();
-                    return createItems(context, plugin);
-                }
-                // Check if context is a registered node type
-                const def = nodeRegistry.getByInstance(context);
-                if (def) {
-                    return {
-                        searchBar: false,
-                        list: [
-                            {
-                                label: 'Delete',
-                                key: 'delete',
-                                handler: async () => {
-                                    const nodeId = context.id;
-                                    const connections = editor.getConnections().filter(c => c.source === nodeId || c.target === nodeId);
-                                    for (const conn of connections) {
-                                        await editor.removeConnection(conn.id);
-                                    }
-                                    await editor.removeNode(nodeId);
-                                }
-                            }
-                        ]
-                    };
-                }
-                return { searchBar: false, list: [] };
-            }
-        });
+        // Store menu generator for use in right-click handler
+        window._t2GetMenuItems = getMenuItems;
+        window._t2Editor = editor;
+        window._t2Area = area;
 
         const selector = AreaExtensions.selector();
 
@@ -194,19 +252,12 @@ export function Editor() {
             }
         }));
 
-        // Use custom menu item component to filter hasSubitems prop from DOM
-        render.addPreset(Presets.contextMenu.setup({
-            customize: {
-                item() {
-                    return CustomMenuItem;
-                }
-            }
-        }));
+        // Connection preset for classic connection rendering
         connection.addPreset(ConnectionPresets.classic.setup());
 
         editor.use(area);
         area.use(connection);
-        area.use(contextMenu);
+        // Removed slow rete-context-menu-plugin - using FastContextMenu instead
         area.use(render);
 
         // Set up node selection AFTER plugins are initialized
@@ -304,11 +355,40 @@ export function Editor() {
         
         // Use ref for lasso-selected nodes so keyboard handler can access it
         const lassoSelectedNodes = lassoSelectedNodesRef.current;
+        
+        // Safety function to reset drag/selection state (prevents frozen UI)
+        // Note: This is a partial reset, the full resetAllDragStates is defined after backdrop state
+        const resetDragState = () => {
+            if (isSelecting) {
+                console.log('[Editor] Safety reset: clearing stuck lasso selection');
+                isSelecting = false;
+                selectionBox.style.display = 'none';
+            }
+        };
+        
+        // Reset state when window loses focus (e.g., Alt+Tab during drag)
+        // Uses partial reset here; full reset happens via resetAllDragStates later
+        const onWindowBlur = () => {
+            resetDragState();
+            // Will be enhanced to call resetAllDragStates after it's defined
+            if (window.resetEditorDragState) window.resetEditorDragState();
+        };
+        
+        // Reset state when tab visibility changes
+        const onVisibilityChange = () => {
+            if (document.hidden) {
+                resetDragState();
+                if (window.resetEditorDragState) window.resetEditorDragState();
+            }
+        };
+        
+        window.addEventListener('blur', onWindowBlur);
+        document.addEventListener('visibilitychange', onVisibilityChange);
 
         const onPointerDown = (e) => {
             // Enable Lasso on Ctrl + Left Click
             if ((e.ctrlKey || e.metaKey) && e.button === 0) {
-                console.log("[Editor] Lasso start");
+                // Debug: console.log("[Editor] Lasso start");
                 e.stopPropagation(); 
                 e.preventDefault();
                 isSelecting = true;
@@ -365,18 +445,18 @@ export function Editor() {
 
         const onPointerUp = (e) => {
             if (!isSelecting) return;
-            console.log("[Editor] Lasso end");
+            // Debug: console.log("[Editor] Lasso end");
             
             // Measure BEFORE hiding
             const boxRect = selectionBox.getBoundingClientRect();
-            console.log("[Editor] Box Rect:", boxRect);
+            // Debug: console.log("[Editor] Box Rect:", boxRect);
 
             isSelecting = false;
             selectionBox.style.display = 'none';
             
             // Skip if box is too small (just a click)
             if (boxRect.width < 5 && boxRect.height < 5) {
-                console.log("[Editor] Selection box too small, ignoring");
+                // Debug: console.log("[Editor] Selection box too small, ignoring");
                 return;
             }
             
@@ -400,11 +480,11 @@ export function Editor() {
                 }
             });
             
-            console.log(`[Editor] Found ${nodesToSelect.length} nodes in selection area`);
+            // Debug: console.log(`[Editor] Found ${nodesToSelect.length} nodes in selection area`);
             
             // Select the nodes and track them for group movement
             nodesToSelect.forEach(({ node, view }) => {
-                console.log(`[Editor] Selecting node ${node.id}`, view.element);
+                // Debug: console.log(`[Editor] Selecting node ${node.id}`, view.element);
                 
                 // Track this node in our lasso selection
                 lassoSelectedNodes.add(node.id);
@@ -429,13 +509,13 @@ export function Editor() {
                 selectedCount++;
             });
             
-            console.log(`[Editor] Selected ${selectedCount} nodes, tracked:`, Array.from(lassoSelectedNodes));
+            // Debug: console.log(`[Editor] Selected ${selectedCount} nodes, tracked:`, Array.from(lassoSelectedNodes));
         };
         
         // Function to clear lasso selection
         const clearLassoSelection = () => {
             if (lassoSelectedNodes.size > 0) {
-                console.log('[Editor] Clearing lasso selection');
+                // Debug: console.log('[Editor] Clearing lasso selection');
                 lassoSelectedNodes.forEach(nodeId => {
                     const view = area.nodeViews.get(nodeId);
                     if (view && view.element) {
@@ -500,6 +580,51 @@ export function Editor() {
         
         // Guard to prevent infinite recursion during group moves
         let isGroupMoving = false;
+        let groupMovingTimeout = null;
+        
+        // Safety function to set isGroupMoving with automatic timeout reset
+        const setGroupMoving = (value) => {
+            isGroupMoving = value;
+            if (groupMovingTimeout) {
+                clearTimeout(groupMovingTimeout);
+                groupMovingTimeout = null;
+            }
+            if (value) {
+                // Safety timeout: reset after 500ms to prevent stuck state
+                groupMovingTimeout = setTimeout(() => {
+                    if (isGroupMoving) {
+                        console.log('[Editor] Safety reset: clearing stuck isGroupMoving');
+                        isGroupMoving = false;
+                    }
+                    groupMovingTimeout = null;
+                }, 500);
+            }
+        };
+        
+        // Comprehensive reset function for all drag/selection states
+        // Called on blur, visibility change, or Escape key
+        const resetAllDragStates = () => {
+            // Reset lasso selection
+            if (isSelecting) {
+                console.log('[Editor] Resetting stuck lasso selection');
+                isSelecting = false;
+                selectionBox.style.display = 'none';
+            }
+            // Reset group moving
+            if (isGroupMoving) {
+                console.log('[Editor] Resetting stuck group moving');
+                setGroupMoving(false);
+            }
+            // Reset backdrop drag state
+            if (backdropDragState.isDragging) {
+                console.log('[Editor] Resetting stuck backdrop drag');
+                backdropDragState.isDragging = false;
+                backdropDragState.activeBackdropId = null;
+            }
+        };
+        
+        // Expose globally for emergency reset (can be called from console: window.resetEditorDragState())
+        window.resetEditorDragState = resetAllDragStates;
 
         // Function to update which nodes are captured by which backdrops
         function updateBackdropCaptures() {
@@ -598,12 +723,12 @@ export function Editor() {
                 if (node) {
                     const def = nodeRegistry.getByInstance(node);
                     if (def && def.isBackdrop && node.properties.locked) {
-                        console.log('[Editor] Blocked pick on locked backdrop:', nodeId);
+                        // Debug: console.log('[Editor] Blocked pick on locked backdrop:', nodeId);
                         return; // Return undefined to block the event
                     }
                 }
                 
-                console.log('[Editor] Node picked (Rete event):', nodeId, 'Shift held:', shiftKeyRef.current);
+                // Debug: console.log('[Editor] Node picked (Rete event):', nodeId, 'Shift held:', shiftKeyRef.current);
                 
                 // If Shift is NOT held and clicking a new node, clear previous selection
                 if (!shiftKeyRef.current && !lassoSelectedNodes.has(nodeId)) {
@@ -628,7 +753,7 @@ export function Editor() {
                     view.element.style.outline = '3px solid #00f3ff';
                 }
                 
-                console.log('[Editor] Selection after pick:', Array.from(lassoSelectedNodes));
+                // Debug: console.log('[Editor] Selection after pick:', Array.from(lassoSelectedNodes));
             }
             return context;
         });
@@ -643,14 +768,15 @@ export function Editor() {
                     setTimeout(() => {
                         const nodeView = area.nodeViews.get(payload.id);
                         if (nodeView && nodeView.element) {
-                            nodeView.element.style.zIndex = '-10';
-                            // Set pointer-events based on locked state
-                            if (payload.properties.locked) {
-                                nodeView.element.style.pointerEvents = 'none';
-                            } else {
-                                nodeView.element.style.pointerEvents = 'auto';
+                            // Only update if not already set (avoid redundant DOM writes)
+                            if (nodeView.element.style.zIndex !== '-10') {
+                                nodeView.element.style.zIndex = '-10';
                             }
-                            console.log('[Backdrop] Set z-index for:', payload.id, 'locked:', payload.properties.locked);
+                            // Set pointer-events based on locked state
+                            const targetPointerEvents = payload.properties.locked ? 'none' : 'auto';
+                            if (nodeView.element.style.pointerEvents !== targetPointerEvents) {
+                                nodeView.element.style.pointerEvents = targetPointerEvents;
+                            }
                         }
                     }, 0);
                 }
@@ -675,7 +801,7 @@ export function Editor() {
                 
                 // Handle lasso-selected group movement
                 if (lassoSelectedNodes.size > 1 && lassoSelectedNodes.has(nodeId)) {
-                    isGroupMoving = true;
+                    setGroupMoving(true);
                     
                     // Move other selected nodes using area.translate for proper connection updates
                     const promises = [];
@@ -693,7 +819,7 @@ export function Editor() {
                     
                     // Wait for all translations to complete, then reset flag
                     Promise.all(promises).then(() => {
-                        isGroupMoving = false;
+                        setGroupMoving(false);
                     });
                     
                     return context; // Return early to avoid further processing
@@ -722,12 +848,12 @@ export function Editor() {
                         
                         // Update captures to get current nodes inside
                         updateBackdropCaptures();
-                        console.log('[Backdrop] Started dragging, captured nodes:', node.properties.capturedNodes);
+                        // Debug: console.log('[Backdrop] Started dragging, captured nodes:', node.properties.capturedNodes);
                     }
                     
                     // Move all captured nodes by the same delta
                     if (node.properties.capturedNodes.length > 0) {
-                        isGroupMoving = true;
+                        setGroupMoving(true);
                         
                         const promises = [];
                         node.properties.capturedNodes.forEach(capturedId => {
@@ -742,7 +868,7 @@ export function Editor() {
                         });
                         
                         Promise.all(promises).then(() => {
-                            isGroupMoving = false;
+                            setGroupMoving(false);
                         });
                         
                         return context;
@@ -753,7 +879,7 @@ export function Editor() {
             // Reset state when drag ends
             if (context.type === 'nodedragged') {
                 if (programmaticMoveRef.current) return context;
-                console.log('[Backdrop] Drag ended, resetting state');
+                // Debug: console.log('[Backdrop] Drag ended, resetting state');
                 backdropDragState.isDragging = false;
                 backdropDragState.activeBackdropId = null;
                 
@@ -791,6 +917,9 @@ export function Editor() {
                 window.removeEventListener('pointerup', onPointerUp);
                 window.removeEventListener('pointermove', onConnectionPanMove);
                 window.removeEventListener('keyup', onConnectionPanKeyUp);
+                window.removeEventListener('blur', onWindowBlur);
+                document.removeEventListener('visibilitychange', onVisibilityChange);
+                if (groupMovingTimeout) clearTimeout(groupMovingTimeout);
                 if (selectionBox.parentNode) selectionBox.parentNode.removeChild(selectionBox);
                 area.destroy();
             },
@@ -812,6 +941,7 @@ export function Editor() {
         let engineInstance = null;
         let selectorInstance = null;
         let editorPromise = null;
+        let resizeObserver = null;
 
         // Load plugins FIRST, then create editor
         editorPromise = loadPlugins().then(() => {
@@ -832,10 +962,146 @@ export function Editor() {
             // Store processImmediate in ref for graph loading
             processImmediateRef.current = result.processImmediate;
             
+            // ELECTRON FIX: Ensure area plugin handlers are properly initialized
+            // Dispatch a synthetic wheel event to "wake up" the zoom handler
+            // And focus the container to enable pan/drag
+            setTimeout(() => {
+                if (container) {
+                    container.tabIndex = -1;
+                    container.focus();
+                    
+                    // Dispatch minimal synthetic events to initialize handlers
+                    const rect = container.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    
+                    // Trigger a minimal wheel event to initialize zoom handler
+                    const wheelEvent = new WheelEvent('wheel', {
+                        bubbles: true, cancelable: true,
+                        clientX: centerX, clientY: centerY,
+                        deltaY: 0  // Zero delta so no actual zoom happens
+                    });
+                    container.dispatchEvent(wheelEvent);
+                    
+                    console.log('[Editor] Container initialized and focused');
+                    
+                    // Expose a global reset function for debugging/recovery
+                    window.resetEditorView = () => {
+                        console.log('[Editor] Manual reset triggered');
+                        
+                        // Also reset our internal drag/selection states
+                        if (window.resetEditorDragState) {
+                            window.resetEditorDragState();
+                        }
+                        
+                        const rect = container.getBoundingClientRect();
+                        const centerX = rect.left + rect.width / 2;
+                        const centerY = rect.top + rect.height / 2;
+                        
+                        // Focus container
+                        container.tabIndex = -1;
+                        container.focus();
+                        
+                        // Release any pointer captures on container and all children
+                        try {
+                            for (let i = 0; i < 10; i++) {
+                                try { container.releasePointerCapture(i); } catch (e) {}
+                            }
+                            container.querySelectorAll('*').forEach(el => {
+                                for (let i = 0; i < 10; i++) {
+                                    try { el.releasePointerCapture(i); } catch (e) {}
+                                }
+                            });
+                        } catch (e) {}
+                        
+                        // AGGRESSIVE FIX: Try to access area's internal drag handler state
+                        // The AreaPlugin uses a "drag" module that tracks pointer state
+                        const areaRef = areaInstance;
+                        if (areaRef) {
+                            // Try to reset any internal drag tracking by triggering pointercancel
+                            const cancelEvent = new PointerEvent('pointercancel', {
+                                bubbles: true, cancelable: true,
+                                pointerId: 1, pointerType: 'mouse'
+                            });
+                            container.dispatchEvent(cancelEvent);
+                            
+                            // Also dispatch lostpointercapture which some handlers check
+                            const lostCapture = new PointerEvent('lostpointercapture', {
+                                bubbles: true, cancelable: true,
+                                pointerId: 1, pointerType: 'mouse'
+                            });
+                            container.dispatchEvent(lostCapture);
+                        }
+                        
+                        // Small delay to let cancellation events process
+                        setTimeout(() => {
+                            // Dispatch pointer events to reset drag state
+                            const downEvent = new PointerEvent('pointerdown', {
+                                bubbles: true, cancelable: true,
+                                clientX: centerX, clientY: centerY,
+                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
+                                button: 0, buttons: 1
+                            });
+                            const upEvent = new PointerEvent('pointerup', {
+                                bubbles: true, cancelable: true,
+                                clientX: centerX, clientY: centerY,
+                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
+                                button: 0, buttons: 0
+                            });
+                            
+                            container.dispatchEvent(downEvent);
+                            setTimeout(() => {
+                                container.dispatchEvent(upEvent);
+                                // Dispatch wheel event for zoom
+                                const wheelEvent = new WheelEvent('wheel', {
+                                    bubbles: true, cancelable: true,
+                                    clientX: centerX, clientY: centerY,
+                                    deltaY: 0
+                                });
+                                container.dispatchEvent(wheelEvent);
+                                console.log('[Editor] Reset complete');
+                            }, 50);
+                        }, 50);
+                    };
+                }
+            }, 100);
+            
+            // Set up ResizeObserver to detect when container becomes properly sized
+            // This helps with Electron where the window may resize after initial load
+            let hasInitializedFromResize = false;
+            resizeObserver = new ResizeObserver((entries) => {
+                for (const entry of entries) {
+                    const { width, height } = entry.contentRect;
+                    // Only act once when container first gets proper dimensions
+                    if (!hasInitializedFromResize && width > 0 && height > 0) {
+                        hasInitializedFromResize = true;
+                        console.log('[Editor] ResizeObserver: Container now has size', width, height);
+                        
+                        // Trigger area recalculation by focusing and dispatching events
+                        setTimeout(() => {
+                            container.focus();
+                            // Dispatch a zero-delta wheel to reinitialize handlers
+                            const rect = container.getBoundingClientRect();
+                            const wheelEvent = new WheelEvent('wheel', {
+                                bubbles: true, cancelable: true,
+                                clientX: rect.left + rect.width / 2,
+                                clientY: rect.top + rect.height / 2,
+                                deltaY: 0
+                            });
+                            container.dispatchEvent(wheelEvent);
+                        }, 50);
+                    }
+                }
+            });
+            resizeObserver.observe(container);
+            
             return result;
         });
 
         return () => {
+            if (resizeObserver) {
+                resizeObserver.disconnect();
+            }
             editorPromise.then((result) => result.destroy());
         };
     }, [createEditor]);
@@ -849,6 +1115,16 @@ export function Editor() {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
 
             console.log(`[Editor] KeyDown: ${e.code} (Ctrl: ${e.ctrlKey}, Meta: ${e.metaKey})`);
+            
+            // F5 or Ctrl+Shift+R - Reset editor view (fix frozen pan/zoom)
+            if (e.code === 'F5' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyR')) {
+                e.preventDefault();
+                console.log('[Editor] View reset shortcut triggered');
+                if (window.resetEditorView) {
+                    window.resetEditorView();
+                }
+                return;
+            }
             
             // Use refs to get current instances (avoids stale closure issues)
             const editor = editorRef.current;
@@ -1234,6 +1510,14 @@ export function Editor() {
                     console.log('[Editor] Viewport reset via Home key');
                 }
             }
+            
+            // Escape key - Reset any stuck drag/selection states
+            if (e.code === 'Escape') {
+                if (window.resetEditorDragState) {
+                    window.resetEditorDragState();
+                    console.log('[Editor] Drag state reset via Escape key');
+                }
+            }
         };
         
         // Track mouse position for paste location
@@ -1286,6 +1570,74 @@ export function Editor() {
             if (cleanupElectronDelete) cleanupElectronDelete();
         };
     }, [editorInstance, areaInstance, engineInstance, selectorInstance]);
+
+    // Fast Context Menu - Right-click handler
+    useEffect(() => {
+        const container = ref.current;
+        if (!container || !editorInstance || !areaInstance) return;
+
+        const handleContextMenu = (e) => {
+            // Check if right-clicking on a node
+            const nodeElement = e.target.closest('[data-testid="node"]');
+            
+            if (nodeElement) {
+                // Right-click on a node - show node context menu
+                e.preventDefault();
+                const nodeId = nodeElement.dataset.nodeId || 
+                    Array.from(areaInstance.nodeViews.entries())
+                        .find(([id, view]) => view.element === nodeElement)?.[0];
+                
+                if (nodeId) {
+                    const node = editorInstance.getNode(nodeId);
+                    setContextMenu({
+                        visible: true,
+                        position: { x: e.clientX, y: e.clientY },
+                        items: [
+                            {
+                                label: 'Delete',
+                                handler: async () => {
+                                    const connections = editorInstance.getConnections()
+                                        .filter(c => c.source === nodeId || c.target === nodeId);
+                                    for (const conn of connections) {
+                                        await editorInstance.removeConnection(conn.id);
+                                    }
+                                    await editorInstance.removeNode(nodeId);
+                                }
+                            }
+                        ],
+                        nodeContext: node
+                    });
+                }
+            } else {
+                // Right-click on empty area - show add node menu
+                e.preventDefault();
+                const menuItems = window._t2GetMenuItems ? window._t2GetMenuItems() : [];
+                setContextMenu({
+                    visible: true,
+                    position: { x: e.clientX, y: e.clientY },
+                    items: menuItems,
+                    nodeContext: null
+                });
+            }
+        };
+
+        container.addEventListener('contextmenu', handleContextMenu);
+
+        return () => {
+            container.removeEventListener('contextmenu', handleContextMenu);
+        };
+    }, [editorInstance, areaInstance]);
+
+    // Context menu handlers
+    const handleContextMenuClose = useCallback(() => {
+        setContextMenu(prev => ({ ...prev, visible: false }));
+    }, []);
+
+    const handleContextMenuSelect = useCallback(async (item) => {
+        if (item.handler) {
+            await item.handler(contextMenu.position);
+        }
+    }, [contextMenu.position]);
 
     const handleSave = async () => {
         if (!editorInstance || !areaInstance) return;
@@ -1541,30 +1893,14 @@ export function Editor() {
                         
                         // ELECTRON FIX: Dispatch synthetic pointer events to reset area's drag state
                         // This fixes pan/zoom issues that occur after loading graphs in Electron
-                        const resetAreaDragState = () => {
-                            const rect = container.getBoundingClientRect();
-                            const centerX = rect.left + rect.width / 2;
-                            const centerY = rect.top + rect.height / 2;
-                            
-                            const downEvent = new PointerEvent('pointerdown', {
-                                bubbles: true, cancelable: true,
-                                clientX: centerX, clientY: centerY,
-                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
-                                button: 0, buttons: 1
-                            });
-                            
-                            const upEvent = new PointerEvent('pointerup', {
-                                bubbles: true, cancelable: true,
-                                clientX: centerX, clientY: centerY,
-                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
-                                button: 0, buttons: 0
-                            });
-                            
-                            container.dispatchEvent(downEvent);
-                            setTimeout(() => container.dispatchEvent(upEvent), 50);
-                        };
-                        
-                        setTimeout(resetAreaDragState, 100);
+                        // Use the global reset function which is more comprehensive
+                        if (window.resetEditorView) {
+                            setTimeout(() => window.resetEditorView(), 100);
+                            // Run it again after a longer delay as a safety net
+                            setTimeout(() => window.resetEditorView(), 500);
+                            // One more for good measure at 1 second
+                            setTimeout(() => window.resetEditorView(), 1000);
+                        }
                     }
                     
                     // Release any stuck pointer captures on all nodes
@@ -1789,6 +2125,13 @@ export function Editor() {
                 onImport={handleImport}
             />
             <ForecastPanel />
+            <FastContextMenu
+                visible={contextMenu.visible}
+                position={contextMenu.position}
+                items={contextMenu.items}
+                onClose={handleContextMenuClose}
+                onSelect={handleContextMenuSelect}
+            />
         </div>
     );
 }

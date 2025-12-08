@@ -8,6 +8,34 @@
    ============================================================================ */
 
 /* ============================================================================
+   GPU ACCELERATION - Force hardware acceleration for smooth node dragging
+   ============================================================================ */
+
+/* Rete.js node containers - enable GPU layer for transforms */
+[data-testid="node"],
+.rete-node {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* CSS Containment - tells browser this element is isolated for better perf */
+  contain: layout style paint;
+}
+
+/* Rete area container - GPU accelerated panning/zooming */
+[data-testid="area"],
+.rete-area {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Connection SVG layer - also GPU accelerated */
+[data-testid="connection-wrapper"],
+.connection-wrapper {
+  will-change: transform;
+  pointer-events: none;
+}
+
+/* ============================================================================
    SHARED ANIMATIONS
    ============================================================================ */
 

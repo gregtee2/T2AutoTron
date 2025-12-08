@@ -107,6 +107,8 @@ class HomeAssistantManager {
 
               const state = {
                 id: cacheKey,
+                name: entity.attributes.friendly_name || entity.entity_id,
+                type: domain,
                 state: entity.state,
                 on: entity.state === 'on' || entity.state === 'open' || entity.state === 'playing',
                 brightness: entity.attributes.brightness ? Math.round((entity.attributes.brightness / 255) * 100) : (entity.state === 'on' ? 100 : 0),

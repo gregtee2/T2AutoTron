@@ -4,12 +4,20 @@ import { socket, connectSocket, disconnectSocket } from './socket';
 import './App.css';
 import './test-sockets.js'; // Test socket patch
 
+// Track commands sent by nodes (to distinguish app-triggered vs HA-triggered changes)
+const pendingCommands = new Map(); // deviceId -> { nodeTitle, action, timestamp }
+// Track last known state to detect actual changes (not just repeated updates)
+const lastKnownState = new Map(); // deviceId -> { on: boolean, state: string }
+
 function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [haStatus, setHaStatus] = useState({ connected: false, wsConnected: false, deviceCount: 0 });
   const [eventLogs, setEventLogs] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [panelHeight, setPanelHeight] = useState(() => parseInt(localStorage.getItem('panelHeight')) || 150);
+  const [panelFontSize, setPanelFontSize] = useState(() => parseInt(localStorage.getItem('panelFontSize')) || 11);
   const eventLogRef = useRef(null);
+  const resizeRef = useRef(null);
   const maxLogEntries = 100;
 
   useEffect(() => {
@@ -17,6 +25,8 @@ function App() {
       setIsConnected(true);
       console.log('Socket connected');
       addEventLog('system', 'Socket connected to server');
+      // Clear state tracking on reconnect to get fresh data
+      lastKnownState.clear();
       // Request HA status when we connect
       socket.emit('request-ha-status');
     }
@@ -33,11 +43,43 @@ function App() {
       console.log('HA connection status:', data);
     }
 
-    // Listen for device state changes
+    // Listen for device state changes from backend (real-time HA WebSocket updates)
+    function onDeviceStateUpdate(data) {
+      const { id, state, on, name } = data;
+      if (!id) return;
+      
+      // Determine current state
+      const lastState = lastKnownState.get(id);
+      const currentOn = on !== undefined ? on : (state === 'on' || state === 'playing' || state === 'open');
+      // Get friendly name from various possible fields
+      const deviceName = name || data.friendly_name || data.attributes?.friendly_name || 
+        id.replace('ha_', '').replace('kasa_', '').replace(/\./g, ' ').replace(/_/g, ' ');
+      
+      // Check if state actually changed (filter out repeated updates for logging)
+      if (lastState && lastState.on === currentOn) {
+        return; // State hasn't changed, skip logging
+      }
+      
+      // Update last known state
+      lastKnownState.set(id, { on: currentOn, state });
+      
+      // Log the state change
+      const pending = pendingCommands.get(id);
+      const stateStr = currentOn ? 'ON' : 'OFF';
+      
+      if (pending && (Date.now() - pending.timestamp) < 5000) {
+        // This change was triggered by a node in the app
+        addEventLog('device', `${deviceName} → ${stateStr}`, { source: 'app', triggeredBy: pending.nodeTitle });
+        pendingCommands.delete(id);
+      } else {
+        // This change came from HA (physical switch, other automation, etc.)
+        addEventLog('trigger', `${deviceName} → ${stateStr}`, { source: 'HA' });
+      }
+    }
+
+    // Legacy handler for device_state_change (keep for compatibility)
     function onDeviceStateChange(data) {
-      const { deviceId, deviceName, state, source } = data;
-      const stateStr = state?.on !== undefined ? (state.on ? 'ON' : 'OFF') : JSON.stringify(state);
-      addEventLog('device', `${deviceName || deviceId}: ${stateStr}`, source);
+      // Handled by onDeviceStateUpdate now
     }
 
     // Listen for node execution events
@@ -62,6 +104,7 @@ function App() {
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('ha-connection-status', onHaConnectionStatus);
+    socket.on('device-state-update', onDeviceStateUpdate);
     socket.on('device_state_change', onDeviceStateChange);
     socket.on('node_executed', onNodeExecuted);
     socket.on('scheduled_events', onScheduledEvents);
@@ -73,6 +116,7 @@ function App() {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('ha-connection-status', onHaConnectionStatus);
+      socket.off('device-state-update', onDeviceStateUpdate);
       socket.off('device_state_change', onDeviceStateChange);
       socket.off('node_executed', onNodeExecuted);
       socket.off('scheduled_events', onScheduledEvents);
@@ -129,11 +173,16 @@ function App() {
     window.setUpcomingEvents = setUpcomingEvents;
     window.registerScheduledEvents = registerScheduledEvents;
     window.unregisterScheduledEvents = unregisterScheduledEvents;
+    // Expose pending commands tracker for nodes to register their commands
+    window.registerPendingCommand = (deviceId, nodeTitle, action) => {
+      pendingCommands.set(deviceId, { nodeTitle, action, timestamp: Date.now() });
+    };
     return () => {
       delete window.addEventLog;
       delete window.setUpcomingEvents;
       delete window.registerScheduledEvents;
       delete window.unregisterScheduledEvents;
+      delete window.registerPendingCommand;
     };
   }, [registerScheduledEvents, unregisterScheduledEvents]);
 
@@ -175,22 +224,51 @@ function App() {
       <div className="editor-wrapper">
         <Editor />
       </div>
-      <div className="bottom-panels">
+      <div 
+        className="resize-handle" 
+        ref={resizeRef}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          const startY = e.clientY;
+          const startHeight = panelHeight;
+          const onMouseMove = (moveEvent) => {
+            const delta = startY - moveEvent.clientY;
+            const newHeight = Math.max(80, Math.min(400, startHeight + delta));
+            setPanelHeight(newHeight);
+            localStorage.setItem('panelHeight', newHeight);
+          };
+          const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+          };
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        }}
+      >
+        <div className="resize-handle-grip"></div>
+      </div>
+      <div className="bottom-panels" style={{ height: panelHeight, fontSize: panelFontSize }}>
         <div className="panel event-log-panel">
           <div className="panel-header">
             <span className="panel-title">Event Log</span>
-            <button className="panel-clear-btn" onClick={() => setEventLogs([])}>Clear</button>
+            <div className="panel-controls">
+              <button className="font-size-btn" onClick={() => { const s = Math.max(8, panelFontSize - 1); setPanelFontSize(s); localStorage.setItem('panelFontSize', s); }}>A-</button>
+              <span className="font-size-label">{panelFontSize}px</span>
+              <button className="font-size-btn" onClick={() => { const s = Math.min(16, panelFontSize + 1); setPanelFontSize(s); localStorage.setItem('panelFontSize', s); }}>A+</button>
+              <button className="panel-clear-btn" onClick={() => setEventLogs([])}>Clear</button>
+            </div>
           </div>
           <div className="panel-content" ref={eventLogRef}>
             {eventLogs.length === 0 ? (
               <div className="empty-message">No events yet...</div>
             ) : (
               eventLogs.map((log, index) => (
-                <div key={index} className={`log-entry log-${log.type}`}>
+                <div key={index} className={`log-entry log-${log.type}`} title={log.details?.triggeredBy ? `Triggered by: ${log.details.triggeredBy}` : (log.details?.source === 'HA' ? 'Triggered externally (HA, physical switch, etc.)' : '')}>
                   <span className="log-time">{log.timestamp}</span>
-                  <span className={`log-type-badge ${log.type}`}>{log.type}</span>
+                  <span className={`log-type-badge ${log.type}`}>{log.type === 'trigger' ? 'external' : log.type}</span>
                   <span className="log-message">{log.message}</span>
-                  {log.details && <span className="log-details">{typeof log.details === 'object' ? JSON.stringify(log.details) : log.details}</span>}
+                  {log.details?.triggeredBy && <span className="log-source app-source">via {log.details.triggeredBy}</span>}
+                  {log.details?.source === 'HA' && !log.details?.triggeredBy && <span className="log-source external-source">via HA</span>}
                 </div>
               ))
             )}

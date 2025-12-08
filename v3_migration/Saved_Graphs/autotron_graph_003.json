@@ -27,7 +27,7 @@
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
           "next_on_date": null,
-          "next_off_date": "2025-12-08T06:30:00.000Z",
+          "next_off_date": "2025-12-09T06:30:00.000Z",
           "next_cycle_date": null,
           "currentState": false,
           "status": "Initializing...",
@@ -87,11 +87,11 @@
           "city": "Los Angeles",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2025-12-07T14:00:28.036Z",
-          "sunset_time": "2025-12-08T02:00:28.036Z",
-          "next_on_date": "2025-12-09T01:05:28.036Z",
-          "next_off_date": "2025-12-08T11:00:00.000Z",
-          "currentState": true,
+          "sunrise_time": "2025-12-08T14:00:33.399Z",
+          "sunset_time": "2025-12-09T02:00:33.399Z",
+          "next_on_date": "2025-12-09T01:05:33.399Z",
+          "next_off_date": "2025-12-09T11:00:00.000Z",
+          "currentState": false,
           "status": "Sun times set (Default).",
           "debug": false,
           "pulseMode": false
@@ -144,9 +144,9 @@
           "logicType": "OR",
           "hysteresis": 5,
           "_lastEval": {
-            "solar": true,
-            "temp": false,
-            "humidity": false,
+            "solar": false,
+            "temp": true,
+            "humidity": true,
             "wind": false,
             "hourlyRain": false,
             "eventRain": false,
@@ -210,11 +210,11 @@
           "city": "Los Angeles",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2025-12-07T14:00:28.117Z",
-          "sunset_time": "2025-12-08T02:00:28.117Z",
-          "next_on_date": "2025-12-09T00:00:28.117Z",
-          "next_off_date": "2025-12-08T06:30:00.000Z",
-          "currentState": true,
+          "sunrise_time": "2025-12-08T14:00:33.447Z",
+          "sunset_time": "2025-12-09T02:00:33.447Z",
+          "next_on_date": "2025-12-09T00:00:33.447Z",
+          "next_off_date": "2025-12-09T06:30:00.000Z",
+          "currentState": false,
           "status": "Sun times set (Default).",
           "debug": false,
           "pulseMode": false
@@ -238,7 +238,7 @@
           "compareOperator": ">",
           "compareThreshold": 80,
           "setVariable": "",
-          "_lastResult": true
+          "_lastResult": false
         }
       }
     },
@@ -387,7 +387,7 @@
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
           "next_on_date": null,
-          "next_off_date": "2025-12-08T09:00:00.000Z",
+          "next_off_date": "2025-12-09T09:00:00.000Z",
           "next_cycle_date": null,
           "currentState": false,
           "status": "Initializing...",
@@ -447,11 +447,11 @@
           "city": "Los Angeles",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2025-12-07T14:00:28.213Z",
-          "sunset_time": "2025-12-08T02:00:28.213Z",
-          "next_on_date": "2025-12-09T01:30:28.213Z",
-          "next_off_date": "2025-12-08T10:00:28.213Z",
-          "currentState": true,
+          "sunrise_time": "2025-12-08T14:00:33.512Z",
+          "sunset_time": "2025-12-09T02:00:33.512Z",
+          "next_on_date": "2025-12-09T01:30:33.512Z",
+          "next_off_date": "2025-12-09T10:00:33.512Z",
+          "currentState": false,
           "status": "Sun times set (Default).",
           "debug": false,
           "pulseMode": false
@@ -470,7 +470,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "Bathroom Light On/Off",
-          "lastValue": true,
+          "lastValue": false,
           "registeredName": "[Trigger]Bathroom Light On/Off",
           "finalName": "[Trigger]Bathroom Light On/Off"
         }
@@ -503,7 +503,7 @@
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
           "next_on_date": "2025-12-09T05:00:00.000Z",
-          "next_off_date": "2025-12-08T07:00:00.000Z",
+          "next_off_date": "2025-12-09T07:00:00.000Z",
           "next_cycle_date": null,
           "currentState": false,
           "status": "Initializing...",
@@ -584,11 +584,11 @@
           "city": "Los Angeles",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2025-12-07T14:00:28.309Z",
-          "sunset_time": "2025-12-08T02:00:28.309Z",
-          "next_on_date": "2025-12-09T01:01:28.309Z",
-          "next_off_date": "2025-12-08T06:30:00.000Z",
-          "currentState": true,
+          "sunrise_time": "2025-12-08T14:00:33.559Z",
+          "sunset_time": "2025-12-09T02:00:33.559Z",
+          "next_on_date": "2025-12-09T01:01:33.559Z",
+          "next_off_date": "2025-12-09T06:30:00.000Z",
+          "currentState": false,
           "status": "Sun times set (Default).",
           "debug": false,
           "pulseMode": false
@@ -607,7 +607,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "KitchenCounterLights",
-          "lastValue": true,
+          "lastValue": false,
           "registeredName": "[Trigger]KitchenCounterLights",
           "finalName": "[Trigger]KitchenCounterLights"
         }
@@ -625,7 +625,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "registeredName": "[Trigger]House Lights ON/Off",
           "finalName": "[Trigger]House Lights ON/Off"
         }
@@ -658,7 +658,7 @@
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
           "next_on_date": "2025-12-09T05:30:00.000Z",
-          "next_off_date": "2025-12-08T07:00:00.000Z",
+          "next_off_date": "2025-12-09T07:00:00.000Z",
           "next_cycle_date": null,
           "currentState": false,
           "status": "Initializing...",
@@ -697,7 +697,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true
+          "lastValue": false
         }
       }
     },
@@ -728,7 +728,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]Sunset",
-          "lastValue": true
+          "lastValue": false
         }
       }
     },
@@ -744,7 +744,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "Sunset",
-          "lastValue": true,
+          "lastValue": false,
           "registeredName": "[Trigger]Sunset",
           "finalName": "[Trigger]Sunset"
         }
@@ -797,9 +797,9 @@
         "properties": {
           "bufferName": "Bathroom_to_office_color",
           "lastValue": {
-            "hue": 0.2388888888888889,
-            "saturation": 0.86,
-            "brightness": 180,
+            "hue": 0.10555555555555556,
+            "saturation": 0,
+            "brightness": 83,
             "transition": 0
           },
           "registeredName": "[HSV]Bathroom_to_office_color",
@@ -865,7 +865,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "4def71c4330bf4b7",
+            "id": "d23aae8b41c6544a",
             "control": null,
             "showControl": true
           },
@@ -874,7 +874,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "3a7b170d25fe3c02",
+            "id": "fee020bf5e1888a9",
             "control": null,
             "showControl": true
           },
@@ -883,7 +883,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "c410d461c998603d",
+            "id": "678cd4a01b2da23e",
             "control": null,
             "showControl": true
           },
@@ -892,7 +892,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "5a813a2cad5603f2",
+            "id": "c56f56ef8bc24a5c",
             "control": null,
             "showControl": true
           },
@@ -901,7 +901,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "894380d5113929a3",
+            "id": "168fa869c025b181",
             "control": null,
             "showControl": true
           }
@@ -913,7 +913,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "566c91259c2bc655"
+            "id": "758473b912aaecff"
           }
         },
         "controls": {},
@@ -971,13 +971,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 58,
-        "position": 0.9666666666666667,
-        "isInRange": true,
+        "lastTimeStep": 2,
+        "position": 0,
+        "isInRange": false,
         "lastColor": {
-          "r": 39,
-          "g": 22,
-          "b": 9
+          "r": 46,
+          "g": 46,
+          "b": 46
         },
         "inputStartTime": "5:30 PM",
         "inputEndTime": "10:30 PM"
@@ -996,7 +996,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": true
+          "value": false
         }
       }
     },
@@ -1033,10 +1033,10 @@
           "city": "Los Angeles",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2025-12-07T14:00:28.465Z",
-          "sunset_time": "2025-12-08T02:00:28.465Z",
-          "next_on_date": "2025-12-09T01:30:28.465Z",
-          "next_off_date": "2025-12-08T06:30:00.000Z",
+          "sunrise_time": "2025-12-08T14:00:33.699Z",
+          "sunset_time": "2025-12-09T02:00:33.699Z",
+          "next_on_date": "2025-12-09T01:30:33.699Z",
+          "next_off_date": "2025-12-09T06:30:00.000Z",
           "currentState": false,
           "status": "Sun times set (Default).",
           "debug": false,
@@ -1260,7 +1260,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "7bcb259f527530ef",
+            "id": "d8c9903824d8b5e6",
             "control": null,
             "showControl": true
           },
@@ -1269,7 +1269,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "1237180f70d19776",
+            "id": "244312f970a6984d",
             "control": null,
             "showControl": true
           },
@@ -1278,7 +1278,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "2607a7c626b15853",
+            "id": "448874165c74dc65",
             "control": null,
             "showControl": true
           },
@@ -1287,7 +1287,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "63e9d94f77c1c079",
+            "id": "ccfafb70104bbaa0",
             "control": null,
             "showControl": true
           },
@@ -1296,7 +1296,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "baa02de88b4e5cdf",
+            "id": "b090cfef88b3cc68",
             "control": null,
             "showControl": true
           }
@@ -1308,7 +1308,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "320be334893fc4e4"
+            "id": "8d24c1ed6e6d7316"
           }
         },
         "controls": {},
@@ -1366,13 +1366,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 36,
-        "position": 0.6,
-        "isInRange": true,
+        "lastTimeStep": 2,
+        "position": 0,
+        "isInRange": false,
         "lastColor": {
-          "r": 50,
-          "g": 93,
-          "b": 0
+          "r": 0,
+          "g": 140,
+          "b": 153
         },
         "inputStartTime": "5:30 PM",
         "inputEndTime": "1:30 AM"
@@ -1411,10 +1411,10 @@
           "city": "Los Angeles",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2025-12-07T14:00:28.600Z",
-          "sunset_time": "2025-12-08T02:00:28.600Z",
-          "next_on_date": "2025-12-09T01:30:28.600Z",
-          "next_off_date": "2025-12-08T09:30:00.000Z",
+          "sunrise_time": "2025-12-08T14:00:33.760Z",
+          "sunset_time": "2025-12-09T02:00:33.760Z",
+          "next_on_date": "2025-12-09T01:30:33.760Z",
+          "next_off_date": "2025-12-09T09:30:00.000Z",
           "currentState": false,
           "status": "Sun times set (Default).",
           "debug": false,
@@ -1449,9 +1449,9 @@
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
           "next_on_date": "2025-12-09T05:00:00.000Z",
-          "next_off_date": "2025-12-08T17:00:00.000Z",
+          "next_off_date": "2025-12-09T17:00:00.000Z",
           "next_cycle_date": null,
-          "currentState": true,
+          "currentState": false,
           "status": "Initializing...",
           "debug": false,
           "pulseMode": false
@@ -1472,7 +1472,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "170d30b4d0742aca",
+            "id": "8a203e01a8d8b4cf",
             "control": null,
             "showControl": true
           },
@@ -1481,7 +1481,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "ff0d2b3155d6ff75",
+            "id": "8245f83d747b9529",
             "control": null,
             "showControl": true
           },
@@ -1490,7 +1490,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "7b3b567621daf238",
+            "id": "567bfceb17a8eee1",
             "control": null,
             "showControl": true
           },
@@ -1499,7 +1499,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "60a810f38b5ec114",
+            "id": "d77355370bd21971",
             "control": null,
             "showControl": true
           },
@@ -1508,7 +1508,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "58befa47221f5edf",
+            "id": "f2601e94a554909b",
             "control": null,
             "showControl": true
           }
@@ -1520,7 +1520,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "864034010f8f5634"
+            "id": "064350ba677727a8"
           }
         },
         "controls": {},
@@ -1578,13 +1578,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 36,
-        "position": 0.6,
-        "isInRange": true,
+        "lastTimeStep": 2,
+        "position": 0,
+        "isInRange": false,
         "lastColor": {
-          "r": 73,
-          "g": 52,
-          "b": 38
+          "r": 99,
+          "g": 99,
+          "b": 99
         },
         "inputStartTime": "5:30 PM",
         "inputEndTime": "1:30 AM"
@@ -1675,7 +1675,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": true
+          "value": false
         }
       }
     },
@@ -1761,7 +1761,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]Sunset",
-          "lastValue": true
+          "lastValue": false
         }
       }
     },
@@ -1777,7 +1777,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true
+          "lastValue": false
         }
       }
     },
@@ -1794,7 +1794,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": true
+          "value": false
         }
       }
     },
@@ -1810,7 +1810,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true
+          "lastValue": false
         }
       }
     },
@@ -1882,7 +1882,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": true
+          "value": false
         }
       }
     },
@@ -2218,7 +2218,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true
+          "lastValue": false
         }
       }
     },
@@ -2393,7 +2393,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": true
+          "value": false
         }
       }
     },
@@ -2410,7 +2410,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": true
+          "value": false
         }
       }
     },
@@ -2609,8 +2609,8 @@
           "cycle_duration": 10,
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
-          "next_on_date": "2025-12-08T15:30:00.000Z",
-          "next_off_date": "2025-12-08T07:00:00.000Z",
+          "next_on_date": "2025-12-09T15:30:00.000Z",
+          "next_off_date": "2025-12-09T07:00:00.000Z",
           "next_cycle_date": null,
           "currentState": true,
           "status": "Initializing...",
@@ -2651,7 +2651,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "778e53cce207ef14",
+            "id": "5ef83b8b7e26bc27",
             "control": null,
             "showControl": true
           },
@@ -2660,7 +2660,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "59b238f4fdb33095",
+            "id": "a8b4d0a746477063",
             "control": null,
             "showControl": true
           },
@@ -2669,7 +2669,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "adf78cb6d3e790a6",
+            "id": "4299af13c419fd9d",
             "control": null,
             "showControl": true
           },
@@ -2678,7 +2678,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "a240c55da79ce5a8",
+            "id": "43020ff3a9351721",
             "control": null,
             "showControl": true
           },
@@ -2687,7 +2687,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "cc0c660fec4c9514",
+            "id": "7645e4578e22c38f",
             "control": null,
             "showControl": true
           }
@@ -2699,7 +2699,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "a44bb0f136dfb6dc"
+            "id": "c3b21a958ac921c8"
           }
         },
         "controls": {},
@@ -2757,13 +2757,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 57,
-        "position": 0.95,
+        "lastTimeStep": 10,
+        "position": 0.16666666666666666,
         "isInRange": true,
         "lastColor": {
-          "r": 77,
-          "g": 60,
-          "b": 6
+          "r": 2,
+          "g": 95,
+          "b": 116
         },
         "inputStartTime": null,
         "inputEndTime": null
@@ -2782,9 +2782,9 @@
         "properties": {
           "bufferName": "Office Colors",
           "lastValue": {
-            "hue": 0.1284722222222222,
-            "saturation": 0.924,
-            "brightness": 76.2,
+            "hue": 0.5310185185185184,
+            "saturation": 0.9866666666666667,
+            "brightness": 115.99333333333333,
             "hueStart": 222,
             "hueEnd": 37
           },
@@ -2856,9 +2856,9 @@
         "properties": {
           "selectedBuffer": "[HSV]Office Colors",
           "lastValue": {
-            "hue": 0.1284722222222222,
-            "saturation": 0.924,
-            "brightness": 76.2,
+            "hue": 0.5310185185185184,
+            "saturation": 0.9866666666666667,
+            "brightness": 115.99333333333333,
             "hueStart": 222,
             "hueEnd": 37
           }
@@ -3016,7 +3016,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "a912aede4d68150a",
+            "id": "fd7919bef9f8b132",
             "control": null,
             "showControl": true
           },
@@ -3025,7 +3025,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "6a7d92c6038ce919",
+            "id": "7f8c6b40704ab233",
             "control": null,
             "showControl": true
           },
@@ -3034,7 +3034,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "da62f897fe68e5d4",
+            "id": "fb74b08879150616",
             "control": null,
             "showControl": true
           },
@@ -3043,7 +3043,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "9c830abf1e442313",
+            "id": "a11ceb8c2e92a8dc",
             "control": null,
             "showControl": true
           },
@@ -3052,7 +3052,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "5233a48a4b5a3f71",
+            "id": "dde3ac423e07fdd3",
             "control": null,
             "showControl": true
           }
@@ -3064,7 +3064,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "d01df3aacf80c51e"
+            "id": "a5077427c6437602"
           }
         },
         "controls": {},
@@ -3162,7 +3162,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": true
+          "value": false
         }
       }
     },
@@ -3177,7 +3177,7 @@
         "id": "beeffe4e5da5c7fe",
         "label": "HA Device Automation",
         "properties": {
-          "status": "Fields: temperature",
+          "status": "⚠️ No input data received",
           "debug": false,
           "lastEntityType": "sensor",
           "selectedFields": [
@@ -3202,7 +3202,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_temperature",
           "selectedDeviceName": "Sunshine terrace  Temperature",
-          "status": "✅ Sunshine terrace  Temperature: 55.6",
+          "status": "✅ Sunshine terrace  Temperature: 68.5",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -3473,7 +3473,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true
+          "lastValue": false
         }
       }
     },
@@ -3713,7 +3713,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": true
+          "value": false
         }
       }
     },
@@ -3733,8 +3733,8 @@
           "isActive": false,
           "countdown": 0,
           "lastInputValue": true,
-          "outputValue": false,
-          "passthroughValue": null,
+          "outputValue": true,
+          "passthroughValue": true,
           "debug": false
         }
       }
@@ -3752,7 +3752,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": false
+          "value": true
         }
       }
     },
@@ -3776,644 +3776,644 @@
   ],
   "connections": [
     {
-      "id": "7e2e09d4706b0854",
+      "id": "5a6c36e02c143fdf",
       "source": "18c61864ae674e4a",
       "target": "8d4af06d6181b1c6",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "5e1dbb499137b354",
+      "id": "df11aa19b771c0f0",
       "source": "cb4c3820c4b47079",
       "target": "d384f545fa2b7f45",
       "sourceOutput": "state",
       "targetInput": "in0"
     },
     {
-      "id": "aee3a5c8fdc95f54",
+      "id": "7aceb91b209478f9",
       "source": "50f4fa1dafd492f9",
       "target": "d384f545fa2b7f45",
       "sourceOutput": "result",
       "targetInput": "in1"
     },
     {
-      "id": "c93e17c0db2191eb",
+      "id": "84a0feb0eb5c12a9",
       "source": "720bd29f88ec7e96",
       "target": "444d3a77af409b04",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "9fec17ea2be8c0c8",
+      "id": "6f6580ce513a518a",
       "source": "b774e53e008efd8a",
       "target": "c01e165c7bfe62a5",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "0e266b34d1e50769",
+      "id": "60c7612238ec58f8",
       "source": "b774e53e008efd8a",
       "target": "5b0cc8a4356c0f1a",
       "sourceOutput": "state",
       "targetInput": "in0"
     },
     {
-      "id": "8eb320dde700baee",
+      "id": "01b5aceb2aebb5f4",
       "source": "be6f5545a201a498",
       "target": "5b0cc8a4356c0f1a",
       "sourceOutput": "state",
       "targetInput": "in1"
     },
     {
-      "id": "19ab477152f42746",
+      "id": "3aeecdc8c2efba2e",
       "source": "5b0cc8a4356c0f1a",
       "target": "079087acd1131ba1",
       "sourceOutput": "result",
       "targetInput": "in"
     },
     {
-      "id": "5f20b1a2c255956e",
+      "id": "22656cdebd5ebf87",
       "source": "8480926f954c2743",
       "target": "ccf1a34014c85926",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "d16649581da2dc52",
+      "id": "518d91315592ff83",
       "source": "d384f545fa2b7f45",
       "target": "d34623b94b64ad5c",
       "sourceOutput": "result",
       "targetInput": "in"
     },
     {
-      "id": "efebf5fcea143306",
+      "id": "682bad0c4b86878b",
       "source": "3809449d3be5a2d5",
       "target": "0cab81e8c5c154ff",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "1750e6fe65412be2",
+      "id": "611bb4f6941d3e25",
       "source": "537324f4d766e02b",
       "target": "5a64094e75fe69b7",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "a904eb74de9d8ef8",
+      "id": "f46e8b75ae39367f",
       "source": "90d3eea48e12005f",
       "target": "6ff49671565a0255",
       "sourceOutput": "out",
       "targetInput": "a"
     },
     {
-      "id": "c8c4c9a781ad79d6",
+      "id": "78d71b46b09de2e3",
       "source": "f4dd2d2e6355d1c9",
       "target": "6ff49671565a0255",
       "sourceOutput": "value",
       "targetInput": "b"
     },
     {
-      "id": "466d64b3f60f35a1",
+      "id": "f8d7773597741c43",
       "source": "6ff49671565a0255",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "33ccdb7a1db57ea1",
+      "id": "ddcaa4ff2872f1ad",
       "source": "13d7d35bcd11958e",
       "target": "32214cb284b6c445",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "53d88070d58c1cb9",
+      "id": "3b835ccc69615120",
       "source": "8b0054e3d5a4b49f",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "f3973491f887af89",
+      "id": "1e94dba21f970fd0",
       "source": "1556397fa0448d51",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "hsv_out",
       "targetInput": "data_3"
     },
     {
-      "id": "2c7c3d2c01d18806",
+      "id": "338717a1b725bfa0",
       "source": "757c6f3bd4fd74dd",
       "target": "7326e8f64d174170",
       "sourceOutput": "solar",
       "targetInput": "input"
     },
     {
-      "id": "6e9a2b5d6d064f6d",
+      "id": "056bed0aa5ffcd79",
       "source": "757c6f3bd4fd74dd",
       "target": "50f4fa1dafd492f9",
       "sourceOutput": "solar",
       "targetInput": "in0"
     },
     {
-      "id": "fe89d01a9934c287",
+      "id": "ef9412ca2f279e7c",
       "source": "83837d8f043f49cf",
       "target": "5fc2a6083b607a64",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "78e56b2739f4a51d",
+      "id": "d6d24647ddfa46d5",
       "source": "83837d8f043f49cf",
       "target": "5fc2a6083b607a64",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "2ecd97f7d4091ef2",
+      "id": "1811d88589ba2ada",
       "source": "83837d8f043f49cf",
       "target": "b63188f832b55b51",
       "sourceOutput": "startTime",
       "targetInput": "input"
     },
     {
-      "id": "8042374ab5632af2",
+      "id": "c88af5fbb29e0a1a",
       "source": "22ab7427bbcd0c0f",
       "target": "f65af4c70a7f6f40",
       "sourceOutput": "state",
       "targetInput": "trigger"
     },
     {
-      "id": "aafb638e8dce3dbb",
+      "id": "32048a7840e4312f",
       "source": "22ab7427bbcd0c0f",
       "target": "b2dcb230aabedc48",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "074ec2e72d781756",
+      "id": "043a0415c95bbd98",
       "source": "22ab7427bbcd0c0f",
       "target": "b2dcb230aabedc48",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "7dd1964f43456bc0",
+      "id": "0dcd27f2a07dbc1d",
       "source": "bb5e204a7266087a",
       "target": "c602674304198387",
       "sourceOutput": "state",
       "targetInput": "trigger"
     },
     {
-      "id": "285d8f406ac109e7",
+      "id": "666b6b0d2ab3430d",
       "source": "22ab7427bbcd0c0f",
       "target": "c1c9a5b0ed01c3b7",
       "sourceOutput": "state",
       "targetInput": "trigger"
     },
     {
-      "id": "c69a1b4b0433e845",
+      "id": "519f9278d8c78d20",
       "source": "b2dcb230aabedc48",
       "target": "c1c9a5b0ed01c3b7",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "3e86af511bc4fac2",
+      "id": "d804e1aee930da95",
       "source": "22ab7427bbcd0c0f",
       "target": "51e37bca5f4b342d",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "60e7da7d90d3ce9c",
+      "id": "72b4a4280147b896",
       "source": "22ab7427bbcd0c0f",
       "target": "51e37bca5f4b342d",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "4a9b1fdc87d9fdef",
+      "id": "a9d77055ca0bcf8c",
       "source": "e82bee10d637f7bd",
       "target": "206d534c807468f1",
       "sourceOutput": "out",
       "targetInput": "input"
     },
     {
-      "id": "1092740559096298",
+      "id": "7e5638a58b192bd2",
       "source": "5fc2a6083b607a64",
       "target": "23c01481261e42d1",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "13d3e78b68489285",
+      "id": "54855c8a8c5ef09b",
       "source": "ccbfbe4498e0188d",
       "target": "8cb4fdd26ab0ff28",
       "sourceOutput": "out",
       "targetInput": "input"
     },
     {
-      "id": "5e6f30670f7cac7f",
+      "id": "2f571106889c2dd4",
       "source": "d6bb910c707b1dd5",
       "target": "e0ea6f0875da65de",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "cdb4a403059634d4",
+      "id": "26c473082824511a",
       "source": "9e2a30f7a17e5bd5",
       "target": "2f7d4a81e11769d4",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "6e5e47fad0d40cb7",
+      "id": "e9cf7fc8cef46737",
       "source": "3fb3a20b014821a8",
       "target": "228368262223f1db",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "5957367a5f318b81",
+      "id": "8b6980f62a499688",
       "source": "cb87122766b2be7d",
       "target": "771f2954e396349a",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "101bfdbaf3533903",
+      "id": "22adaa055e42171f",
       "source": "8fa96b2599a3efbf",
       "target": "46fa426389043256",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "4a096fe0343a6927",
+      "id": "bbcad1728768d585",
       "source": "8fa96b2599a3efbf",
       "target": "74640383197a8ca7",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "ffa2a4f4b2fa9c66",
+      "id": "98141ed4c35a5ea0",
       "source": "620d9422ac54e63e",
       "target": "2c3e63e9a7123804",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "73de484ca7fa463e",
+      "id": "44dde0dd7099d885",
       "source": "620d9422ac54e63e",
       "target": "57db63745a724bc3",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "89ef3e2a46c98f36",
+      "id": "bbf3d2eabe688502",
       "source": "57db63745a724bc3",
       "target": "8be42cfaab24b585",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "6366c9bd9df302be",
+      "id": "5ab44c615b9d1a27",
       "source": "9289bd97b1d582f5",
       "target": "46fa426389043256",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "110738e9a734977f",
+      "id": "4715998504b3ac5b",
       "source": "9ccb7efe133cf25a",
       "target": "74640383197a8ca7",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "f4c3d3f1f556be3f",
+      "id": "bf45400b2159ab86",
       "source": "9e2a30f7a17e5bd5",
       "target": "ceb925173a2931a7",
       "sourceOutput": "out",
       "targetInput": "input"
     },
     {
-      "id": "61be78e7bb10726f",
+      "id": "3313a3f39177635a",
       "source": "537324f4d766e02b",
       "target": "e8754e2dc6aaeeeb",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "057fc0a3c85aabec",
+      "id": "1240e7705671cb5d",
       "source": "8fa96b2599a3efbf",
       "target": "b8140146b61cbe8b",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "3a19a6020cf3a25c",
+      "id": "4d0a97abe1619bca",
       "source": "638e3dd2992d1984",
       "target": "642f583dff788b72",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "d6a47c4cbeaeca52",
+      "id": "23f1ec7658d55468",
       "source": "638e3dd2992d1984",
       "target": "09acc1353342ccb0",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "37b234683ddac8b7",
+      "id": "badd05192c3748e7",
       "source": "80cb637e8dec510c",
       "target": "e2f1b055323b6048",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "5cef75e655b4ef94",
+      "id": "b35f94091f4eb061",
       "source": "116f053651fa1896",
       "target": "04169d0d9714a784",
       "sourceOutput": "hsvInfo",
       "targetInput": "in"
     },
     {
-      "id": "161756902b291444",
+      "id": "0c036518ce71e798",
       "source": "f7641899a215dc7f",
       "target": "f9e613cfd22bb224",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "a8154cf1342d83b1",
+      "id": "0afa48615e4dad7b",
       "source": "80cb637e8dec510c",
       "target": "105adc7b3db42147",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "fef8721318c8fe39",
+      "id": "fd85533203c25158",
       "source": "8fa96b2599a3efbf",
       "target": "0f7a5498635fd32f",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "4c27a7ed005e1305",
+      "id": "97a6a338b3c5e888",
       "source": "620d9422ac54e63e",
       "target": "f92212978a300d5a",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "7a07362a8dfba2d0",
+      "id": "93e0a92bfa769299",
       "source": "f92212978a300d5a",
       "target": "dd6bece03850fcd1",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "133cbd24ef8dc4d1",
+      "id": "291e622679db0f63",
       "source": "c6a03d9be3047a22",
       "target": "0f7a5498635fd32f",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "4f8d5a21a31ce67f",
+      "id": "526f8dd0d43ac6e4",
       "source": "d75099b0931e7056",
       "target": "f9e613cfd22bb224",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "0656e501d66ae761",
+      "id": "4a7ef4d3f537b24d",
       "source": "638e3dd2992d1984",
       "target": "dacd040a7e6de2ab",
       "sourceOutput": "out",
       "targetInput": "input"
     },
     {
-      "id": "687b27fb2a1e3742",
+      "id": "76278fd7fefda3be",
       "source": "bb5e204a7266087a",
       "target": "fa3dd8e92a6fb03f",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "ac96c27ff2629d41",
+      "id": "1128adb67849d5ef",
       "source": "9e2a30f7a17e5bd5",
       "target": "228368262223f1db",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "938352fc0f17aa20",
+      "id": "1106a6faf9fe2a83",
       "source": "9e2a30f7a17e5bd5",
       "target": "771f2954e396349a",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "9b5c7a39bb3a756d",
+      "id": "2775fa76febf0574",
       "source": "9e2a30f7a17e5bd5",
       "target": "e88b0238fe4d8b6b",
       "sourceOutput": "out",
       "targetInput": "input"
     },
     {
-      "id": "932aa673edc90b1e",
+      "id": "ba1b6e7bf9816670",
       "source": "dfd6413601b2f519",
       "target": "beeffe4e5da5c7fe",
       "sourceOutput": "device_state",
       "targetInput": "device_state"
     },
     {
-      "id": "146213c05f061c90",
+      "id": "3c5b8123a72b2bbf",
       "source": "beeffe4e5da5c7fe",
       "target": "8c7a2edc9a0f858d",
       "sourceOutput": "out_temperature",
       "targetInput": "value"
     },
     {
-      "id": "6a7d7a759357d0e3",
+      "id": "3b19b6c8d8da233b",
       "source": "8c7a2edc9a0f858d",
       "target": "63049b18401c8bf1",
       "sourceOutput": "hsvInfo",
       "targetInput": "in"
     },
     {
-      "id": "c65023ce305e78db",
+      "id": "4c1eabe44b278330",
       "source": "4e242756c2612585",
       "target": "5b71b0de41e3a529",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "48d0161b895c7129",
+      "id": "66104125854d4909",
       "source": "a3d39e49f47f28f7",
       "target": "15bedae98acf174c",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "c9911b29b9c4ca29",
+      "id": "38b716c84dee186b",
       "source": "56ee4fd527651afc",
       "target": "e318b65067c3608e",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "76593e632273e87f",
+      "id": "fd6d431b0877f637",
       "source": "39ab97626c5c2296",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "hsv_out",
       "targetInput": "data_2"
     },
     {
-      "id": "cfb5a5265c317534",
+      "id": "4002207d40062df5",
       "source": "93de143c8b853b9d",
       "target": "56ee4fd527651afc",
       "sourceOutput": "hsv_out",
       "targetInput": "data_2"
     },
     {
-      "id": "2336967334f49395",
+      "id": "e644fa0534361b60",
       "source": "bf71124258f2c9f4",
       "target": "af5d78eb391594ce",
       "sourceOutput": "isInRange",
       "targetInput": "a"
     },
     {
-      "id": "afc6149f5c1ddc01",
+      "id": "2282ff580090dd4a",
       "source": "c50730db0a8fc75b",
       "target": "af5d78eb391594ce",
       "sourceOutput": "value",
       "targetInput": "b"
     },
     {
-      "id": "844fe755e0018a72",
+      "id": "6f92a93a55d6119b",
       "source": "af5d78eb391594ce",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "fe9faceb1a78c179",
+      "id": "84f539e2cefa1239",
       "source": "af5d78eb391594ce",
       "target": "56ee4fd527651afc",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "809fdaaa0fb7e9bd",
+      "id": "eaf36a2a5e2c019b",
       "source": "3f6956273b66f32c",
       "target": "56ee4fd527651afc",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "64a8e72044b59995",
+      "id": "451e8509dddda136",
       "source": "a096aaaa5d139111",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "a7db97bd5f96823b",
+      "id": "7d556cc3eca1d701",
       "source": "b697f1460c4c6614",
       "target": "d5686fc3e43513d6",
       "sourceOutput": "out",
       "targetInput": "in1"
     },
     {
-      "id": "f12ac1b3eb146c6a",
+      "id": "110d80abde8019d6",
       "source": "50ff70ef0f2acc96",
       "target": "6ac17d4ab201b32b",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "1c1d57fda7e3dcbe",
+      "id": "627f54b76584a1b9",
       "source": "d5686fc3e43513d6",
       "target": "3aebe89aed9eddb5",
       "sourceOutput": "result",
       "targetInput": "trigger"
     },
     {
-      "id": "6a18be894283a904",
+      "id": "97b5bb5ebfe7fb64",
       "source": "f7641899a215dc7f",
       "target": "d5686fc3e43513d6",
       "sourceOutput": "out",
       "targetInput": "in0"
     },
     {
-      "id": "09fcf2a696bbbdc7",
+      "id": "c646ea5b0066a5fa",
       "source": "e82bee10d637f7bd",
       "target": "39309e0384e43956",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "fcead251e2a10414",
+      "id": "2d38b7fe0848bae6",
       "source": "043a50dbfccdcd71",
       "target": "6b63b8e9fb86837c",
       "sourceOutput": "out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "dc63085c476d35d8",
+      "id": "73f02de974f0879c",
       "source": "6b63b8e9fb86837c",
       "target": "39309e0384e43956",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "8553ff6255660020",
+      "id": "2c8bd4c2220428f0",
       "source": "8fa96b2599a3efbf",
       "target": "01446a4eb12772bd",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "994cbd68b010a180",
+      "id": "c0040d616a1d5396",
       "source": "8fa96b2599a3efbf",
       "target": "9a4908a524f7808a",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "b89c8091ba333230",
+      "id": "24f64f1b7c2590c2",
       "source": "8fa96b2599a3efbf",
       "target": "d08ef8707ab0fba4",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "de4e496f139072e9",
+      "id": "9c505b84e5f6ec6e",
       "source": "d384f545fa2b7f45",
       "target": "e9c2d08063453f26",
       "sourceOutput": "result",
       "targetInput": "input"
     },
     {
-      "id": "d0c1f58a170f0e36",
+      "id": "faec2ee44cccabbe",
       "source": "e82bee10d637f7bd",
       "target": "23c01481261e42d1",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "d52e66028f3d993d",
+      "id": "918d52810719a1e2",
       "source": "d929ab86e10d51ed",
       "target": "4edffad82960f0bf",
       "sourceOutput": "delayed",
       "targetInput": "input"
     },
     {
-      "id": "b16a4fcd7c106495",
+      "id": "ea5966245887fcc4",
       "source": "e0d68d80b1d18587",
       "target": "d929ab86e10d51ed",
       "sourceOutput": "state",
@@ -4421,8 +4421,8 @@
     }
   ],
   "viewport": {
-    "x": -3478.2911503314967,
-    "y": 1950.6801713943478,
-    "k": 0.6652017145337228
+    "x": 447.93200912475606,
+    "y": 325.80485229492194,
+    "k": 0.045245308331612465
   }
 }

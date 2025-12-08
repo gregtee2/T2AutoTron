@@ -175,7 +175,7 @@
                 ])
             ]),
             React.createElement('div', { key: 'mid', style: { flex: 1, display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '200px' } }, [
-                drawGraph(),
+                React.createElement('div', { key: 'graph' }, drawGraph()),
                 enabled && React.createElement('div', { key: 'ctrl', className: "weather-controls-sub" }, [
                     React.createElement('div', { key: 'inv', style: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#aaa' } }, [
                         React.createElement('label', { key: 'l', className: "weather-toggle-container", style: { transform: 'scale(0.9)', transformOrigin: 'left' } }, [

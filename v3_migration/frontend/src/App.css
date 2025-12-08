@@ -42,20 +42,50 @@ body {
 }
 
 /* ============================================
+   Resize Handle
+   ============================================ */
+.resize-handle {
+  height: 6px;
+  background: linear-gradient(180deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.2));
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.resize-handle:hover {
+  background: linear-gradient(180deg, rgba(0, 243, 255, 0.2), rgba(0, 243, 255, 0.4));
+}
+
+.resize-handle-grip {
+  width: 40px;
+  height: 3px;
+  background: rgba(0, 243, 255, 0.5);
+  border-radius: 2px;
+}
+
+.resize-handle:hover .resize-handle-grip {
+  background: rgba(0, 243, 255, 0.8);
+}
+
+/* ============================================
    Bottom Panels - Event Log & Upcoming Events
    ============================================ */
 .bottom-panels {
   display: flex;
-  height: 150px;
-  min-height: 120px;
-  max-height: 200px;
+  min-height: 80px;
+  max-height: 400px;
   background: rgba(10, 15, 25, 0.95);
   border-top: 1px solid #00f3ff;
   z-index: 100;
+  width: 100%;
+  overflow-x: auto;
 }
 
 .panel {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 200px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -97,6 +127,37 @@ body {
 .panel-clear-btn:hover {
   background: rgba(255, 100, 100, 0.3);
   border-color: #ff6b6b;
+}
+
+.panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.font-size-btn {
+  background: rgba(0, 243, 255, 0.15);
+  border: 1px solid rgba(0, 243, 255, 0.4);
+  color: #00f3ff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 22px;
+}
+
+.font-size-btn:hover {
+  background: rgba(0, 243, 255, 0.3);
+  border-color: #00f3ff;
+}
+
+.font-size-label {
+  color: #888;
+  font-size: 9px;
+  min-width: 28px;
+  text-align: center;
 }
 
 .panel-content {
@@ -180,11 +241,42 @@ body {
 .log-message {
   color: #ccc;
   flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-device-count {
+  background: rgba(0, 243, 255, 0.15);
+  color: #0af;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.log-source {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.log-source.app-source {
+  background: rgba(100, 255, 100, 0.15);
+  color: #8f8;
+}
+
+.log-source.external-source {
+  background: rgba(255, 180, 100, 0.15);
+  color: #fa4;
 }
 
 .log-details {
   color: #888;
   font-size: 10px;
+  display: none;
 }
 
 /* Upcoming Events Entries */
@@ -227,6 +319,46 @@ body {
 .event-action.off {
   background: rgba(255, 100, 100, 0.2);
   color: #f88;
+}
+
+/* ============================================
+   Active Devices Panel
+   ============================================ */
+.active-devices-panel {
+  min-width: 180px;
+  max-width: 250px;
+}
+
+.active-device-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  margin-bottom: 2px;
+}
+
+.active-device-entry:hover {
+  background: rgba(0, 255, 100, 0.1);
+}
+
+.device-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.device-indicator.on {
+  background: #0f0;
+  box-shadow: 0 0 6px #0f0;
+}
+
+.device-name {
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .event-action.trigger, .event-action.pulse {
@@ -643,4 +775,48 @@ div[style*="position: fixed"] input::placeholder {
 .rete-connection:hover path {
   stroke-width: 4px !important;
   filter: drop-shadow(0 0 8px currentColor) !important;
+}
+
+/* Active Devices Panel */
+.active-devices-panel {
+  min-width: 180px;
+  flex: 1 1 0;
+}
+
+.active-device-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+}
+
+.active-device-entry:last-child {
+  border-bottom: none;
+}
+
+.device-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.device-indicator.on {
+  background: #00ff88;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 255, 136, 0.6); }
+  50% { box-shadow: 0 0 12px rgba(0, 255, 136, 0.9); }
+}
+
+.device-name {
+  color: #e0e0e0;
+  font-size: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

@@ -242,7 +242,8 @@ app.get('/api/config', async (req, res) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '') || process.env.HA_TOKEN;
     if (!token) throw new Error('No Home Assistant token provided');
-    const response = await fetch('http://localhost:8123/api/config', {
+    const haHost = process.env.HA_HOST || 'http://localhost:8123';
+    const response = await fetch(`${haHost}/api/config`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -265,12 +266,13 @@ app.get('/api/sun/times', async (req, res) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '') || process.env.HA_TOKEN;
     if (!token) throw new Error('No Home Assistant token provided');
-    const sunResponse = await fetch('http://localhost:8123/api/states/sun.sun', {
+    const haHost = process.env.HA_HOST || 'http://localhost:8123';
+    const sunResponse = await fetch(`${haHost}/api/states/sun.sun`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!sunResponse.ok) throw new Error(`HTTP ${sunResponse.status}`);
     const sun = await sunResponse.json();
-    const configResponse = await fetch('http://localhost:8123/api/config', {
+    const configResponse = await fetch(`${haHost}/api/config`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!configResponse.ok) throw new Error(`HTTP ${configResponse.status}`);

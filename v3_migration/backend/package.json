@@ -1,10 +1,12 @@
 {
   "name": "t2-autotron",
-  "version": "2.0.0",
+  "version": "2.1.0-beta.1",
   "main": "src/frontend/electron/main.js",
-  "description": "Smart Lighting with Home Assistant Integration",
-  "author": "Your Name <your.email@example.com>",
+  "description": "Visual node-based automation editor for smart home control (Home Assistant, Philips Hue, Kasa, Shelly)",
+  "author": "T2AutoTron Contributors",
   "homepage": "https://github.com/gregtee2/T2AutoTron",
+  "keywords": ["home-assistant", "smart-home", "automation", "node-editor", "philips-hue", "kasa", "shelly", "rete"],
+  "license": "MIT",
   "scripts": {
     "start": "node src/server.js",
     "start:backend": "node src/server.js",
@@ -13,6 +15,9 @@
     "start:dev": "nodemon src/server.js",
     "test": "jest",
     "build": "electron-builder --linux deb --arm64",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:all": "electron-builder --win --mac --linux",
     "postinstall": "electron-builder install-app-deps"
   },
   "overrides": {
@@ -43,6 +48,14 @@
   "build": {
     "appId": "com.t2autotron.app",
     "productName": "T2AutoTron",
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "src/frontend/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
     "linux": {
       "target": [
         "deb"

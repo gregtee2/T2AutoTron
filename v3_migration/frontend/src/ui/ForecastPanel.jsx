@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { socket } from '../socket';
 import './ForecastPanel.css';
 
 export function ForecastPanel() {
     const [expanded, setExpanded] = useState(true);
+    const [devicesExpanded, setDevicesExpanded] = useState(true);
     const [forecastData, setForecastData] = useState(null);
     const [selectedDay, setSelectedDay] = useState(null);
     const [isConnected, setIsConnected] = useState(socket?.connected ?? false);
     const [haStatus, setHaStatus] = useState({ connected: false, wsConnected: false, deviceCount: 0 });
+    const [activeDevices, setActiveDevices] = useState(new Map());
+    const [panelWidth, setPanelWidth] = useState(() => parseInt(localStorage.getItem('forecastPanelWidth')) || 320);
+    const [devicesHeight, setDevicesHeight] = useState(() => parseInt(localStorage.getItem('devicesOnHeight')) || 200);
+    const resizeRef = useRef(null);
 
     useEffect(() => {
         if (!socket) return;
@@ -31,6 +36,31 @@ export function ForecastPanel() {
             console.log('Forecast received:', data);
             setForecastData(data);
         });
+        
+        // Listen for device state updates to track active devices
+        const onDeviceStateUpdate = (data) => {
+            const { id, state, on, name } = data;
+            if (!id) return;
+            
+            const currentOn = on !== undefined ? on : (state === 'on' || state === 'playing' || state === 'open');
+            const deviceName = name || data.friendly_name || data.attributes?.friendly_name || 
+                id.replace('ha_', '').replace('kasa_', '').replace(/\./g, ' ').replace(/_/g, ' ');
+            
+            // Only track lights and switches (not sensors)
+            const isControllable = id.includes('light.') || id.includes('switch.') || id.startsWith('kasa_');
+            if (!isControllable) return;
+            
+            setActiveDevices(prev => {
+                const next = new Map(prev);
+                if (currentOn) {
+                    next.set(id, { name: deviceName, on: true });
+                } else {
+                    next.delete(id);
+                }
+                return next;
+            });
+        };
+        socket.on('device-state-update', onDeviceStateUpdate);
 
         socket.emit('request-forecast');
         if (socket.connected) {
@@ -43,6 +73,7 @@ export function ForecastPanel() {
             socket.off('disconnect', onDisconnect);
             socket.off('ha-connection-status', onHaStatus);
             socket.off('forecast-update');
+            socket.off('device-state-update', onDeviceStateUpdate);
         };
     }, []);
 
@@ -235,8 +266,60 @@ export function ForecastPanel() {
         ));
     };
 
+    const handleResizeMouseDown = (e) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startWidth = panelWidth;
+        
+        const onMouseMove = (moveEvent) => {
+            const delta = startX - moveEvent.clientX;
+            const newWidth = Math.max(250, Math.min(500, startWidth + delta));
+            setPanelWidth(newWidth);
+            localStorage.setItem('forecastPanelWidth', newWidth);
+        };
+        
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    };
+
+    const handleDevicesResizeMouseDown = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const startY = e.clientY;
+        const startHeight = devicesHeight;
+        
+        const onMouseMove = (moveEvent) => {
+            const delta = startY - moveEvent.clientY;
+            const newHeight = Math.max(100, Math.min(500, startHeight + delta));
+            setDevicesHeight(newHeight);
+            localStorage.setItem('devicesOnHeight', newHeight);
+        };
+        
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    };
+
     return (
-        <div className="forecast-panel">
+        <div className="forecast-panel" style={{ width: panelWidth }}>
+            {/* Resize handle on left edge */}
+            <div 
+                className="forecast-resize-handle"
+                ref={resizeRef}
+                onMouseDown={handleResizeMouseDown}
+            >
+                <div className="forecast-resize-grip"></div>
+            </div>
+            
             <div className="forecast-panel-header" onClick={() => setExpanded(!expanded)}>
                 <span>5-Day Forecast</span>
                 <button onClick={(e) => { e.stopPropagation(); refreshForecast(); }} className="forecast-refresh-btn">
@@ -248,6 +331,38 @@ export function ForecastPanel() {
                     {renderForecast()}
                 </div>
             )}
+            
+            {/* Active Devices Section */}
+            <div className="devices-on-section" style={{ height: devicesExpanded ? devicesHeight : 'auto' }}>
+                {/* Resize handle on top */}
+                <div 
+                    className="devices-resize-handle"
+                    onMouseDown={handleDevicesResizeMouseDown}
+                >
+                    <div className="devices-resize-grip"></div>
+                </div>
+                <div className="devices-on-header" onClick={() => setDevicesExpanded(!devicesExpanded)}>
+                    <span>Devices ON ({activeDevices.size})</span>
+                    <span className="expand-icon">{devicesExpanded ? '▼' : '▶'}</span>
+                </div>
+                {devicesExpanded && (
+                    <div className="devices-on-list">
+                        {activeDevices.size === 0 ? (
+                            <div className="no-devices">All devices off</div>
+                        ) : (
+                            Array.from(activeDevices.values())
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((device, i) => (
+                                    <div key={i} className="device-on-item">
+                                        <span className="device-on-indicator"></span>
+                                        <span className="device-on-name">{device.name}</span>
+                                    </div>
+                                ))
+                        )}
+                    </div>
+                )}
+            </div>
+            
             <div className="status-indicators">
                 <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
                     {isConnected ? 'Backend' : 'Backend X'}

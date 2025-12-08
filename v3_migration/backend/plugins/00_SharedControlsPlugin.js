@@ -595,6 +595,195 @@
     // =========================================================================
     // EXPOSE TO WINDOW
     // =========================================================================
+
+    // =========================================================================
+    // TOOLTIP COMPONENT - Styled tooltip wrapper for any element
+    // =========================================================================
+    function Tooltip({ text, children, position = 'top' }) {
+        const [visible, setVisible] = useState(false);
+
+        if (!text) {
+            // No tooltip text, just render children
+            return children;
+        }
+
+        // Calculate position styles based on position prop
+        const getPositionStyle = () => {
+            switch (position) {
+                case 'bottom':
+                    return { top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '6px' };
+                case 'left':
+                    return { right: '100%', top: '50%', transform: 'translateY(-50%)', marginRight: '6px' };
+                case 'right':
+                    return { left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: '6px' };
+                case 'top':
+                default:
+                    return { bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '6px' };
+            }
+        };
+
+        const tooltipStyle = {
+            position: 'absolute',
+            ...getPositionStyle(),
+            background: 'rgba(0, 0, 0, 0.95)',
+            border: `1px solid ${THEME.primary}`,
+            borderRadius: '6px',
+            padding: '8px 12px',
+            color: THEME.text,
+            fontSize: '11px',
+            lineHeight: '1.4',
+            minWidth: '150px',
+            maxWidth: '250px',
+            zIndex: 10000,
+            pointerEvents: 'none',
+            boxShadow: `0 4px 12px rgba(0, 0, 0, 0.5), 0 0 8px ${THEME.primaryRgba(0.3)}`,
+            whiteSpace: 'pre-wrap',
+            textAlign: 'left'
+        };
+
+        return React.createElement('div', {
+            style: { display: 'inline-block', position: 'relative' },
+            onMouseEnter: () => setVisible(true),
+            onMouseLeave: () => setVisible(false)
+        }, [
+            children,
+            visible && React.createElement('div', { key: 'tooltip', style: tooltipStyle }, text)
+        ]);
+    }
+
+    // =========================================================================
+    // HELP ICON - Small "?" icon that shows tooltip on hover
+    // =========================================================================
+    function HelpIcon({ text, size = 14 }) {
+        const [visible, setVisible] = useState(false);
+
+        const containerStyle = {
+            position: 'relative',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        };
+
+        const iconStyle = {
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: `${size}px`,
+            height: `${size}px`,
+            borderRadius: '50%',
+            background: THEME.primaryRgba(0.2),
+            border: `1px solid ${THEME.primaryRgba(0.4)}`,
+            color: THEME.primary,
+            fontSize: `${size - 4}px`,
+            fontWeight: 'bold',
+            cursor: 'help',
+            marginLeft: '4px',
+            flexShrink: 0
+        };
+
+        const tooltipStyle = {
+            position: 'absolute',
+            left: '50%',
+            bottom: '100%',
+            transform: 'translateX(-50%)',
+            marginBottom: '6px',
+            background: 'rgba(0, 0, 0, 0.95)',
+            border: `1px solid ${THEME.primary}`,
+            borderRadius: '6px',
+            padding: '8px 12px',
+            color: THEME.text,
+            fontSize: '11px',
+            lineHeight: '1.4',
+            minWidth: '180px',
+            maxWidth: '250px',
+            zIndex: 10000,
+            pointerEvents: 'none',
+            boxShadow: `0 4px 12px rgba(0, 0, 0, 0.5), 0 0 8px ${THEME.primaryRgba(0.3)}`,
+            whiteSpace: 'pre-wrap',
+            textAlign: 'left'
+        };
+
+        return React.createElement('span', {
+            style: containerStyle,
+            onMouseEnter: () => setVisible(true),
+            onMouseLeave: () => setVisible(false)
+        }, [
+            React.createElement('span', { key: 'icon', style: iconStyle }, '?'),
+            visible && React.createElement('div', { key: 'tip', style: tooltipStyle }, text)
+        ]);
+    }
+
+    // =========================================================================
+    // NODE HEADER WITH TOOLTIP - Reusable header component with node description
+    // =========================================================================
+    function NodeHeader({ icon, title, tooltip, statusDot, statusColor }) {
+        const headerStyle = {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '10px',
+            paddingBottom: '8px',
+            borderBottom: `1px solid ${THEME.border}`
+        };
+
+        const titleStyle = {
+            color: THEME.primary,
+            fontSize: '14px',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+        };
+
+        const dotStyle = statusDot ? {
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            background: statusColor || '#555'
+        } : null;
+
+        return React.createElement('div', { style: headerStyle }, [
+            React.createElement('div', { key: 'title', style: titleStyle }, [
+                icon && React.createElement('span', { key: 'icon' }, icon),
+                title,
+                tooltip && React.createElement(HelpIcon, { key: 'help', text: tooltip })
+            ]),
+            statusDot && React.createElement('div', { key: 'status', style: dotStyle })
+        ]);
+    }
+
+    // =========================================================================
+    // LABELED ROW WITH TOOLTIP - Label + control + optional help icon
+    // =========================================================================
+    function LabeledRow({ label, tooltip, children }) {
+        const rowStyle = {
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: '8px',
+            padding: '4px 0'
+        };
+
+        const labelContainerStyle = {
+            display: 'flex',
+            alignItems: 'center',
+            width: '70px',
+            flexShrink: 0
+        };
+
+        const labelTextStyle = {
+            color: THEME.text,
+            fontSize: '11px'
+        };
+
+        return React.createElement('div', { style: rowStyle }, [
+            React.createElement('div', { key: 'label', style: labelContainerStyle }, [
+                React.createElement('span', { key: 'text', style: labelTextStyle }, label),
+                tooltip && React.createElement(HelpIcon, { key: 'help', text: tooltip, size: 12 })
+            ]),
+            React.createElement('div', { key: 'control', style: { flex: 1 } }, children)
+        ]);
+    }
+
     window.T2Controls = {
         // Control Classes
         ButtonControl,
@@ -621,6 +810,12 @@
         // Reusable UI Components
         Slider: SliderComponent,
         Checkbox: CheckboxComponent,
+
+        // Tooltip Components
+        Tooltip,
+        HelpIcon,
+        NodeHeader,
+        LabeledRow,
 
         // Theme constants
         THEME,

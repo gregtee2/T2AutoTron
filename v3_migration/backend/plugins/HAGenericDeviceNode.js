@@ -1,6 +1,4 @@
 (function() {
-    console.log("[HAGenericDeviceNode] Loading plugin...");
-
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
         console.error("[HAGenericDeviceNode] Missing dependencies");
         return;
@@ -60,7 +58,7 @@
                 status: "Initializing...",
                 haConnected: false,
                 haWsConnected: false,
-                debug: true,
+                debug: false,
                 haToken: localStorage.getItem('ha_token') || "",
                 transitionTime: 1000,
                 filterType: "All",
@@ -157,10 +155,7 @@
             const hasConnection = triggerRaw !== undefined;
             let needsUpdate = false;
 
-            // Debug logging when enabled
-            if (this.properties.debug) {
-                console.log(`[HAGenericDeviceNode] data() - triggerRaw: ${triggerRaw}, trigger: ${trigger}, lastTriggerValue: ${this.lastTriggerValue}, hasConnection: ${hasConnection}, hadConnection: ${this.hadConnection}, mode: ${this.properties.triggerMode}`);
-            }
+
 
             // On first call after load, apply current state to devices (sync devices to input)
             if (this.skipInitialTrigger) {
@@ -173,9 +168,6 @@
                     this.lastHsvInfo = JSON.stringify(hsvInput);
                     // Apply HSV immediately on first connection
                     setTimeout(async () => {
-                        if (this.properties.debug) {
-                            console.log(`[HAGenericDeviceNode] Initial HSV sync - applying color immediately`);
-                        }
                         await this.applyHSVInput(hsvInput);
                     }, 500);
                 }
@@ -185,9 +177,6 @@
                 if (mode === "Follow" && hasConnection) {
                     // Small delay to ensure connections are established
                     setTimeout(async () => {
-                        if (this.properties.debug) {
-                            console.log(`[HAGenericDeviceNode] Initial Follow mode sync - setting devices to: ${trigger}`);
-                        }
                         await this.setDevicesState(trigger);
                     }, 500);
                 }
@@ -208,15 +197,8 @@
                 const newConnection = hasConnection && !this.hadConnection;
                 const mode = this.properties.triggerMode || "Toggle";
 
-                if (this.properties.debug && (risingEdge || fallingEdge || newConnection)) {
-                    console.log(`[HAGenericDeviceNode] Edge detected - rising: ${risingEdge}, falling: ${fallingEdge}, newConnection: ${newConnection}, mode: ${mode}`);
-                }
-
                 if (mode === "Toggle" && risingEdge) { await this.onTrigger(); needsUpdate = true; }
                 else if (mode === "Follow" && (risingEdge || fallingEdge || newConnection)) { 
-                    if (this.properties.debug) {
-                        console.log(`[HAGenericDeviceNode] Follow mode - setting devices to: ${trigger}`);
-                    }
                     await this.setDevicesState(trigger); 
                     needsUpdate = true; 
                 }
@@ -470,6 +452,12 @@
             const ids = this.properties.selectedDeviceIds.filter(Boolean);
             if (ids.length === 0) return;
             this.updateStatus("Applying control...");
+            
+            // Register pending commands so the Event Log knows this change came from the app
+            const nodeTitle = this.properties.customTitle || this.label || 'HA Device';
+            if (typeof window !== 'undefined' && window.registerPendingCommand) {
+                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'color'));
+            }
             await Promise.all(ids.map(async (id) => {
                 const apiInfo = this.getDeviceApiInfo(id);
                 if (!apiInfo) return;
@@ -544,13 +532,18 @@
         async setDevicesState(turnOn) {
             // Skip API calls during graph loading to prevent resource exhaustion
             if (typeof window !== 'undefined' && window.graphLoading) {
-                console.log('[HAGenericDeviceNode] Skipping setDevicesState during graph load');
                 return;
             }
             this.updateStatus(turnOn ? "Turning On..." : "Turning Off...");
             const ids = this.properties.selectedDeviceIds.filter(Boolean);
             if (ids.length === 0) return;
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
+            
+            // Register pending commands so the Event Log knows this change came from the app
+            const nodeTitle = this.properties.customTitle || this.label || 'HA Device';
+            if (typeof window !== 'undefined' && window.registerPendingCommand) {
+                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off'));
+            }
             await Promise.all(ids.map(async (id) => {
                 const apiInfo = this.getDeviceApiInfo(id);
                 if (!apiInfo) return;
@@ -586,6 +579,13 @@
             this.updateStatus("Toggling...");
             const ids = this.properties.selectedDeviceIds.filter(Boolean);
             if (ids.length === 0) { this.updateStatus("No devices selected"); return; }
+            
+            // Register pending commands so the Event Log knows this change came from the app
+            const nodeTitle = this.properties.customTitle || this.label || 'HA Device';
+            if (typeof window !== 'undefined' && window.registerPendingCommand) {
+                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'toggle'));
+            }
+            
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
             await Promise.all(ids.map(async (id) => {
                 const apiInfo = this.getDeviceApiInfo(id);
@@ -657,7 +657,7 @@
                 filterType: this.properties.filterType || "All",
                 triggerMode: this.properties.triggerMode || "Follow",
                 transitionTime: this.properties.transitionTime || 1000,
-                debug: this.properties.debug ?? true,
+                debug: this.properties.debug ?? false,
                 autoRefreshInterval: this.properties.autoRefreshInterval || 30000,
                 customTitle: this.properties.customTitle || ""
             };
@@ -931,6 +931,4 @@
         factory: (cb) => new HAGenericDeviceNode(cb),
         component: HAGenericDeviceNodeComponent
     });
-
-    console.log("[HAGenericDeviceNode] Registered");
 })();
