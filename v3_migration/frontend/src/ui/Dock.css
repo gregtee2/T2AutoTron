@@ -158,3 +158,60 @@
     text-align: center;
     font-size: 12px;
 }
+
+/* ============================================
+   Connection Status Indicators
+   ============================================ */
+
+.dock-status-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dock-status-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.dock-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px currentColor;
+}
+
+.dock-status-item.connected .dock-status-dot {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+}
+
+.dock-status-item.disconnected .dock-status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+}
+
+.dock-status-item.plugins .dock-status-dot {
+    /* Color set inline based on failed count */
+}
+
+.dock-status-label {
+    color: #aaa;
+    flex: 1;
+}
+
+.dock-status-value {
+    color: #00f3ff;
+    font-weight: 500;
+    font-size: 11px;
+}
+
+.dock-status-item.disconnected .dock-status-value {
+    color: #ef4444;
+}

@@ -3,7 +3,7 @@ import { Editor } from './Editor';
 import { socket, connectSocket, disconnectSocket } from './socket';
 import { onPluginProgress } from './registries/PluginLoader';
 import ErrorBoundary from './ErrorBoundary';
-import { ToastContainer, useToast } from './ui/Toast';
+import { ToastContainer, ToastExposer, useToast } from './ui/Toast';
 import { LoadingOverlay } from './ui/LoadingOverlay';
 import './App.css';
 import './test-sockets.js'; // Test socket patch
@@ -340,6 +340,7 @@ function AppWithErrorBoundary() {
   return (
     <ErrorBoundary>
       <ToastContainer>
+        <ToastExposer />
         <App />
       </ToastContainer>
     </ErrorBoundary>

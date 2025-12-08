@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Dock.css';
 import { SettingsModal } from './SettingsModal';
+import { socket } from '../socket';
+import { getLoadingState } from '../registries/PluginLoader';
 
 export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -11,9 +13,57 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [graphExpanded, setGraphExpanded] = useState(true);
+    const [statusExpanded, setStatusExpanded] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [connectionStatus, setConnectionStatus] = useState({
+        backend: socket.connected,
+        ha: { connected: false, wsConnected: false, deviceCount: 0 },
+        hue: { connected: false, deviceCount: 0 },
+        kasa: { connected: false, deviceCount: 0 },
+        shelly: { connected: false, deviceCount: 0 }
+    });
+    const [pluginStatus, setPluginStatus] = useState({ loaded: 0, failed: 0 });
     const dockRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    // Subscribe to connection status updates
+    useEffect(() => {
+        const onConnect = () => setConnectionStatus(prev => ({ ...prev, backend: true }));
+        const onDisconnect = () => setConnectionStatus(prev => ({ ...prev, backend: false }));
+        const onHaStatus = (data) => setConnectionStatus(prev => ({ 
+            ...prev, 
+            ha: { connected: data.connected, wsConnected: data.wsConnected, deviceCount: data.deviceCount || 0 }
+        }));
+        
+        // Listen for device counts from various integrations
+        const onDeviceCounts = (data) => {
+            if (data.hue) setConnectionStatus(prev => ({ ...prev, hue: data.hue }));
+            if (data.kasa) setConnectionStatus(prev => ({ ...prev, kasa: data.kasa }));
+            if (data.shelly) setConnectionStatus(prev => ({ ...prev, shelly: data.shelly }));
+        };
+
+        socket.on('connect', onConnect);
+        socket.on('disconnect', onDisconnect);
+        socket.on('ha-connection-status', onHaStatus);
+        socket.on('device-counts', onDeviceCounts);
+        
+        // Initial status
+        setConnectionStatus(prev => ({ ...prev, backend: socket.connected }));
+        
+        // Get initial plugin status
+        const loadState = getLoadingState();
+        setPluginStatus({ 
+            loaded: loadState.loadedCount, 
+            failed: loadState.failedPlugins?.length || 0 
+        });
+
+        return () => {
+            socket.off('connect', onConnect);
+            socket.off('disconnect', onDisconnect);
+            socket.off('ha-connection-status', onHaStatus);
+            socket.off('device-counts', onDeviceCounts);
+        };
+    }, []);
 
     // Update time every second
     useEffect(() => {
@@ -134,6 +184,55 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
                             style={{ display: 'none' }}
                             onChange={handleFileChange}
                         />
+                    </div>
+                )}
+            </div>
+
+            {/* Connection Status Section */}
+            <div className="dock-section">
+                <div
+                    className="dock-section-header"
+                    onClick={() => setStatusExpanded(!statusExpanded)}
+                >
+                    <span>{statusExpanded ? '▼' : '▶'} Connection Status</span>
+                </div>
+                {statusExpanded && (
+                    <div className="dock-section-content dock-status-grid">
+                        <div className={`dock-status-item ${connectionStatus.backend ? 'connected' : 'disconnected'}`}>
+                            <span className="dock-status-dot"></span>
+                            <span className="dock-status-label">Backend</span>
+                            <span className="dock-status-value">{connectionStatus.backend ? 'Connected' : 'Offline'}</span>
+                        </div>
+                        <div className={`dock-status-item ${connectionStatus.ha.connected ? 'connected' : 'disconnected'}`}>
+                            <span className="dock-status-dot"></span>
+                            <span className="dock-status-label">Home Assistant</span>
+                            <span className="dock-status-value">
+                                {connectionStatus.ha.connected 
+                                    ? `${connectionStatus.ha.deviceCount} devices` 
+                                    : 'Offline'}
+                            </span>
+                        </div>
+                        {connectionStatus.hue.deviceCount > 0 && (
+                            <div className={`dock-status-item ${connectionStatus.hue.connected ? 'connected' : 'disconnected'}`}>
+                                <span className="dock-status-dot"></span>
+                                <span className="dock-status-label">Philips Hue</span>
+                                <span className="dock-status-value">{connectionStatus.hue.deviceCount} lights</span>
+                            </div>
+                        )}
+                        {connectionStatus.kasa.deviceCount > 0 && (
+                            <div className={`dock-status-item ${connectionStatus.kasa.connected ? 'connected' : 'disconnected'}`}>
+                                <span className="dock-status-dot"></span>
+                                <span className="dock-status-label">Kasa</span>
+                                <span className="dock-status-value">{connectionStatus.kasa.deviceCount} devices</span>
+                            </div>
+                        )}
+                        <div className="dock-status-item plugins">
+                            <span className="dock-status-dot" style={{ background: pluginStatus.failed > 0 ? '#f59e0b' : '#10b981' }}></span>
+                            <span className="dock-status-label">Plugins</span>
+                            <span className="dock-status-value">
+                                {pluginStatus.loaded} loaded{pluginStatus.failed > 0 ? ` (${pluginStatus.failed} failed)` : ''}
+                            </span>
+                        </div>
                     </div>
                 )}
             </div>

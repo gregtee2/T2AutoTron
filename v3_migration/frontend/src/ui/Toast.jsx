@@ -89,7 +89,7 @@ export function ToastContainer({ children }) {
 export function useToast() {
     const context = useContext(ToastContext);
     if (!context) {
-        console.warn('useToast must be used within a ToastContainer');
+        // Debug: console.warn('useToast must be used within a ToastContainer');
         // Return a no-op version to prevent crashes
         return {
             success: () => {},
@@ -101,6 +101,31 @@ export function useToast() {
         };
     }
     return context;
+}
+
+// Global toast accessor for plugins (set by ToastExposer component)
+let globalToast = null;
+
+export function ToastExposer() {
+    const toast = useToast();
+    useEffect(() => {
+        globalToast = toast;
+        if (typeof window !== 'undefined') {
+            window.T2Toast = toast;
+        }
+        return () => {
+            globalToast = null;
+            if (typeof window !== 'undefined') {
+                window.T2Toast = null;
+            }
+        };
+    }, [toast]);
+    return null;
+}
+
+// Get global toast (for use outside React)
+export function getToast() {
+    return globalToast;
 }
 
 // Also expose globally for plugins
