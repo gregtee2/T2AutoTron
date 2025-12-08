@@ -1,0 +1,204 @@
+# T2 AutoTron 2.1 - Getting Started Guide
+
+Welcome to T2 AutoTron, a visual node-based automation editor for smart home control. This guide will help you get up and running quickly.
+
+## 📋 Prerequisites
+
+Before you start, make sure you have:
+- **Node.js 18+** installed ([download](https://nodejs.org/))
+- A **Home Assistant** instance (optional but recommended)
+- Any smart devices you want to control (Philips Hue, TP-Link Kasa, Shelly, etc.)
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
+
+```bash
+# Navigate to the project
+cd v3_migration
+
+# Install backend dependencies
+cd backend
+npm install
+
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
+
+### 2. Configure Environment
+
+Create a `.env` file in `v3_migration/backend/`:
+
+```env
+# Home Assistant (required for HA integration)
+HA_HOST=http://homeassistant.local:8123
+HA_TOKEN=your_long_lived_access_token
+
+# Optional integrations
+HUE_BRIDGE_IP=192.168.1.x
+HUE_USERNAME=your_hue_api_key
+OPENWEATHERMAP_API_KEY=your_api_key
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+```
+
+**Getting a Home Assistant Token:**
+1. Go to your Home Assistant Profile (click your username)
+2. Scroll down to "Long-Lived Access Tokens"
+3. Create a new token and copy it
+
+### 3. Start the Application
+
+**Terminal 1 - Start Backend:**
+```bash
+cd v3_migration/backend
+npm start
+```
+
+**Terminal 2 - Start Frontend (Development):**
+```bash
+cd v3_migration/frontend
+npm run dev -- --force
+```
+
+Open your browser to: **http://localhost:5173**
+
+## 🖥️ The Interface
+
+### Control Panel (Dock)
+The floating dock in the top-left provides:
+- **Graph Tools**: Save, Load, Import, Clear
+- **Connection Status**: Shows what's connected and device counts
+- **Settings**: Configure API keys and integrations
+
+### Node Editor
+- **Right-click** to open the context menu and add nodes
+- **Drag** from output sockets to input sockets to connect nodes
+- **Scroll** to zoom in/out
+- **Middle-click drag** to pan the canvas
+
+### Bottom Panels
+- **Event Log**: Shows real-time device state changes and triggers
+- **Upcoming Events**: Shows scheduled automation events
+
+## 🔌 Your First Automation
+
+Let's create a simple "toggle light on button press" automation:
+
+### Step 1: Add a Pushbutton Node
+1. Right-click the canvas
+2. Navigate to **Inputs** → **Pushbutton**
+3. Click to place it
+
+### Step 2: Add an HA Generic Device Node
+1. Right-click the canvas
+2. Navigate to **Home Assistant** → **HA Generic Device**
+3. Click to place it
+
+### Step 3: Connect Them
+1. Drag from the **Pushbutton's output** (right side)
+2. Drop onto the **HA Device's trigger input** (left side)
+
+### Step 4: Select Your Device
+1. In the HA Generic Device node, click "Add Device"
+2. Select your light from the dropdown
+3. Set **Trigger Mode** to "Toggle"
+
+### Step 5: Test It!
+Click the pushbutton - your light should toggle!
+
+## 📦 Common Node Types
+
+### Input Nodes
+| Node | Purpose |
+|------|---------|
+| **Pushbutton** | Manual trigger button |
+| **Integer Selector** | Pick a number value |
+| **Time of Day** | Outputs true during specified hours |
+| **Sunrise/Sunset** | Triggers at solar events |
+
+### Logic Nodes
+| Node | Purpose |
+|------|---------|
+| **AND** | All inputs must be true |
+| **OR** | Any input can be true |
+| **Comparison** | Compare two values |
+| **Conditional Switch** | Route signals based on conditions |
+
+### Device Nodes
+| Node | Purpose |
+|------|---------|
+| **HA Generic Device** | Control any Home Assistant entity |
+| **HA Device State** | Read device states |
+| **Kasa Plug** | Control TP-Link Kasa devices |
+
+### Color Nodes
+| Node | Purpose |
+|------|---------|
+| **HSV Control** | Set hue, saturation, brightness |
+| **Color Gradient** | Animate between colors |
+| **All-in-One Color** | Full color picker |
+
+## 💾 Saving Your Work
+
+### Quick Save
+Click **💾 Save** in the dock to save to the server.
+
+### Export to File
+1. After saving, your graph is in `v3_migration/Saved_Graphs/`
+2. You can also use browser localStorage (auto-saved)
+
+### Import from File
+Click **📂 Import File** to load a saved `.json` graph.
+
+## ⚙️ Settings & API Keys
+
+Click **🔧 Settings & API Keys** to configure:
+
+- **Home Assistant**: URL and access token
+- **Weather Services**: OpenWeatherMap API key
+- **Philips Hue**: Bridge IP and username
+- **Telegram**: Bot token and chat ID for notifications
+
+Each section has a **Test Connection** button to verify your settings.
+
+## 🔧 Troubleshooting
+
+### Backend won't start
+```bash
+# Check if port 3000 is in use
+netstat -ano | findstr :3000
+# Kill the process if needed
+```
+
+### Plugins not loading
+- Check browser console (F12) for errors
+- Clear Vite cache: `rm -rf v3_migration/frontend/node_modules/.vite`
+- Restart with `npm run dev -- --force`
+
+### Home Assistant not connecting
+1. Verify HA_HOST and HA_TOKEN in Settings
+2. Make sure your HA instance is accessible
+3. Check the "Test Connection" button in Settings
+
+### Nodes not responding
+- Check the **Connection Status** in the dock
+- Make sure backend is running and shows "Connected"
+- Verify device is online in Home Assistant
+
+## 📚 Next Steps
+
+- Read `PLUGIN_ARCHITECTURE.md` to create custom nodes
+- Check `RETE_NODE_GUIDE.md` for advanced node patterns
+- Browse existing plugins in `backend/plugins/` for examples
+
+## 🆘 Getting Help
+
+- Check the browser console (F12) for error messages
+- Look at the Event Log panel for automation feedback
+- Review the README.md for API documentation
+
+---
+
+Happy automating! 🏠✨
