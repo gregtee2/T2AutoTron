@@ -766,7 +766,27 @@
             }
         });
 
-        return React.createElement('div', { className: 'ha-node-tron' }, [
+        // Check if ANY device is currently ON
+        const anyDeviceOn = Object.values(data.perDeviceState || {}).some(state => 
+            state?.on || state?.state === 'on'
+        );
+        
+        // Dynamic border style based on device state
+        const borderStyle = anyDeviceOn 
+            ? '2px solid #00ff64' 
+            : '1px solid rgba(0, 243, 255, 0.3)';
+        const boxShadowStyle = anyDeviceOn 
+            ? '0 0 15px rgba(0, 255, 100, 0.4), inset 0 0 10px rgba(0, 255, 100, 0.1)' 
+            : 'none';
+
+        return React.createElement('div', { 
+            className: 'ha-node-tron',
+            style: {
+                border: borderStyle,
+                boxShadow: boxShadowStyle,
+                transition: 'border 0.3s ease, box-shadow 0.3s ease'
+            }
+        }, [
             // Header
             React.createElement('div', { key: 'header', className: 'ha-node-header' }, [
                 React.createElement('div', { key: 'row', style: { display: "flex", alignItems: "center", gap: "8px", width: "100%" } }, [

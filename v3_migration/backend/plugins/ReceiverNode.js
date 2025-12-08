@@ -123,7 +123,27 @@
             ? "No Data" 
             : (typeof currentValue === 'object' ? JSON.stringify(currentValue) : String(currentValue));
 
-        return React.createElement('div', { className: 'receiver-node-tron' }, [
+        // Determine if value is "active" (truthy boolean, non-zero number, non-empty)
+        const isActive = currentValue === true || 
+            (typeof currentValue === 'number' && currentValue !== 0) ||
+            (typeof currentValue === 'object' && currentValue !== null && Object.keys(currentValue).length > 0);
+        
+        // Dynamic border style based on active state
+        const borderStyle = isActive 
+            ? '2px solid #00ff64' 
+            : '1px solid rgba(0, 243, 255, 0.3)';
+        const boxShadowStyle = isActive 
+            ? '0 0 15px rgba(0, 255, 100, 0.4), inset 0 0 10px rgba(0, 255, 100, 0.1)' 
+            : 'none';
+
+        return React.createElement('div', { 
+            className: 'receiver-node-tron',
+            style: {
+                border: borderStyle,
+                boxShadow: boxShadowStyle,
+                transition: 'border 0.3s ease, box-shadow 0.3s ease'
+            }
+        }, [
             React.createElement('div', { className: 'receiver-header' }, "Receiver Node"),
             React.createElement('div', { className: 'receiver-content' }, [
                 // Buffer Selector

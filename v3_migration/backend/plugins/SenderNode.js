@@ -128,17 +128,41 @@
             if (data.changeCallback) data.changeCallback();
         }, [bufferName, data]);
 
+        // Track if we have an active value
+        const [isActive, setIsActive] = useState(false);
+
         // Poll for status update (since data() runs in engine)
         useEffect(() => {
             const interval = setInterval(() => {
                 if (data.properties.finalName) {
                     setStatus(`Broadcasting: ${data.properties.finalName}`);
                 }
+                // Check if lastValue is "active"
+                const val = data.properties.lastValue;
+                const active = val === true || 
+                    (typeof val === 'number' && val !== 0) ||
+                    (typeof val === 'object' && val !== null && Object.keys(val).length > 0);
+                setIsActive(active);
             }, 500);
             return () => clearInterval(interval);
         }, [data]);
 
-        return React.createElement('div', { className: 'sender-node-tron' }, [
+        // Dynamic border style based on active state
+        const borderStyle = isActive 
+            ? '2px solid #00ff64' 
+            : '1px solid rgba(0, 243, 255, 0.3)';
+        const boxShadowStyle = isActive 
+            ? '0 0 15px rgba(0, 255, 100, 0.4), inset 0 0 10px rgba(0, 255, 100, 0.1)' 
+            : 'none';
+
+        return React.createElement('div', { 
+            className: 'sender-node-tron',
+            style: {
+                border: borderStyle,
+                boxShadow: boxShadowStyle,
+                transition: 'border 0.3s ease, box-shadow 0.3s ease'
+            }
+        }, [
             React.createElement('div', { key: 'header', className: 'sender-header' }, "Sender Node"),
             React.createElement('div', { key: 'content', className: 'sender-content' }, [
                 // Input Socket
