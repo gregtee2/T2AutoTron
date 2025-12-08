@@ -11,6 +11,7 @@ import "./sockets"; // Import socket patch globally
 import { Dock } from "./ui/Dock";
 import { ForecastPanel } from "./ui/ForecastPanel";
 import { FastContextMenu } from "./FastContextMenu";
+import { validateGraph, repairGraph } from "./utils/graphValidation";
 
 // Registry
 import { nodeRegistry } from "./registries/NodeRegistry";
@@ -1838,6 +1839,29 @@ export function Editor() {
             const graphData = JSON.parse(saved);
             console.log(`[handleLoad] Loading graph with ${graphData.nodes?.length} nodes`);
             
+            // Validate graph structure
+            const validation = validateGraph(graphData);
+            if (!validation.valid) {
+                console.warn('[handleLoad] Graph validation failed:', validation.errors);
+                if (window.T2Toast) {
+                    window.T2Toast.warning(`Graph has issues: ${validation.errors.length} errors`, 4000);
+                }
+                
+                // Attempt repair
+                const repairResult = repairGraph(graphData);
+                if (repairResult.repaired) {
+                    console.log('[handleLoad] Graph repaired:', repairResult.fixes);
+                    if (window.T2Toast) {
+                        window.T2Toast.info(`Graph repaired: ${repairResult.fixes.length} fixes applied`, 3000);
+                    }
+                    // Use repaired data
+                    Object.assign(graphData, repairResult.graphData);
+                }
+            }
+            if (validation.warnings.length > 0) {
+                console.warn('[handleLoad] Graph warnings:', validation.warnings);
+            }
+            
             // Clear existing graph first
             await handleClear();
             
@@ -2079,6 +2103,31 @@ export function Editor() {
     };
 
     const handleImport = async (graphData) => {
+        // Validate graph before import
+        const validation = validateGraph(graphData);
+        if (!validation.valid) {
+            console.warn('[handleImport] Graph validation failed:', validation.errors);
+            if (window.T2Toast) {
+                window.T2Toast.warning(`Graph has issues: ${validation.errors.length} errors`, 4000);
+            }
+            
+            // Attempt repair
+            const repairResult = repairGraph(graphData);
+            if (repairResult.repaired) {
+                console.log('[handleImport] Graph repaired:', repairResult.fixes);
+                if (window.T2Toast) {
+                    window.T2Toast.info(`Graph repaired: ${repairResult.fixes.length} fixes applied`, 3000);
+                }
+                // Use repaired data
+                graphData = repairResult.graphData;
+            } else {
+                // Ask user if they want to continue with broken graph
+                if (!confirm(`Graph has ${validation.errors.length} errors. Continue anyway?`)) {
+                    return;
+                }
+            }
+        }
+        
         // Completely suppress console during import to prevent DevTools crash
         const originalConsole = { log: console.log, warn: console.warn, error: console.error };
         console.log = () => {};
