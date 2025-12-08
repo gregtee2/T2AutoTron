@@ -215,3 +215,38 @@
 .dock-status-item.disconnected .dock-status-value {
     color: #ef4444;
 }
+
+/* Unsaved changes indicator */
+.unsaved-dot {
+    color: #f59e0b;
+    font-size: 10px;
+    margin-left: 6px;
+    animation: pulse-orange 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-orange {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.dock-btn-unsaved {
+    border-color: #f59e0b;
+    color: #f59e0b;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+}
+
+.dock-btn-unsaved:hover {
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+/* Help button */
+.dock-btn-help {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+    border-color: #8b5cf6;
+    color: #8b5cf6;
+}
+
+.dock-btn-help:hover {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+}

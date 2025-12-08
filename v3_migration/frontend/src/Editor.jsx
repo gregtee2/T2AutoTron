@@ -1723,6 +1723,88 @@ export function Editor() {
         }
     };
 
+    // Auto-save to localStorage every 2 minutes
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const autoSaveIntervalRef = useRef(null);
+    const lastAutoSaveRef = useRef(Date.now());
+    
+    // Mark as having unsaved changes when editor content changes
+    useEffect(() => {
+        if (!editorInstance) return;
+        
+        const markDirty = () => {
+            setHasUnsavedChanges(true);
+        };
+        
+        // Listen for node/connection changes
+        editorInstance.addPipe((context) => {
+            if (['nodecreated', 'noderemoved', 'connectioncreated', 'connectionremoved'].includes(context.type)) {
+                markDirty();
+            }
+            return context;
+        });
+    }, [editorInstance]);
+    
+    // Auto-save interval
+    useEffect(() => {
+        if (!editorInstance || !areaInstance) return;
+        
+        const autoSave = async () => {
+            // Don't auto-save during loading
+            if (window.graphLoading || loadingRef.current) return;
+            
+            if (hasUnsavedChanges) {
+                try {
+                    const nodes = editorInstance.getNodes().map(n => {
+                        const serializedNode = typeof n.toJSON === 'function' ? n.toJSON() : { ...n };
+                        if (n.properties) serializedNode.properties = n.properties;
+                        return {
+                            id: n.id,
+                            label: n.label,
+                            position: areaInstance.nodeViews.get(n.id)?.position || { x: 0, y: 0 },
+                            data: serializedNode
+                        };
+                    });
+                    const connections = editorInstance.getConnections().map(c => ({
+                        id: c.id,
+                        source: c.source,
+                        target: c.target,
+                        sourceOutput: c.sourceOutput,
+                        targetInput: c.targetInput
+                    }));
+                    const viewport = areaInstance.area?.transform 
+                        ? { x: areaInstance.area.transform.x, y: areaInstance.area.transform.y, k: areaInstance.area.transform.k }
+                        : { x: 0, y: 0, k: 1 };
+                    
+                    const graphData = { nodes, connections, viewport, autoSaved: true, timestamp: Date.now() };
+                    const jsonString = JSON.stringify(graphData);
+                    
+                    if (jsonString.length < 2000000) {
+                        localStorage.setItem('saved-graph', jsonString);
+                        lastAutoSaveRef.current = Date.now();
+                        setHasUnsavedChanges(false);
+                        
+                        // Show toast notification if available
+                        if (window.T2Toast) {
+                            window.T2Toast.success('Auto-saved', 2000);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[Auto-save] Failed:', e);
+                }
+            }
+        };
+        
+        // Auto-save every 2 minutes
+        autoSaveIntervalRef.current = setInterval(autoSave, 120000);
+        
+        return () => {
+            if (autoSaveIntervalRef.current) {
+                clearInterval(autoSaveIntervalRef.current);
+            }
+        };
+    }, [editorInstance, areaInstance, hasUnsavedChanges]);
+
     const handleLoad = async () => {
         if (!editorInstance || !areaInstance || !engineInstance) {
             console.error('[handleLoad] Missing instances:', { 
@@ -2123,6 +2205,7 @@ export function Editor() {
                 onClear={handleClear}
                 onExport={handleExport}
                 onImport={handleImport}
+                hasUnsavedChanges={hasUnsavedChanges}
             />
             <ForecastPanel />
             <FastContextMenu

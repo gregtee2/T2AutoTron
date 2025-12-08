@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Dock.css';
 import { SettingsModal } from './SettingsModal';
+import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 import { socket } from '../socket';
 import { getLoadingState } from '../registries/PluginLoader';
 
-export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
+export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedChanges }) {
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [position, setPosition] = useState(() => {
         const saved = localStorage.getItem('dock-position');
         return saved ? JSON.parse(saved) : { x: 20, y: 20 };
@@ -25,6 +27,21 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
     const [pluginStatus, setPluginStatus] = useState({ loaded: 0, failed: 0 });
     const dockRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    // Listen for "?" key to open shortcuts modal
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Ignore if typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+            // "?" key (Shift + /)
+            if (e.key === '?' || (e.shiftKey && e.code === 'Slash')) {
+                e.preventDefault();
+                setShortcutsOpen(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Subscribe to connection status updates
     useEffect(() => {
@@ -169,11 +186,13 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
                     className="dock-section-header"
                     onClick={() => setGraphExpanded(!graphExpanded)}
                 >
-                    <span>{graphExpanded ? '▼' : '▶'} Graph Tools</span>
+                    <span>{graphExpanded ? '▼' : '▶'} Graph Tools {hasUnsavedChanges && <span className="unsaved-dot" title="Unsaved changes">●</span>}</span>
                 </div>
                 {graphExpanded && (
                     <div className="dock-section-content">
-                        <button onClick={onSave} className="dock-btn">💾 Save</button>
+                        <button onClick={onSave} className={`dock-btn ${hasUnsavedChanges ? 'dock-btn-unsaved' : ''}`}>
+                            💾 Save {hasUnsavedChanges && '*'}
+                        </button>
                         <button onClick={onLoad} className="dock-btn">↻ Load Last</button>
                         <button onClick={handleImportClick} className="dock-btn">📂 Import File</button>
                         <button onClick={onClear} className="dock-btn">🗑️ Clear</button>
@@ -243,6 +262,9 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
                     <button onClick={() => setSettingsOpen(true)} className="dock-btn dock-btn-settings">
                         🔧 Settings & API Keys
                     </button>
+                    <button onClick={() => setShortcutsOpen(true)} className="dock-btn dock-btn-help">
+                        ❓ Keyboard Shortcuts
+                    </button>
                 </div>
             </div>
 
@@ -250,6 +272,12 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport }) {
             <SettingsModal 
                 isOpen={settingsOpen} 
                 onClose={() => setSettingsOpen(false)} 
+            />
+            
+            {/* Keyboard Shortcuts Modal */}
+            <KeyboardShortcutsModal
+                isOpen={shortcutsOpen}
+                onClose={() => setShortcutsOpen(false)}
             />
         </div>
     );

@@ -1,0 +1,143 @@
+.shortcuts-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+
+.shortcuts-modal {
+    background: #1e1e2e;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+}
+
+.shortcuts-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #2a2a3e;
+    border-bottom: 1px solid #333;
+}
+
+.shortcuts-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #fff;
+}
+
+.shortcuts-close-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.shortcuts-close-btn:hover {
+    color: #fff;
+}
+
+.shortcuts-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(80vh - 120px);
+}
+
+.shortcuts-section {
+    margin-bottom: 24px;
+}
+
+.shortcuts-section:last-child {
+    margin-bottom: 0;
+}
+
+.shortcuts-section h3 {
+    color: #8b5cf6;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #333;
+}
+
+.shortcuts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shortcut-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #262636;
+    border-radius: 6px;
+}
+
+.shortcut-keys {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.shortcut-keys kbd {
+    background: linear-gradient(180deg, #3a3a4a 0%, #2a2a3a 100%);
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 12px;
+    color: #e0e0e0;
+    box-shadow: 0 2px 0 #222;
+    min-width: 24px;
+    text-align: center;
+}
+
+.key-separator {
+    color: #666;
+    margin: 0 2px;
+}
+
+.shortcut-action {
+    color: #aaa;
+    font-size: 13px;
+}
+
+.shortcuts-modal-footer {
+    padding: 12px 20px;
+    background: #262636;
+    border-top: 1px solid #333;
+    text-align: center;
+}
+
+.shortcuts-modal-footer p {
+    margin: 0;
+    color: #666;
+    font-size: 12px;
+}
+
+.shortcuts-modal-footer kbd {
+    background: #333;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+    color: #8b5cf6;
+}
