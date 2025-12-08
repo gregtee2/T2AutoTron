@@ -4,7 +4,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[IntegerSelectorNode] Loading plugin...");
+    // Debug: console.log("[IntegerSelectorNode] Loading plugin...");
 
     // Dependency checks
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {

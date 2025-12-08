@@ -1,5 +1,5 @@
 (function() {
-    console.log("[HADeviceStateDisplayNode] Loading plugin...");
+    // Debug: console.log("[HADeviceStateDisplayNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
         console.error("[HADeviceStateDisplayNode] Missing dependencies", {

@@ -1,5 +1,5 @@
 (function() {
-    console.log("[HABasePlugin] Loading shared HA utilities...");
+    // Debug: console.log("[HABasePlugin] Loading shared...");
 
     // -------------------------------------------------------------------------
     // FILTER TYPE MAPPING - Normalizes filter dropdown values to entity types

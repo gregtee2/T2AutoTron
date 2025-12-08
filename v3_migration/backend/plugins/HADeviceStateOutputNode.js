@@ -1,5 +1,5 @@
 (function() {
-    console.log("[HADeviceStateOutputNode] Loading plugin...");
+    // Debug: console.log("[HADeviceStateOutputNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls || !window.T2HAUtils) {
         console.error("[HADeviceStateOutputNode] Missing dependencies", {
@@ -51,7 +51,7 @@
                 selectedDeviceName: null,
                 status: "Select a device",
                 debug: false,
-                haToken: localStorage.getItem('ha_token') || "",
+                haToken: sessionStorage.getItem('ha_token') || localStorage.getItem('ha_token') || "",
                 filterType: "All",
                 letterFilter: "All Letters"
             };

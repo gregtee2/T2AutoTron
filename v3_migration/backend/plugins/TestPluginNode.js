@@ -1,5 +1,5 @@
 (function() {
-    console.log("[TestPluginNode] Loading plugin...");
+    // Debug: console.log("[TestPluginNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
         console.error("[TestPluginNode] Missing dependencies");

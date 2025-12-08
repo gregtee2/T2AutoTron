@@ -1,5 +1,5 @@
 (function() {
-    console.log("[LogicOperationsNode] Loading plugin...");
+    // Debug: console.log("[LogicOperationsNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
         console.error("[LogicOperationsNode] Missing dependencies", {

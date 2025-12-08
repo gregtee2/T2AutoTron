@@ -1,5 +1,5 @@
 (function() {
-    console.log("[TimeRangeNode] Loading plugin...");
+    // Debug: console.log("[TimeRangeNode] Loading plugin...");
 
     // =========================================================================
     // CSS is now loaded from node-styles.css via index.css

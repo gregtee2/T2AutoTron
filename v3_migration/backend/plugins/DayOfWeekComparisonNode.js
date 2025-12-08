@@ -1,5 +1,5 @@
 (function() {
-    console.log("[DayOfWeekComparisonNode] Loading plugin...");
+    // Debug: console.log("[DayOfWeekComparisonNode] Loading plugin...");
 
     // =========================================================================
     // CSS is now loaded from node-styles.css via index.css

@@ -3,7 +3,7 @@
 // Exposes window.ColorUtils for use by HSVControlNode, HSVModifierNode, etc.
 
 (function() {
-    console.log("[ColorUtilsPlugin] Loading shared color utilities...");
+    // Debug: console.log("[ColorUtilsPlugin] Loading shared...");
 
     const ColorUtils = {
         /**

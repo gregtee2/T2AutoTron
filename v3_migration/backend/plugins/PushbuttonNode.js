@@ -4,7 +4,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[PushbuttonNode] Loading plugin...");
+    // Debug: console.log("[PushbuttonNode] Loading plugin...");
 
     // Dependency checks
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {

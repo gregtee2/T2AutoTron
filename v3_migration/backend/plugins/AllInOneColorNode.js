@@ -1,5 +1,5 @@
 (function() {
-    console.log("[AllInOneColorNode] Loading plugin...");
+    // Debug: console.log("[AllInOneColorNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
         console.error("[AllInOneColorNode] Missing dependencies");

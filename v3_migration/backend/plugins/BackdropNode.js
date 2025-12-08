@@ -1,5 +1,5 @@
 (function() {
-    console.log("[BackdropNode] Loading plugin...");
+    // Debug: console.log("[BackdropNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent) {
         console.error("[BackdropNode] Missing dependencies");

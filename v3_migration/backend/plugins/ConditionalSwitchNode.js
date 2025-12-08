@@ -1,5 +1,5 @@
 (function() {
-    console.log("[ConditionalSwitchNode] Loading plugin...");
+    // Debug: console.log("[ConditionalSwitchNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
         console.error("[ConditionalSwitchNode] Missing dependencies");

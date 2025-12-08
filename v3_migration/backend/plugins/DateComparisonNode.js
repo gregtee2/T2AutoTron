@@ -1,5 +1,5 @@
 (function() {
-    console.log("[DateComparisonNode] Loading plugin...");
+    // Debug: console.log("[DateComparisonNode] Loading plugin...");
 
     // =========================================================================
     // CSS is now loaded from node-styles.css via index.css

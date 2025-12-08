@@ -1,5 +1,5 @@
 (function() {
-    console.log("[SenderNode] Loading plugin...");
+    // Debug: console.log("[SenderNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
         console.error("[SenderNode] Missing dependencies");

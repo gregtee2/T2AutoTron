@@ -1,5 +1,5 @@
 (function() {
-    console.log("[LogicConditionNode] Loading plugin...");
+    // Debug: console.log("[LogicConditionNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
         console.error("[LogicConditionNode] Missing dependencies", {
@@ -38,7 +38,7 @@
                 conditionValue: "",
                 actionType: "None",
                 setValue: 0,
-                haToken: localStorage.getItem('ha_token') || ""
+                haToken: sessionStorage.getItem('ha_token') || localStorage.getItem('ha_token') || ""
             };
 
             this.devices = [];

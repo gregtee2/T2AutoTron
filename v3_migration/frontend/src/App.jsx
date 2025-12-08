@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Editor } from './Editor';
 import { socket, connectSocket, disconnectSocket } from './socket';
+import ErrorBoundary from './ErrorBoundary';
 import './App.css';
 import './test-sockets.js'; // Test socket patch
 
@@ -297,4 +298,13 @@ function App() {
   );
 }
 
-export default App;
+// Wrap App with ErrorBoundary for crash protection
+function AppWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+}
+
+export default AppWithErrorBoundary;

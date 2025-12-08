@@ -59,7 +59,7 @@
                 haConnected: false,
                 haWsConnected: false,
                 debug: false,
-                haToken: localStorage.getItem('ha_token') || "",
+                haToken: sessionStorage.getItem('ha_token') || localStorage.getItem('ha_token') || "",
                 transitionTime: 1000,
                 filterType: "All",
                 triggerMode: "Follow",

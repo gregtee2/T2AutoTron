@@ -1,5 +1,5 @@
 (function() {
-    console.log("[SunriseSunsetNode] Loading plugin...");
+    // Debug: console.log("[SunriseSunsetNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.luxon) {
         console.error("[SunriseSunsetNode] Missing dependencies");

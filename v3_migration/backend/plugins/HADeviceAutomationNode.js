@@ -1,5 +1,5 @@
 (function() {
-    console.log("[HADeviceAutomationNode] Loading plugin...");
+    // Debug: console.log("[HADeviceAutomationNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls || !window.T2HAUtils) {
         console.error("[HADeviceAutomationNode] Missing dependencies", {

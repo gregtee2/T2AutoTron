@@ -1,5 +1,5 @@
 (function() {
-    console.log("[HSVControlNode] Loading plugin...");
+    // Debug: console.log("[HSVControlNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
         console.error("[HSVControlNode] Missing dependencies");

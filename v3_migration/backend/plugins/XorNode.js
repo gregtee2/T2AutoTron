@@ -4,7 +4,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[XorNode] Loading plugin...");
+    // Debug: console.log("[XorNode] Loading plugin...");
 
     // Use shared dependency checker
     if (!window.T2LogicGate) {

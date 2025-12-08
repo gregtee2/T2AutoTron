@@ -1,5 +1,5 @@
 (function() {
-    console.log("[ConditionalIntegerOutputNode] Loading plugin...");
+    // Debug: console.log("[ConditionalIntegerOutputNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
         console.error("[ConditionalIntegerOutputNode] Missing dependencies");

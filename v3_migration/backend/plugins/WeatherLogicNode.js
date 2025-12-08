@@ -1,5 +1,5 @@
 (function() {
-    console.log("[WeatherLogicNode] Loading plugin...");
+    // Debug: console.log("[WeatherLogicNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.socket) {
         console.error("[WeatherLogicNode] Missing dependencies");

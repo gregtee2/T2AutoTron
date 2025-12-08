@@ -1,5 +1,5 @@
 (function() {
-    console.log("[ColorGradientNode] Loading plugin...");
+    // Debug: console.log("[ColorGradientNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.ColorUtils) {
         console.error("[ColorGradientNode] Missing dependencies");

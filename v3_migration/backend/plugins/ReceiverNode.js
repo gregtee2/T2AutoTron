@@ -1,5 +1,5 @@
 (function() {
-    console.log("[ReceiverNode] Loading plugin...");
+    // Debug: console.log("[ReceiverNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
         console.error("[ReceiverNode] Missing dependencies");

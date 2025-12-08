@@ -5,7 +5,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[SharedControlsPlugin] Loading shared controls...");
+    // Debug: console.log("[SharedControlsPlugin] Loading shared...");
 
     // Dependency check
     if (!window.Rete || !window.React) {

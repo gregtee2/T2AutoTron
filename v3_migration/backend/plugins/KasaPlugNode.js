@@ -1,5 +1,5 @@
 (function() {
-    console.log("[KasaPlugNode] Loading plugin...");
+    // Debug: console.log("[KasaPlugNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.T2Controls) {
         console.error("[KasaPlugNode] Missing dependencies", {

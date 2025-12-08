@@ -4,7 +4,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[DebugNode] Loading plugin...");
+    // Debug: console.log("[DebugNode] Loading plugin...");
     
     // Dependency checks
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {

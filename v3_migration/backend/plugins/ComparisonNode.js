@@ -4,7 +4,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[ComparisonNode] Loading plugin...");
+    // Debug: console.log("[ComparisonNode] Loading plugin...");
 
     // Dependency checks
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {

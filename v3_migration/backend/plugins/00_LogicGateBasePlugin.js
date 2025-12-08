@@ -5,7 +5,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[LogicGateBasePlugin] Loading logic gate utilities...");
+    // Debug: console.log("[LogicGateBasePlugin] Loading logic gate...");
 
     // Dependency check
     if (!window.Rete || !window.React || !window.RefComponent) {

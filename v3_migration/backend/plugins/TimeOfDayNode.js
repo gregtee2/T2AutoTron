@@ -1,5 +1,5 @@
 (function() {
-    console.log("[TimeOfDayNode] Loading plugin...");
+    // Debug: console.log("[TimeOfDayNode] Loading plugin...");
 
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets || !window.luxon) {
         console.error("[TimeOfDayNode] Missing dependencies");

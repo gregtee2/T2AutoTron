@@ -5,7 +5,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[NodeComponentsPlugin] Loading shared components...");
+    // Debug: console.log("[NodeComponentsPlugin] Loading shared...");
 
     // Dependency check
     if (!window.React || !window.RefComponent) {

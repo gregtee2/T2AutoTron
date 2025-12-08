@@ -4,7 +4,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[AndNode] Loading plugin...");
+    // Debug: console.log("[AndNode] Loading plugin...");
 
     // Use shared dependency checker
     if (!window.T2LogicGate) {

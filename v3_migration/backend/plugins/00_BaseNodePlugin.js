@@ -5,7 +5,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[BaseNodePlugin] Loading base node class...");
+    // Debug: console.log("[BaseNodePlugin] Loading base...");
 
     // Dependency check
     if (!window.Rete) {

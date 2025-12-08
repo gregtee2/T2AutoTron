@@ -4,7 +4,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[DisplayNode] Loading plugin...");
+    // Debug: console.log("[DisplayNode] Loading plugin...");
 
     // Dependency checks
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {

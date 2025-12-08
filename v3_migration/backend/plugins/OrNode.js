@@ -4,7 +4,7 @@
 // ============================================================================
 
 (function() {
-    console.log("[OrNode] Loading plugin...");
+    // Debug: console.log("[OrNode] Loading plugin...");
 
     // Use shared dependency checker
     if (!window.T2LogicGate) {
