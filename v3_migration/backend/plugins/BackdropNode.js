@@ -9,6 +9,19 @@
     const { ClassicPreset } = window.Rete;
     const React = window.React;
     const { useState, useEffect, useRef } = React;
+    const { HelpIcon } = window.T2Controls || {};
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Visual grouping box for organizing nodes.\n\nDrag to position, resize from corner handle.\n\nDouble-click title to rename.",
+        lock: "🔒 LOCK: Prevents moving/dragging the backdrop.\n\nWhen locked:\n• Backdrop stays in place\n• Nodes inside can still be selected/moved\n• Click through backdrop to select nodes\n\n🔓 UNLOCK: Allows moving the backdrop.",
+        title: "Double-click to rename this group.",
+        fontSize: "Title font size (8-72px).",
+        color: "Click to choose backdrop color.\n\nPresets or custom hex color.",
+        resize: "Drag to resize the backdrop."
+    };
 
     // -------------------------------------------------------------------------
     // CSS is now loaded from node-styles.css via index.css
@@ -365,7 +378,9 @@
                     className: `backdrop-lock-btn ${isLocked ? 'locked' : ''}`,
                     onClick: handleLockToggle,
                     onPointerDown: (e) => e.stopPropagation(),
-                    title: isLocked ? 'Unlock group (allow moving)' : 'Lock group (prevent moving)',
+                    title: isLocked 
+                        ? 'LOCKED: Backdrop cannot be moved. Nodes inside can still be selected. Click to unlock.' 
+                        : 'UNLOCKED: Backdrop can be moved by dragging. Click to lock in place.',
                     style: { pointerEvents: 'auto' }
                 }, isLocked ? '🔒' : '🔓'),
                 isEditing
@@ -386,7 +401,8 @@
                         className: 'backdrop-title',
                         onDoubleClick: (e) => { e.stopPropagation(); setIsEditing(true); },
                         onPointerDown: (e) => e.stopPropagation(),
-                        style: { cursor: 'text', padding: '2px 8px', fontSize: `${fontSize}px` }
+                        style: { cursor: 'text', padding: '2px 8px', fontSize: `${fontSize}px` },
+                        title: 'Double-click to rename this group'
                     }, title),
                 
                 React.createElement('input', {
@@ -409,7 +425,7 @@
                     className: 'backdrop-color-btn',
                     onClick: (e) => { e.stopPropagation(); setShowColorPicker(!showColorPicker); },
                     onPointerDown: (e) => e.stopPropagation(),
-                    title: 'Change color',
+                    title: 'Change backdrop color - choose from presets or pick a custom color',
                     style: { pointerEvents: 'auto' }
                 }, '🎨')
             ]),
@@ -489,7 +505,8 @@
             React.createElement('div', {
                 key: 'resize',
                 className: 'backdrop-resize-handle',
-                onPointerDown: handleResizeStart
+                onPointerDown: handleResizeStart,
+                title: 'Drag to resize backdrop'
             })
         ]);
     }
