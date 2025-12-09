@@ -6,18 +6,23 @@ REM Frontend port: 5173
 
 REM Get script directory
 set "SCRIPT_DIR=%~dp0"
-cd /d "!SCRIPT_DIR!"
-
-REM Initialize logging
-set "LOGFILE=!SCRIPT_DIR!start_autotron.log"
-echo Starting batch file at %DATE% %TIME% > "!LOGFILE!"
-echo Script directory: !SCRIPT_DIR! >> "!LOGFILE!"
+set "BACKEND_DIR=%SCRIPT_DIR%v3_migration\backend"
+set "FRONTEND_DIR=%SCRIPT_DIR%v3_migration\frontend"
 
 REM Initialize variables
 set "BACKEND_PORT=3000"
 set "FRONTEND_PORT=5173"
 set "MAX_ATTEMPTS=10"
 set "CHECK_INTERVAL=2"
+
+echo.
+echo  ===============================================
+echo     T2AutoTron 2.1 - Starting Services
+echo  ===============================================
+echo.
+echo  Script directory: %SCRIPT_DIR%
+echo  Backend directory: %BACKEND_DIR%
+echo.
 
 REM Check for Node.js and npm
 echo Checking for Node.js and npm...
@@ -44,24 +49,23 @@ timeout /t 2 /nobreak >nul
 
 REM Start the backend server
 echo Starting backend...
-cd /d "!SCRIPT_DIR!v3_migration\backend"
-start "Backend" /MIN cmd /k "npm start"
+start "Backend" /D "%BACKEND_DIR%" /MIN cmd /k npm start
 
 REM Wait for backend to bind to port
 echo Waiting for backend to start...
 set "ATTEMPTS=0"
 :wait_for_backend
-timeout /t !CHECK_INTERVAL! /nobreak >nul
-netstat -ano | findstr ":!BACKEND_PORT!" | findstr "LISTENING" >nul
-if !errorlevel! equ 0 (
-    echo Backend started successfully on port !BACKEND_PORT!.
+timeout /t %CHECK_INTERVAL% /nobreak >nul
+netstat -ano | findstr ":%BACKEND_PORT%" | findstr "LISTENING" >nul
+if %errorlevel% equ 0 (
+    echo Backend started successfully on port %BACKEND_PORT%.
 ) else (
     set /a ATTEMPTS+=1
-    if !ATTEMPTS! lss !MAX_ATTEMPTS! (
+    if !ATTEMPTS! lss %MAX_ATTEMPTS% (
         echo Backend not ready after !ATTEMPTS! attempts. Retrying...
         goto wait_for_backend
     ) else (
-        echo ERROR: Backend failed to start after !MAX_ATTEMPTS! attempts.
+        echo ERROR: Backend failed to start after %MAX_ATTEMPTS% attempts.
         pause
         exit /b 1
     )
@@ -69,17 +73,21 @@ if !errorlevel! equ 0 (
 
 REM Start the Frontend (Vite)
 echo Starting Frontend Vite...
-cd /d "!SCRIPT_DIR!v3_migration\frontend"
-start "Frontend" /MIN cmd /k "npm run dev"
+start "Frontend" /D "%FRONTEND_DIR%" /MIN cmd /k npm run dev
 
 REM Wait a bit for Vite to spin up
 timeout /t 5 /nobreak >nul
 
 REM Start Electron
 echo Starting Electron...
-cd /d "!SCRIPT_DIR!v3_migration\backend"
-start "Electron" /MIN cmd /k "npm run start:electron"
+start "Electron" /D "%BACKEND_DIR%" /MIN cmd /k npm run start:electron
 
-echo All services started.
+echo.
+echo  ===============================================
+echo     All services started!
+echo  ===============================================
+echo.
+echo  Open browser to: http://localhost:5173
+echo.
 pause
 exit /b 0
