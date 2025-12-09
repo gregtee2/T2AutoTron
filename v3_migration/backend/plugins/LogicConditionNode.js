@@ -21,7 +21,28 @@
     // -------------------------------------------------------------------------
     // Import shared controls from T2Controls
     // -------------------------------------------------------------------------
-    const { DropdownControl, InputControl } = window.T2Controls;
+    const { DropdownControl, InputControl, HelpIcon } = window.T2Controls;
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Checks if a device state matches a condition, then optionally performs an action.\n\nTrigger-based: only evaluates when trigger input fires.\n\nUse for: if/then automations, threshold triggers.",
+        inputs: {
+            trigger: "Pulse to evaluate the condition.\n\nConnect from button, timer, or other trigger source."
+        },
+        outputs: {
+            condition_met: "Fires when condition is true.",
+            action: "Action data object (for chaining)."
+        },
+        controls: {
+            device: "Select the device to monitor.",
+            operator: "Comparison operator (=, <, >, etc.).",
+            value: "Value to compare against.",
+            action: "Action to perform when condition met.\n\nNone, Turn On, Turn Off, Set Value.",
+            setValue: "Value to set (when Action is 'Set Value')."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // NODE CLASS

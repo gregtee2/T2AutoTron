@@ -16,6 +16,21 @@
     const { useState, useEffect, useRef, useCallback } = React;
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
+    const { HelpIcon } = window.T2Controls || {};
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Outputs TRUE when today is a specific day of the week.\n\nModes:\n• Single: One specific day (e.g., Monday)\n• Range: Day span (e.g., Mon-Fri)\n• All: Every day (always TRUE)",
+        outputs: {
+            isInRange: "TRUE if today matches criteria.\nFALSE otherwise."
+        },
+        controls: {
+            mode: "Single: One day only\nRange: Weekday range\nAll: Every day",
+            day: "Which day(s) of the week to match."
+        }
+    };
 
     const DAY_NAMES = [
         "Sunday", "Monday", "Tuesday", "Wednesday",

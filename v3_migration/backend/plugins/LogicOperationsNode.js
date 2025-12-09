@@ -21,7 +21,29 @@
     // -------------------------------------------------------------------------
     // Import shared controls from T2Controls
     // -------------------------------------------------------------------------
-    const { DropdownControl, InputControl, ButtonControl } = window.T2Controls;
+    const { DropdownControl, InputControl, ButtonControl, HelpIcon } = window.T2Controls;
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Advanced logic operations with multiple inputs and comparison.\n\nModes: AND, OR, NAND, NOR, XOR, XNOR, IMPLIES, BICOND, RisingEdge, FallingEdge.\n\nIncludes optional threshold comparison.",
+        outputs: {
+            result: "Boolean result of the logic operation.",
+            inverse: "Inverted result (NOT of result).",
+            value: "Numeric value (from compared input).",
+            variable: "Named variable output (for AutoTronBuffer)."
+        },
+        controls: {
+            mode: "Logic operation mode:\n• AND: all true\n• OR: any true\n• NAND/NOR: inverted AND/OR\n• XOR: exactly one true\n• Edge: detects transitions",
+            addInput: "Add another boolean input (up to 10).",
+            removeInput: "Remove the last input.",
+            compareInput: "Enable threshold comparison on one input.",
+            operator: "Threshold comparison operator.",
+            threshold: "Value to compare input against.",
+            setVariable: "Optional: write result to AutoTronBuffer."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // NODE CLASS

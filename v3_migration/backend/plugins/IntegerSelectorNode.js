@@ -21,11 +21,27 @@
     // Get shared components
     const T2Components = window.T2Components || {};
     const { createSocketRef, LabeledSlider } = T2Components;
+    const { HelpIcon } = window.T2Controls || {};
     const THEME = T2Components.THEME || window.T2Controls?.THEME || {
         primary: '#00f3ff',
         primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
         border: 'rgba(0, 243, 255, 0.3)',
         background: '#0a0f14'
+    };
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Outputs a selectable integer value.\n\nUse for: Setting brightness levels, selecting modes, or any numeric parameter.\n\nDrag the slider or adjust min/max range.",
+        outputs: {
+            value: "The currently selected integer value.\n\nRange: min to max (configurable)"
+        },
+        controls: {
+            value: "Current value. Drag to adjust.",
+            min: "Minimum allowed value.",
+            max: "Maximum allowed value."
+        }
     };
 
     // -------------------------------------------------------------------------

@@ -22,7 +22,7 @@
     // -------------------------------------------------------------------------
     // Import shared controls from T2Controls
     // -------------------------------------------------------------------------
-    const { DropdownControl, ButtonControl, SwitchControl } = window.T2Controls;
+    const { DropdownControl, ButtonControl, SwitchControl, HelpIcon } = window.T2Controls;
 
     // -------------------------------------------------------------------------
     // Import shared HA utilities from T2HAUtils (DRY)
@@ -36,6 +36,21 @@
         initializeSocketListeners,
         removeSocketListeners
     } = window.T2HAUtils;
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Outputs the current state of a selected Home Assistant device.\n\nUse for: Reading sensor values, checking device status, monitoring state changes.\n\nNo trigger input needed - continuously outputs device state.",
+        outputs: {
+            device_state: "Full device state object.\n\nIncludes: on/off, brightness, color, attributes, etc.\n\nConnect to Display or Automation nodes."
+        },
+        controls: {
+            filterType: "Filter device list by entity type.\n\nLight, Switch, Sensor, etc.",
+            letterFilter: "Filter devices alphabetically.\n\nUseful when you have many devices.",
+            device: "Select which device to monitor."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // NODE CLASS

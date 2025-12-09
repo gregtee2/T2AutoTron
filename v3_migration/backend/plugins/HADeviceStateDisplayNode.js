@@ -21,7 +21,20 @@
     // -------------------------------------------------------------------------
     // Import shared controls from T2Controls
     // -------------------------------------------------------------------------
-    const { SwitchControl } = window.T2Controls;
+    const { SwitchControl, HelpIcon } = window.T2Controls;
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Displays device state information visually.\n\nConnect to HADeviceStateOutput or HAGenericDevice to see device details.\n\nShows: name, type, on/off, brightness, color, power usage.",
+        inputs: {
+            device_state: "Device state object from an HA node.\n\nAccepts single device or array."
+        },
+        outputs: {
+            device_state: "Pass-through of input data.\n\nChain multiple display nodes."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // NODE CLASS

@@ -22,12 +22,31 @@
     // -------------------------------------------------------------------------
     // Import shared controls from T2Controls
     // -------------------------------------------------------------------------
-    const { ButtonControl, DropdownControl, SwitchControl } = window.T2Controls;
+    const { ButtonControl, DropdownControl, SwitchControl, HelpIcon } = window.T2Controls;
 
     // -------------------------------------------------------------------------
     // Import shared HA utilities from T2HAUtils (DRY)
     // -------------------------------------------------------------------------
     const { fieldMapping, getFieldsForEntityType } = window.T2HAUtils;
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Extracts specific fields from device state for use in automations.\n\nAdd fields dynamically to output: brightness, color, power, temperature, etc.\n\nConnect to HADeviceStateOutput or HAGenericDevice.",
+        inputs: {
+            device_state: "Device state object from an HA node."
+        },
+        controls: {
+            addField: "Add a new output field.\n\nAvailable fields depend on device type.",
+            removeField: "Remove the last added field.",
+            resetFields: "Clear all field outputs."
+        }
+    };
+
+    // -------------------------------------------------------------------------
+    // NODE CLASS
+    // -------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
     // NODE CLASS

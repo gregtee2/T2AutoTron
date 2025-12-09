@@ -11,6 +11,25 @@
     const { useState, useEffect } = React;
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
+    const { HelpIcon } = window.T2Controls || {};
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Routes one of multiple inputs to the output based on a selector value.\n\nLike a multiplexer/switch: Select=0 → Data 0, Select=1 → Data 1, etc.\n\nUse for: choosing between different values, routing signals.",
+        inputs: {
+            select: "Integer selector (0-based index).\n\nDetermines which Data input passes through.\n\nExample: 0 = first input, 1 = second input.",
+            data: "Data inputs to choose from.\n\nAny type accepted (number, object, boolean)."
+        },
+        outputs: {
+            out: "The selected data input value."
+        },
+        controls: {
+            numberOfInputs: "How many data inputs to show (1-10).",
+            clampSelect: "When ON: clamps selector to valid range.\n\nWhen OFF: out-of-range returns undefined."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // CSS is now loaded from node-styles.css via index.css

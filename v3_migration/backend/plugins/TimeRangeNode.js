@@ -16,6 +16,21 @@
     const { useState, useEffect, useRef, useCallback } = React;
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
+    const { HelpIcon } = window.T2Controls || {};
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Outputs TRUE when current time is within the specified range.\n\nSupports overnight ranges (e.g., 10 PM to 6 AM).\n\nUpdates continuously in real-time.",
+        outputs: {
+            isInRange: "TRUE if current time is within range.\nFALSE otherwise."
+        },
+        controls: {
+            start: "Start time of the active window (24-hour format).",
+            end: "End time of the active window.\n\nCan be earlier than start for overnight ranges."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // HELPERS

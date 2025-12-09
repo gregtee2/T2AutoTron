@@ -16,6 +16,21 @@
     const { useState, useEffect, useRef, useCallback } = React;
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
+    const { HelpIcon } = window.T2Controls || {};
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Outputs TRUE when today matches a specific date or falls within a date range.\n\nUse for: Seasonal automations, holidays, special events.\n\nModes:\n• Single Date: Match exact day\n• Range: Match date span",
+        outputs: {
+            isInRange: "TRUE if today matches criteria.\nFALSE otherwise."
+        },
+        controls: {
+            useRange: "Single: Match one specific date.\nRange: Match any date within span.",
+            date: "The target date (month and day)."
+        }
+    };
 
     const MONTH_NAMES = [
         "January", "February", "March", "April", "May", "June",

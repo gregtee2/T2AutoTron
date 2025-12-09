@@ -11,6 +11,21 @@
     const { useState, useEffect } = React;
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
+    const { HelpIcon } = window.T2Controls || {};
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Outputs an integer value when a boolean condition is true.\n\nWhen A=true: outputs B as integer.\nWhen A=false: outputs false.\n\nUse for: conditional brightness, gated values.",
+        inputs: {
+            a: "Boolean condition (true/false).\n\nWhen true, passes B value.",
+            b: "Integer value to output when A is true."
+        },
+        outputs: {
+            out: "Integer value (when A=true) or false (when A=false)."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // CSS is now loaded from node-styles.css via index.css

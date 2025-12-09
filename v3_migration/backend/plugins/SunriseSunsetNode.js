@@ -11,6 +11,24 @@
     const { useState, useEffect, useCallback, useRef } = React;
     const RefComponent = window.RefComponent;
     const { DateTime } = window.luxon;
+    const { HelpIcon } = window.T2Controls || {};
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Triggers based on sunrise/sunset times for your location.\n\nCalculates actual solar times based on latitude/longitude.\n\nSupports offset (e.g., 30 min before sunset) and fixed override times.",
+        outputs: {
+            state: "TRUE during active window.\nFALSE otherwise.",
+            startTime: "Calculated ON time (sunrise offset or fixed).",
+            endTime: "Calculated OFF time (sunset offset or fixed)."
+        },
+        controls: {
+            location: "Your latitude/longitude for accurate sunrise/sunset calculation.",
+            offset: "Trigger before/after the solar event.\nExample: 30 min before sunset.",
+            fixedTime: "Override solar time with a fixed time.\nUseful for consistent schedules."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // CSS is now loaded from node-styles.css via index.css
