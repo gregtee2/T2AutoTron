@@ -11,9 +11,11 @@ echo.
 
 REM Get the directory where this script is located
 set "SCRIPT_DIR=%~dp0"
+set "BACKEND_DIR=%SCRIPT_DIR%v3_migration\backend"
+set "FRONTEND_DIR=%SCRIPT_DIR%v3_migration\frontend"
 
 REM Check if installed
-if not exist "!SCRIPT_DIR!v3_migration\backend\node_modules" (
+if not exist "%BACKEND_DIR%\node_modules" (
     color 0C
     echo  ERROR: Not installed yet!
     echo.
@@ -24,13 +26,14 @@ if not exist "!SCRIPT_DIR!v3_migration\backend\node_modules" (
 )
 
 echo  Starting backend server...
-start "T2AutoTron Backend" cmd /k "cd /d !SCRIPT_DIR!v3_migration\backend && npm start"
+echo  Backend dir: %BACKEND_DIR%
+start "T2AutoTron Backend" /D "%BACKEND_DIR%" cmd /k npm start
 
 REM Wait for backend to initialize
 timeout /t 3 /nobreak >nul
 
 echo  Starting frontend dev server...
-start "T2AutoTron Frontend" cmd /k "cd /d !SCRIPT_DIR!v3_migration\frontend && npm run dev"
+start "T2AutoTron Frontend" /D "%FRONTEND_DIR%" cmd /k npm run dev
 
 REM Wait for frontend to initialize
 timeout /t 5 /nobreak >nul
@@ -38,6 +41,7 @@ timeout /t 5 /nobreak >nul
 echo.
 echo  ===============================================
 echo     T2AutoTron is running!
+echo  ===============================================
 echo  ===============================================
 echo.
 echo  Opening browser to http://localhost:5173
