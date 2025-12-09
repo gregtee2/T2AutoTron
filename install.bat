@@ -1,92 +1,266 @@
 @echo off
-title T2AutoTron 2.1 - Installer Debug
+title T2AutoTron 2.1 - Installer
 color 0A
 
 echo.
 echo  ===============================================
-echo     T2AutoTron 2.1 - Installer Debug Mode
+echo     T2AutoTron 2.1 - One-Click Installer
 echo  ===============================================
 echo.
-echo  This will test each step with pauses between.
-echo  Press any key to start...
-pause >nul
 
-echo.
-echo  ------ Step 1: Script Location ------
-echo  Script path: %~dp0
-echo  Current dir: %CD%
-echo.
-echo  Press any key for next step...
-pause >nul
+REM Get the directory where this script is located
+set "SCRIPT_DIR=%~dp0"
+cd /d "%SCRIPT_DIR%"
 
-echo.
-echo  ------ Step 2: Check Node.js ------
-echo  Running: where node
-where node
-echo.
-echo  Exit code: %errorlevel%
-echo.
-echo  Press any key for next step...
-pause >nul
+REM ===================================================
+REM Step 1: Check for Node.js
+REM ===================================================
+echo [1/5] Checking for Node.js...
 
-echo.
-echo  ------ Step 3: Node Version ------
-echo  Running: node -v
-node -v
-echo.
-echo  Exit code: %errorlevel%
-echo.
-echo  Press any key for next step...
-pause >nul
-
-echo.
-echo  ------ Step 4: Check npm ------
-echo  Running: where npm
-where npm
-echo.
-echo  Exit code: %errorlevel%
-echo.
-echo  Press any key for next step...
-pause >nul
-
-echo.
-echo  ------ Step 5: npm Version ------
-echo  Running: npm -v
-npm -v
-echo.
-echo  Exit code: %errorlevel%
-echo.
-echo  Press any key for next step...
-pause >nul
-
-echo.
-echo  ------ Step 6: Check backend folder ------
-set "BACKEND=%~dp0v3_migration\backend"
-echo  Backend path: %BACKEND%
-if exist "%BACKEND%\package.json" (
-    echo  package.json: FOUND
+where node >nul 2>&1
+if errorlevel 1 (
+    echo    Node.js not found. Installing automatically...
+    echo.
+    call :InstallNodeJS
+    if errorlevel 1 (
+        goto :NodeInstallFailed
+    )
+    
+    REM Add Node.js to PATH for this session
+    set "PATH=%PATH%;C:\Program Files\nodejs;%APPDATA%\npm"
+    
+    REM Verify it worked
+    where node >nul 2>&1
+    if errorlevel 1 (
+        echo.
+        echo  Node.js was installed but PATH needs a restart.
+        echo  Please CLOSE this window, RESTART your computer,
+        echo  then run install.bat again.
+        echo.
+        pause
+        exit /b 0
+    )
+    echo    Node.js installed successfully!
 ) else (
-    echo  package.json: NOT FOUND
+    for /f "tokens=*" %%a in ('node -v') do echo    Found Node.js %%a
 )
-echo.
-echo  Press any key for next step...
-pause >nul
 
+REM ===================================================
+REM Step 2: Check for npm
+REM ===================================================
 echo.
-echo  ------ Step 7: Check frontend folder ------
-set "FRONTEND=%~dp0v3_migration\frontend"
-echo  Frontend path: %FRONTEND%
-if exist "%FRONTEND%\package.json" (
-    echo  package.json: FOUND
+echo [2/5] Checking for npm...
+
+where npm >nul 2>&1
+if errorlevel 1 (
+    color 0C
+    echo  ERROR: npm not found!
+    echo  npm should be included with Node.js.
+    echo  Please reinstall Node.js from https://nodejs.org/
+    echo.
+    pause
+    exit /b 1
+)
+for /f "tokens=*" %%a in ('npm -v') do echo    Found npm %%a
+
+REM ===================================================
+REM Step 3: Install backend dependencies
+REM ===================================================
+echo.
+echo [3/5] Installing backend dependencies...
+
+set "BACKEND=%SCRIPT_DIR%v3_migration\backend"
+if not exist "%BACKEND%\package.json" (
+    color 0C
+    echo  ERROR: Backend package.json not found!
+    echo  Expected: %BACKEND%\package.json
+    echo  Make sure you extracted the complete T2AutoTron package.
+    echo.
+    pause
+    exit /b 1
+)
+
+cd /d "%BACKEND%"
+if not exist "node_modules" (
+    echo    Running npm install (this may take 1-2 minutes)...
+    call npm install --loglevel=error
+    if errorlevel 1 (
+        color 0C
+        echo  ERROR: Backend npm install failed!
+        echo  Check your internet connection and try again.
+        echo.
+        pause
+        exit /b 1
+    )
+    echo    Backend dependencies installed!
 ) else (
-    echo  package.json: NOT FOUND
+    echo    Dependencies already installed, verifying...
+    call npm install --loglevel=error >nul 2>&1
+    echo    Backend OK!
 )
+
+REM ===================================================
+REM Step 4: Install frontend dependencies
+REM ===================================================
+echo.
+echo [4/5] Installing frontend dependencies...
+
+set "FRONTEND=%SCRIPT_DIR%v3_migration\frontend"
+if not exist "%FRONTEND%\package.json" (
+    color 0C
+    echo  ERROR: Frontend package.json not found!
+    echo  Expected: %FRONTEND%\package.json
+    echo.
+    pause
+    exit /b 1
+)
+
+cd /d "%FRONTEND%"
+if not exist "node_modules" (
+    echo    Running npm install (this may take 1-2 minutes)...
+    call npm install --loglevel=error
+    if errorlevel 1 (
+        color 0C
+        echo  ERROR: Frontend npm install failed!
+        echo.
+        pause
+        exit /b 1
+    )
+    echo    Frontend dependencies installed!
+) else (
+    echo    Dependencies already installed, verifying...
+    call npm install --loglevel=error >nul 2>&1
+    echo    Frontend OK!
+)
+
+REM ===================================================
+REM Step 5: Create default configuration
+REM ===================================================
+echo.
+echo [5/5] Setting up configuration...
+
+cd /d "%BACKEND%"
+if not exist ".env" (
+    (
+        echo # T2AutoTron Environment Configuration
+        echo # Configure these via the Settings UI in the app
+        echo.
+        echo PORT=3000
+        echo.
+        echo # Home Assistant - set via Settings UI
+        echo # HA_URL=http://homeassistant.local:8123
+        echo # HA_TOKEN=your_long_lived_access_token
+        echo.
+        echo # Debug logging
+        echo VERBOSE_LOGGING=false
+    ) > .env
+    echo    Created default .env file
+) else (
+    echo    Configuration already exists
+)
+
+REM ===================================================
+REM Done!
+REM ===================================================
+echo.
+color 0A
+echo  ===============================================
+echo     Installation Complete!
+echo  ===============================================
+echo.
+echo  To start T2AutoTron:
+echo.
+echo     Double-click:  start.bat
+echo.
+echo  The app will open in your browser at:
+echo     http://localhost:5173
+echo.
+echo  First time? Click the Settings (gear) icon to
+echo  configure Home Assistant, Hue, etc.
+echo.
+echo  ===============================================
+echo.
+pause
+exit /b 0
+
+
+REM ===================================================
+REM Function: Install Node.js
+REM ===================================================
+:InstallNodeJS
+echo  -----------------------------------------------
+echo    Installing Node.js 20 LTS...
+echo  -----------------------------------------------
 echo.
 
+REM Try winget first (Windows 10/11)
+where winget >nul 2>&1
+if not errorlevel 1 (
+    echo    Using Windows Package Manager (winget)...
+    winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements -h
+    if not errorlevel 1 (
+        echo    Installed via winget!
+        exit /b 0
+    )
+    echo    winget install failed, trying alternative...
+)
+
+REM Try Chocolatey if available
+where choco >nul 2>&1
+if not errorlevel 1 (
+    echo    Using Chocolatey...
+    choco install nodejs-lts -y
+    if not errorlevel 1 (
+        echo    Installed via Chocolatey!
+        exit /b 0
+    )
+    echo    Chocolatey install failed, trying direct download...
+)
+
+REM Direct download as last resort
+echo    Downloading Node.js installer from nodejs.org...
+set "NODE_MSI=%TEMP%\node-install.msi"
+
+powershell -Command "& { try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi' -OutFile '%NODE_MSI%' -UseBasicParsing } catch { exit 1 } }"
+
+if not exist "%NODE_MSI%" (
+    echo    ERROR: Failed to download Node.js installer.
+    echo    Please download manually from https://nodejs.org/
+    exit /b 1
+)
+
+echo    Running Node.js installer...
+echo    (You may see a UAC prompt - click Yes)
+msiexec /i "%NODE_MSI%" /passive /norestart
+
+REM Clean up
+del "%NODE_MSI%" >nul 2>&1
+
+REM Check if it worked
+set "PATH=%PATH%;C:\Program Files\nodejs"
+where node >nul 2>&1
+if errorlevel 1 (
+    echo    Installation may require a restart.
+    exit /b 1
+)
+
+echo    Node.js installed successfully!
+exit /b 0
+
+
+:NodeInstallFailed
+color 0C
 echo.
 echo  ===============================================
-echo     Debug Complete - All steps passed!
+echo    Could not install Node.js automatically
 echo  ===============================================
 echo.
-echo  Press any key to exit...
-pause >nul
+echo  Please install Node.js manually:
+echo.
+echo    1. Go to: https://nodejs.org/
+echo    2. Download the LTS version (recommended)
+echo    3. Run the installer
+echo    4. Run this install.bat again
+echo.
+pause
+exit /b 1
