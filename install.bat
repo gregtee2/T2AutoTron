@@ -79,17 +79,17 @@ echo.
 echo [3/5] Installing backend dependencies...
 
 set "BACKEND=%SCRIPT_DIR%v3_migration\backend"
-if not exist "%BACKEND%\package.json" (
+if not exist "!BACKEND!\package.json" (
     color 0C
     echo  ERROR: Backend package.json not found!
-    echo  Expected: %BACKEND%\package.json
+    echo  Expected: !BACKEND!\package.json
     echo  Make sure you extracted the complete T2AutoTron package.
     echo.
     pause
     exit /b 1
 )
 
-cd /d "%BACKEND%"
+cd /d "!BACKEND!"
 if not exist "node_modules" (
     echo    Running npm install - this may take 1-2 minutes...
     cmd /c npm install
@@ -115,16 +115,16 @@ echo.
 echo [4/5] Installing frontend dependencies...
 
 set "FRONTEND=%SCRIPT_DIR%v3_migration\frontend"
-if not exist "%FRONTEND%\package.json" (
+if not exist "!FRONTEND!\package.json" (
     color 0C
     echo  ERROR: Frontend package.json not found!
-    echo  Expected: %FRONTEND%\package.json
+    echo  Expected: !FRONTEND!\package.json
     echo.
     pause
     exit /b 1
 )
 
-cd /d "%FRONTEND%"
+cd /d "!FRONTEND!"
 if not exist "node_modules" (
     echo    Running npm install - this may take 1-2 minutes...
     cmd /c npm install
@@ -148,21 +148,19 @@ REM ===================================================
 echo.
 echo [5/5] Setting up configuration...
 
-cd /d "%BACKEND%"
+cd /d "!BACKEND!"
 if not exist ".env" (
-    (
-        echo # T2AutoTron Environment Configuration
-        echo # Configure these via the Settings UI in the app
-        echo.
-        echo PORT=3000
-        echo.
-        echo # Home Assistant - set via Settings UI
-        echo # HA_URL=http://homeassistant.local:8123
-        echo # HA_TOKEN=your_long_lived_access_token
-        echo.
-        echo # Debug logging
-        echo VERBOSE_LOGGING=false
-    ) > .env
+    echo # T2AutoTron Environment Configuration> .env
+    echo # Configure these via the Settings UI in the app>> .env
+    echo.>> .env
+    echo PORT=3000>> .env
+    echo.>> .env
+    echo # Home Assistant - set via Settings UI>> .env
+    echo # HA_URL=http://homeassistant.local:8123>> .env
+    echo # HA_TOKEN=your_long_lived_access_token>> .env
+    echo.>> .env
+    echo # Debug logging>> .env
+    echo VERBOSE_LOGGING=false>> .env
     echo    Created default .env file
 ) else (
     echo    Configuration already exists
