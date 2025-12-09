@@ -404,7 +404,14 @@ app.post('/api/settings', express.json(), async (req, res) => {
     if (homeAssistantManager.updateConfig) {
       const configChanged = homeAssistantManager.updateConfig();
       if (configChanged) {
-        logger.log('Home Assistant manager config refreshed', 'info', false, 'settings:ha-refresh');
+        logger.log('Home Assistant manager config refreshed, re-initializing...', 'info', false, 'settings:ha-refresh');
+        // Re-initialize to establish WebSocket connection with new credentials
+        try {
+          await homeAssistantManager.initialize(io, null, logger.log.bind(logger));
+          logger.log('Home Assistant re-initialized successfully', 'info', false, 'settings:ha-reinit');
+        } catch (haError) {
+          logger.log(`HA re-init failed: ${haError.message}`, 'warn', false, 'settings:ha-reinit-fail');
+        }
       }
     }
     
