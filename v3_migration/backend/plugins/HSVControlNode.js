@@ -244,7 +244,7 @@
                 React.createElement('div', { key: 'row', style: { display: "flex", alignItems: "center", gap: "8px", width: '100%' } }, [
                     React.createElement('div', { 
                         key: 'toggle',
-                        style: { cursor: "pointer", fontSize: "12px", userSelect: "none", color: '#00f3ff' },
+                        style: { cursor: "pointer", fontSize: "12px", userSelect: "none", color: '#f48fb1' },
                         onPointerDown: (e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }
                     }, isCollapsed ? "▶" : "▼"),
                     React.createElement('div', { key: 'title', className: 'hsv-node-title', style: { flex: 1, textAlign: 'center' } }, data.label)
@@ -326,7 +326,7 @@
                                 type: 'number',
                                 value: state.autoTriggerInterval,
                                 onChange: e => updateState({ autoTriggerInterval: Number(e.target.value) }),
-                                style: { width: '60px', background: 'rgba(0,0,0,0.3)', border: '1px solid #00f3ff', color: '#00f3ff', fontSize: '11px', padding: '2px 4px' }
+                                style: { width: '60px', background: 'rgba(0,0,0,0.3)', border: '1px solid #f48fb1', color: '#f48fb1', fontSize: '11px', padding: '2px 4px' }
                             })
                         ])
                     ]),

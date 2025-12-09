@@ -243,16 +243,16 @@
         const paletteColors = ["#FF0000","#FFA500","#FFFF00","#00FF00","#0000FF","#00FFFF","#800080","#FFFFFF"];
         const rgb = `rgb(${state.red},${state.green},${state.blue})`;
 
-        return React.createElement('div', { className: 'ha-node-tron', style: { minWidth: '380px' } }, [
+        return React.createElement('div', { className: 'hsv-node-tron', style: { minWidth: '380px' } }, [
             // Header
-            React.createElement('div', { key: 'header', className: 'ha-node-header' }, [
+            React.createElement('div', { key: 'header', className: 'hsv-node-header' }, [
                 React.createElement('div', { key: 'row', style: { display: "flex", alignItems: "center", gap: "8px", width: '100%' } }, [
                     React.createElement('div', { 
                         key: 'toggle',
-                        style: { cursor: "pointer", fontSize: "12px", userSelect: "none", color: '#00f3ff' },
+                        style: { cursor: "pointer", fontSize: "12px", userSelect: "none", color: 'var(--node-color-color, #f48fb1)' },
                         onPointerDown: (e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }
                     }, isCollapsed ? "▶" : "▼"),
-                    React.createElement('div', { key: 'title', className: 'ha-node-title', style: { flex: 1, textAlign: 'center' } }, data.label)
+                    React.createElement('div', { key: 'title', className: 'hsv-node-title', style: { flex: 1, textAlign: 'center' } }, data.label)
                 ])
             ]),
 
@@ -343,7 +343,7 @@
                                 type: 'number',
                                 value: state.autoInterval,
                                 onChange: e => updateState({ autoInterval: Number(e.target.value) }),
-                                style: { width: '60px', background: 'rgba(0,0,0,0.3)', border: '1px solid #00f3ff', color: '#00f3ff', fontSize: '11px', padding: '2px 4px' }
+                                style: { width: '60px', background: 'rgba(0,0,0,0.3)', border: '1px solid #f48fb1', color: '#f48fb1', fontSize: '11px', padding: '2px 4px' }
                             })
                         ])
                     ])

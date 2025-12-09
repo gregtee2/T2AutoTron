@@ -223,14 +223,13 @@
 
         const outputs = Object.entries(data.outputs);
 
-        return React.createElement('div', { className: 'hsv-node-tron' }, [
+        return React.createElement('div', { className: 'logic-node' }, [
             // Header with output socket on the right
             React.createElement('div', { 
                 key: 'header', 
-                className: 'hsv-node-header',
-                style: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }
+                className: 'header'
             }, [
-                React.createElement('div', { key: 'title', className: 'hsv-node-title' }, data.label),
+                React.createElement('span', { key: 'title' }, data.label),
                 // Output socket in header
                 outputs.map(([key, output]) => 
                     React.createElement('div', { 
@@ -239,7 +238,7 @@
                     }, [
                         React.createElement('span', { 
                             key: 'label',
-                            style: { fontSize: '11px', color: 'rgba(0, 255, 200, 0.7)' }
+                            className: 'socket-label'
                         }, output.label),
                         React.createElement(RefComponent, {
                             key: 'socket',
@@ -263,7 +262,7 @@
 
                 // Single Date Mode
                 !state.useRange && React.createElement('div', { key: 'single' }, [
-                    React.createElement('div', { key: 'section', className: 'hsv-section-header' }, 'Single Date'),
+                    React.createElement('div', { key: 'section', className: 'section-header' }, 'Single Date'),
                     React.createElement(Slider, {
                         key: 'month',
                         label: 'Month',
@@ -283,7 +282,7 @@
 
                 // Range Mode
                 state.useRange && React.createElement('div', { key: 'range' }, [
-                    React.createElement('div', { key: 'startSection', className: 'hsv-section-header' }, 'Start Date'),
+                    React.createElement('div', { key: 'startSection', className: 'section-header' }, 'Start Date'),
                     React.createElement(Slider, {
                         key: 'startMonth',
                         label: 'Month',
@@ -299,7 +298,7 @@
                         min: 1, max: 31,
                         onChange: (v) => updateState({ startDay: v })
                     }),
-                    React.createElement('div', { key: 'endSection', className: 'hsv-section-header', style: { marginTop: '12px' } }, 'End Date'),
+                    React.createElement('div', { key: 'endSection', className: 'section-header', style: { marginTop: '12px' } }, 'End Date'),
                     React.createElement(Slider, {
                         key: 'endMonth',
                         label: 'Month',

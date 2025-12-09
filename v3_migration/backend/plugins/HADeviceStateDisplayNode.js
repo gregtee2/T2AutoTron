@@ -228,7 +228,7 @@
                 React.createElement('div', { 
                     key: 'actionable',
                     style: { 
-                        color: isActionable(lastData.entity_type || lastData.entityType) ? '#00ff88' : '#ff6b6b',
+                        color: isActionable(lastData.entity_type || lastData.entityType) ? '#5faa7d' : '#c75f5f',
                         marginBottom: '8px',
                         fontWeight: '600',
                         fontSize: '11px'
@@ -236,7 +236,7 @@
                 }, `Actionable: ${isActionable(lastData.entity_type || lastData.entityType) ? 'Yes ✓' : 'No ✗'}`),
                 React.createElement('div', { 
                     key: 'raw-label',
-                    style: { color: '#00f3ff', marginBottom: '4px', fontSize: '10px', textTransform: 'uppercase' }
+                    style: { color: '#4fc3f7', marginBottom: '4px', fontSize: '10px', textTransform: 'uppercase' }
                 }, 'Raw Data:'),
                 React.createElement('pre', { 
                     key: 'raw-data',

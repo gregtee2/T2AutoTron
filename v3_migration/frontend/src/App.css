@@ -591,10 +591,10 @@ div[style*="position: fixed"] input::placeholder {
 /* Boolean sockets - Green/Emerald */
 .rete-socket[data-socket-type="boolean"],
 .rete-socket[title*="boolean" i] {
-  background: linear-gradient(145deg, #10b981, #059669) !important;
-  border: 2px solid #34d399 !important;
+  background: linear-gradient(145deg, var(--socket-boolean-color, #10b981), var(--socket-boolean-dark, #059669)) !important;
+  border: 2px solid var(--socket-boolean-border, #34d399) !important;
   box-shadow: 
-    0 0 12px rgba(16, 185, 129, 0.5),
+    0 0 12px rgba(var(--socket-boolean-rgb, 16, 185, 129), 0.5),
     inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -602,18 +602,18 @@ div[style*="position: fixed"] input::placeholder {
 .rete-socket[title*="boolean" i]:hover {
   transform: scale(1.2) !important;
   box-shadow: 
-    0 0 20px rgba(16, 185, 129, 0.7),
-    0 0 0 4px rgba(16, 185, 129, 0.2),
+    0 0 20px rgba(var(--socket-boolean-rgb, 16, 185, 129), 0.7),
+    0 0 0 4px rgba(var(--socket-boolean-rgb, 16, 185, 129), 0.2),
     inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
 }
 
 /* Number sockets - Blue/Cyan */
 .rete-socket[data-socket-type="number"],
 .rete-socket[title*="number" i] {
-  background: linear-gradient(145deg, #3b82f6, #2563eb) !important;
-  border: 2px solid #60a5fa !important;
+  background: linear-gradient(145deg, var(--socket-number-color, #3b82f6), var(--socket-number-dark, #2563eb)) !important;
+  border: 2px solid var(--socket-number-border, #60a5fa) !important;
   box-shadow: 
-    0 0 12px rgba(59, 130, 246, 0.5),
+    0 0 12px rgba(var(--socket-number-rgb, 59, 130, 246), 0.5),
     inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -621,18 +621,18 @@ div[style*="position: fixed"] input::placeholder {
 .rete-socket[title*="number" i]:hover {
   transform: scale(1.2) !important;
   box-shadow: 
-    0 0 20px rgba(59, 130, 246, 0.7),
-    0 0 0 4px rgba(59, 130, 246, 0.2),
+    0 0 20px rgba(var(--socket-number-rgb, 59, 130, 246), 0.7),
+    0 0 0 4px rgba(var(--socket-number-rgb, 59, 130, 246), 0.2),
     inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
 }
 
 /* String sockets - Orange/Amber */
 .rete-socket[data-socket-type="string"],
 .rete-socket[title*="string" i] {
-  background: linear-gradient(145deg, #f59e0b, #d97706) !important;
-  border: 2px solid #fbbf24 !important;
+  background: linear-gradient(145deg, var(--socket-string-color, #f59e0b), var(--socket-string-dark, #d97706)) !important;
+  border: 2px solid var(--socket-string-border, #fbbf24) !important;
   box-shadow: 
-    0 0 12px rgba(245, 158, 11, 0.5),
+    0 0 12px rgba(var(--socket-string-rgb, 245, 158, 11), 0.5),
     inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -640,18 +640,18 @@ div[style*="position: fixed"] input::placeholder {
 .rete-socket[title*="string" i]:hover {
   transform: scale(1.2) !important;
   box-shadow: 
-    0 0 20px rgba(245, 158, 11, 0.7),
-    0 0 0 4px rgba(245, 158, 11, 0.2),
+    0 0 20px rgba(var(--socket-string-rgb, 245, 158, 11), 0.7),
+    0 0 0 4px rgba(var(--socket-string-rgb, 245, 158, 11), 0.2),
     inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
 }
 
 /* HSV Info sockets - Purple/Violet */
 .rete-socket[data-socket-type="hsv_info"],
 .rete-socket[title*="hsv" i] {
-  background: linear-gradient(145deg, #8b5cf6, #7c3aed) !important;
-  border: 2px solid #a78bfa !important;
+  background: linear-gradient(145deg, var(--socket-hsv-color, #8b5cf6), var(--socket-hsv-dark, #7c3aed)) !important;
+  border: 2px solid var(--socket-hsv-border, #a78bfa) !important;
   box-shadow: 
-    0 0 12px rgba(139, 92, 246, 0.5),
+    0 0 12px rgba(var(--socket-hsv-rgb, 139, 92, 246), 0.5),
     inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -659,8 +659,8 @@ div[style*="position: fixed"] input::placeholder {
 .rete-socket[title*="hsv" i]:hover {
   transform: scale(1.2) !important;
   box-shadow: 
-    0 0 20px rgba(139, 92, 246, 0.7),
-    0 0 0 4px rgba(139, 92, 246, 0.2),
+    0 0 20px rgba(var(--socket-hsv-rgb, 139, 92, 246), 0.7),
+    0 0 0 4px rgba(var(--socket-hsv-rgb, 139, 92, 246), 0.2),
     inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
 }
 
@@ -669,10 +669,10 @@ div[style*="position: fixed"] input::placeholder {
 .rete-socket[data-socket-type="any"],
 .rete-socket[title*="object" i],
 .rete-socket[title*="any" i] {
-  background: linear-gradient(145deg, #06b6d4, #0891b2) !important;
-  border: 2px solid #22d3ee !important;
+  background: linear-gradient(145deg, var(--socket-object-color, #06b6d4), var(--socket-object-dark, #0891b2)) !important;
+  border: 2px solid var(--socket-object-border, #22d3ee) !important;
   box-shadow: 
-    0 0 12px rgba(6, 182, 212, 0.5),
+    0 0 12px rgba(var(--socket-object-rgb, 6, 182, 212), 0.5),
     inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -682,18 +682,18 @@ div[style*="position: fixed"] input::placeholder {
 .rete-socket[title*="any" i]:hover {
   transform: scale(1.2) !important;
   box-shadow: 
-    0 0 20px rgba(6, 182, 212, 0.7),
-    0 0 0 4px rgba(6, 182, 212, 0.2),
+    0 0 20px rgba(var(--socket-object-rgb, 6, 182, 212), 0.7),
+    0 0 0 4px rgba(var(--socket-object-rgb, 6, 182, 212), 0.2),
     inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
 }
 
 /* Light Info sockets - Gold/Yellow */
 .rete-socket[data-socket-type="light_info"],
 .rete-socket[title*="light" i] {
-  background: linear-gradient(145deg, #eab308, #ca8a04) !important;
-  border: 2px solid #facc15 !important;
+  background: linear-gradient(145deg, var(--socket-light-color, #eab308), var(--socket-light-dark, #ca8a04)) !important;
+  border: 2px solid var(--socket-light-border, #facc15) !important;
   box-shadow: 
-    0 0 12px rgba(234, 179, 8, 0.5),
+    0 0 12px rgba(var(--socket-light-rgb, 234, 179, 8), 0.5),
     inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -701,8 +701,8 @@ div[style*="position: fixed"] input::placeholder {
 .rete-socket[title*="light" i]:hover {
   transform: scale(1.2) !important;
   box-shadow: 
-    0 0 20px rgba(234, 179, 8, 0.7),
-    0 0 0 4px rgba(234, 179, 8, 0.2),
+    0 0 20px rgba(var(--socket-light-rgb, 234, 179, 8), 0.7),
+    0 0 0 4px rgba(var(--socket-light-rgb, 234, 179, 8), 0.2),
     inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
 }
 

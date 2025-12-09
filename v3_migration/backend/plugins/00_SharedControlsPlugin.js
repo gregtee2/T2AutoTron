@@ -19,18 +19,208 @@
 
     // =========================================================================
     // THEME COLORS (centralized, DRY)
+    // Softer, lower-contrast palette for reduced eye strain
+    // Users can override via localStorage 't2theme-overrides'
     // =========================================================================
+    
+    // Default theme values
+    const DEFAULT_THEME = {
+        // Primary accent - softer teal instead of bright cyan
+        primary: '#5fb3b3',
+        
+        // Backgrounds - warmer grays instead of pure black
+        background: '#1e2428',
+        surface: '#2a3238',       // Card/node surface
+        surfaceLight: '#343d44',  // Elevated elements
+        
+        // Text - off-white instead of pure white/cyan
+        text: '#c5cdd3',
+        textMuted: '#8a959e',
+        
+        // Status colors - muted versions
+        success: '#5faa7d',       // Softer green
+        warning: '#d4a054',       // Softer amber
+        error: '#c75f5f',         // Softer red
+        
+        // Border opacity (0-100)
+        borderOpacity: 25
+    };
+    
+    // Load user overrides from localStorage
+    function loadThemeOverrides() {
+        try {
+            const stored = localStorage.getItem('t2theme-overrides');
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        } catch (e) {
+            console.warn('[SharedControlsPlugin] Failed to load theme overrides:', e);
+        }
+        return {};
+    }
+    
+    // Merge defaults with overrides
+    const userOverrides = loadThemeOverrides();
+    const themeValues = { ...DEFAULT_THEME, ...userOverrides };
+    
+    // Build the THEME object with computed values
     const THEME = {
-        primary: '#00f3ff',
-        primaryRgba: (alpha) => `rgba(0, 243, 255, ${alpha})`,
-        background: '#0a0f14',
-        backgroundAlt: 'rgba(0, 20, 30, 0.6)',
-        text: '#e0f7fa',
-        success: '#00ff88',
-        warning: '#ffaa00',
-        error: '#ff4444',
-        border: 'rgba(0, 243, 255, 0.3)',
-        borderHover: 'rgba(0, 243, 255, 0.6)'
+        primary: themeValues.primary,
+        primaryRgba: (alpha) => {
+            // Parse hex to rgba
+            const hex = themeValues.primary.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        },
+        
+        background: themeValues.background,
+        backgroundAlt: 'rgba(30, 40, 50, 0.8)',
+        surface: themeValues.surface,
+        surfaceLight: themeValues.surfaceLight,
+        
+        text: themeValues.text,
+        textMuted: themeValues.textMuted,
+        textBright: '#e8edf0',
+        
+        success: themeValues.success,
+        warning: themeValues.warning,
+        error: themeValues.error,
+        
+        // Borders computed from primary color
+        border: `rgba(95, 179, 179, ${themeValues.borderOpacity / 100})`,
+        borderHover: `rgba(95, 179, 179, ${Math.min(100, themeValues.borderOpacity * 2) / 100})`,
+        borderLight: 'rgba(200, 210, 220, 0.15)'
+    };
+    
+    // =========================================================================
+    // CATEGORY THEMES - Per-category accent colors
+    // Each node category can have its own accent color while sharing base theme
+    // =========================================================================
+    
+    const DEFAULT_CATEGORY_THEMES = {
+        'Home Assistant': { accent: '#4fc3f7', icon: '🏠' },      // Light blue
+        'Weather': { accent: '#ffb74d', icon: '🌤️' },             // Amber/orange
+        'Logic': { accent: '#81c784', icon: '🔀' },               // Green
+        'Timer/Event': { accent: '#ce93d8', icon: '⏱️' },         // Purple
+        'Color': { accent: '#f48fb1', icon: '🎨' },               // Pink
+        'Utility': { accent: '#90a4ae', icon: '🔧' },             // Gray-blue
+        'Inputs': { accent: '#aed581', icon: '📥' },              // Light green
+        'CC_Control_Nodes': { accent: '#64b5f6', icon: '🎛️' },    // Blue
+        'Other': { accent: '#b0bec5', icon: '📦' }                // Gray
+    };
+    
+    // Load category overrides from localStorage
+    function loadCategoryOverrides() {
+        try {
+            const stored = localStorage.getItem('t2category-overrides');
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        } catch (e) {
+            console.warn('[SharedControlsPlugin] Failed to load category overrides:', e);
+        }
+        return {};
+    }
+    
+    // Merge category defaults with overrides
+    const categoryOverrides = loadCategoryOverrides();
+    const categoryThemes = {};
+    for (const [cat, defaults] of Object.entries(DEFAULT_CATEGORY_THEMES)) {
+        const overrides = categoryOverrides[cat] || {};
+        categoryThemes[cat] = { ...defaults, ...overrides };
+    }
+    
+    // Helper to convert hex to rgba
+    function hexToRgba(hex, alpha) {
+        const cleanHex = hex.replace('#', '');
+        const r = parseInt(cleanHex.substr(0, 2), 16);
+        const g = parseInt(cleanHex.substr(2, 2), 16);
+        const b = parseInt(cleanHex.substr(4, 2), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    
+    // Get category theme with computed values
+    function getCategory(categoryName) {
+        const cat = categoryThemes[categoryName] || categoryThemes['Other'];
+        return {
+            accent: cat.accent,
+            icon: cat.icon,
+            // Computed values for easy use
+            accentRgba: (alpha) => hexToRgba(cat.accent, alpha),
+            headerBg: hexToRgba(cat.accent, 0.15),
+            border: hexToRgba(cat.accent, 0.4),
+            borderHover: hexToRgba(cat.accent, 0.6),
+            glow: `0 0 10px ${hexToRgba(cat.accent, 0.3)}`
+        };
+    }
+    
+    // Attach to THEME object
+    THEME.categories = categoryThemes;
+    THEME.getCategory = getCategory;
+    THEME.getCategoryNames = () => Object.keys(DEFAULT_CATEGORY_THEMES);
+    
+    // Function to update theme at runtime
+    function updateTheme(overrides) {
+        try {
+            const current = loadThemeOverrides();
+            const updated = { ...current, ...overrides };
+            localStorage.setItem('t2theme-overrides', JSON.stringify(updated));
+            // Theme changes take effect on page reload
+            return true;
+        } catch (e) {
+            console.error('[SharedControlsPlugin] Failed to save theme:', e);
+            return false;
+        }
+    }
+    
+    // Function to reset theme to defaults
+    function resetTheme() {
+        try {
+            localStorage.removeItem('t2theme-overrides');
+            return true;
+        } catch (e) {
+            console.error('[SharedControlsPlugin] Failed to reset theme:', e);
+            return false;
+        }
+    }
+    
+    // Function to update category themes at runtime
+    function updateCategoryTheme(categoryName, overrides) {
+        try {
+            const current = loadCategoryOverrides();
+            current[categoryName] = { ...(current[categoryName] || {}), ...overrides };
+            localStorage.setItem('t2category-overrides', JSON.stringify(current));
+            return true;
+        } catch (e) {
+            console.error('[SharedControlsPlugin] Failed to save category theme:', e);
+            return false;
+        }
+    }
+    
+    // Function to reset category themes to defaults
+    function resetCategoryThemes() {
+        try {
+            localStorage.removeItem('t2category-overrides');
+            return true;
+        } catch (e) {
+            console.error('[SharedControlsPlugin] Failed to reset category themes:', e);
+            return false;
+        }
+    }
+    
+    // Expose theme functions globally for settings panel access
+    window.T2ThemeUtils = {
+        getDefaults: () => ({ ...DEFAULT_THEME }),
+        getCurrent: () => ({ ...themeValues }),
+        update: updateTheme,
+        reset: resetTheme,
+        // Category theme utilities
+        getCategoryDefaults: () => JSON.parse(JSON.stringify(DEFAULT_CATEGORY_THEMES)),
+        getCategoryThemes: () => JSON.parse(JSON.stringify(categoryThemes)),
+        updateCategory: updateCategoryTheme,
+        resetCategories: resetCategoryThemes
     };
 
     // =========================================================================
@@ -40,8 +230,8 @@
 
     const baseInputStyle = {
         width: "100%",
-        background: THEME.background,
-        color: THEME.primary,
+        background: THEME.surface,
+        color: THEME.text,
         border: `1px solid ${THEME.border}`,
         padding: "6px",
         borderRadius: "4px",
@@ -52,7 +242,7 @@
     const labelStyle = {
         display: "block",
         fontSize: "10px",
-        color: THEME.primary,
+        color: THEME.textMuted,
         marginBottom: "2px",
         textTransform: "uppercase",
         letterSpacing: "0.5px"
@@ -716,8 +906,14 @@
     // =========================================================================
     // NODE HEADER WITH TOOLTIP - Reusable header component with node description
     // =========================================================================
-    function NodeHeader({ icon, title, tooltip, statusDot, statusColor }) {
-        const headerStyle = {
+    function NodeHeader({ icon, title, tooltip, statusDot, statusColor, className }) {
+        // When className is provided, use CSS for styling (category-specific theming)
+        // Otherwise, use inline styles with THEME fallback for backward compatibility
+        const headerStyle = className ? {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+        } : {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -726,7 +922,11 @@
             borderBottom: `1px solid ${THEME.border}`
         };
 
-        const titleStyle = {
+        const titleStyle = className ? {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+        } : {
             color: THEME.primary,
             fontSize: '14px',
             fontWeight: '600',
@@ -742,7 +942,7 @@
             background: statusColor || '#555'
         } : null;
 
-        return React.createElement('div', { style: headerStyle }, [
+        return React.createElement('div', { className: className, style: headerStyle }, [
             React.createElement('div', { key: 'title', style: titleStyle }, [
                 icon && React.createElement('span', { key: 'icon' }, icon),
                 title,

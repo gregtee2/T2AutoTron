@@ -268,14 +268,13 @@
 
         const outputs = Object.entries(data.outputs);
 
-        return React.createElement('div', { className: 'hsv-node-tron' }, [
+        return React.createElement('div', { className: 'logic-node' }, [
             // Header with output socket on the right
             React.createElement('div', { 
                 key: 'header', 
-                className: 'hsv-node-header',
-                style: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }
+                className: 'header'
             }, [
-                React.createElement('div', { key: 'title', className: 'hsv-node-title' }, data.label),
+                React.createElement('span', { key: 'title' }, data.label),
                 outputs.map(([key, output]) => 
                     React.createElement('div', { 
                         key, 
@@ -283,7 +282,7 @@
                     }, [
                         React.createElement('span', { 
                             key: 'label',
-                            style: { fontSize: '11px', color: 'rgba(0, 255, 200, 0.7)' }
+                            className: 'socket-label'
                         }, output.label),
                         React.createElement(RefComponent, {
                             key: 'socket',
@@ -305,7 +304,7 @@
 
                 // Single Day Mode
                 state.mode === 'single' && React.createElement('div', { key: 'single' }, [
-                    React.createElement('div', { key: 'section', className: 'hsv-section-header' }, 'Single Day'),
+                    React.createElement('div', { key: 'section', className: 'section-header' }, 'Single Day'),
                     React.createElement(Slider, {
                         key: 'singleDay',
                         label: 'Day',
@@ -318,7 +317,7 @@
 
                 // Range Mode
                 state.mode === 'range' && React.createElement('div', { key: 'range' }, [
-                    React.createElement('div', { key: 'startSection', className: 'hsv-section-header' }, 'Start Day'),
+                    React.createElement('div', { key: 'startSection', className: 'section-header' }, 'Start Day'),
                     React.createElement(Slider, {
                         key: 'startDay',
                         label: 'Day',
@@ -327,7 +326,7 @@
                         displayValue: DAY_NAMES[state.startDay],
                         onChange: (v) => updateState({ startDay: v })
                     }),
-                    React.createElement('div', { key: 'endSection', className: 'hsv-section-header', style: { marginTop: '12px' } }, 'End Day'),
+                    React.createElement('div', { key: 'endSection', className: 'section-header', style: { marginTop: '12px' } }, 'End Day'),
                     React.createElement(Slider, {
                         key: 'endDay',
                         label: 'Day',

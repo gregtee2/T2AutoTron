@@ -19,14 +19,24 @@
     // Get shared components
     const T2Controls = window.T2Controls || {};
     const THEME = T2Controls.THEME || {
-        primary: '#00f3ff',
-        primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
-        border: 'rgba(0, 243, 255, 0.3)',
-        success: '#00ff88',
-        warning: '#ffaa00',
-        error: '#ff4444',
-        background: '#0a0f14',
-        text: '#e0f7fa'
+        primary: '#5fb3b3',
+        primaryRgba: (a) => `rgba(95, 179, 179, ${a})`,
+        border: 'rgba(95, 179, 179, 0.25)',
+        success: '#5faa7d',
+        warning: '#d4a054',
+        error: '#c75f5f',
+        background: '#1e2428',
+        surface: '#2a3238',
+        text: '#c5cdd3',
+        textMuted: '#8a959e'
+    };
+    
+    // Get category-specific accent (Timer/Event = purple)
+    const CATEGORY = THEME.getCategory ? THEME.getCategory('Timer/Event') : {
+        accent: '#ce93d8',
+        accentRgba: (a) => `rgba(206, 147, 216, ${a})`,
+        headerBg: 'rgba(206, 147, 216, 0.15)',
+        border: 'rgba(206, 147, 216, 0.4)'
     };
     
     const NodeHeader = T2Controls.NodeHeader;
@@ -249,7 +259,7 @@
         // Styles
         const containerStyle = {
             padding: '12px',
-            background: 'linear-gradient(135deg, #0a0f14 0%, #1a1f24 100%)',
+            background: `linear-gradient(135deg, ${THEME.background} 0%, ${THEME.surface} 100%)`,
             borderRadius: '8px',
             fontFamily: 'monospace',
             minWidth: '220px'
@@ -272,7 +282,7 @@
         };
 
         const selectStyle = {
-            background: '#1a1f24',
+            background: THEME.surface,
             border: `1px solid ${THEME.border}`,
             borderRadius: '4px',
             color: THEME.text,
@@ -288,7 +298,7 @@
 
         const sectionStyle = {
             padding: '8px',
-            background: 'rgba(0,0,0,0.2)',
+            background: THEME.surfaceLight,
             borderRadius: '4px',
             marginBottom: '8px'
         };
@@ -299,8 +309,8 @@
             justifyContent: 'center',
             padding: '8px',
             background: props.isActive 
-                ? `linear-gradient(135deg, ${THEME.warning}22 0%, ${THEME.warning}11 100%)`
-                : 'rgba(0,0,0,0.2)',
+                ? `${THEME.warning}22`
+                : THEME.surfaceLight,
             borderRadius: '4px',
             marginBottom: '8px'
         };
@@ -308,7 +318,7 @@
         const countdownStyle = {
             fontSize: '16px',
             fontWeight: 'bold',
-            color: props.isActive ? THEME.warning : 'rgba(255,255,255,0.3)'
+            color: props.isActive ? THEME.warning : THEME.textMuted
         };
 
         const socketContainerStyle = {

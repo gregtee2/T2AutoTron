@@ -19,14 +19,24 @@
     // Get shared components
     const T2Controls = window.T2Controls || {};
     const THEME = T2Controls.THEME || {
-        primary: '#00f3ff',
-        primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
-        border: 'rgba(0, 243, 255, 0.3)',
-        success: '#00ff88',
-        warning: '#ffaa00',
-        error: '#ff4444',
-        background: '#0a0f14',
-        text: '#e0f7fa'
+        primary: '#5fb3b3',
+        primaryRgba: (a) => `rgba(95, 179, 179, ${a})`,
+        border: 'rgba(95, 179, 179, 0.25)',
+        success: '#5faa7d',
+        warning: '#d4a054',
+        error: '#c75f5f',
+        background: '#1e2428',
+        surface: '#2a3238',
+        text: '#c5cdd3',
+        textMuted: '#8a959e'
+    };
+    
+    // Get category-specific accent (Logic = green)
+    const CATEGORY = THEME.getCategory ? THEME.getCategory('Logic') : {
+        accent: '#81c784',
+        accentRgba: (a) => `rgba(129, 199, 132, ${a})`,
+        headerBg: 'rgba(129, 199, 132, 0.15)',
+        border: 'rgba(129, 199, 132, 0.4)'
     };
     
     const NodeHeader = T2Controls.NodeHeader;
@@ -245,8 +255,6 @@
         // Styles
         const containerStyle = {
             padding: '12px',
-            background: 'linear-gradient(135deg, #0a0f14 0%, #1a1f24 100%)',
-            borderRadius: '8px',
             fontFamily: 'monospace',
             minWidth: '200px'
         };
@@ -268,7 +276,7 @@
         };
 
         const selectStyle = {
-            background: '#1a1f24',
+            background: THEME.surface,
             border: `1px solid ${THEME.border}`,
             borderRadius: '4px',
             color: THEME.text,
@@ -287,10 +295,10 @@
             display: 'flex',
             justifyContent: 'space-between',
             fontSize: '10px',
-            color: 'rgba(255,255,255,0.5)',
+            color: THEME.textMuted,
             marginTop: '8px',
             padding: '6px',
-            background: 'rgba(0,0,0,0.3)',
+            background: THEME.surfaceLight,
             borderRadius: '4px'
         };
 
@@ -304,7 +312,7 @@
         };
 
         const resetButtonStyle = {
-            background: 'rgba(255,255,255,0.1)',
+            background: THEME.surfaceLight,
             border: `1px solid ${THEME.border}`,
             borderRadius: '4px',
             color: THEME.text,
@@ -326,14 +334,14 @@
             gap: '6px'
         };
 
-        return React.createElement('div', { style: containerStyle },
+        return React.createElement('div', { className: 'logic-node', style: containerStyle },
             // Header with status indicator
-            React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' } },
-                NodeHeader ? React.createElement(NodeHeader, {
-                    icon: '🚰',
-                    title: 'Filter',
-                    tooltip: tooltips.node
-                }) : React.createElement('span', { style: { color: THEME.primary, fontWeight: 'bold' } }, '🚰 Filter'),
+            React.createElement('div', { className: 'header' },
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                    React.createElement('span', null, '🚰'),
+                    'Filter',
+                    HelpIcon && React.createElement(HelpIcon, { text: tooltips.node })
+                ),
                 React.createElement('div', { style: indicatorStyle, title: props.lastWasBlocked ? 'Last: Blocked' : 'Last: Passed' })
             ),
 

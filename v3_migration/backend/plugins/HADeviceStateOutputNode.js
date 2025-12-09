@@ -602,8 +602,8 @@
                     key: 'indicator',
                     style: { 
                         width: '14px', height: '14px', borderRadius: '50%',
-                        backgroundColor: deviceState.state === 'on' || deviceState.state === 'open' ? '#00ff88' : '#ff4444',
-                        boxShadow: deviceState.state === 'on' || deviceState.state === 'open' ? '0 0 10px #00ff88' : '0 0 10px #ff4444'
+                        backgroundColor: deviceState.state === 'on' || deviceState.state === 'open' ? '#5faa7d' : '#c75f5f',
+                        boxShadow: deviceState.state === 'on' || deviceState.state === 'open' ? '0 0 10px #5faa7d' : '0 0 10px #c75f5f'
                     }
                 })
             ]),

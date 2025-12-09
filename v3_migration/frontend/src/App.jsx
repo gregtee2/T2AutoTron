@@ -8,6 +8,122 @@ import { LoadingOverlay } from './ui/LoadingOverlay';
 import './App.css';
 import './test-sockets.js'; // Test socket patch
 
+// Apply stored category theme colors to CSS variables on startup
+const applyCategoryColorsFromStorage = () => {
+  const hexToRgb = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r}, ${g}, ${b}`;
+  };
+  
+  const prefixMap = {
+    'Home Assistant': 'ha',
+    'Weather': 'weather',
+    'Logic': 'logic',
+    'Timer/Event': 'timer',
+    'Color': 'color',
+    'Utility': 'utility',
+    'Inputs': 'inputs',
+    'CC_Control_Nodes': 'cc',
+    'Other': 'other'
+  };
+  
+  try {
+    const stored = localStorage.getItem('t2category-overrides');
+    if (stored) {
+      const overrides = JSON.parse(stored);
+      const root = document.documentElement;
+      for (const [category, theme] of Object.entries(overrides)) {
+        const prefix = prefixMap[category];
+        if (prefix) {
+          if (theme.accent) {
+            root.style.setProperty(`--node-${prefix}-color`, theme.accent);
+            root.style.setProperty(`--node-${prefix}-color-rgb`, hexToRgb(theme.accent));
+          }
+          if (theme.background) {
+            root.style.setProperty(`--node-${prefix}-bg`, theme.background);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to apply stored category colors:', err);
+  }
+};
+
+// Apply stored socket colors to CSS variables on startup
+const applySocketColorsFromStorage = () => {
+  const hexToRgb = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r}, ${g}, ${b}`;
+  };
+  
+  const darkenColor = (hex, percent = 15) => {
+    const num = parseInt(hex.slice(1), 16);
+    const r = Math.max(0, (num >> 16) - Math.round(255 * percent / 100));
+    const g = Math.max(0, ((num >> 8) & 0x00FF) - Math.round(255 * percent / 100));
+    const b = Math.max(0, (num & 0x0000FF) - Math.round(255 * percent / 100));
+    return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
+  };
+  
+  const lightenColor = (hex, percent = 20) => {
+    const num = parseInt(hex.slice(1), 16);
+    const r = Math.min(255, (num >> 16) + Math.round(255 * percent / 100));
+    const g = Math.min(255, ((num >> 8) & 0x00FF) + Math.round(255 * percent / 100));
+    const b = Math.min(255, (num & 0x0000FF) + Math.round(255 * percent / 100));
+    return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
+  };
+  
+  const socketPrefixMap = {
+    'Boolean': 'boolean',
+    'Number': 'number',
+    'String': 'string',
+    'HSV Info': 'hsv',
+    'Object/Any': 'object',
+    'Light Info': 'light'
+  };
+  
+  // Default colors (also defined in SettingsModal)
+  const defaultSocketColors = {
+    'Boolean': '#10b981',
+    'Number': '#3b82f6',
+    'String': '#f59e0b',
+    'HSV Info': '#8b5cf6',
+    'Object/Any': '#06b6d4',
+    'Light Info': '#eab308'
+  };
+  
+  try {
+    const stored = localStorage.getItem('t2socket-colors');
+    const overrides = stored ? JSON.parse(stored) : {};
+    const root = document.documentElement;
+    
+    // Apply all socket colors (defaults + overrides)
+    for (const [socketType, prefix] of Object.entries(socketPrefixMap)) {
+      const color = overrides[socketType]?.color || defaultSocketColors[socketType];
+      if (color) {
+        root.style.setProperty(`--socket-${prefix}-color`, color);
+        root.style.setProperty(`--socket-${prefix}-dark`, darkenColor(color));
+        root.style.setProperty(`--socket-${prefix}-border`, lightenColor(color));
+        root.style.setProperty(`--socket-${prefix}-rgb`, hexToRgb(color));
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to apply stored socket colors:', err);
+  }
+};
+
+// Apply on module load (before React renders)
+applyCategoryColorsFromStorage();
+applySocketColorsFromStorage();
+
+// Expose for Settings modal to call after saving
+window.applyCategoryColors = applyCategoryColorsFromStorage;
+window.applySocketColors = applySocketColorsFromStorage;
+
 // Track commands sent by nodes (to distinguish app-triggered vs HA-triggered changes)
 const pendingCommands = new Map(); // deviceId -> { nodeTitle, action, timestamp }
 // Track last known state to detect actual changes (not just repeated updates)

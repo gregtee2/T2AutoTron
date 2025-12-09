@@ -8,9 +8,8 @@
 
 ![Main Interface](screenshots/Main_Canvas.png)
 
-**The fastest way to visually automate your smart home.**
 
-T2AutoTron is a modern, visual node-based automation editor for Home Assistant, Philips Hue, Kasa, and more. Build powerful automations with drag-and-drop simplicity—no coding required.
+**T2AutoTron is a modern, visual node-based automation editor for Home Assistant and smart devices. Build powerful automations with drag-and-drop simplicity—no coding required. Supports real-time device control, advanced logic, and instant integration with Home Assistant, Philips Hue, Kasa, and more. Built with React, Rete.js v3, and Node.js.**
 
 ---
 

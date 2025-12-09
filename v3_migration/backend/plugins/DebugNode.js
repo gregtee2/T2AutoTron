@@ -26,14 +26,24 @@
     // Get shared components
     const T2Controls = window.T2Controls || {};
     const THEME = T2Controls.THEME || {
-        primary: '#00f3ff',
-        primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
-        border: 'rgba(0, 243, 255, 0.3)',
-        success: '#00ff88',
-        warning: '#ffaa00',
-        error: '#ff4444',
-        background: '#0a0f14',
-        text: '#e0f7fa'
+        primary: '#5fb3b3',
+        primaryRgba: (a) => `rgba(95, 179, 179, ${a})`,
+        border: 'rgba(95, 179, 179, 0.25)',
+        success: '#5faa7d',
+        warning: '#d4a054',
+        error: '#c75f5f',
+        background: '#1e2428',
+        surface: '#2a3238',
+        text: '#c5cdd3',
+        textMuted: '#8a959e'
+    };
+    
+    // Get category-specific accent (Utility = gray-blue)
+    const CATEGORY = THEME.getCategory ? THEME.getCategory('Utility') : {
+        accent: '#90a4ae',
+        accentRgba: (a) => `rgba(144, 164, 174, ${a})`,
+        headerBg: 'rgba(144, 164, 174, 0.15)',
+        border: 'rgba(144, 164, 174, 0.4)'
     };
     
     const NodeHeader = T2Controls.NodeHeader;
@@ -188,10 +198,10 @@
 
         const getTypeColor = (type) => {
             switch (type) {
-                case 'boolean': return '#ff88ff';
-                case 'number': return '#88ff88';
-                case 'string': return '#ffff88';
-                case 'object': return '#88ffff';
+                case 'boolean': return '#c490c4';  // softer pink
+                case 'number': return '#7eb87e';   // softer green
+                case 'string': return '#c4c47e';   // softer yellow
+                case 'object': return '#7ec4c4';   // softer cyan
                 default: return THEME.text;
             }
         };
@@ -199,7 +209,7 @@
         // Styles
         const containerStyle = {
             padding: '12px',
-            background: 'linear-gradient(135deg, #0a0f14 0%, #1a1f24 100%)',
+            background: `linear-gradient(135deg, ${THEME.background} 0%, ${THEME.surface} 100%)`,
             borderRadius: '8px',
             fontFamily: 'monospace',
             minWidth: '240px'
@@ -222,7 +232,7 @@
         };
 
         const inputStyle = {
-            background: '#1a1f24',
+            background: THEME.surface,
             border: `1px solid ${THEME.border}`,
             borderRadius: '4px',
             color: THEME.text,
@@ -234,7 +244,7 @@
         const historyContainerStyle = {
             maxHeight: '150px',
             overflowY: 'auto',
-            background: 'rgba(0,0,0,0.4)',
+            background: THEME.surfaceLight,
             borderRadius: '4px',
             padding: '4px',
             marginBottom: '8px'
@@ -242,12 +252,12 @@
 
         const historyEntryStyle = {
             padding: '4px 6px',
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            borderBottom: `1px solid ${THEME.borderLight}`,
             fontSize: '10px'
         };
 
         const timeStyle = {
-            color: 'rgba(255,255,255,0.4)',
+            color: THEME.textMuted,
             marginRight: '8px'
         };
 
@@ -260,14 +270,14 @@
 
         const currentValueStyle = {
             padding: '10px',
-            background: `linear-gradient(135deg, ${THEME.primary}22 0%, ${THEME.primary}11 100%)`,
+            background: `${THEME.primary}15`,
             borderRadius: '4px',
-            border: `1px solid ${THEME.primary}44`,
+            border: `1px solid ${THEME.border}`,
             marginBottom: '8px',
             fontSize: '13px',
             fontWeight: 'bold',
             textAlign: 'center',
-            color: THEME.primary,
+            color: THEME.textBright,
             wordBreak: 'break-all',
             maxHeight: '80px',
             overflow: 'auto'

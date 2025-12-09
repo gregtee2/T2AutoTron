@@ -23,10 +23,21 @@
     const { createSocketRef, StatusBadge } = T2Components;
     const { HelpIcon } = window.T2Controls || {};
     const THEME = T2Components.THEME || window.T2Controls?.THEME || {
-        primary: '#00f3ff',
-        primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
-        border: 'rgba(0, 243, 255, 0.3)',
-        success: '#00ff88'
+        primary: '#5fb3b3',
+        primaryRgba: (a) => `rgba(95, 179, 179, ${a})`,
+        border: 'rgba(95, 179, 179, 0.25)',
+        success: '#5faa7d',
+        background: '#1e2428',
+        surface: '#2a3238',
+        text: '#c5cdd3'
+    };
+    
+    // Get category-specific accent (Inputs = light green)
+    const CATEGORY = THEME.getCategory ? THEME.getCategory('Inputs') : {
+        accent: '#aed581',
+        accentRgba: (a) => `rgba(174, 213, 129, ${a})`,
+        headerBg: 'rgba(174, 213, 129, 0.15)',
+        border: 'rgba(174, 213, 129, 0.4)'
     };
 
     // -------------------------------------------------------------------------
@@ -148,7 +159,13 @@
         };
 
         const outputs = Object.entries(data.outputs);
-        const buttonColor = displayState ? THEME.success : THEME.primary;
+        
+        // Button colors - subtle green for ON, subtle red for OFF
+        const onColor = '#2e7d32';   // Muted green
+        const offColor = '#c62828';  // Muted red
+        const buttonBg = displayState ? 'rgba(46, 125, 50, 0.3)' : 'rgba(198, 40, 40, 0.2)';
+        const buttonBorder = displayState ? onColor : offColor;
+        const glowColor = displayState ? 'rgba(46, 125, 50, 0.5)' : 'none';
 
         return React.createElement('div', { 
             className: 'pushbutton-node',
@@ -220,16 +237,17 @@
                     style: {
                         width: '100%',
                         padding: '16px',
-                        background: displayState ? `${buttonColor}30` : 'transparent',
-                        border: `2px solid ${buttonColor}`,
+                        background: buttonBg,
+                        border: `2px solid ${buttonBorder}`,
                         borderRadius: '8px',
-                        color: buttonColor,
+                        color: '#ffffff',  // Always white text for visibility
                         fontSize: '14px',
                         fontWeight: '700',
                         textTransform: 'uppercase',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        boxShadow: displayState ? `0 0 20px ${buttonColor}40` : 'none'
+                        boxShadow: displayState ? `0 0 15px ${glowColor}` : 'none',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.5)'  // Text shadow for extra readability
                     }
                 }, displayState ? '● ON' : '○ OFF'),
 

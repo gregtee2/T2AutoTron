@@ -23,10 +23,21 @@
     const { createSocketRef, LabeledSlider } = T2Components;
     const { HelpIcon } = window.T2Controls || {};
     const THEME = T2Components.THEME || window.T2Controls?.THEME || {
-        primary: '#00f3ff',
-        primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
-        border: 'rgba(0, 243, 255, 0.3)',
-        background: '#0a0f14'
+        primary: '#5fb3b3',
+        primaryRgba: (a) => `rgba(95, 179, 179, ${a})`,
+        border: 'rgba(95, 179, 179, 0.25)',
+        background: '#1e2428',
+        surface: '#2a3238',
+        text: '#c5cdd3',
+        textMuted: '#8a959e'
+    };
+    
+    // Get category-specific accent (Inputs = light green)
+    const CATEGORY = THEME.getCategory ? THEME.getCategory('Inputs') : {
+        accent: '#aed581',
+        accentRgba: (a) => `rgba(174, 213, 129, ${a})`,
+        headerBg: 'rgba(174, 213, 129, 0.15)',
+        border: 'rgba(174, 213, 129, 0.4)'
     };
 
     // -------------------------------------------------------------------------

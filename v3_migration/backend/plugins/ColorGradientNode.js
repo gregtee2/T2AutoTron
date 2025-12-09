@@ -82,6 +82,11 @@
             this.properties = {
                 colorMode: 'custom',
                 predefinedWedge: 'warm-to-cool',
+                directMode: false,
+                fromColor: { r: 255, g: 0, b: 0 },
+                toColor: { r: 0, g: 0, b: 255 },
+                fromBrightness: 254,
+                toBrightness: 254,
                 startHue: 0,
                 startSaturation: 100,
                 startBrightness: 100,
@@ -121,6 +126,11 @@
         syncFromProperties() {
             this.colorMode = this.properties.colorMode;
             this.predefinedWedge = this.properties.predefinedWedge;
+            this.directMode = this.properties.directMode;
+            this.fromColor = this.properties.fromColor;
+            this.toColor = this.properties.toColor;
+            this.fromBrightness = this.properties.fromBrightness;
+            this.toBrightness = this.properties.toBrightness;
             this.startHue = this.properties.startHue;
             this.startSaturation = this.properties.startSaturation;
             this.startBrightness = this.properties.startBrightness;
@@ -148,6 +158,11 @@
         syncToProperties() {
             this.properties.colorMode = this.colorMode;
             this.properties.predefinedWedge = this.predefinedWedge;
+            this.properties.directMode = this.directMode;
+            this.properties.fromColor = this.fromColor;
+            this.properties.toColor = this.toColor;
+            this.properties.fromBrightness = this.fromBrightness;
+            this.properties.toBrightness = this.toBrightness;
             this.properties.startHue = this.startHue;
             this.properties.startSaturation = this.startSaturation;
             this.properties.startBrightness = this.startBrightness;
@@ -199,18 +214,25 @@
             const now = new Date();
             const currentMs = now.getTime();
 
+            // Check if we have any actual input connections for this mode
+            const hasValueInput = inputValue !== undefined;
+            const hasTriggerInput = trigger !== undefined;
+            const hasTimeInputs = startTimeInput !== undefined || endTimeInput !== undefined;
+
             let position = 0;
             this.isInRange = false;
 
             if (this.rangeMode === 'numerical') {
-                if (inputValue === undefined) {
+                if (!hasValueInput) {
+                    // No input connected - calculate position but don't mark as in range
                     const fallbackValue = (this.startValue + this.endValue) / 2;
                     position = (fallbackValue - this.startValue) / (this.endValue - this.startValue);
+                    // isInRange stays false - no input connected
                 } else {
                     const clamped = Math.max(this.startValue, Math.min(this.endValue, inputValue));
                     position = (clamped - this.startValue) / (this.endValue - this.startValue);
+                    this.isInRange = true; // Only active when input is connected
                 }
-                this.isInRange = true;
             } else if (this.rangeMode === 'time') {
                 let startProps = { hours: this.startTimeHours, minutes: this.startTimeMinutes, period: this.startTimePeriod };
                 let endProps = { hours: this.endTimeHours, minutes: this.endTimeMinutes, period: this.endTimePeriod };
@@ -245,6 +267,10 @@
                     endMs = endTime.getTime();
                 }
 
+                // Time mode: only show "in range" if we have time input connections OR trigger
+                // This prevents unconnected nodes from showing active status
+                const hasTimeConnection = hasTimeInputs || hasTriggerInput || hasValueInput;
+
                 if (currentMs < startMs) {
                     position = 0;
                     this.isInRange = false;
@@ -252,7 +278,8 @@
                     position = 1;
                     this.isInRange = false;
                 } else {
-                    this.isInRange = true;
+                    // Within time range - only mark active if node has connections
+                    this.isInRange = hasTimeConnection;
                     const totalSteps = Math.max(1, this.timeSteps);
                     const stepInterval = (endMs - startMs) / totalSteps;
                     const elapsedMs = currentMs - startMs;
@@ -305,8 +332,41 @@
                 }
             }
 
-            // Calculate HSV output (linear interpolation)
+            // Calculate output color
             if (this.isInRange || this.rangeMode === 'time') {
+                this.position = position;
+
+                // Direct RGB interpolation mode
+                if (this.directMode) {
+                    const from = this.fromColor || { r: 255, g: 0, b: 0 };
+                    const to = this.toColor || { r: 0, g: 0, b: 255 };
+                    const r = Math.round(from.r + position * (to.r - from.r));
+                    const g = Math.round(from.g + position * (to.g - from.g));
+                    const b = Math.round(from.b + position * (to.b - from.b));
+                    this.lastColor = { r, g, b };
+
+                    // Convert RGB to HSV for output compatibility
+                    // ColorUtils.rgbToHsv returns { hue, sat, val } with values 0-1
+                    const hsv = ColorUtils.rgbToHsv(r, g, b);
+                    
+                    // Interpolate brightness between fromBrightness and toBrightness
+                    const fromBri = this.fromBrightness !== undefined ? this.fromBrightness : 254;
+                    const toBri = this.toBrightness !== undefined ? this.toBrightness : 254;
+                    const interpolatedBrightness = Math.round(fromBri + position * (toBri - fromBri));
+                    const brightness = this.useBrightnessOverride ? this.brightnessOverride : interpolatedBrightness;
+
+                    return {
+                        hsvInfo: {
+                            hue: hsv.hue,
+                            saturation: hsv.sat,
+                            brightness: brightness,
+                            rgb: { r, g, b },
+                            directMode: true
+                        }
+                    };
+                }
+
+                // HSV sweep mode (original behavior)
                 const h = this.startHue + position * (this.endHue - this.startHue);
                 const s = this.startSaturation + position * (this.endSaturation - this.startSaturation);
                 const v = this.startBrightness + position * (this.endBrightness - this.startBrightness);
@@ -314,7 +374,6 @@
 
                 const rgb = ColorUtils.hsvToRgbDegrees(h, s, v);
                 this.lastColor = rgb;
-                this.position = position;
 
                 return {
                     hsvInfo: {
@@ -334,6 +393,11 @@
             return {
                 colorMode: this.colorMode,
                 predefinedWedge: this.predefinedWedge,
+                directMode: this.directMode,
+                fromColor: this.fromColor,
+                toColor: this.toColor,
+                fromBrightness: this.fromBrightness,
+                toBrightness: this.toBrightness,
                 startHue: this.startHue,
                 startSaturation: this.startSaturation,
                 startBrightness: this.startBrightness,
@@ -362,6 +426,11 @@
             if (!data) return;
             if (data.colorMode !== undefined) this.colorMode = data.colorMode;
             if (data.predefinedWedge !== undefined) this.predefinedWedge = data.predefinedWedge;
+            if (data.directMode !== undefined) this.directMode = data.directMode;
+            if (data.fromColor !== undefined) this.fromColor = data.fromColor;
+            if (data.toColor !== undefined) this.toColor = data.toColor;
+            if (data.fromBrightness !== undefined) this.fromBrightness = data.fromBrightness;
+            if (data.toBrightness !== undefined) this.toBrightness = data.toBrightness;
             if (data.startHue !== undefined) this.startHue = data.startHue;
             if (data.startSaturation !== undefined) this.startSaturation = data.startSaturation;
             if (data.startBrightness !== undefined) this.startBrightness = data.startBrightness;
@@ -401,6 +470,11 @@
     function ColorGradientNodeComponent({ data, emit }) {
         const [colorMode, setColorMode] = useState(data.colorMode);
         const [predefinedWedge, setPredefinedWedge] = useState(data.predefinedWedge);
+        const [directMode, setDirectMode] = useState(data.directMode || false);
+        const [fromColor, setFromColor] = useState(data.fromColor || { r: 255, g: 0, b: 0 });
+        const [toColor, setToColor] = useState(data.toColor || { r: 0, g: 0, b: 255 });
+        const [fromBrightness, setFromBrightness] = useState(data.fromBrightness !== undefined ? data.fromBrightness : 254);
+        const [toBrightness, setToBrightness] = useState(data.toBrightness !== undefined ? data.toBrightness : 254);
         const [startHue, setStartHue] = useState(data.startHue);
         const [startSaturation, setStartSaturation] = useState(data.startSaturation);
         const [startBrightness, setStartBrightness] = useState(data.startBrightness);
@@ -436,6 +510,11 @@
         useEffect(() => {
             setColorMode(data.colorMode);
             setPredefinedWedge(data.predefinedWedge);
+            setDirectMode(data.directMode || false);
+            setFromColor(data.fromColor || { r: 255, g: 0, b: 0 });
+            setToColor(data.toColor || { r: 0, g: 0, b: 255 });
+            setFromBrightness(data.fromBrightness !== undefined ? data.fromBrightness : 254);
+            setToBrightness(data.toBrightness !== undefined ? data.toBrightness : 254);
             setStartHue(data.startHue);
             setStartSaturation(data.startSaturation);
             setStartBrightness(data.startBrightness);
@@ -484,14 +563,30 @@
             // Clear canvas
             ctx.clearRect(0, 0, width, height);
 
-            // Draw gradient (linear interpolation)
+            // Draw gradient based on mode
             const steps = 100;
             for (let i = 0; i < steps; i++) {
                 const t = i / steps;
-                const hue = startHue + t * (endHue - startHue);
-                const sat = startSaturation + t * (endSaturation - startSaturation);
-                const bri = startBrightness + t * (endBrightness - startBrightness);
-                ctx.fillStyle = `hsl(${hue}, ${sat}%, ${Math.max(20, bri / 2)}%)`;
+                if (directMode) {
+                    // Direct RGB interpolation with brightness
+                    const r = Math.round(fromColor.r + t * (toColor.r - fromColor.r));
+                    const g = Math.round(fromColor.g + t * (toColor.g - fromColor.g));
+                    const b = Math.round(fromColor.b + t * (toColor.b - fromColor.b));
+                    // Interpolate brightness and apply as a multiplier (0-254 -> 0-1)
+                    const fromBri = fromBrightness !== undefined ? fromBrightness : 254;
+                    const toBri = toBrightness !== undefined ? toBrightness : 254;
+                    const briMultiplier = (fromBri + t * (toBri - fromBri)) / 254;
+                    const rAdj = Math.round(r * briMultiplier);
+                    const gAdj = Math.round(g * briMultiplier);
+                    const bAdj = Math.round(b * briMultiplier);
+                    ctx.fillStyle = `rgb(${rAdj}, ${gAdj}, ${bAdj})`;
+                } else {
+                    // HSV sweep
+                    const hue = startHue + t * (endHue - startHue);
+                    const sat = startSaturation + t * (endSaturation - startSaturation);
+                    const bri = startBrightness + t * (endBrightness - startBrightness);
+                    ctx.fillStyle = `hsl(${hue}, ${sat}%, ${Math.max(20, bri / 2)}%)`;
+                }
                 ctx.fillRect((i / steps) * width, 0, width / steps + 1, gradientHeight);
             }
 
@@ -615,7 +710,7 @@
             ctx.lineTo(markerX, gradientHeight + 8);
             ctx.closePath();
             ctx.fill();
-        }, [startHue, startSaturation, startBrightness, endHue, endSaturation, endBrightness, position, isInRange, rangeMode, startValue, endValue, startTimeHours, startTimeMinutes, startTimePeriod, endTimeHours, endTimeMinutes, endTimePeriod, timerDuration, timerUnit]);
+        }, [directMode, fromColor, toColor, fromBrightness, toBrightness, startHue, startSaturation, startBrightness, endHue, endSaturation, endBrightness, position, isInRange, rangeMode, startValue, endValue, startTimeHours, startTimeMinutes, startTimePeriod, endTimeHours, endTimeMinutes, endTimePeriod, timerDuration, timerUnit]);
 
         // Periodic update for runtime state
         useEffect(() => {
@@ -806,8 +901,107 @@
 
             // Controls
             !isCollapsed ? el('div', { key: 'controls', className: 'cgn-controls', onPointerDown: stopPropagation, onWheel: stopWheelPropagation }, [
-                // Color Mode
-                el('div', { key: 'colorMode', className: 'cgn-section' }, [
+                // Direct Color Interpolation Toggle
+                el('div', { key: 'directMode', className: 'cgn-section cgn-toggle-row' }, [
+                    el('label', { key: 'label', className: 'cgn-label cgn-tooltip', 'data-tooltip': "Enable to interpolate directly between two RGB colors (true gradient). When off, uses HSV hue sweep which may pass through unwanted colors." }, [
+                        el('span', { key: 'text' }, "Direct Color Mode"), el('span', { key: 'icon', className: 'cgn-info-icon' }, "?")
+                    ]),
+                    el('input', { type: 'checkbox', checked: directMode, onChange: (e) => { 
+                        const val = e.target.checked;
+                        setDirectMode(val); 
+                        data.directMode = val; 
+                        triggerUpdate(); 
+                    }, className: 'cgn-checkbox' })
+                ]),
+
+                // Direct Color Pickers (only shown when directMode is true)
+                directMode ? el('div', { key: 'directColors', className: 'cgn-section-group' }, [
+                    el('div', { key: 'fromColor', className: 'cgn-section cgn-hsv-group', style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
+                        el('label', { key: 'label', className: 'cgn-label', style: { flex: 1 } }, "From Color"),
+                        el('input', { 
+                            type: 'color', 
+                            value: `#${((1 << 24) + (fromColor.r << 16) + (fromColor.g << 8) + fromColor.b).toString(16).slice(1)}`,
+                            onChange: (e) => {
+                                const hex = e.target.value;
+                                const r = parseInt(hex.slice(1, 3), 16);
+                                const g = parseInt(hex.slice(3, 5), 16);
+                                const b = parseInt(hex.slice(5, 7), 16);
+                                const newColor = { r, g, b };
+                                setFromColor(newColor);
+                                data.fromColor = newColor;
+                                triggerUpdate();
+                            },
+                            className: 'cgn-color-picker',
+                            style: { width: '50px', height: '30px', border: 'none', cursor: 'pointer' }
+                        }),
+                        el('span', { key: 'swatch', style: { 
+                            backgroundColor: `rgb(${fromColor.r}, ${fromColor.g}, ${fromColor.b})`, 
+                            width: '24px', height: '24px', borderRadius: '4px', border: '1px solid #555' 
+                        }})
+                    ]),
+                    el('div', { key: 'fromBrightness', className: 'cgn-section cgn-hsv-group' }, [
+                        el('label', { key: 'label', className: 'cgn-label' }, `From Brightness: ${fromBrightness}`),
+                        el('input', { 
+                            key: 'input', 
+                            type: 'range', 
+                            min: 0, 
+                            max: 254, 
+                            value: fromBrightness, 
+                            onChange: (e) => {
+                                const val = parseInt(e.target.value, 10);
+                                setFromBrightness(val);
+                                data.fromBrightness = val;
+                                triggerUpdate();
+                            }, 
+                            className: 'cgn-slider', 
+                            style: getSliderStyle(fromBrightness, 0, 254) 
+                        })
+                    ]),
+                    el('div', { key: 'toColor', className: 'cgn-section cgn-hsv-group', style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
+                        el('label', { key: 'label', className: 'cgn-label', style: { flex: 1 } }, "To Color"),
+                        el('input', { 
+                            type: 'color', 
+                            value: `#${((1 << 24) + (toColor.r << 16) + (toColor.g << 8) + toColor.b).toString(16).slice(1)}`,
+                            onChange: (e) => {
+                                const hex = e.target.value;
+                                const r = parseInt(hex.slice(1, 3), 16);
+                                const g = parseInt(hex.slice(3, 5), 16);
+                                const b = parseInt(hex.slice(5, 7), 16);
+                                const newColor = { r, g, b };
+                                setToColor(newColor);
+                                data.toColor = newColor;
+                                triggerUpdate();
+                            },
+                            className: 'cgn-color-picker',
+                            style: { width: '50px', height: '30px', border: 'none', cursor: 'pointer' }
+                        }),
+                        el('span', { key: 'swatch', style: { 
+                            backgroundColor: `rgb(${toColor.r}, ${toColor.g}, ${toColor.b})`, 
+                            width: '24px', height: '24px', borderRadius: '4px', border: '1px solid #555' 
+                        }})
+                    ]),
+                    el('div', { key: 'toBrightness', className: 'cgn-section cgn-hsv-group' }, [
+                        el('label', { key: 'label', className: 'cgn-label' }, `To Brightness: ${toBrightness}`),
+                        el('input', { 
+                            key: 'input', 
+                            type: 'range', 
+                            min: 0, 
+                            max: 254, 
+                            value: toBrightness, 
+                            onChange: (e) => {
+                                const val = parseInt(e.target.value, 10);
+                                setToBrightness(val);
+                                data.toBrightness = val;
+                                triggerUpdate();
+                            }, 
+                            className: 'cgn-slider', 
+                            style: getSliderStyle(toBrightness, 0, 254) 
+                        })
+                    ])
+                ]) : null,
+
+                // Color Mode (only shown when directMode is false)
+                !directMode ? el('div', { key: 'colorMode', className: 'cgn-section' }, [
                     el('label', { key: 'label', className: 'cgn-label cgn-tooltip', 'data-tooltip': "Predefined: Choose from preset color ranges (Warm, Cool, etc). Custom: Define your own start and end HSV colors." }, [
                         el('span', { key: 'text' }, "Color Mode"), el('span', { key: 'icon', className: 'cgn-info-icon' }, "?")
                     ]),
@@ -815,7 +1009,7 @@
                         el('option', { key: 'predefined', value: 'predefined' }, 'Predefined'),
                         el('option', { key: 'custom', value: 'custom' }, 'Custom')
                     ])
-                ]),
+                ]) : null,
 
                 // Range Mode
                 el('div', { key: 'rangeMode', className: 'cgn-section' }, [
@@ -829,8 +1023,8 @@
                     ])
                 ]),
 
-                // Wedge Selection
-                colorMode === 'predefined' ? el('div', { key: 'wedge', className: 'cgn-section' }, [
+                // Wedge Selection (only when not in direct mode)
+                !directMode && colorMode === 'predefined' ? el('div', { key: 'wedge', className: 'cgn-section' }, [
                     el('label', { key: 'label', className: 'cgn-label cgn-tooltip', 'data-tooltip': "Warm: Red to Yellow. Cool: Cyan to Blue. Warm-to-Cool: Full spectrum from red through green to blue." }, [
                         el('span', { key: 'text' }, "Wedge"), el('span', { key: 'icon', className: 'cgn-info-icon' }, "?")
                     ]),
@@ -841,8 +1035,8 @@
                     ])
                 ]) : null,
 
-                // HSV Sliders
-                colorMode === 'custom' ? [
+                // HSV Sliders (only when not in direct mode)
+                !directMode && colorMode === 'custom' ? [
                     el('div', { key: 'sh', className: 'cgn-section cgn-hsv-group' }, [
                         el('label', { key: 'label', className: 'cgn-label' }, `Start Hue: ${startHue}°`),
                         el('input', { key: 'input', type: 'range', min: 0, max: 360, value: startHue, onChange: createSliderHandler(setStartHue, 'startHue'), className: 'cgn-slider', style: getSliderStyle(startHue, 0, 360, true) })

@@ -47,18 +47,27 @@
   --node-timeofday-text: #e0e0e0;
   --node-timeofday-text-secondary: #a5d6a7;
   
-  /* Weather Logic Node */
-  --node-weather-color: #00f3ff;
-  --node-weather-color-rgb: 0, 243, 255;
-  --node-weather-hover: #50ffff;
-  --node-weather-text: #e0f7fa;
+  /* Weather Logic Node - Amber/Orange to match Sunrise/Sunset */
+  --node-weather-color: #ffb74d;
+  --node-weather-color-rgb: 255, 183, 77;
+  --node-weather-hover: #ffc570;
+  --node-weather-text: #fff3e0;
+  --node-weather-text-secondary: #ffe0b2;
   
-  /* HSV Modifier Node (Purple theme) */
-  --node-hsv-modifier-color: #b388ff;
-  --node-hsv-modifier-color-rgb: 179, 136, 255;
-  --node-hsv-modifier-hover: #d1c4e9;
-  --node-hsv-modifier-text: #ede7f6;
-  --node-hsv-modifier-text-secondary: #d1c4e9;
+  /* COLOR CATEGORY - Shared by all Color nodes (HSV, Gradient, Modifier, etc.) */
+  --node-color-color: #f48fb1;
+  --node-color-color-rgb: 244, 143, 177;
+  --node-color-hover: #f8bbd9;
+  --node-color-text: #fce4ec;
+  --node-color-text-secondary: #f8bbd0;
+  --node-color-bg: #140a10;
+  
+  /* HSV Modifier Node (uses Color category as base) */
+  --node-hsv-modifier-color: var(--node-color-color);
+  --node-hsv-modifier-color-rgb: var(--node-color-color-rgb);
+  --node-hsv-modifier-hover: var(--node-color-hover);
+  --node-hsv-modifier-text: var(--node-color-text);
+  --node-hsv-modifier-text-secondary: var(--node-color-text-secondary);
   
   /* Wireless Nodes (Sender) */
   --node-sender-color: #4fc3f7;

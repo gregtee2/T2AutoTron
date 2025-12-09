@@ -19,14 +19,24 @@
     // Get shared theme
     const T2Controls = window.T2Controls || {};
     const THEME = T2Controls.THEME || {
-        primary: '#00f3ff',
-        primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
-        border: 'rgba(0, 243, 255, 0.3)',
-        success: '#00ff88',
-        warning: '#ffaa00',
-        error: '#ff4444',
-        background: '#0a0f14',
-        text: '#e0f7fa'
+        primary: '#5fb3b3',
+        primaryRgba: (a) => `rgba(95, 179, 179, ${a})`,
+        border: 'rgba(95, 179, 179, 0.25)',
+        success: '#5faa7d',
+        warning: '#d4a054',
+        error: '#c75f5f',
+        background: '#1e2428',
+        surface: '#2a3238',
+        text: '#c5cdd3',
+        textMuted: '#8a959e'
+    };
+    
+    // Get category-specific accent (Timer/Event = purple)
+    const CATEGORY = THEME.getCategory ? THEME.getCategory('Timer/Event') : {
+        accent: '#ce93d8',
+        accentRgba: (a) => `rgba(206, 147, 216, ${a})`,
+        headerBg: 'rgba(206, 147, 216, 0.15)',
+        border: 'rgba(206, 147, 216, 0.4)'
     };
 
     const stopPropagation = (e) => e.stopPropagation();
@@ -42,7 +52,10 @@
 
             this.properties = {
                 delayMs: 1000,
+                delayValue: 1,        // Numeric value for UI
+                delayUnit: 'seconds', // 'ms', 'seconds', 'minutes', 'hours'
                 mode: 'delay',
+                randomPercent: 0,  // ±% random variation (0-100)
                 isActive: false,
                 countdown: 0,
                 lastInputValue: false,
@@ -143,11 +156,30 @@
             if (this.changeCallback) this.changeCallback();
         }
 
+        _getRandomizedDelay() {
+            const baseDelay = this.properties.delayMs;
+            const randomPercent = this.properties.randomPercent || 0;
+            
+            if (randomPercent === 0) {
+                return baseDelay;
+            }
+            
+            // Calculate random variation: ±randomPercent%
+            // (Math.random() - 0.5) gives -0.5 to +0.5
+            // * 2 gives -1 to +1
+            // * (randomPercent / 100) gives -percent to +percent
+            const variation = (Math.random() - 0.5) * 2 * (randomPercent / 100);
+            const actualDelay = Math.round(baseDelay * (1 + variation));
+            
+            // Ensure minimum delay of 10ms
+            return Math.max(10, actualDelay);
+        }
+
         _processTrigger(triggerValue, valueToPass) {
-            const delay = this.properties.delayMs;
+            const delay = this._getRandomizedDelay();
             const mode = this.properties.mode;
             
-            this._log(`Trigger: ${triggerValue}, value: ${valueToPass}, mode: ${mode}, delay: ${delay}ms`);
+            this._log(`Trigger: ${triggerValue}, value: ${valueToPass}, mode: ${mode}, delay: ${delay}ms (base: ${this.properties.delayMs}ms)`);
 
             switch (mode) {
                 case 'delay':
@@ -219,7 +251,10 @@
         restore(state) {
             if (state.properties) {
                 this.properties.delayMs = state.properties.delayMs ?? 1000;
+                this.properties.delayValue = state.properties.delayValue ?? 1;
+                this.properties.delayUnit = state.properties.delayUnit ?? 'seconds';
                 this.properties.mode = state.properties.mode ?? 'delay';
+                this.properties.randomPercent = state.properties.randomPercent ?? 0;
                 this.properties.debug = state.properties.debug ?? false;
                 this.properties.isActive = false;
                 this.properties.countdown = 0;
@@ -230,7 +265,10 @@
         serialize() {
             return {
                 delayMs: this.properties.delayMs,
+                delayValue: this.properties.delayValue,
+                delayUnit: this.properties.delayUnit,
                 mode: this.properties.mode,
+                randomPercent: this.properties.randomPercent,
                 debug: this.properties.debug
             };
         }
@@ -245,11 +283,32 @@
     // -------------------------------------------------------------------------
     function DelayNodeComponent({ data, emit }) {
         const [delayMs, setDelayMs] = useState(data.properties.delayMs);
+        const [delayValue, setDelayValue] = useState(data.properties.delayValue || 1);
+        const [delayUnit, setDelayUnit] = useState(data.properties.delayUnit || 'seconds');
         const [mode, setMode] = useState(data.properties.mode);
+        const [randomPercent, setRandomPercent] = useState(data.properties.randomPercent || 0);
         const [isActive, setIsActive] = useState(data.properties.isActive);
         const [countdown, setCountdown] = useState(data.properties.countdown);
         const [outputState, setOutputState] = useState(data.properties.outputValue);
         const [debug, setDebug] = useState(data.properties.debug);
+
+        // Unit conversion helpers
+        const UNIT_MULTIPLIERS = {
+            'ms': 1,
+            'seconds': 1000,
+            'minutes': 60000,
+            'hours': 3600000
+        };
+
+        const updateDelay = (value, unit) => {
+            const ms = Math.round(value * UNIT_MULTIPLIERS[unit]);
+            setDelayMs(ms);
+            setDelayValue(value);
+            setDelayUnit(unit);
+            data.properties.delayMs = ms;
+            data.properties.delayValue = value;
+            data.properties.delayUnit = unit;
+        };
 
         // Get tooltip components from T2Controls
         const { NodeHeader, LabeledRow, HelpIcon, Tooltip } = window.T2Controls || {};
@@ -259,7 +318,10 @@
             const originalCallback = data.changeCallback;
             data.changeCallback = () => {
                 setDelayMs(data.properties.delayMs);
+                setDelayValue(data.properties.delayValue || 1);
+                setDelayUnit(data.properties.delayUnit || 'seconds');
                 setMode(data.properties.mode);
+                setRandomPercent(data.properties.randomPercent || 0);
                 setIsActive(data.properties.isActive);
                 setCountdown(data.properties.countdown);
                 setOutputState(data.properties.outputValue);
@@ -270,7 +332,14 @@
         }, [data]);
 
         const formatTime = (ms) => {
-            if (ms >= 60000) return `${(ms / 60000).toFixed(1)}m`;
+            if (ms >= 3600000) {
+                const hours = ms / 3600000;
+                return hours >= 10 ? `${Math.round(hours)}h` : `${hours.toFixed(1)}h`;
+            }
+            if (ms >= 60000) {
+                const mins = ms / 60000;
+                return mins >= 10 ? `${Math.round(mins)}m` : `${mins.toFixed(1)}m`;
+            }
             if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
             return `${ms}ms`;
         };
@@ -290,7 +359,7 @@
             },
             controls: {
                 mode: "Delay: Wait X time, then pass value through\nDebounce: Reset timer on each trigger, fire after silence\nThrottle: Pass immediately, block repeats for X time\nRetriggerable: ON immediately, restart OFF timer on each trigger",
-                time: "Time to wait in milliseconds.\n1000ms = 1 second\n60000ms = 1 minute",
+                time: "Time to wait before passing the signal.\nSelect a value and unit (ms, seconds, minutes, hours).\nSupports delays up to 24+ hours.",
                 trigger: "Manually trigger the node for testing.",
                 cancel: "Cancel any pending timer and reset output to OFF.",
                 debug: "Enable console logging for troubleshooting."
@@ -306,7 +375,7 @@
 
         // Styles
         const containerStyle = {
-            background: 'linear-gradient(135deg, rgba(10,15,20,0.95) 0%, rgba(20,30,40,0.95) 100%)',
+            background: `linear-gradient(135deg, ${THEME.background} 0%, ${THEME.surface} 100%)`,
             borderRadius: '8px',
             padding: '10px',
             fontFamily: 'Inter, system-ui, sans-serif',
@@ -319,11 +388,11 @@
             justifyContent: 'space-between',
             marginBottom: '10px',
             paddingBottom: '8px',
-            borderBottom: `1px solid ${THEME.border}`
+            borderBottom: `1px solid ${CATEGORY.border}`
         };
 
         const titleStyle = {
-            color: THEME.primary,
+            color: CATEGORY.accent,
             fontSize: '14px',
             fontWeight: '600',
             display: 'flex',
@@ -335,7 +404,7 @@
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            background: outputState ? THEME.success : (isActive ? THEME.warning : '#555')
+            background: outputState ? THEME.success : (isActive ? THEME.warning : THEME.textMuted)
         };
 
         const inputRowStyle = {
@@ -353,7 +422,7 @@
 
         const selectStyle = {
             flex: 1,
-            background: 'rgba(0,0,0,0.4)',
+            background: THEME.surface,
             border: `1px solid ${THEME.border}`,
             borderRadius: '4px',
             padding: '4px 6px',
@@ -362,7 +431,7 @@
         };
 
         const inputStyle = {
-            background: 'rgba(0,0,0,0.4)',
+            background: THEME.surface,
             border: `1px solid ${THEME.border}`,
             borderRadius: '4px',
             padding: '4px 6px',
@@ -374,10 +443,10 @@
         const buttonStyle = (color) => ({
             flex: 1,
             padding: '6px 8px',
-            border: 'none',
+            border: `1px solid ${color || THEME.primary}`,
             borderRadius: '4px',
-            background: color || THEME.primary,
-            color: '#000',
+            background: `${color || THEME.primary}25`,
+            color: THEME.textBright,
             fontSize: '11px',
             fontWeight: '600',
             cursor: 'pointer'
@@ -386,7 +455,7 @@
         const progressBarStyle = {
             width: '100%',
             height: '6px',
-            background: 'rgba(0,0,0,0.4)',
+            background: THEME.surfaceLight,
             borderRadius: '3px',
             overflow: 'hidden',
             marginTop: '8px'
@@ -409,7 +478,7 @@
 
         const socketLabelStyle = {
             fontSize: '10px',
-            color: 'rgba(255,255,255,0.6)'
+            color: THEME.textMuted
         };
 
         // Build the component
@@ -478,55 +547,106 @@
                 modeDescriptions[mode]
             ),
 
-            // Delay time with slider + number input
+            // Delay time with value input + unit selector
             React.createElement('div', { key: 'time-row', style: { marginBottom: '10px' } }, [
                 // Label row with help
                 React.createElement('div', { key: 'label-row', style: { display: 'flex', alignItems: 'center', marginBottom: '4px' } }, [
                     React.createElement('span', { key: 'label', style: labelStyle }, 'Time'),
                     HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.time, size: 12 })
                 ]),
+                // Value input + Unit selector row
+                React.createElement('div', { key: 'input-row', style: { display: 'flex', gap: '6px', alignItems: 'center' } }, [
+                    // Numeric input
+                    React.createElement('input', {
+                        key: 'value-input',
+                        type: 'number',
+                        style: { ...inputStyle, flex: 1, textAlign: 'center' },
+                        value: delayValue,
+                        min: delayUnit === 'ms' ? 100 : 0.1,
+                        step: delayUnit === 'ms' ? 100 : (delayUnit === 'hours' ? 0.25 : 1),
+                        onChange: (e) => {
+                            const v = parseFloat(e.target.value) || 1;
+                            updateDelay(v, delayUnit);
+                        },
+                        onPointerDown: stopPropagation
+                    }),
+                    // Unit selector
+                    React.createElement('select', {
+                        key: 'unit-select',
+                        style: { ...selectStyle, width: '90px' },
+                        value: delayUnit,
+                        onChange: (e) => {
+                            const newUnit = e.target.value;
+                            // Convert current value to new unit
+                            const currentMs = delayValue * UNIT_MULTIPLIERS[delayUnit];
+                            const newValue = currentMs / UNIT_MULTIPLIERS[newUnit];
+                            // Round appropriately
+                            const rounded = newUnit === 'ms' ? Math.round(newValue) : 
+                                           newUnit === 'hours' ? Math.round(newValue * 4) / 4 :
+                                           Math.round(newValue * 10) / 10;
+                            updateDelay(rounded, newUnit);
+                        },
+                        onPointerDown: stopPropagation
+                    }, [
+                        React.createElement('option', { key: 'ms', value: 'ms' }, 'ms'),
+                        React.createElement('option', { key: 'seconds', value: 'seconds' }, 'seconds'),
+                        React.createElement('option', { key: 'minutes', value: 'minutes' }, 'minutes'),
+                        React.createElement('option', { key: 'hours', value: 'hours' }, 'hours')
+                    ])
+                ]),
+                // Show actual time in friendly format
+                React.createElement('div', { key: 'formatted', style: { textAlign: 'center', marginTop: '4px' } },
+                    React.createElement('span', { style: { color: THEME.primary, fontSize: '12px', fontWeight: 'bold' } }, 
+                        formatTime(delayMs)
+                    )
+                )
+            ]),
+
+            // Random variation slider (±%)
+            React.createElement('div', { key: 'random-row', style: { marginBottom: '10px' } }, [
+                // Label row with help
+                React.createElement('div', { key: 'label-row', style: { display: 'flex', alignItems: 'center', marginBottom: '4px' } }, [
+                    React.createElement('span', { key: 'label', style: labelStyle }, 'Random'),
+                    HelpIcon && React.createElement(HelpIcon, { 
+                        key: 'help', 
+                        text: 'Add random variation to delay time. ±50% means delay can vary between 50%-150% of set time.', 
+                        size: 12 
+                    })
+                ]),
                 // Slider
                 React.createElement('input', {
                     key: 'slider',
                     type: 'range',
-                    min: 100,
-                    max: 60000,
-                    step: 100,
-                    value: Math.min(delayMs, 60000),
+                    min: 0,
+                    max: 100,
+                    step: 5,
+                    value: randomPercent,
                     onChange: (e) => {
                         const v = parseInt(e.target.value);
-                        setDelayMs(v);
-                        data.properties.delayMs = v;
+                        setRandomPercent(v);
+                        data.properties.randomPercent = v;
                     },
                     onPointerDown: stopPropagation,
                     style: {
                         width: '100%',
                         height: '6px',
-                        background: `linear-gradient(to right, ${THEME.primary} ${(Math.min(delayMs, 60000) / 60000) * 100}%, rgba(255,255,255,0.1) 0%)`,
+                        background: `linear-gradient(to right, ${THEME.warning} ${randomPercent}%, rgba(255,255,255,0.1) 0%)`,
                         borderRadius: '3px',
                         cursor: 'pointer',
                         WebkitAppearance: 'none',
                         appearance: 'none'
                     }
                 }),
-                // Value display + manual input
+                // Value display
                 React.createElement('div', { key: 'value-row', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' } }, [
-                    React.createElement('span', { key: 'formatted', style: { color: THEME.primary, fontSize: '12px', fontWeight: 'bold' } }, formatTime(delayMs)),
-                    React.createElement('input', {
-                        key: 'input',
-                        type: 'number',
-                        style: { ...inputStyle, width: '80px', textAlign: 'right' },
-                        value: delayMs,
-                        min: 100,
-                        step: 100,
-                        onChange: (e) => {
-                            const v = Math.max(100, parseInt(e.target.value) || 1000);
-                            setDelayMs(v);
-                            data.properties.delayMs = v;
-                        },
-                        onPointerDown: stopPropagation
-                    }),
-                    React.createElement('span', { key: 'unit', style: { fontSize: '10px', color: 'rgba(255,255,255,0.5)', marginLeft: '4px' } }, 'ms')
+                    React.createElement('span', { 
+                        key: 'formatted', 
+                        style: { color: randomPercent > 0 ? THEME.warning : 'rgba(255,255,255,0.4)', fontSize: '11px' } 
+                    }, randomPercent > 0 ? `±${randomPercent}%` : 'Off'),
+                    randomPercent > 0 && React.createElement('span', {
+                        key: 'range',
+                        style: { fontSize: '10px', color: 'rgba(255,255,255,0.5)' }
+                    }, `${formatTime(Math.round(delayMs * (1 - randomPercent/100)))} – ${formatTime(Math.round(delayMs * (1 + randomPercent/100)))}`)
                 ])
             ]),
 

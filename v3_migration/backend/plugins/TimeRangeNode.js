@@ -217,14 +217,13 @@
 
         const outputs = Object.entries(data.outputs);
 
-        return React.createElement('div', { className: 'hsv-node-tron' }, [
+        return React.createElement('div', { className: 'logic-node' }, [
             // Header with output socket on the right
             React.createElement('div', { 
                 key: 'header', 
-                className: 'hsv-node-header',
-                style: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }
+                className: 'header'
             }, [
-                React.createElement('div', { key: 'title', className: 'hsv-node-title' }, data.label),
+                React.createElement('span', { key: 'title' }, data.label),
                 outputs.map(([key, output]) => 
                     React.createElement('div', { 
                         key, 
@@ -232,7 +231,7 @@
                     }, [
                         React.createElement('span', { 
                             key: 'label',
-                            style: { fontSize: '11px', color: 'rgba(0, 255, 200, 0.7)' }
+                            className: 'socket-label'
                         }, output.label),
                         React.createElement(RefComponent, {
                             key: 'socket',
@@ -246,7 +245,7 @@
             // Controls container
             React.createElement('div', { key: 'controls', className: 'ha-controls-container' }, [
                 // Start Time
-                React.createElement('div', { key: 'startSection', className: 'hsv-section-header' }, 'Start Time'),
+                React.createElement('div', { key: 'startSection', className: 'section-header' }, 'Start Time'),
                 React.createElement(Slider, {
                     key: 'startHour',
                     label: 'Hour',
@@ -264,7 +263,7 @@
                 }),
 
                 // End Time
-                React.createElement('div', { key: 'endSection', className: 'hsv-section-header', style: { marginTop: '12px' } }, 'End Time'),
+                React.createElement('div', { key: 'endSection', className: 'section-header', style: { marginTop: '12px' } }, 'End Time'),
                 React.createElement(Slider, {
                     key: 'endHour',
                     label: 'Hour',

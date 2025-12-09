@@ -22,11 +22,12 @@
     const T2Components = window.T2Components || {};
     const { createSocketRef, ValueDisplay } = T2Components;
     const THEME = T2Components.THEME || window.T2Controls?.THEME || {
-        primary: '#00f3ff',
-        primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
-        border: 'rgba(0, 243, 255, 0.3)',
-        backgroundAlt: 'rgba(0, 20, 30, 0.6)',
-        text: '#e0f7fa'
+        primary: '#5fb3b3',
+        primaryRgba: (a) => `rgba(95, 179, 179, ${a})`,
+        border: 'rgba(95, 179, 179, 0.25)',
+        backgroundAlt: 'rgba(30, 40, 50, 0.8)',
+        surface: '#2a3238',
+        text: '#c5cdd3'
     };
 
     // -------------------------------------------------------------------------

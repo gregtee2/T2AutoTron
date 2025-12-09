@@ -157,7 +157,7 @@
             );
         };
 
-        return React.createElement('div', { className: "weather-metric-row", style: { borderColor: isActive ? '#00FF00' : 'rgba(0, 243, 255, 0.1)' } }, [
+        return React.createElement('div', { className: "weather-metric-row", style: { borderColor: isActive ? '#4caf50' : 'rgba(255, 140, 0, 0.15)' } }, [
             React.createElement('div', { key: 'info', className: "weather-metric-info" }, [
                 React.createElement('div', { key: 'h', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } }, [
                     React.createElement('span', { key: 'l', className: "weather-metric-label" }, label),
@@ -167,10 +167,10 @@
                 ]),
                 React.createElement('span', { key: 'v', className: "weather-metric-value" }, [
                     value !== null ? value.toFixed(step < 1 ? 2 : 1) : 'N/A', " ", unit,
-                    secondaryInfo && React.createElement('span', { key: 'si', style: { marginLeft: '6px', color: '#00f3ff', fontSize: '0.9em' } }, secondaryInfo)
+                    secondaryInfo && React.createElement('span', { key: 'si', style: { marginLeft: '6px', color: '#ffb74d', fontSize: '0.9em' } }, secondaryInfo)
                 ]),
                 React.createElement('div', { key: 'tr', style: { display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' } }, [
-                    React.createElement('span', { key: 't', className: "weather-metric-trend", style: { color: trend.arrow === '↑' ? '#00FF00' : trend.arrow === '↓' ? '#FF0000' : '#FFFF00' } }, trend.arrow),
+                    React.createElement('span', { key: 't', className: "weather-metric-trend", style: { color: trend.arrow === '↑' ? '#4caf50' : trend.arrow === '↓' ? '#f44336' : '#ffb74d' } }, trend.arrow),
                     React.createElement('span', { key: 'r', className: "weather-metric-range" }, `[${range.min !== null ? range.min.toFixed(1) : '-'}-${range.max !== null ? range.max.toFixed(1) : '-'}]`)
                 ])
             ]),
@@ -388,7 +388,7 @@
                 React.createElement('div', { key: 't', style: { display: "flex", alignItems: "center", gap: "8px" } }, [
                     React.createElement('div', { 
                         key: 'c',
-                        style: { cursor: "pointer", fontSize: "14px", color: '#00f3ff' },
+                        style: { cursor: "pointer", fontSize: "14px", color: '#ffb74d' },
                         onPointerDown: (e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }
                     }, isCollapsed ? "▶" : "▼"),
                     React.createElement('div', { key: 'l', className: "weather-node-title" }, "Weather Logic")
@@ -405,7 +405,7 @@
                         ])
                     ]),
                     React.createElement('div', { key: 'out', style: { display: "flex", alignItems: "center", gap: "8px" } }, [
-                        React.createElement('span', { key: 'l', className: "weather-socket-label", style: { color: evalResults.all ? '#00FF00' : '#aaa', fontWeight: 'bold' } }, "All Conditions"),
+                        React.createElement('span', { key: 'l', className: "weather-socket-label", style: { color: evalResults.all ? '#4caf50' : '#aaa', fontWeight: 'bold' } }, "All Conditions"),
                         React.createElement(RefComponent, { 
                             key: 'r',
                             init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.all.socket, nodeId: data.id, side: "output", key: "all" } }), 
@@ -481,7 +481,7 @@
                 React.createElement('div', { key: 'outs', className: "outputs" }, 
                     Object.entries(data.outputs).map(([key, output]) => 
                         React.createElement('div', { key: key, style: { display: "flex", alignItems: "center", gap: "8px", justifyContent: 'flex-end', marginBottom: '4px' } }, [
-                            React.createElement('span', { key: 'l', className: "weather-socket-label", style: { color: evalResults[key] ? '#00FF00' : '#aaa' } }, output.label),
+                            React.createElement('span', { key: 'l', className: "weather-socket-label", style: { color: evalResults[key] ? '#4caf50' : '#aaa' } }, output.label),
                             React.createElement(RefComponent, { 
                                 key: 'r',
                                 init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }), 
@@ -496,7 +496,7 @@
 
     window.nodeRegistry.register('WeatherLogicNode', {
         label: "Weather Logic",
-        category: "Timer/Event",
+        category: "Weather",
         nodeClass: WeatherLogicNode,
         factory: (cb) => new WeatherLogicNode(cb),
         component: WeatherLogicNodeComponent

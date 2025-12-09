@@ -27,7 +27,7 @@
     box-shadow: 0 0 40px rgba(0, 243, 255, 0.4), inset 0 0 30px rgba(0, 243, 255, 0.05);
     width: 600px;
     max-width: 90vw;
-    max-height: 80vh;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     animation: slideIn 0.3s ease;

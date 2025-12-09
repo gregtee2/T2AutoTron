@@ -517,8 +517,9 @@ export function Editor() {
             // Debug: debug(` Selected ${selectedCount} nodes, tracked:`, Array.from(lassoSelectedNodes));
         };
         
-        // Function to clear lasso selection
-        const clearLassoSelection = () => {
+        // Function to clear all selections (both lasso and Rete's selector)
+        const clearAllSelections = () => {
+            // Clear lasso-tracked nodes
             if (lassoSelectedNodes.size > 0) {
                 // Debug: debug(' Clearing lasso selection');
                 lassoSelectedNodes.forEach(nodeId => {
@@ -530,7 +531,30 @@ export function Editor() {
                 });
                 lassoSelectedNodes.clear();
             }
+            
+            // Clear Rete's internal selector
+            if (selector && selector.entities) {
+                const entities = selector.entities instanceof Map 
+                    ? Array.from(selector.entities.values())
+                    : Array.from(selector.entities);
+                entities.forEach(entity => {
+                    // Call unselect if it exists to clean up visual state
+                    if (entity.unselect) entity.unselect();
+                    selector.remove(entity);
+                });
+            }
+            
+            // Also clear any remaining selected classes on nodes
+            editor.getNodes().forEach(node => {
+                const view = area.nodeViews.get(node.id);
+                if (view && view.element) {
+                    view.element.classList.remove('selected');
+                }
+            });
         };
+        
+        // Alias for backward compatibility
+        const clearLassoSelection = clearAllSelections;
         
         // Click on empty canvas clears selection
         const onCanvasClick = (e) => {

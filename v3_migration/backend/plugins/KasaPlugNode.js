@@ -388,8 +388,8 @@
                     const name = select?.control?.value || `Plug ${parseInt(index) + 1}`;
                     const isOn = indicator?.control?.data?.state === "on";
                     if (name === "Select Plug") return null;
-                    return React.createElement('div', { key: index, style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#e0f7fa" } }, [
-                        React.createElement('div', { key: 'd', style: { width: "8px", height: "8px", borderRadius: "50%", background: isOn ? "#00f3ff" : "#333", boxShadow: isOn ? "0 0 5px #00f3ff" : "none" } }),
+                    return React.createElement('div', { key: index, style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#c5cdd3" } }, [
+                        React.createElement('div', { key: 'd', style: { width: "8px", height: "8px", borderRadius: "50%", background: isOn ? "#4fc3f7" : "#333", boxShadow: isOn ? "0 0 5px #4fc3f7" : "none" } }),
                         React.createElement('span', { key: 'n' }, name)
                     ]);
                 })

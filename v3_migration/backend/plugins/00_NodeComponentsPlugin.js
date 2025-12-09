@@ -18,12 +18,17 @@
 
     // Get theme from T2Controls if available
     const THEME = window.T2Controls?.THEME || {
-        primary: '#00f3ff',
-        primaryRgba: (alpha) => `rgba(0, 243, 255, ${alpha})`,
-        background: '#0a0f14',
-        backgroundAlt: 'rgba(0, 20, 30, 0.6)',
-        text: '#e0f7fa',
-        border: 'rgba(0, 243, 255, 0.3)'
+        primary: '#5fb3b3',
+        primaryRgba: (alpha) => `rgba(95, 179, 179, ${alpha})`,
+        background: '#1e2428',
+        backgroundAlt: 'rgba(30, 40, 50, 0.8)',
+        surface: '#2a3238',
+        text: '#c5cdd3',
+        textMuted: '#8a959e',
+        border: 'rgba(95, 179, 179, 0.25)',
+        success: '#5faa7d',
+        warning: '#d4a054',
+        error: '#c75f5f'
     };
 
     // =========================================================================
@@ -243,7 +248,7 @@
     // =========================================================================
     // STATUS BADGE COMPONENT
     // =========================================================================
-    function StatusBadge({ active, activeText = 'ON', inactiveText = 'OFF', activeColor = '#00ff88', inactiveColor = '#ff4444' }) {
+    function StatusBadge({ active, activeText = 'ON', inactiveText = 'OFF', activeColor = '#5faa7d', inactiveColor = '#c75f5f' }) {
         const isActive = !!active;
         const color = isActive ? activeColor : inactiveColor;
 

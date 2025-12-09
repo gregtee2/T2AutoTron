@@ -63,14 +63,15 @@
 
     // =========================================================================
     // SHARED STYLES FOR LOGIC GATES
+    // Uses softer colors from category theme system
     // =========================================================================
     const GATE_COLORS = {
-        and: { primary: '#00ff88', bg: 'rgba(0, 255, 136, 0.1)', border: 'rgba(0, 255, 136, 0.3)' },
-        or: { primary: '#4fc3f7', bg: 'rgba(79, 195, 247, 0.1)', border: 'rgba(79, 195, 247, 0.3)' },
-        xor: { primary: '#ff9800', bg: 'rgba(255, 152, 0, 0.1)', border: 'rgba(255, 152, 0, 0.3)' },
-        not: { primary: '#e91e63', bg: 'rgba(233, 30, 99, 0.1)', border: 'rgba(233, 30, 99, 0.3)' },
-        nand: { primary: '#9c27b0', bg: 'rgba(156, 39, 176, 0.1)', border: 'rgba(156, 39, 176, 0.3)' },
-        nor: { primary: '#00bcd4', bg: 'rgba(0, 188, 212, 0.1)', border: 'rgba(0, 188, 212, 0.3)' }
+        and: { primary: '#81c784', bg: 'rgba(129, 199, 132, 0.1)', border: 'rgba(129, 199, 132, 0.3)' },
+        or: { primary: '#64b5f6', bg: 'rgba(100, 181, 246, 0.1)', border: 'rgba(100, 181, 246, 0.3)' },
+        xor: { primary: '#ffb74d', bg: 'rgba(255, 183, 77, 0.1)', border: 'rgba(255, 183, 77, 0.3)' },
+        not: { primary: '#f48fb1', bg: 'rgba(244, 143, 177, 0.1)', border: 'rgba(244, 143, 177, 0.3)' },
+        nand: { primary: '#ce93d8', bg: 'rgba(206, 147, 216, 0.1)', border: 'rgba(206, 147, 216, 0.3)' },
+        nor: { primary: '#4dd0e1', bg: 'rgba(77, 208, 225, 0.1)', border: 'rgba(77, 208, 225, 0.3)' }
     };
 
     // =========================================================================
@@ -86,30 +87,13 @@
     }
 
     function GateButtonControlComponent({ data }) {
-        const color = data.color || '#4fc3f7';
         return React.createElement('button', {
             onClick: data.onClick,
             onPointerDown: (e) => e.stopPropagation(),
             onDoubleClick: (e) => e.stopPropagation(),
             style: {
-                background: `${color}20`,
-                border: `1px solid ${color}`,
-                color: color,
-                padding: '4px 8px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px',
                 width: '100%',
-                marginBottom: '5px',
-                transition: 'all 0.2s'
-            },
-            onMouseOver: (e) => {
-                e.currentTarget.style.background = `${color}40`;
-                e.currentTarget.style.boxShadow = `0 0 8px ${color}40`;
-            },
-            onMouseOut: (e) => {
-                e.currentTarget.style.background = `${color}20`;
-                e.currentTarget.style.boxShadow = 'none';
+                marginBottom: '5px'
             }
         }, data.label);
     }
@@ -150,11 +134,11 @@
                 onChange: handleChange,
                 onPointerDown: (e) => e.stopPropagation(),
                 onDoubleClick: (e) => e.stopPropagation(),
-                style: { marginRight: '5px', accentColor: '#00f3ff' }
+                style: { marginRight: '8px' }
             }),
             React.createElement('span', { 
                 key: 'label',
-                style: { fontSize: '12px', color: '#eee' } 
+                className: 'socket-label'
             }, data.label)
         ]);
     }
@@ -294,9 +278,6 @@
             return React.createElement('div', { 
                 className: 'logic-node',
                 style: {
-                    background: 'linear-gradient(180deg, rgba(10,20,30,0.95) 0%, rgba(5,15,25,0.98) 100%)',
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: '8px',
                     padding: '0',
                     minWidth: '160px'
                 }
@@ -306,10 +287,7 @@
                     key: 'header',
                     className: 'header',
                     style: {
-                        background: colors.bg,
-                        borderBottom: `1px solid ${colors.border}`,
                         padding: '8px 12px',
-                        borderRadius: '7px 7px 0 0',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between'
@@ -318,7 +296,6 @@
                     React.createElement('span', {
                         key: 'title',
                         style: {
-                            color: colors.primary,
                             fontWeight: '600',
                             fontSize: '13px',
                             textTransform: 'uppercase',
@@ -364,7 +341,7 @@
                         }),
                         React.createElement('span', { 
                             key: 'label',
-                            style: { marginLeft: '10px', fontSize: '12px', color: '#ccc' } 
+                            className: 'socket-label'
                         }, input.label)
                     ]))
                 ),
@@ -372,10 +349,7 @@
                 // Controls
                 controls.length > 0 && React.createElement('div', { 
                     key: 'controls',
-                    style: { 
-                        padding: '4px 10px', 
-                        borderTop: `1px solid ${colors.border}` 
-                    }
+                    className: 'controls'
                 }, 
                     controls.map(([key, control]) => {
                         if (control instanceof GateButtonControl) {
@@ -397,11 +371,7 @@
                 // Outputs
                 React.createElement('div', { 
                     key: 'outputs',
-                    className: 'io-container',
-                    style: { 
-                        padding: '8px 10px', 
-                        borderTop: `1px solid ${colors.border}` 
-                    }
+                    className: 'io-container'
                 }, 
                     outputs.map(([key, output]) => React.createElement('div', { 
                         key: key, 
@@ -414,7 +384,7 @@
                     }, [
                         React.createElement('span', { 
                             key: 'label',
-                            style: { marginRight: '10px', fontSize: '12px', color: '#ccc' } 
+                            className: 'socket-label'
                         }, output.label),
                         React.createElement(RefComponent, {
                             key: 'socket',

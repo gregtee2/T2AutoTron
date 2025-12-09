@@ -19,14 +19,24 @@
     // Get shared components
     const T2Controls = window.T2Controls || {};
     const THEME = T2Controls.THEME || {
-        primary: '#00f3ff',
-        primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
-        border: 'rgba(0, 243, 255, 0.3)',
-        success: '#00ff88',
-        warning: '#ffaa00',
-        error: '#ff4444',
-        background: '#0a0f14',
-        text: '#e0f7fa'
+        primary: '#5fb3b3',
+        primaryRgba: (a) => `rgba(95, 179, 179, ${a})`,
+        border: 'rgba(95, 179, 179, 0.25)',
+        success: '#5faa7d',
+        warning: '#d4a054',
+        error: '#c75f5f',
+        background: '#1e2428',
+        surface: '#2a3238',
+        text: '#c5cdd3',
+        textMuted: '#8a959e'
+    };
+    
+    // Get category-specific accent (Logic = green)
+    const CATEGORY = THEME.getCategory ? THEME.getCategory('Logic') : {
+        accent: '#81c784',
+        accentRgba: (a) => `rgba(129, 199, 132, ${a})`,
+        headerBg: 'rgba(129, 199, 132, 0.15)',
+        border: 'rgba(129, 199, 132, 0.4)'
     };
     
     const NodeHeader = T2Controls.NodeHeader;
@@ -60,6 +70,7 @@
         { value: '>', label: '>' },
         { value: '<=', label: '<=' },
         { value: '>=', label: '>=' },
+        { value: 'between', label: 'is between' },
         { value: 'contains', label: 'contains' },
         { value: 'regex', label: 'matches regex' },
         { value: 'isTrue', label: 'is true' },
@@ -84,7 +95,7 @@
                 ],
                 stopOnFirstMatch: true,
                 lastMatchedRule: -1,
-                routeCount: [0, 0, 0, 0], // Count for each output
+                routeCount: [0, 0, 0], // Count for each output (dynamic size + otherwise)
                 debug: false
             };
 
@@ -94,23 +105,50 @@
                 "Input"
             ));
 
-            // Outputs (3 rule outputs + 1 otherwise)
-            this.addOutput("out1", new ClassicPreset.Output(
-                sockets.any || new ClassicPreset.Socket('any'),
-                "→ 1"
-            ));
-            this.addOutput("out2", new ClassicPreset.Output(
-                sockets.any || new ClassicPreset.Socket('any'),
-                "→ 2"
-            ));
-            this.addOutput("out3", new ClassicPreset.Output(
-                sockets.any || new ClassicPreset.Socket('any'),
-                "→ 3"
-            ));
+            // Create outputs for initial rules
+            this._createOutputs();
+        }
+
+        _createOutputs() {
+            // Remove all existing outputs
+            const existingOutputs = Object.keys(this.outputs);
+            for (const key of existingOutputs) {
+                this.removeOutput(key);
+            }
+
+            // Create outputs for each rule
+            for (let i = 0; i < this.properties.rules.length; i++) {
+                this.addOutput(`out${i + 1}`, new ClassicPreset.Output(
+                    sockets.any || new ClassicPreset.Socket('any'),
+                    `→ ${i + 1}`
+                ));
+            }
+
+            // Always add "otherwise" output
             this.addOutput("otherwise", new ClassicPreset.Output(
                 sockets.any || new ClassicPreset.Socket('any'),
                 "Otherwise"
             ));
+
+            // Ensure routeCount array matches
+            while (this.properties.routeCount.length < this.properties.rules.length + 1) {
+                this.properties.routeCount.push(0);
+            }
+        }
+
+        addRule() {
+            if (this.properties.rules.length >= 8) return;
+            this.properties.rules.push({ operator: 'isTrue', value: '' });
+            this._createOutputs();
+            if (this.changeCallback) this.changeCallback();
+        }
+
+        removeRule() {
+            if (this.properties.rules.length <= 1) return;
+            this.properties.rules.pop();
+            this.properties.routeCount.pop();
+            this._createOutputs();
+            if (this.changeCallback) this.changeCallback();
         }
 
         _evaluateRule(rule, value) {
@@ -131,6 +169,11 @@
                         return Number(value) <= Number(compareValue);
                     case '>=':
                         return Number(value) >= Number(compareValue);
+                    case 'between':
+                        const num = Number(value);
+                        const min = Number(rule.min ?? 0);
+                        const max = Number(rule.max ?? 100);
+                        return num >= min && num <= max;
                     case 'contains':
                         return String(value).includes(String(compareValue));
                     case 'regex':
@@ -155,23 +198,27 @@
             const input = inputs.input?.[0];
             const props = this.properties;
             
-            const result = {
-                out1: undefined,
-                out2: undefined,
-                out3: undefined,
-                otherwise: undefined
-            };
+            // Build result object based on actual outputs that exist on this node
+            // This ensures consistency even if outputs were recreated during restore
+            const result = {};
+            for (const key of Object.keys(this.outputs)) {
+                result[key] = undefined;
+            }
 
             let anyMatch = false;
             props.lastMatchedRule = -1;
 
             // Evaluate each rule
-            for (let i = 0; i < props.rules.length && i < 3; i++) {
+            for (let i = 0; i < props.rules.length; i++) {
                 const rule = props.rules[i];
+                const outputKey = `out${i + 1}`;
+                
+                // Only process if this output exists
+                if (!this.outputs[outputKey]) continue;
+                
                 if (this._evaluateRule(rule, input)) {
-                    const outputKey = `out${i + 1}`;
                     result[outputKey] = input;
-                    props.routeCount[i]++;
+                    props.routeCount[i] = (props.routeCount[i] || 0) + 1;
                     
                     if (props.lastMatchedRule === -1) {
                         props.lastMatchedRule = i;
@@ -186,10 +233,11 @@
             }
 
             // If no rules matched, output to "otherwise"
-            if (!anyMatch) {
+            if (!anyMatch && this.outputs.otherwise) {
                 result.otherwise = input;
-                props.routeCount[3]++;
-                props.lastMatchedRule = 3;
+                const otherwiseIdx = props.rules.length;
+                props.routeCount[otherwiseIdx] = (props.routeCount[otherwiseIdx] || 0) + 1;
+                props.lastMatchedRule = otherwiseIdx;
             }
 
             if (this.changeCallback) this.changeCallback();
@@ -198,15 +246,30 @@
 
         restore(state) {
             if (state.properties) {
-                this.properties.rules = state.properties.rules || [
+                // Deep copy rules to ensure all properties (including min/max for 'between') are preserved
+                this.properties.rules = (state.properties.rules || [
                     { operator: 'isTrue', value: '' },
                     { operator: 'isFalse', value: '' }
-                ];
+                ]).map(rule => ({
+                    operator: rule.operator || 'isTrue',
+                    value: rule.value ?? '',
+                    min: rule.min ?? 0,
+                    max: rule.max ?? 100
+                }));
                 this.properties.stopOnFirstMatch = state.properties.stopOnFirstMatch ?? true;
             }
             // Reset runtime state
             this.properties.lastMatchedRule = -1;
-            this.properties.routeCount = [0, 0, 0, 0];
+            this.properties.routeCount = new Array(this.properties.rules.length + 1).fill(0);
+            // Recreate outputs for restored rules
+            this._createOutputs();
+            
+            // Schedule area update to ensure Rete recognizes the new outputs
+            if (this.changeCallback) {
+                setTimeout(() => {
+                    if (this.changeCallback) this.changeCallback();
+                }, 50);
+            }
         }
     }
 
@@ -234,8 +297,6 @@
         // Styles
         const containerStyle = {
             padding: '12px',
-            background: 'linear-gradient(135deg, #0a0f14 0%, #1a1f24 100%)',
-            borderRadius: '8px',
             fontFamily: 'monospace',
             minWidth: '260px'
         };
@@ -243,13 +304,13 @@
         const ruleStyle = (index) => ({
             padding: '8px',
             background: props.lastMatchedRule === index 
-                ? `rgba(0, 255, 136, 0.15)`
-                : 'rgba(0,0,0,0.2)',
+                ? `rgba(95, 170, 125, 0.15)`
+                : THEME.surfaceLight,
             borderRadius: '4px',
             marginBottom: '6px',
             border: props.lastMatchedRule === index 
                 ? `1px solid ${THEME.success}`
-                : '1px solid transparent'
+                : `1px solid ${THEME.borderLight}`
         });
 
         const ruleHeaderStyle = {
@@ -267,11 +328,11 @@
 
         const ruleCountStyle = {
             fontSize: '9px',
-            color: 'rgba(255,255,255,0.4)'
+            color: THEME.textMuted
         };
 
         const selectStyle = {
-            background: '#1a1f24',
+            background: THEME.surface,
             border: `1px solid ${THEME.border}`,
             borderRadius: '4px',
             color: THEME.text,
@@ -313,16 +374,17 @@
             opacity: props.lastMatchedRule === index ? 1 : 0.6
         });
 
-        const needsValue = (op) => !['isTrue', 'isFalse', 'isNull', 'isNotNull'].includes(op);
+        const needsValue = (op) => !['isTrue', 'isFalse', 'isNull', 'isNotNull', 'between'].includes(op);
+        const isBetween = (op) => op === 'between';
 
-        return React.createElement('div', { style: containerStyle },
+        return React.createElement('div', { className: 'logic-node', style: containerStyle },
             // Header
-            NodeHeader ? React.createElement(NodeHeader, {
-                icon: '🔀',
-                title: 'Switch',
-                tooltip: tooltips.node
-            }) : React.createElement('div', { style: { marginBottom: '8px' } },
-                React.createElement('span', { style: { color: THEME.primary, fontWeight: 'bold' } }, '🔀 Switch')
+            React.createElement('div', { className: 'header' },
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                    React.createElement('span', null, '🔀'),
+                    'Switch',
+                    HelpIcon && React.createElement(HelpIcon, { text: tooltips.node })
+                )
             ),
 
             // Stop on first match checkbox
@@ -340,18 +402,23 @@
                 HelpIcon && React.createElement(HelpIcon, { text: tooltips.controls.stopFirst, size: 10 })
             ),
 
-            // Rules
-            props.rules.slice(0, 3).map((rule, index) => 
+            // Rules (dynamically render all rules - no slice limit)
+            props.rules.map((rule, index) => 
                 React.createElement('div', { key: index, style: ruleStyle(index) },
                     React.createElement('div', { style: ruleHeaderStyle },
                         React.createElement('span', { style: ruleLabelStyle }, `Rule ${index + 1}`),
-                        React.createElement('span', { style: ruleCountStyle }, `× ${props.routeCount[index]}`)
+                        React.createElement('span', { style: ruleCountStyle }, `× ${props.routeCount[index] || 0}`)
                     ),
                     React.createElement('select', {
                         style: selectStyle,
                         value: rule.operator,
                         onChange: (e) => {
                             rule.operator = e.target.value;
+                            // Initialize min/max for between
+                            if (e.target.value === 'between') {
+                                rule.min = rule.min ?? 0;
+                                rule.max = rule.max ?? 100;
+                            }
                             forceUpdate(n => n + 1);
                         },
                         onPointerDown: stopPropagation
@@ -360,6 +427,7 @@
                             React.createElement('option', { key: op.value, value: op.value }, op.label)
                         )
                     ),
+                    // Standard value input (for non-between operators)
                     needsValue(rule.operator) && React.createElement('input', {
                         type: 'text',
                         style: inputStyle,
@@ -370,39 +438,88 @@
                             forceUpdate(n => n + 1);
                         },
                         onPointerDown: stopPropagation
-                    })
+                    }),
+                    // Min/Max inputs for "between" operator
+                    isBetween(rule.operator) && React.createElement('div', {
+                        style: { display: 'flex', gap: '4px', marginTop: '4px' }
+                    },
+                        React.createElement('input', {
+                            type: 'number',
+                            style: { ...inputStyle, width: '70px' },
+                            placeholder: 'Min',
+                            value: rule.min ?? 0,
+                            onChange: (e) => {
+                                rule.min = e.target.value;
+                                forceUpdate(n => n + 1);
+                            },
+                            onPointerDown: stopPropagation
+                        }),
+                        React.createElement('span', { style: { color: THEME.text, fontSize: '10px', alignSelf: 'center' } }, '–'),
+                        React.createElement('input', {
+                            type: 'number',
+                            style: { ...inputStyle, width: '70px' },
+                            placeholder: 'Max',
+                            value: rule.max ?? 100,
+                            onChange: (e) => {
+                                rule.max = e.target.value;
+                                forceUpdate(n => n + 1);
+                            },
+                            onPointerDown: stopPropagation
+                        })
+                    )
                 )
             ),
 
-            // Add rule button (if less than 3)
-            props.rules.length < 3 && React.createElement('button', {
-                style: {
-                    width: '100%',
-                    padding: '6px',
-                    background: 'rgba(255,255,255,0.1)',
-                    border: `1px dashed ${THEME.border}`,
-                    borderRadius: '4px',
-                    color: THEME.text,
-                    fontSize: '10px',
-                    cursor: 'pointer',
-                    marginBottom: '8px'
-                },
-                onClick: () => {
-                    props.rules.push({ operator: 'isTrue', value: '' });
-                    props.routeCount.splice(props.rules.length - 1, 0, 0);
-                    forceUpdate(n => n + 1);
-                },
-                onPointerDown: stopPropagation
-            }, '+ Add Rule'),
+            // Add/Remove rule buttons
+            React.createElement('div', {
+                style: { display: 'flex', gap: '6px', marginBottom: '8px' }
+            },
+                // Add rule button (max 8)
+                props.rules.length < 8 && React.createElement('button', {
+                    style: {
+                        flex: 1,
+                        padding: '6px',
+                        background: 'rgba(255,255,255,0.1)',
+                        border: `1px dashed ${THEME.border}`,
+                        borderRadius: '4px',
+                        color: THEME.text,
+                        fontSize: '10px',
+                        cursor: 'pointer'
+                    },
+                    onClick: () => {
+                        data.addRule();
+                        forceUpdate(n => n + 1);
+                    },
+                    onPointerDown: stopPropagation
+                }, '+ Add Rule'),
+                // Remove rule button (min 1)
+                props.rules.length > 1 && React.createElement('button', {
+                    style: {
+                        flex: 1,
+                        padding: '6px',
+                        background: 'rgba(199,95,95,0.2)',
+                        border: `1px dashed ${THEME.error || '#c75f5f'}`,
+                        borderRadius: '4px',
+                        color: THEME.error || '#c75f5f',
+                        fontSize: '10px',
+                        cursor: 'pointer'
+                    },
+                    onClick: () => {
+                        data.removeRule();
+                        forceUpdate(n => n + 1);
+                    },
+                    onPointerDown: stopPropagation
+                }, '− Remove Rule')
+            ),
 
             // Otherwise indicator
             React.createElement('div', { style: {
-                ...ruleStyle(3),
-                opacity: props.lastMatchedRule === 3 ? 1 : 0.5
+                ...ruleStyle(props.rules.length),
+                opacity: props.lastMatchedRule === props.rules.length ? 1 : 0.5
             } },
                 React.createElement('div', { style: ruleHeaderStyle },
                     React.createElement('span', { style: { ...ruleLabelStyle, color: THEME.warning } }, 'Otherwise'),
-                    React.createElement('span', { style: ruleCountStyle }, `× ${props.routeCount[3]}`)
+                    React.createElement('span', { style: ruleCountStyle }, `× ${props.routeCount[props.rules.length] || 0}`)
                 )
             ),
 
