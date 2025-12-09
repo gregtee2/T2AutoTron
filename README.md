@@ -1,18 +1,55 @@
-# T2AutoTron 2.1 - Rete.js v3 Migration
+# T2AutoTron 2.1 - Visual Node-Based Home Automation
 
-This is the next-generation version of T2AutoTron, migrated to Rete.js v3 with a modern React-based architecture.
+A visual node-based automation editor for smart home control, supporting Home Assistant, Philips Hue, TP-Link Kasa, and Shelly devices. Built with React, Rete.js v3, and Node.js.
 
-## What's New in 2.1
+![Main Interface](screenshots/Main_Canvas.png)
 
-### Architecture
+## Features
+
+### Visual Node Editor
+Build automations by connecting nodes visually - no coding required.
+
+![Context Menu](screenshots/Context_Menu.png)
+
+### 37+ Node Types
+- **Device Control**: Home Assistant, Philips Hue, TP-Link Kasa, Shelly
+- **Logic**: AND, OR, XOR, Comparison, Conditional Switch
+- **Timing**: Time of Day, Time Range, Sunrise/Sunset, Delay, Debounce
+- **Color**: HSV Control, Color Gradient, All-In-One Color Picker
+- **Utility**: Debug, Display, Sender/Receiver for cross-graph communication
+
+### Automation Flows
+Create complex automations with visual flows connecting triggers, logic, and device control.
+
+![Flow Example](screenshots/Flow_Exmaple.png)
+
+### Organize with Backdrops
+Group related nodes into zones for better organization.
+
+![Backdrop Grouping](screenshots/Group_Nodes_into_Zones.png)
+
+### Settings & API Keys
+Configure all your integrations in one place with connection testing.
+
+![Settings Panel](screenshots/API_Keys_Inputs.png)
+
+### Real-Time Dashboard
+- 5-Day Weather Forecast
+- Device Status (14 devices shown ON)
+- Event Log with filtering
+- Connection Status indicators
+
+---
+
+## Architecture
 - **Rete.js v3**: Complete migration from LiteGraph to Rete.js v3
 - **React Components**: All nodes are now React components with proper state management
 - **Vite Build System**: Fast development with HMR (Hot Module Replacement)
 - **Modern Socket System**: Type-safe socket connections with custom compatibility layer
 - **Plugin Architecture**: Extensible node system - add new nodes without rebuilding
 
-### Working Features
-- ✅ **30+ Node Types**: Full suite of automation nodes ported from v2.0
+## Working Features
+- ✅ **37+ Node Types**: Full suite of automation nodes
 - ✅ **HAGenericDeviceNode**: Home Assistant device control with Follow mode
 - ✅ **Logic Nodes**: AND, OR, XOR, Comparison, Conditional Switch
 - ✅ **Time Nodes**: Time of Day, Time Range, Sunrise/Sunset, Date Comparison, Day of Week
@@ -21,10 +58,11 @@ This is the next-generation version of T2AutoTron, migrated to Rete.js v3 with a
 - ✅ **Graph Save/Load**: Full serialization with viewport state preservation
 - ✅ **Backdrop Nodes**: Visual grouping with z-index management
 - ✅ **Settings Panel**: UI for managing API keys with test connections
+- ✅ **Auto-Save**: Every 2 minutes to prevent work loss
 
-### Recent Updates (December 2024)
+## Recent Updates (December 2024)
 
-#### Settings & API Keys Panel
+### Settings & API Keys Panel
 - **New UI**: Accessible via "🔧 Settings & API Keys" button in the Dock
 - **Test Connections**: Verify API credentials before saving
   - Home Assistant: Tests connection and returns version
@@ -34,12 +72,12 @@ This is the next-generation version of T2AutoTron, migrated to Rete.js v3 with a
 - **Backup/Restore**: Export and import settings as JSON files
 - **Security**: Allowlist-based key management, secrets masked by default
 
-#### New Logic Nodes
+### New Logic Nodes
 - **DateComparisonNode**: Compare current date against single date or range
 - **DayOfWeekComparisonNode**: Check day of week (single, range, or all week)
 - **TimeRangeNode**: Check if current time falls within a time range
 
-#### Node Improvements
+### Node Improvements
 - **HADeviceStateOutputNode**: Filter dropdowns now properly update device lists
 - **HADeviceAutomationNode**: Fixed sensor temperature value extraction
 - **All nodes**: Consistent shared CSS styles via `node-styles.css`
