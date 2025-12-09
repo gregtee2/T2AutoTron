@@ -70,6 +70,16 @@ if [ ! -f ".env" ]; then
 # Configure via Settings UI in the app
 
 PORT=3000
+
+# Skip MongoDB - set to false if you have MongoDB installed
+SKIP_MONGODB=true
+
+# Home Assistant - set via Settings UI
+# HA_URL=http://homeassistant.local:8123
+# HA_TOKEN=your_long_lived_access_token
+
+# Debug logging
+VERBOSE_LOGGING=false
 EOF
     echo "   Created default .env file"
 else
