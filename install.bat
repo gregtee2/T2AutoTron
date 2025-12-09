@@ -202,11 +202,12 @@ echo    Installing Node.js 20 LTS...
 echo  -----------------------------------------------
 echo.
 
-REM Try winget first (Windows 10/11)
+REM Try winget first - Windows 10/11
 where winget >nul 2>&1
 if not errorlevel 1 (
-    echo    Using Windows Package Manager (winget)...
-    winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements -h
+    echo    Using Windows Package Manager winget...
+    cmd /c winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements -h
+    where node >nul 2>&1
     if not errorlevel 1 (
         echo    Installed via winget!
         exit /b 0
@@ -218,7 +219,8 @@ REM Try Chocolatey if available
 where choco >nul 2>&1
 if not errorlevel 1 (
     echo    Using Chocolatey...
-    choco install nodejs-lts -y
+    cmd /c choco install nodejs-lts -y
+    where node >nul 2>&1
     if not errorlevel 1 (
         echo    Installed via Chocolatey!
         exit /b 0
@@ -230,7 +232,7 @@ REM Direct download as last resort
 echo    Downloading Node.js installer from nodejs.org...
 set "NODE_MSI=%TEMP%\node-install.msi"
 
-powershell -Command "& { try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi' -OutFile '%NODE_MSI%' -UseBasicParsing } catch { exit 1 } }"
+powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi' -OutFile '%NODE_MSI%' -UseBasicParsing"
 
 if not exist "%NODE_MSI%" (
     echo    ERROR: Failed to download Node.js installer.
@@ -239,11 +241,11 @@ if not exist "%NODE_MSI%" (
 )
 
 echo    Running Node.js installer...
-echo    (You may see a UAC prompt - click Yes)
+echo    You may see a UAC prompt - click Yes
 msiexec /i "%NODE_MSI%" /passive /norestart
 
 REM Clean up
-del "%NODE_MSI%" >nul 2>&1
+del "%NODE_MSI%" 2>nul
 
 REM Check if it worked
 set "PATH=%PATH%;C:\Program Files\nodejs"
