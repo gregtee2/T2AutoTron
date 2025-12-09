@@ -4,12 +4,19 @@ const logger = require('../logging/logger');
 const config = require('./env');
 
 async function connectMongoDB() {
-  const maxRetries = 5;
+  // Check if MongoDB is disabled via environment
+  if (process.env.SKIP_MONGODB === 'true') {
+    console.log('MongoDB connection skipped (SKIP_MONGODB=true)');
+    await logger.log('MongoDB connection skipped', 'info', false, 'mongodb:skipped');
+    return;
+  }
+
+  const maxRetries = 2; // Reduced retries for faster startup
   for (let i = 0; i < maxRetries; i++) {
     try {
       await logger.log('Attempting to connect to MongoDB...', 'info', false, `mongodb:connect:${i}`);
       await mongoose.connect(config.get('mongodbUri'), {
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 3000, // Faster timeout
         maxPoolSize: 10
       });
       await logger.log('Connected to MongoDB successfully', 'info', false, 'mongodb:connected');
@@ -17,10 +24,12 @@ async function connectMongoDB() {
     } catch (err) {
       await logger.log(`MongoDB attempt ${i + 1} failed: ${err.message}`, 'warn', false, `mongodb:fail:${i}`);
       if (i === maxRetries - 1) {
-        await logger.log('MongoDB connection failed after retries', 'error', false, 'error:mongodb');
-        throw new Error('MongoDB connection failed');
+        // Instead of throwing, just log and continue without MongoDB
+        console.log('⚠ MongoDB not available - continuing without database');
+        await logger.log('MongoDB not available - running without database', 'warn', false, 'mongodb:unavailable');
+        return; // Don't throw, just continue
       }
-      await new Promise(resolve => setTimeout(resolve, 5000 * (i + 1)));
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   }
 }

@@ -155,6 +155,9 @@ if not exist ".env" (
     echo.>> .env
     echo PORT=3000>> .env
     echo.>> .env
+    echo # Skip MongoDB connection - set to true if you dont have MongoDB>> .env
+    echo SKIP_MONGODB=true>> .env
+    echo.>> .env
     echo # Home Assistant - set via Settings UI>> .env
     echo # HA_URL=http://homeassistant.local:8123>> .env
     echo # HA_TOKEN=your_long_lived_access_token>> .env
