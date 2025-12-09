@@ -1,8 +1,29 @@
-# T2AutoTron 2.1 - Visual Node-Based Home Automation
 
-A visual node-based automation editor for smart home control, supporting Home Assistant, Philips Hue, TP-Link Kasa, and Shelly devices. Built with React, Rete.js v3, and Node.js.
+# T2AutoTron 2.1
+
+[![Build Status](https://img.shields.io/github/workflow/status/gregtee2/T2AutoTron/CI?style=flat-square)](https://github.com/gregtee2/T2AutoTron/actions)
+[![License](https://img.shields.io/github/license/gregtee2/T2AutoTron?style=flat-square)](LICENSE)
+[![Version](https://img.shields.io/badge/version-2.1.0--beta.1-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)
+[![Open in VS Code](https://img.shields.io/badge/Open%20in-VS%20Code-blue?logo=visualstudiocode&style=flat-square)](https://open.vscode.dev/gregtee2/T2AutoTron)
 
 ![Main Interface](screenshots/Main_Canvas.png)
+
+**The fastest way to visually automate your smart home.**
+
+T2AutoTron is a modern, visual node-based automation editor for Home Assistant, Philips Hue, Kasa, and more. Build powerful automations with drag-and-drop simplicity—no coding required.
+
+---
+
+## Why Use T2AutoTron?
+
+- **No coding required:** Build automations visually, just connect nodes.
+- **Instant device discovery:** Home Assistant integration finds all your devices automatically.
+- **Extensible:** Add new node types at runtime—no rebuild needed.
+- **Real-time dashboard:** See device status, weather, and events live.
+- **One-click install:** Windows/Mac/Linux scripts, or manual setup.
+- **Open source:** MIT licensed, ready for community contributions.
+
+---
 
 ## 🚀 Quick Start
 
@@ -46,6 +67,17 @@ cd v3_migration/frontend && npm run dev  # Terminal 2
 
 ---
 
+## Links & Community
+
+- [Getting Started Guide](v3_migration/GETTING_STARTED.md)
+- [Node Development Guide](v3_migration/frontend/RETE_NODE_GUIDE.md)
+- [Plugin Architecture](v3_migration/PLUGIN_ARCHITECTURE.md)
+- [Demo Video](https://www.youtube.com/results?search_query=T2AutoTron) <!-- Replace with actual demo link if available -->
+- [Issues & Feature Requests](https://github.com/gregtee2/T2AutoTron/issues)
+- [Discussions](https://github.com/gregtee2/T2AutoTron/discussions)
+
+---
+
 ## Features
 
 ### Visual Node Editor
@@ -54,7 +86,7 @@ Build automations by connecting nodes visually - no coding required.
 ![Context Menu](screenshots/Context_Menu.png)
 
 ### 37+ Node Types
-- **Device Control**: Home Assistant, Philips Hue, TP-Link Kasa, Shelly
+- **Device Control**: Home Assistant, Philips Hue, TP-Link Kasa
 - **Logic**: AND, OR, XOR, Comparison, Conditional Switch
 - **Timing**: Time of Day, Time Range, Sunrise/Sunset, Delay, Debounce
 - **Color**: HSV Control, Color Gradient, All-In-One Color Picker
@@ -221,3 +253,9 @@ Built with:
 - [React](https://react.dev/)
 - [Vite](https://vitejs.dev/)
 - [Home Assistant](https://www.home-assistant.io/)
+
+---
+
+## GitHub Topics (add these for discoverability)
+
+`home-automation`, `node-editor`, `smart-home`, `home-assistant`, `iot`, `react`, `retejs`, `visual-programming`, `automation`, `open-source`
