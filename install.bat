@@ -9,6 +9,14 @@ if "%1"=="" (
     pause >nul
 )
 
+REM Wrap everything in a try-catch style approach
+call :MainInstall
+echo.
+echo  DEBUG: MainInstall returned, pausing...
+pause
+exit /b 0
+
+:MainInstall
 echo.
 echo  ===============================================
 echo     T2AutoTron 2.1 - One-Click Installer
@@ -19,14 +27,15 @@ echo.
 
 REM Get the directory where this script is located
 set "SCRIPT_DIR=%~dp0"
+echo  DEBUG: SCRIPT_DIR=%SCRIPT_DIR%
 cd /d "%SCRIPT_DIR%"
+echo  DEBUG: Changed to directory, now in %CD%
 
 REM ===================================================
 REM Step 1: Check/Install Node.js
 REM ===================================================
 echo [1/5] Checking for Node.js...
-echo    DEBUG: About to run 'where node'...
-where node >nul 2>&1
+where node
 if errorlevel 1 (
     echo    Node.js not found. Installing automatically...
     call :InstallNodeJS
@@ -197,8 +206,7 @@ echo  your Home Assistant, Hue, or other integrations.
 echo.
 echo  ===============================================
 echo.
-pause
-exit /b 0
+goto :eof
 
 
 REM ===================================================
