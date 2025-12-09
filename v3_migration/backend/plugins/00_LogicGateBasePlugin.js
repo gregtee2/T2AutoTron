@@ -18,6 +18,49 @@
     const { useState, useEffect } = React;
     const RefComponent = window.RefComponent;
 
+    // Get tooltip components from T2Controls
+    const { HelpIcon } = window.T2Controls || {};
+
+    // =========================================================================
+    // GATE DESCRIPTIONS - Tooltips for each gate type
+    // =========================================================================
+    const GATE_TOOLTIPS = {
+        and: {
+            node: "AND Gate - Outputs TRUE only when ALL inputs are TRUE.\n\nUse for: Requiring multiple conditions to be met simultaneously.\n\nExample: Turn on lights only when motion detected AND it's dark.",
+            pulseMode: "When enabled, outputs a brief pulse (100ms) on rising edge instead of sustained TRUE.",
+            addInput: "Add another input slot (max 8).",
+            removeInput: "Remove the last input slot (min 2)."
+        },
+        or: {
+            node: "OR Gate - Outputs TRUE when ANY input is TRUE.\n\nUse for: Triggering on any of multiple conditions.\n\nExample: Alert when front door OR back door opens.",
+            pulseMode: "When enabled, outputs a brief pulse (100ms) on rising edge instead of sustained TRUE.",
+            addInput: "Add another input slot (max 8).",
+            removeInput: "Remove the last input slot (min 2)."
+        },
+        xor: {
+            node: "XOR Gate (Exclusive OR) - Outputs TRUE when exactly ONE input is TRUE.\n\nUse for: Detecting when only one of multiple conditions is active.\n\nExample: Alert if front door OR back door is open, but not both.",
+            pulseMode: "When enabled, outputs a brief pulse (100ms) on rising edge instead of sustained TRUE.",
+            addInput: "Add another input slot (max 8).",
+            removeInput: "Remove the last input slot (min 2)."
+        },
+        not: {
+            node: "NOT Gate (Inverter) - Outputs the opposite of the input.\n\nUse for: Inverting a boolean signal.\n\nExample: Trigger when motion is NOT detected.",
+            pulseMode: "When enabled, outputs a brief pulse (100ms) on rising edge instead of sustained TRUE."
+        },
+        nand: {
+            node: "NAND Gate - Outputs FALSE only when ALL inputs are TRUE (inverse of AND).\n\nUse for: Triggering when at least one condition is not met.",
+            pulseMode: "When enabled, outputs a brief pulse (100ms) on rising edge instead of sustained TRUE.",
+            addInput: "Add another input slot (max 8).",
+            removeInput: "Remove the last input slot (min 2)."
+        },
+        nor: {
+            node: "NOR Gate - Outputs TRUE only when ALL inputs are FALSE (inverse of OR).\n\nUse for: Triggering when no conditions are active.",
+            pulseMode: "When enabled, outputs a brief pulse (100ms) on rising edge instead of sustained TRUE.",
+            addInput: "Add another input slot (max 8).",
+            removeInput: "Remove the last input slot (min 2)."
+        }
+    };
+
     // =========================================================================
     // SHARED STYLES FOR LOGIC GATES
     // =========================================================================
@@ -241,6 +284,7 @@
     // =========================================================================
     function createLogicGateComponent(gateType = 'or') {
         const colors = GATE_COLORS[gateType] || GATE_COLORS.or;
+        const tooltips = GATE_TOOLTIPS[gateType] || GATE_TOOLTIPS.or;
 
         return function LogicGateComponent({ data, emit }) {
             const inputs = Object.entries(data.inputs);
@@ -257,7 +301,7 @@
                     minWidth: '160px'
                 }
             }, [
-                // Header
+                // Header with tooltip
                 React.createElement('div', { 
                     key: 'header',
                     className: 'header',
@@ -266,13 +310,27 @@
                         borderBottom: `1px solid ${colors.border}`,
                         padding: '8px 12px',
                         borderRadius: '7px 7px 0 0',
-                        color: colors.primary,
-                        fontWeight: '600',
-                        fontSize: '13px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '1px'
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
                     }
-                }, data.label),
+                }, [
+                    React.createElement('span', {
+                        key: 'title',
+                        style: {
+                            color: colors.primary,
+                            fontWeight: '600',
+                            fontSize: '13px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px'
+                        }
+                    }, data.label),
+                    HelpIcon && React.createElement(HelpIcon, { 
+                        key: 'help', 
+                        text: tooltips.node, 
+                        size: 14 
+                    })
+                ]),
 
                 // Inputs
                 React.createElement('div', { 

@@ -21,11 +21,25 @@
     // Get shared components
     const T2Components = window.T2Components || {};
     const { createSocketRef, StatusBadge } = T2Components;
+    const { HelpIcon } = window.T2Controls || {};
     const THEME = T2Components.THEME || window.T2Controls?.THEME || {
         primary: '#00f3ff',
         primaryRgba: (a) => `rgba(0, 243, 255, ${a})`,
         border: 'rgba(0, 243, 255, 0.3)',
         success: '#00ff88'
+    };
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Manual trigger button for testing automations.\n\nClick the button to toggle state.\n\nModes:\n• Latch: Click toggles ON/OFF\n• Pulse: Click sends brief ON signal",
+        outputs: {
+            state: "Current button state.\n\nLatch Mode: TRUE when on, FALSE when off\nPulse Mode: Brief TRUE pulse, then FALSE"
+        },
+        controls: {
+            pulseMode: "Latch: Button stays on until clicked again\nPulse: Button sends brief signal then resets"
+        }
     };
 
     // -------------------------------------------------------------------------
@@ -158,10 +172,16 @@
                     borderRadius: '7px 7px 0 0'
                 }
             }, [
-                React.createElement('span', { 
-                    key: 'title',
-                    style: { color: THEME.primary, fontWeight: '600', fontSize: '13px', textTransform: 'uppercase' }
-                }, data.label),
+                React.createElement('div', {
+                    key: 'title-row',
+                    style: { display: 'flex', alignItems: 'center', gap: '6px' }
+                }, [
+                    React.createElement('span', { 
+                        key: 'title',
+                        style: { color: THEME.primary, fontWeight: '600', fontSize: '13px', textTransform: 'uppercase' }
+                    }, '🔘 ' + data.label),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
+                ]),
                 
                 // Output sockets
                 React.createElement('div', { 
@@ -233,7 +253,8 @@
                         onChange: handlePulseModeChange,
                         style: { accentColor: THEME.primary }
                     }),
-                    React.createElement('span', { key: 'label' }, pulseMode ? 'Pulse Mode' : 'Latch Mode')
+                    React.createElement('span', { key: 'label' }, pulseMode ? 'Pulse Mode' : 'Latch Mode'),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.pulseMode, size: 10 })
                 ])
             ])
         ]);

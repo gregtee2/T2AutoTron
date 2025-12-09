@@ -18,9 +18,27 @@
     }
 
     const { ClassicPreset } = window.Rete;
+    const React = window.React;
+    const RefComponent = window.RefComponent;
     const sockets = window.sockets;
-    const { DropdownControl, InputControl } = window.T2Controls;
-    const { createSimpleNodeComponent } = window.T2Components || {};
+    const { DropdownControl, InputControl, HelpIcon } = window.T2Controls;
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Compares an input value against a reference value.\n\nOutputs TRUE or FALSE based on the selected operator.\n\nSupports both numeric and string comparison.",
+        inputs: {
+            in: "The value to compare. Can be number, string, or boolean."
+        },
+        outputs: {
+            result: "TRUE if comparison passes, FALSE otherwise."
+        },
+        controls: {
+            operator: "= Equal\n< Less than\n> Greater than\n<= Less or equal\n>= Greater or equal\n!= Not equal",
+            value: "The reference value to compare against.\n\nNumbers are compared numerically.\nStrings are compared alphabetically."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -126,49 +144,97 @@
     }
 
     // -------------------------------------------------------------------------
-    // COMPONENT - Use shared factory or create simple one
+    // COMPONENT
     // -------------------------------------------------------------------------
-    const ComparisonNodeComponent = createSimpleNodeComponent 
-        ? createSimpleNodeComponent({ className: 'logic-node' })
-        : function({ data, emit }) {
-            // Fallback if T2Components not available
-            const React = window.React;
-            const RefComponent = window.RefComponent;
-            const inputs = Object.entries(data.inputs);
-            const outputs = Object.entries(data.outputs);
-            const controls = Object.entries(data.controls);
+    function ComparisonNodeComponent({ data, emit }) {
+        const inputs = Object.entries(data.inputs);
+        const outputs = Object.entries(data.outputs);
+        const controls = Object.entries(data.controls);
 
-            return React.createElement('div', { className: 'logic-node' }, [
-                React.createElement('div', { key: 'header', className: 'header' }, data.label),
-                React.createElement('div', { key: 'inputs', className: 'io-container' }, 
-                    inputs.map(([key, input]) => React.createElement('div', { key, className: 'socket-row' }, [
-                        React.createElement(RefComponent, {
-                            key: 'socket',
-                            init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: input.socket, nodeId: data.id, side: "input", key } }),
-                            unmount: ref => emit({ type: "unmount", data: { element: ref } })
-                        }),
-                        React.createElement('span', { key: 'label', style: { marginLeft: '10px', fontSize: '12px' } }, input.label)
-                    ]))
-                ),
-                React.createElement('div', { key: 'controls', className: 'controls' }, 
-                    controls.map(([key, control]) => React.createElement(RefComponent, {
-                        key,
+        return React.createElement('div', { 
+            className: 'logic-node',
+            style: {
+                background: 'linear-gradient(180deg, rgba(10,20,30,0.95) 0%, rgba(5,15,25,0.98) 100%)',
+                borderRadius: '8px',
+                padding: '0',
+                minWidth: '180px'
+            }
+        }, [
+            // Header with tooltip
+            React.createElement('div', { 
+                key: 'header',
+                style: {
+                    background: 'rgba(0, 243, 255, 0.1)',
+                    borderBottom: '1px solid rgba(0, 243, 255, 0.3)',
+                    padding: '8px 12px',
+                    borderRadius: '7px 7px 0 0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }
+            }, [
+                React.createElement('span', {
+                    key: 'title',
+                    style: {
+                        color: '#00f3ff',
+                        fontWeight: '600',
+                        fontSize: '13px'
+                    }
+                }, '⚖️ ' + data.label),
+                HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
+            ]),
+            
+            // Inputs
+            React.createElement('div', { key: 'inputs', style: { padding: '8px 10px' } }, 
+                inputs.map(([key, input]) => React.createElement('div', { 
+                    key, 
+                    style: { display: 'flex', alignItems: 'center', marginBottom: '4px' } 
+                }, [
+                    React.createElement(RefComponent, {
+                        key: 'socket',
+                        init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: input.socket, nodeId: data.id, side: "input", key } }),
+                        unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                    }),
+                    React.createElement('span', { key: 'label', style: { marginLeft: '10px', fontSize: '12px', color: '#ccc' } }, input.label),
+                    HelpIcon && tooltips.inputs[key] && React.createElement(HelpIcon, { key: 'help', text: tooltips.inputs[key], size: 10 })
+                ]))
+            ),
+            
+            // Controls
+            React.createElement('div', { key: 'controls', style: { padding: '6px 10px', borderTop: '1px solid rgba(0,243,255,0.2)' } }, 
+                controls.map(([key, control]) => React.createElement('div', { key, style: { marginBottom: '6px' } }, [
+                    React.createElement('div', { 
+                        key: 'label-row',
+                        style: { display: 'flex', alignItems: 'center', marginBottom: '2px' } 
+                    }, [
+                        React.createElement('span', { key: 'lbl', style: { fontSize: '10px', color: '#00f3ff', textTransform: 'uppercase' } }, control.label || key),
+                        HelpIcon && tooltips.controls[key] && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls[key], size: 10 })
+                    ]),
+                    React.createElement(RefComponent, {
+                        key: 'ctrl',
                         init: ref => emit({ type: "render", data: { type: "control", element: ref, payload: control } }),
                         unmount: ref => emit({ type: "unmount", data: { element: ref } })
-                    }))
-                ),
-                React.createElement('div', { key: 'outputs', className: 'io-container' }, 
-                    outputs.map(([key, output]) => React.createElement('div', { key, className: 'socket-row', style: { justifyContent: 'flex-end' } }, [
-                        React.createElement('span', { key: 'label', style: { marginRight: '10px', fontSize: '12px' } }, output.label),
-                        React.createElement(RefComponent, {
-                            key: 'socket',
-                            init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }),
-                            unmount: ref => emit({ type: "unmount", data: { element: ref } })
-                        })
-                    ]))
-                )
-            ]);
-        };
+                    })
+                ]))
+            ),
+            
+            // Outputs
+            React.createElement('div', { key: 'outputs', style: { padding: '8px 10px', borderTop: '1px solid rgba(0,243,255,0.2)' } }, 
+                outputs.map(([key, output]) => React.createElement('div', { 
+                    key, 
+                    style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end' } 
+                }, [
+                    HelpIcon && tooltips.outputs[key] && React.createElement(HelpIcon, { key: 'help', text: tooltips.outputs[key], size: 10 }),
+                    React.createElement('span', { key: 'label', style: { marginRight: '10px', fontSize: '12px', color: '#ccc' } }, output.label),
+                    React.createElement(RefComponent, {
+                        key: 'socket',
+                        init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }),
+                        unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                    })
+                ]))
+            )
+        ]);
+    }
 
     // -------------------------------------------------------------------------
     // REGISTRATION

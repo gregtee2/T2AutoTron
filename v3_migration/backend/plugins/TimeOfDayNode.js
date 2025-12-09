@@ -11,6 +11,26 @@
     const { useState, useEffect, useCallback, useRef } = React;
     const RefComponent = window.RefComponent;
     const { DateTime } = window.luxon;
+    const { HelpIcon } = window.T2Controls || {};
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Time-based trigger that activates during specified hours.\n\nSet start and stop times to define an active window.\n\nModes:\n• Range Mode: TRUE during active window\n• Pulse Mode: Brief pulse at start/stop times",
+        outputs: {
+            state: "TRUE when current time is within active window.\nFALSE otherwise.",
+            startTime: "Formatted start time string (e.g., '8:00 AM')",
+            endTime: "Formatted stop time string (e.g., '6:00 PM')"
+        },
+        controls: {
+            customName: "Optional name for this timer.\nUseful when you have multiple time nodes.",
+            pulseMode: "Pulse: Brief signal at start/stop times\nRange: Continuous TRUE during active window",
+            start: "Time when this node turns ON.\nUses 12-hour format with AM/PM.",
+            stop: "Time when this node turns OFF.\nSupports overnight ranges (e.g., 10PM to 6AM).",
+            cycle: "Optional recurring trigger during active window.\nUseful for periodic actions."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // CSS is now loaded from node-styles.css via index.css
@@ -322,7 +342,14 @@
         const outputs = Object.entries(data.outputs).map(([key, output]) => ({ key, ...output }));
 
         return React.createElement('div', { className: 'time-of-day-node' }, [
-            React.createElement('div', { key: 't', className: 'title' }, data.label),
+            React.createElement('div', { 
+                key: 't', 
+                className: 'title',
+                style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }
+            }, [
+                React.createElement('span', { key: 'label' }, '🕐 ' + data.label),
+                HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
+            ]),
             // Outputs Section
             React.createElement('div', { key: 'os', className: 'tod-outputs-section' },
                 outputs.map(output => React.createElement('div', { key: output.key, className: 'tod-output-row' }, [

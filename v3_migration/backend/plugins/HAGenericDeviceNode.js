@@ -31,6 +31,7 @@
         ColorBarControl,
         PowerStatsControl,
         DeviceStateControl,
+        HelpIcon,
         THEME,
         stopPropagation
     } = window.T2Controls;
@@ -42,6 +43,25 @@
         isAuxiliaryEntity,
         filterDevices
     } = window.T2HAUtils;
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Control Home Assistant devices.\n\nConnect trigger to turn devices on/off.\nConnect HSV Info to control light color.\n\nModes:\n• Follow: Output matches trigger state\n• Toggle: Each trigger toggles state\n• On/Off/Pulse: Fixed actions",
+        inputs: {
+            trigger: "Boolean signal to control devices.\n\nBehavior depends on Trigger Mode:\n• Follow: TRUE = on, FALSE = off\n• Toggle: Any TRUE toggles state\n• On/Off: Trigger activates action",
+            hsv_info: "HSV color object from color nodes.\n\nFormat: { hue: 0-1, saturation: 0-1, brightness: 0-254 }\n\nApplies color to all selected lights."
+        },
+        outputs: {
+            all_devices: "Array of all selected device states.\n\nUseful for chaining to other nodes."
+        },
+        controls: {
+            filterType: "Filter device list by type:\n• All: Show everything\n• Lights: light.* entities\n• Switches: switch.* entities\n• Fans, Covers, etc.",
+            triggerMode: "How trigger input controls devices:\n• Follow: Match trigger (on/off)\n• Toggle: Each trigger flips state\n• Turn On: Only turn on\n• Turn Off: Only turn off\n• Pulse: Brief on, then off",
+            transitionTime: "Fade time for lights in milliseconds.\n1000ms = 1 second smooth transition."
+        }
+    };
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -889,7 +909,9 @@
                                 color: data.properties.haConnected ? '#00ff64' : '#ff3232'
                             }
                         }, data.properties.haConnected ? 'HA' : 'HA ✕')
-                    ])
+                    ]),
+                    // Help icon with node tooltip
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
                 ]),
                 React.createElement('div', { key: 'status', className: 'ha-node-status' }, data.properties.status)
             ]),
@@ -903,11 +925,13 @@
                             init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: input.socket, nodeId: data.id, side: "input", key } }),
                             unmount: ref => emit({ type: "unmount", data: { element: ref } })
                         }),
-                        React.createElement('span', { key: 'l', className: 'ha-socket-label' }, input.label)
+                        React.createElement('span', { key: 'l', className: 'ha-socket-label' }, input.label),
+                        HelpIcon && tooltips.inputs[key] && React.createElement(HelpIcon, { key: 'help', text: tooltips.inputs[key], size: 10 })
                     ]))
                 ),
                 React.createElement('div', { key: 'out', className: 'outputs' }, 
                     outputs.map(([key, output]) => React.createElement('div', { key: key, style: { display: "flex", alignItems: "center", gap: "8px", justifyContent: "flex-end", marginBottom: "4px" } }, [
+                        HelpIcon && tooltips.outputs[key] && React.createElement(HelpIcon, { key: 'help', text: tooltips.outputs[key], size: 10 }),
                         React.createElement('span', { key: 'l', className: 'ha-socket-label' }, output.label),
                         React.createElement(RefComponent, {
                             key: 'ref',

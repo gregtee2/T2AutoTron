@@ -11,6 +11,21 @@
     const { useState, useEffect, useCallback } = React;
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
+    const { HelpIcon } = window.T2Controls || {};
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Receives values from Sender nodes with matching name.\n\nUse Sender/Receiver pairs to pass data between distant parts of your graph without wires.\n\nSelect a source from the dropdown to subscribe.",
+        outputs: {
+            out: "The current value from the selected buffer.\n\nUpdates in real-time when Sender broadcasts.",
+            change: "Pulses TRUE when the value changes.\n\nUseful for triggering actions on updates."
+        },
+        controls: {
+            source: "Select which Sender to receive from.\n\nDropdown shows all active buffers.\n\nFormat: [Type]Name (e.g., [Trigger]LivingRoom)"
+        }
+    };
 
     // -------------------------------------------------------------------------
     // CSS is now loaded from node-styles.css via index.css
@@ -153,35 +168,48 @@
                 transition: 'border 0.3s ease, box-shadow 0.3s ease'
             }
         }, [
-            React.createElement('div', { className: 'receiver-header' }, "Receiver Node"),
-            React.createElement('div', { className: 'receiver-content' }, [
+            React.createElement('div', { 
+                key: 'header',
+                className: 'receiver-header',
+                style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }
+            }, [
+                React.createElement('span', { key: 'title' }, "📥 Receiver"),
+                HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
+            ]),
+            React.createElement('div', { key: 'content', className: 'receiver-content' }, [
                 // Buffer Selector
-                React.createElement('div', { className: 'receiver-row' }, [
-                    React.createElement('span', { className: 'receiver-label' }, "Source:"),
+                React.createElement('div', { key: 'selector', className: 'receiver-row' }, [
+                    React.createElement('span', { key: 'label', className: 'receiver-label' }, "Source:"),
                     React.createElement('select', {
+                        key: 'select',
                         className: 'receiver-select',
                         value: selectedBuffer,
                         onChange: handleSelect
                     }, [
                         React.createElement('option', { key: 'none', value: '' }, "Select Buffer..."),
                         ...availableBuffers.map(b => React.createElement('option', { key: b, value: b }, b))
-                    ])
+                    ]),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.source, size: 10 })
                 ]),
 
                 // Value Display
-                React.createElement('div', { className: 'receiver-value-box' }, displayValue),
+                React.createElement('div', { key: 'value', className: 'receiver-value-box' }, displayValue),
 
                 // Output Sockets
-                React.createElement('div', { className: 'receiver-socket-row' }, [
-                    React.createElement('span', { className: 'receiver-label', style: { width: 'auto' } }, "Out"),
+                React.createElement('div', { key: 'out', className: 'receiver-socket-row' }, [
+                    React.createElement('span', { key: 'label', className: 'receiver-label', style: { width: 'auto' } }, "Out"),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.outputs.out, size: 10 }),
                     React.createElement(RefComponent, {
+                        key: 'socket',
                         init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.out.socket, nodeId: data.id, side: "output", key: "out" } }),
                         unmount: ref => emit({ type: "unmount", data: { element: ref } })
                     })
                 ]),
-                React.createElement('div', { className: 'receiver-socket-row' }, [
-                    React.createElement('span', { className: 'receiver-label', style: { width: 'auto' } }, "Change"),
+                React.createElement('div', { key: 'change', className: 'receiver-socket-row' }, [
+                    React.createElement('span', { key: 'label', className: 'receiver-label', style: { width: 'auto' } }, "Change"),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.outputs.change, size: 10 }),
                     React.createElement(RefComponent, {
+                        key: 'socket',
                         init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.change.socket, nodeId: data.id, side: "output", key: "change" } }),
                         unmount: ref => emit({ type: "unmount", data: { element: ref } })
                     })

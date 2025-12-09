@@ -11,6 +11,20 @@
     const { useState, useEffect, useCallback } = React;
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
+    const { HelpIcon } = window.T2Controls || {};
+
+    // -------------------------------------------------------------------------
+    // TOOLTIPS
+    // -------------------------------------------------------------------------
+    const tooltips = {
+        node: "Broadcasts a value to all Receiver nodes with matching name.\n\nUse Sender/Receiver pairs to pass data between distant parts of your graph without wires.\n\nType prefixes ([Trigger], [HSV], etc.) are added automatically.",
+        inputs: {
+            in: "Any value to broadcast.\n\nSupported types:\n• Boolean → [Trigger]\n• Number → [Number]\n• HSV object → [HSV]\n• Other objects → [Object]"
+        },
+        controls: {
+            name: "Name for this channel.\n\nReceivers with the same name will receive this value.\n\nExample: 'LivingRoom' → '[Trigger]LivingRoom'"
+        }
+    };
 
     // -------------------------------------------------------------------------
     // SHARED BUFFER SYSTEM
@@ -187,7 +201,14 @@
                 transition: 'border 0.3s ease, box-shadow 0.3s ease'
             }
         }, [
-            React.createElement('div', { key: 'header', className: 'sender-header' }, "Sender Node"),
+            React.createElement('div', { 
+                key: 'header', 
+                className: 'sender-header',
+                style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }
+            }, [
+                React.createElement('span', { key: 'title' }, "📡 Sender"),
+                HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
+            ]),
             React.createElement('div', { key: 'content', className: 'sender-content' }, [
                 // Input Socket
                 React.createElement('div', { key: 'socket', className: 'sender-socket-row' }, [
@@ -196,7 +217,8 @@
                         init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.inputs.in.socket, nodeId: data.id, side: "input", key: "in" } }),
                         unmount: ref => emit({ type: "unmount", data: { element: ref } })
                     }),
-                    React.createElement('span', { key: 'label', className: 'sender-label', style: { width: 'auto' } }, "Input")
+                    React.createElement('span', { key: 'label', className: 'sender-label', style: { width: 'auto' } }, "Input"),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.inputs.in, size: 10 })
                 ]),
                 
                 // Buffer Name Input
@@ -208,7 +230,8 @@
                         value: bufferName,
                         onChange: (e) => setBufferName(e.target.value),
                         placeholder: "Buffer Name"
-                    })
+                    }),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.name, size: 10 })
                 ]),
 
                 // Status
