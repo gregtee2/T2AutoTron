@@ -12,7 +12,6 @@
     "node-editor",
     "philips-hue",
     "kasa",
-    "shelly",
     "rete"
   ],
   "license": "MIT",
@@ -30,10 +29,6 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "overrides": {
-    "shelly-driver": {
-      "axios": "1.9.0",
-      "bonjour": "npm:bonjour-service@1.2.1"
-    },
     "axios-debug-log": {
       "axios": "1.9.0"
     },
@@ -150,7 +145,6 @@
     "node-hue-api": "^5.0.0-beta.16",
     "node-telegram-bot-api": "^0.66.0",
     "shellies-ng": "^1.5.1",
-    "shelly-driver": "^0.1.4",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "suncalc": "^1.9.0",
