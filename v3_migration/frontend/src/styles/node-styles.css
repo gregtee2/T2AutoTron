@@ -568,6 +568,7 @@
 
 .sunrise-sunset-node input[type="range"] {
   -webkit-appearance: none;
+  appearance: none;
   width: 100%;
   height: 4px;
   background: #444;
@@ -751,6 +752,7 @@
 
 .time-of-day-node input[type="range"] {
   -webkit-appearance: none;
+  appearance: none;
   width: 100%;
   height: 4px;
   background: #444;
