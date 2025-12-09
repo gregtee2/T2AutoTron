@@ -990,79 +990,83 @@ export function Editor() {
                     window.resetEditorView = () => {
                         console.log('[Editor] Manual reset triggered');
                         
-                        // Also reset our internal drag/selection states
-                        if (window.resetEditorDragState) {
-                            window.resetEditorDragState();
-                        }
-                        
-                        const rect = container.getBoundingClientRect();
-                        const centerX = rect.left + rect.width / 2;
-                        const centerY = rect.top + rect.height / 2;
-                        
-                        // Focus container
-                        container.tabIndex = -1;
-                        container.focus();
-                        
-                        // Release any pointer captures on container and all children
-                        try {
-                            for (let i = 0; i < 10; i++) {
-                                try { container.releasePointerCapture(i); } catch (e) {}
+                        // Use requestAnimationFrame to avoid blocking the main thread
+                        requestAnimationFrame(() => {
+                            // Also reset our internal drag/selection states
+                            if (window.resetEditorDragState) {
+                                window.resetEditorDragState();
                             }
-                            container.querySelectorAll('*').forEach(el => {
-                                for (let i = 0; i < 10; i++) {
-                                    try { el.releasePointerCapture(i); } catch (e) {}
+                            
+                            const rect = container.getBoundingClientRect();
+                            const centerX = rect.left + rect.width / 2;
+                            const centerY = rect.top + rect.height / 2;
+                            
+                            // Focus container
+                            container.tabIndex = -1;
+                            container.focus();
+                            
+                            // Release pointer captures only on container and direct drag-related elements
+                            // (Avoid querySelectorAll('*') which is very slow with many nodes)
+                            try {
+                                for (let i = 0; i < 5; i++) {
+                                    try { container.releasePointerCapture(i); } catch (e) {}
                                 }
-                            });
-                        } catch (e) {}
-                        
-                        // AGGRESSIVE FIX: Try to access area's internal drag handler state
-                        // The AreaPlugin uses a "drag" module that tracks pointer state
-                        const areaRef = areaInstance;
-                        if (areaRef) {
-                            // Try to reset any internal drag tracking by triggering pointercancel
-                            const cancelEvent = new PointerEvent('pointercancel', {
-                                bubbles: true, cancelable: true,
-                                pointerId: 1, pointerType: 'mouse'
-                            });
-                            container.dispatchEvent(cancelEvent);
+                                // Only check elements that typically capture pointers
+                                const dragElements = container.querySelectorAll('.node, .connection, [data-drag]');
+                                dragElements.forEach(el => {
+                                    try { el.releasePointerCapture(1); } catch (e) {}
+                                });
+                            } catch (e) {}
                             
-                            // Also dispatch lostpointercapture which some handlers check
-                            const lostCapture = new PointerEvent('lostpointercapture', {
-                                bubbles: true, cancelable: true,
-                                pointerId: 1, pointerType: 'mouse'
-                            });
-                            container.dispatchEvent(lostCapture);
-                        }
-                        
-                        // Small delay to let cancellation events process
-                        setTimeout(() => {
-                            // Dispatch pointer events to reset drag state
-                            const downEvent = new PointerEvent('pointerdown', {
-                                bubbles: true, cancelable: true,
-                                clientX: centerX, clientY: centerY,
-                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
-                                button: 0, buttons: 1
-                            });
-                            const upEvent = new PointerEvent('pointerup', {
-                                bubbles: true, cancelable: true,
-                                clientX: centerX, clientY: centerY,
-                                pointerId: 1, pointerType: 'mouse', isPrimary: true,
-                                button: 0, buttons: 0
-                            });
+                            // AGGRESSIVE FIX: Try to access area's internal drag handler state
+                            // The AreaPlugin uses a "drag" module that tracks pointer state
+                            const areaRef = areaInstance;
+                            if (areaRef) {
+                                // Try to reset any internal drag tracking by triggering pointercancel
+                                const cancelEvent = new PointerEvent('pointercancel', {
+                                    bubbles: true, cancelable: true,
+                                    pointerId: 1, pointerType: 'mouse'
+                                });
+                                container.dispatchEvent(cancelEvent);
+                                
+                                // Also dispatch lostpointercapture which some handlers check
+                                const lostCapture = new PointerEvent('lostpointercapture', {
+                                    bubbles: true, cancelable: true,
+                                    pointerId: 1, pointerType: 'mouse'
+                                });
+                                container.dispatchEvent(lostCapture);
+                            }
                             
-                            container.dispatchEvent(downEvent);
+                            // Small delay to let cancellation events process
                             setTimeout(() => {
-                                container.dispatchEvent(upEvent);
-                                // Dispatch wheel event for zoom
-                                const wheelEvent = new WheelEvent('wheel', {
+                                // Dispatch pointer events to reset drag state
+                                const downEvent = new PointerEvent('pointerdown', {
                                     bubbles: true, cancelable: true,
                                     clientX: centerX, clientY: centerY,
-                                    deltaY: 0
+                                    pointerId: 1, pointerType: 'mouse', isPrimary: true,
+                                    button: 0, buttons: 1
                                 });
-                                container.dispatchEvent(wheelEvent);
-                                console.log('[Editor] Reset complete');
+                                const upEvent = new PointerEvent('pointerup', {
+                                    bubbles: true, cancelable: true,
+                                    clientX: centerX, clientY: centerY,
+                                    pointerId: 1, pointerType: 'mouse', isPrimary: true,
+                                    button: 0, buttons: 0
+                                });
+                                
+                                container.dispatchEvent(downEvent);
+                                setTimeout(() => {
+                                    container.dispatchEvent(upEvent);
+                                    // Dispatch wheel event for zoom
+                                    const wheelEvent = new WheelEvent('wheel', {
+                                        bubbles: true, cancelable: true,
+                                        clientX: centerX, clientY: centerY,
+                                        deltaY: 0
+                                    });
+                                    container.dispatchEvent(wheelEvent);
+                                    console.log('[Editor] Reset complete');
+                                }, 50);
                             }, 50);
-                        }, 50);
+                        }); // End requestAnimationFrame
                     };
                 }
             }, 100);
@@ -1099,10 +1103,20 @@ export function Editor() {
             return result;
         });
 
+        // Listen for graphLoadComplete event to do a final reset (outside promise for cleanup access)
+        const onGraphLoadComplete = () => {
+            console.log('[Editor] graphLoadComplete event received - triggering view reset');
+            if (window.resetEditorView) {
+                window.resetEditorView();
+            }
+        };
+        window.addEventListener('graphLoadComplete', onGraphLoadComplete);
+
         return () => {
             if (resizeObserver) {
                 resizeObserver.disconnect();
             }
+            window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
             editorPromise.then((result) => result.destroy());
         };
     }, [createEditor]);
@@ -1881,6 +1895,17 @@ export function Editor() {
             
             programmaticMoveRef.current = true;
             loadingRef.current = true;  // Prevent cascading updates during load
+            
+            // PERF FIX: Zoom out before adding nodes to prevent UI freeze
+            // This prevents dense node clusters from rendering in the visible area
+            // We'll zoom to fit all nodes after they're added
+            if (areaInstance?.area) {
+                const transform = areaInstance.area.transform;
+                transform.k = 0.1;  // Zoom out to 10%
+                transform.x = 0;
+                transform.y = 0;
+            }
+            
             try {
                 for (const nodeData of graphData.nodes) {
                     let node;
@@ -1939,6 +1964,18 @@ export function Editor() {
             } finally {
                 programmaticMoveRef.current = false;
                 areaInstance?.updateBackdropCaptures?.();
+            }
+            
+            // PERF FIX: After all nodes are added, zoom to fit them all in view
+            // This completes the zoom-out-before-load optimization
+            const allNodes = editorInstance.getNodes();
+            if (allNodes.length > 0 && areaInstance) {
+                console.log('[handleLoad] Zooming to fit', allNodes.length, 'nodes...');
+                try {
+                    await AreaExtensions.zoomAt(areaInstance, allNodes, { scale: 0.9 });
+                } catch (zoomErr) {
+                    console.warn('[handleLoad] zoomAt failed:', zoomErr);
+                }
             }
             
             // CRITICAL: Process the entire graph immediately after loading
@@ -2150,6 +2187,16 @@ export function Editor() {
 
             programmaticMoveRef.current = true;
             loadingRef.current = true;  // Prevent cascading updates during import
+            
+            // PERF FIX: Zoom out before adding nodes to prevent UI freeze
+            // This prevents dense node clusters from rendering in the visible area
+            if (areaInstance?.area) {
+                const transform = areaInstance.area.transform;
+                transform.k = 0.1;  // Zoom out to 10%
+                transform.x = 0;
+                transform.y = 0;
+            }
+            
             try {
                 for (const nodeData of graphData.nodes) {
                     let node;
@@ -2220,6 +2267,17 @@ export function Editor() {
                 areaInstance?.updateBackdropCaptures?.();
             }
             
+            // PERF FIX: After all nodes are added, zoom to fit them all in view
+            // This completes the zoom-out-before-load optimization
+            const allNodes = editorInstance.getNodes();
+            if (allNodes.length > 0 && areaInstance) {
+                try {
+                    await AreaExtensions.zoomAt(areaInstance, allNodes, { scale: 0.9 });
+                } catch (zoomErr) {
+                    // Fallback if zoomAt fails - just restore console silently
+                }
+            }
+            
             // Re-enable cascading updates after import is complete
             loadingRef.current = false;
             
@@ -2228,6 +2286,13 @@ export function Editor() {
             setTimeout(() => {
                 window.graphLoading = false;
                 console.log('[handleImport] Graph loading complete - API calls now enabled');
+                // Emit event so nodes can refresh their data now that loading is complete
+                window.dispatchEvent(new CustomEvent('graphLoadComplete'));
+                
+                // Final safety reset of editor view after all loading is complete
+                if (window.resetEditorView) {
+                    setTimeout(() => window.resetEditorView(), 100);
+                }
             }, 2000);  // 2 second delay to ensure all queued callbacks have fired
             
             // Restore console

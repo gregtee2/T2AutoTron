@@ -293,6 +293,24 @@ class HomeAssistantManager {
     this.stateCache.clear();
     this.deviceCache = null;
   }
+
+  // Update config from process.env (called after settings are saved)
+  updateConfig() {
+    const oldHost = this.config.host;
+    const oldToken = this.config.token;
+    
+    this.config.host = process.env.HA_HOST || 'http://localhost:8123';
+    this.config.token = process.env.HA_TOKEN;
+    
+    // Clear caches when config changes
+    if (oldHost !== this.config.host || oldToken !== this.config.token) {
+      this.stateCache.clear();
+      this.deviceCache = null;
+      logger.log('HA config updated from environment', 'info', false, 'ha:config:update');
+      return true; // Config changed
+    }
+    return false; // No change
+  }
 }
 
 // Create singleton instance
@@ -309,6 +327,7 @@ module.exports = {
   controlDevice: (deviceId, state) => instance.controlDevice(deviceId, state),
   getDevices: () => instance.getDevices(),
   shutdown: () => instance.shutdown(),
+  updateConfig: () => instance.updateConfig(),
   // Expose connection status for status requests
   getConnectionStatus: () => ({
     isConnected: instance.isConnected,

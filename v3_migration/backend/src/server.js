@@ -385,6 +385,15 @@ app.post('/api/settings', express.json(), async (req, res) => {
       }
     }
     
+    // Notify managers to reload their config from updated process.env
+    const homeAssistantManager = require('./devices/managers/homeAssistantManager');
+    if (homeAssistantManager.updateConfig) {
+      const configChanged = homeAssistantManager.updateConfig();
+      if (configChanged) {
+        logger.log('Home Assistant manager config refreshed', 'info', false, 'settings:ha-refresh');
+      }
+    }
+    
     res.json({ success: true, message: 'Settings saved successfully' });
     logger.log('Settings updated via API', 'info', false, 'settings:write');
   } catch (error) {
