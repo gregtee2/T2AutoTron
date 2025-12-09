@@ -353,7 +353,19 @@ app.post('/api/settings', express.json(), async (req, res) => {
     }
     
     const envPath = path.join(__dirname, '../.env');
-    let envContent = await fs.readFile(envPath, 'utf-8');
+    
+    // Create .env if it doesn't exist (first-time setup via UI)
+    let envContent = '';
+    try {
+      envContent = await fs.readFile(envPath, 'utf-8');
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        logger.log('Creating new .env file for first-time setup', 'info', false, 'settings:init');
+        envContent = '# T2AutoTron Environment Configuration\n# Created automatically via Settings UI\n\n';
+      } else {
+        throw err;
+      }
+    }
     
     // Process each setting update
     for (const [key, value] of Object.entries(newSettings)) {

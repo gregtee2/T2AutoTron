@@ -26,29 +26,7 @@ cd ../frontend
 npm install
 ```
 
-### 2. Configure Environment
-
-Create a `.env` file in `v3_migration/backend/`:
-
-```env
-# Home Assistant (required for HA integration)
-HA_HOST=http://homeassistant.local:8123
-HA_TOKEN=your_long_lived_access_token
-
-# Optional integrations
-HUE_BRIDGE_IP=192.168.1.x
-HUE_USERNAME=your_hue_api_key
-OPENWEATHERMAP_API_KEY=your_api_key
-TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_CHAT_ID=your_chat_id
-```
-
-**Getting a Home Assistant Token:**
-1. Go to your Home Assistant Profile (click your username)
-2. Scroll down to "Long-Lived Access Tokens"
-3. Create a new token and copy it
-
-### 3. Start the Application
+### 2. Start the Application
 
 **Terminal 1 - Start Backend:**
 ```bash
@@ -56,13 +34,33 @@ cd v3_migration/backend
 npm start
 ```
 
-**Terminal 2 - Start Frontend (Development):**
+**Terminal 2 - Start Frontend:**
 ```bash
 cd v3_migration/frontend
-npm run dev -- --force
+npm run dev
 ```
 
 Open your browser to: **http://localhost:5173**
+
+### 3. Configure Your Integrations (via UI)
+
+No need to edit config files! Use the built-in Settings panel:
+
+1. Click **🔧 Settings & API Keys** in the dock (top-left)
+2. Enter your credentials for each integration you want to use:
+   - **Home Assistant**: Your HA URL and Long-Lived Access Token
+   - **Philips Hue**: Bridge IP and username
+   - **OpenWeatherMap**: API key for weather nodes
+   - **Telegram**: Bot token and chat ID for notifications
+3. Click **Test Connection** to verify each one works
+4. Click **Save Settings** - done!
+
+> **Tip:** You only need to configure the integrations you'll actually use. Start with just Home Assistant!
+
+**Getting a Home Assistant Token:**
+1. Go to your Home Assistant Profile (click your username)
+2. Scroll down to "Long-Lived Access Tokens"
+3. Create a new token and copy it
 
 ## 🖥️ The Interface
 
