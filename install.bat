@@ -2,6 +2,11 @@
 title T2AutoTron 2.1 - Installer
 color 0A
 
+REM Keep window open no matter what
+cmd /k "call :Main & pause & exit /b"
+goto :eof
+
+:Main
 echo.
 echo  ===============================================
 echo     T2AutoTron 2.1 - One-Click Installer
