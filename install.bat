@@ -3,10 +3,18 @@ setlocal enabledelayedexpansion
 title T2AutoTron 2.1 - Installer
 color 0A
 
+REM Prevent immediate close on any error
+if "%1"=="" (
+    echo Starting installer... Press any key to continue or close window to cancel.
+    pause >nul
+)
+
 echo.
 echo  ===============================================
 echo     T2AutoTron 2.1 - One-Click Installer
 echo  ===============================================
+echo.
+echo  Script location: %~dp0
 echo.
 
 REM Get the directory where this script is located
@@ -17,6 +25,7 @@ REM ===================================================
 REM Step 1: Check/Install Node.js
 REM ===================================================
 echo [1/5] Checking for Node.js...
+echo    DEBUG: About to run 'where node'...
 where node >nul 2>&1
 if errorlevel 1 (
     echo    Node.js not found. Installing automatically...
