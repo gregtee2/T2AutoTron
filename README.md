@@ -8,26 +8,39 @@ A visual node-based automation editor for smart home control, supporting Home As
 
 **Requirements:** [Node.js 18+](https://nodejs.org/)
 
+### Option 1: One-Click Installer (Recommended)
+
 ```bash
-# 1. Clone and install
 git clone https://github.com/gregtee2/T2AutoTron.git
-cd T2AutoTron/v3_migration
-
-# 2. Install dependencies
-cd backend && npm install
-cd ../frontend && npm install
-
-# 3. Start both servers (two terminals)
-# Terminal 1 - Backend:
-cd v3_migration/backend && npm start
-
-# Terminal 2 - Frontend:
-cd v3_migration/frontend && npm run dev
+cd T2AutoTron
 ```
 
-**4. Open** http://localhost:5173
+**Windows:** Double-click `install.bat`, then `start.bat`
 
-**5. Configure integrations:** Click **🔧 Settings & API Keys** in the dock to add your Home Assistant token, Hue bridge, etc. No manual file editing needed!
+**Mac/Linux:**
+```bash
+chmod +x install.sh start.sh
+./install.sh
+./start.sh
+```
+
+### Option 2: Manual Install
+
+```bash
+# Install dependencies
+cd v3_migration/backend && npm install
+cd ../frontend && npm install
+
+# Start servers (two terminals)
+cd v3_migration/backend && npm start    # Terminal 1
+cd v3_migration/frontend && npm run dev  # Terminal 2
+```
+
+### Then...
+
+1. **Open** http://localhost:5173
+2. **Configure:** Click **🔧 Settings & API Keys** to add your Home Assistant token, Hue bridge, etc.
+3. **Build automations!**
 
 > 📖 **First time?** See the [Getting Started Guide](v3_migration/GETTING_STARTED.md) for a step-by-step tutorial.
 
