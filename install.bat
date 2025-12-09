@@ -1,12 +1,16 @@
 @echo off
+REM === KEEP WINDOW OPEN WRAPPER ===
+REM If we're not already in a wrapper, restart ourselves in one
+if not defined INSTALL_WRAPPER (
+    set "INSTALL_WRAPPER=1"
+    cmd /k "%~f0" %*
+    exit /b
+)
+
+setlocal EnableDelayedExpansion
 title T2AutoTron 2.1 - Installer
 color 0A
 
-REM Keep window open no matter what
-cmd /k "call :Main & pause & exit /b"
-goto :eof
-
-:Main
 echo.
 echo  ===============================================
 echo     T2AutoTron 2.1 - One-Click Installer
@@ -87,9 +91,9 @@ if not exist "%BACKEND%\package.json" (
 
 cd /d "%BACKEND%"
 if not exist "node_modules" (
-    echo    Running npm install (this may take 1-2 minutes)...
-    call npm install --loglevel=error
-    if errorlevel 1 (
+    echo    Running npm install - this may take 1-2 minutes...
+    cmd /c npm install
+    if not exist "node_modules" (
         color 0C
         echo  ERROR: Backend npm install failed!
         echo  Check your internet connection and try again.
@@ -100,7 +104,7 @@ if not exist "node_modules" (
     echo    Backend dependencies installed!
 ) else (
     echo    Dependencies already installed, verifying...
-    call npm install --loglevel=error >nul 2>&1
+    cmd /c npm install --silent
     echo    Backend OK!
 )
 
@@ -122,9 +126,9 @@ if not exist "%FRONTEND%\package.json" (
 
 cd /d "%FRONTEND%"
 if not exist "node_modules" (
-    echo    Running npm install (this may take 1-2 minutes)...
-    call npm install --loglevel=error
-    if errorlevel 1 (
+    echo    Running npm install - this may take 1-2 minutes...
+    cmd /c npm install
+    if not exist "node_modules" (
         color 0C
         echo  ERROR: Frontend npm install failed!
         echo.
@@ -134,7 +138,7 @@ if not exist "node_modules" (
     echo    Frontend dependencies installed!
 ) else (
     echo    Dependencies already installed, verifying...
-    call npm install --loglevel=error >nul 2>&1
+    cmd /c npm install --silent
     echo    Frontend OK!
 )
 
