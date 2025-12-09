@@ -1253,12 +1253,19 @@
 
 .hsv-mod-select {
   flex: 1;
-  background: rgba(0, 0, 0, 0.3);
+  background: #1a1a2e;
   border: 1px solid var(--node-hsv-modifier-color);
   color: var(--node-hsv-modifier-text-secondary);
-  padding: 2px;
+  padding: 4px 6px;
   border-radius: var(--control-radius);
   font-size: 11px;
+  cursor: pointer;
+}
+
+.hsv-mod-select option {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  padding: 4px;
 }
 
 /* ============================================================================
@@ -2110,6 +2117,145 @@
 
 .backdrop-node .backdrop-resize-handle:hover {
   opacity: 1;
+}
+
+/* Color Picker Dropdown */
+.backdrop-node .backdrop-color-picker {
+  position: absolute;
+  top: 40px;
+  right: 8px;
+  z-index: 9999;
+  background: rgba(30, 35, 45, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 200px;
+  pointer-events: auto !important;
+}
+
+.backdrop-node .backdrop-color-picker .color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.backdrop-node .backdrop-color-picker .color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+  pointer-events: auto;
+}
+
+.backdrop-node .backdrop-color-picker .color-swatch:hover {
+  transform: scale(1.15);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.backdrop-node .backdrop-color-picker .color-swatch.selected {
+  border-color: #fff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.5),
+              inset 0 0 0 1px rgba(0, 0, 0, 0.3);
+  transform: scale(1.1);
+}
+
+.backdrop-node .backdrop-color-picker .custom-color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.backdrop-node .backdrop-color-picker .custom-color-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.backdrop-node .backdrop-color-picker .custom-color-input {
+  width: 40px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+}
+
+.backdrop-node .backdrop-color-picker .custom-color-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.backdrop-node .backdrop-color-picker .custom-color-input::-webkit-color-swatch {
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Color picker header */
+.backdrop-node .backdrop-color-picker .color-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.backdrop-node .backdrop-color-picker .color-picker-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.15s ease;
+  pointer-events: auto;
+}
+
+.backdrop-node .backdrop-color-picker .color-picker-close:hover {
+  background: rgba(255, 100, 100, 0.3);
+  color: #fff;
+}
+
+/* Done button for custom color */
+.backdrop-node .backdrop-color-picker .color-picker-done {
+  background: rgba(100, 200, 100, 0.3);
+  border: 1px solid rgba(100, 200, 100, 0.5);
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  pointer-events: auto;
+  margin-left: auto;
+}
+
+.backdrop-node .backdrop-color-picker .color-picker-done:hover {
+  background: rgba(100, 200, 100, 0.5);
+  box-shadow: 0 0 8px rgba(100, 200, 100, 0.4);
 }
 
 /* ============================================================================

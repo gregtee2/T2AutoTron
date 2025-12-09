@@ -399,5 +399,5 @@
         GATE_COLORS
     };
 
-    console.log("[LogicGateBasePlugin] Registered window.T2LogicGate");
+    // console.log("[LogicGateBasePlugin] Registered window.T2LogicGate");
 })();

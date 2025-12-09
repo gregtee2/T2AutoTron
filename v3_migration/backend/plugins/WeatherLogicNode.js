@@ -502,5 +502,5 @@
         component: WeatherLogicNodeComponent
     });
 
-    console.log("[WeatherLogicNode] Registered");
+    // console.log("[WeatherLogicNode] Registered");
 })();

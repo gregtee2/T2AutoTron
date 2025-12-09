@@ -615,7 +615,7 @@
             component: DelayNodeComponent,
             factory: (changeCallback) => new DelayNode(changeCallback)
         });
-        console.log("[DelayNode] Registered successfully");
+        // console.log("[DelayNode] Registered successfully");
     } else {
         console.error("[DelayNode] nodeRegistry not found!");
     }

@@ -32,20 +32,29 @@
         data() {
             const bufferName = this.properties.selectedBuffer;
             let value = null;
+            let source = null;
             
             if (window.AutoTronBuffer && bufferName) {
                 value = window.AutoTronBuffer.get(bufferName);
+                source = window.AutoTronBuffer.getSource(bufferName);
             }
 
             const hasChanged = JSON.stringify(value) !== JSON.stringify(this.properties.lastValue);
             if (hasChanged) {
                 this.properties.lastValue = value;
+                // Store the source for downstream nodes to access
+                this.properties.lastTriggerSource = source;
             }
 
             return {
                 out: value,
                 change: hasChanged
             };
+        }
+        
+        // Allow downstream nodes to query the trigger source
+        getTriggerSource() {
+            return this.properties.lastTriggerSource || this.properties.selectedBuffer?.replace(/^\[.+\]/, '') || null;
         }
 
         restore(state) {
@@ -189,5 +198,5 @@
         component: ReceiverNodeComponent
     });
 
-    console.log("[ReceiverNode] Registered");
+    // console.log("[ReceiverNode] Registered");
 })();

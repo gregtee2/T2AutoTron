@@ -156,5 +156,5 @@
     // Expose globally for other plugins
     window.ColorUtils = ColorUtils;
     
-    console.log("[ColorUtilsPlugin] Shared color utilities loaded successfully");
+    // console.log("[ColorUtilsPlugin] Shared color utilities loaded successfully");
 })();

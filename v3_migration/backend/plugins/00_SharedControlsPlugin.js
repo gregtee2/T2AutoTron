@@ -826,5 +826,5 @@
         labelStyle
     };
 
-    console.log("[SharedControlsPlugin] Registered window.T2Controls with", Object.keys(window.T2Controls).length, "exports");
+    // console.log("[SharedControlsPlugin] Registered window.T2Controls with", Object.keys(window.T2Controls).length, "exports");
 })();

@@ -459,7 +459,7 @@
             component: DebugNodeComponent,
             factory: (cb) => new DebugNode(cb)
         });
-        console.log("[DebugNode] Registered successfully");
+        // console.log("[DebugNode] Registered successfully");
     } else {
         console.error("[DebugNode] window.nodeRegistry not found!");
     }

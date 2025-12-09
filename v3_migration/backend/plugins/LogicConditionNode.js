@@ -284,5 +284,5 @@
         component: LogicConditionNodeComponent
     });
 
-    console.log("[LogicConditionNode] Registered");
+    // console.log("[LogicConditionNode] Registered");
 })();

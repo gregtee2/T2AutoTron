@@ -52,6 +52,19 @@
             this.startAutoRefresh();
         }
 
+        // Get effective trigger source for Event Log attribution
+        getEffectiveTriggerSource() {
+            // Check if there's a recent buffer trigger source
+            if (window.AutoTronBuffer && typeof window.AutoTronBuffer.getLastTriggerSource === 'function') {
+                const bufferSource = window.AutoTronBuffer.getLastTriggerSource();
+                if (bufferSource) {
+                    return bufferSource;
+                }
+            }
+            // Fall back to node label
+            return this.label || 'Kasa Plug';
+        }
+
         startAutoRefresh() {
             if (this.intervalId) clearInterval(this.intervalId);
             this.intervalId = setInterval(() => this.fetchPlugs(), this.properties.autoRefreshInterval);
@@ -112,8 +125,18 @@
                 this._onDeviceStateUpdate = (data) => this.handleDeviceStateUpdate(data);
                 this._onConnect = () => this.fetchPlugs();
                 
+                // Listen for graph load complete event to refresh devices
+                this._onGraphLoadComplete = () => {
+                    this.fetchPlugs();
+                    // Also fetch state for each selected plug
+                    this.properties.selectedPlugIds.filter(Boolean).forEach(id => {
+                        this.fetchPlugState(id);
+                    });
+                };
+                
                 window.socket.on("device-state-update", this._onDeviceStateUpdate);
                 window.socket.on("connect", this._onConnect);
+                window.addEventListener("graphLoadComplete", this._onGraphLoadComplete);
                 
                 if (window.socket.connected) this.fetchPlugs();
             }
@@ -209,7 +232,7 @@
             if (ids.length === 0) return;
             
             // Register pending commands so the Event Log knows this change came from the app
-            const nodeTitle = this.label || 'Kasa Plug';
+            const nodeTitle = this.getEffectiveTriggerSource();
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
                 ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off'));
             }
@@ -233,7 +256,7 @@
             if (ids.length === 0) return;
             
             // Register pending commands so the Event Log knows this change came from the app
-            const nodeTitle = this.label || 'Kasa Plug';
+            const nodeTitle = this.getEffectiveTriggerSource();
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
                 ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'toggle'));
             }
@@ -304,6 +327,11 @@
             if (window.socket) {
                 if (this._onDeviceStateUpdate) window.socket.off("device-state-update", this._onDeviceStateUpdate);
                 if (this._onConnect) window.socket.off("connect", this._onConnect);
+            }
+            
+            // Remove window event listener
+            if (this._onGraphLoadComplete) {
+                window.removeEventListener("graphLoadComplete", this._onGraphLoadComplete);
             }
             
             super.destroy?.();
@@ -393,5 +421,5 @@
         component: KasaPlugNodeComponent
     });
 
-    console.log("[KasaPlugNode] Registered");
+    // console.log("[KasaPlugNode] Registered");
 })();

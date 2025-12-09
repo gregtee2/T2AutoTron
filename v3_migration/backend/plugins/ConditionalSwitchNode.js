@@ -252,5 +252,5 @@
         factory: (cb) => new ConditionalSwitchNode(cb)
     });
 
-    console.log("[ConditionalSwitchNode] Registered");
+    // console.log("[ConditionalSwitchNode] Registered");
 })();

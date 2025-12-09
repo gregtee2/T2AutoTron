@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import './KeyboardShortcutsModal.css';
 
 const shortcuts = [
@@ -29,6 +30,20 @@ const shortcuts = [
 ];
 
 export function KeyboardShortcutsModal({ isOpen, onClose }) {
+    // Handle Escape key to close modal
+    useEffect(() => {
+        if (!isOpen) return;
+        
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
+    
     if (!isOpen) return null;
 
     const handleOverlayClick = (e) => {
@@ -37,12 +52,13 @@ export function KeyboardShortcutsModal({ isOpen, onClose }) {
         }
     };
 
-    return (
+    // Use portal to render at document body level (avoids clipping from parent containers)
+    return ReactDOM.createPortal(
         <div className="shortcuts-modal-overlay" onClick={handleOverlayClick}>
             <div className="shortcuts-modal">
                 <div className="shortcuts-modal-header">
                     <h2>⌨️ Keyboard Shortcuts</h2>
-                    <button className="shortcuts-close-btn" onClick={onClose}>×</button>
+                    <button className="shortcuts-close-btn" onClick={onClose}>✕ Close</button>
                 </div>
                 <div className="shortcuts-modal-body">
                     {shortcuts.map((section, sIdx) => (
@@ -70,6 +86,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }) {
                     <p>Press <kbd>?</kbd> anytime to show this dialog</p>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

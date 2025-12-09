@@ -97,6 +97,24 @@
         getDeviceApiInfo(id) {
             return getDeviceApiInfo(id);
         }
+        
+        // Get effective trigger source for Event Log attribution
+        // Checks: 1) Custom node title, 2) Recent buffer trigger source, 3) Default label
+        getEffectiveTriggerSource() {
+            // If user set a custom title, use it (they're explicitly naming this node)
+            if (this.properties.customTitle && this.properties.customTitle.trim()) {
+                return this.properties.customTitle;
+            }
+            // Check if there's a recent buffer trigger source
+            if (window.AutoTronBuffer && typeof window.AutoTronBuffer.getLastTriggerSource === 'function') {
+                const bufferSource = window.AutoTronBuffer.getLastTriggerSource();
+                if (bufferSource) {
+                    return bufferSource;
+                }
+            }
+            // Fall back to node label
+            return this.label || 'HA Device';
+        }
         normalizeSelectedDeviceNames() {
             const uniqueDevices = this.getAllDevicesWithUniqueNames();
             const displayNameMap = new Map(uniqueDevices.map(item => [item.device.id, item.displayName]));
@@ -258,9 +276,19 @@
                     this.fetchDevices();
                 };
                 
+                // Listen for graph load complete event to refresh devices
+                this._onGraphLoadComplete = () => {
+                    this.fetchDevices();
+                    // Also fetch state for each selected device
+                    this.properties.selectedDeviceIds.filter(Boolean).forEach(id => {
+                        this.fetchDeviceState(id);
+                    });
+                };
+                
                 window.socket.on("device-state-update", this._onDeviceStateUpdate);
                 window.socket.on("ha-connection-status", this._onHaConnectionStatus);
                 window.socket.on("connect", this._onConnect);
+                window.addEventListener("graphLoadComplete", this._onGraphLoadComplete);
                 
                 // Request current HA status
                 window.socket.emit("request-ha-status");
@@ -454,7 +482,7 @@
             this.updateStatus("Applying control...");
             
             // Register pending commands so the Event Log knows this change came from the app
-            const nodeTitle = this.properties.customTitle || this.label || 'HA Device';
+            const nodeTitle = this.getEffectiveTriggerSource();
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
                 ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'color'));
             }
@@ -554,7 +582,7 @@
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
             
             // Register pending commands so the Event Log knows this change came from the app
-            const nodeTitle = this.properties.customTitle || this.label || 'HA Device';
+            const nodeTitle = this.getEffectiveTriggerSource();
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
                 ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off'));
             }
@@ -595,7 +623,7 @@
             if (ids.length === 0) { this.updateStatus("No devices selected"); return; }
             
             // Register pending commands so the Event Log knows this change came from the app
-            const nodeTitle = this.properties.customTitle || this.label || 'HA Device';
+            const nodeTitle = this.getEffectiveTriggerSource();
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
                 ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'toggle'));
             }
@@ -696,6 +724,11 @@
                 if (this._onDeviceStateUpdate) window.socket.off("device-state-update", this._onDeviceStateUpdate);
                 if (this._onHaConnectionStatus) window.socket.off("ha-connection-status", this._onHaConnectionStatus);
                 if (this._onConnect) window.socket.off("connect", this._onConnect);
+            }
+            
+            // Remove window event listener
+            if (this._onGraphLoadComplete) {
+                window.removeEventListener("graphLoadComplete", this._onGraphLoadComplete);
             }
             
             super.destroy?.();

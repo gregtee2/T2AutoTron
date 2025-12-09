@@ -62,5 +62,5 @@
         component: OrNodeComponent
     });
 
-    console.log("[OrNode] Registered (DRY refactored)");
+    // console.log("[OrNode] Registered (DRY refactored)");
 })();

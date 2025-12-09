@@ -1,7 +1,12 @@
 const fetch = require('node-fetch');
+require('dotenv').config();
 
 async function testHA() {
-    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjNmJlMDNhNjhlZjI0YzA0OWExNWY2ZDU3NjZjNDNlYiIsImlhdCI6MTc0NzQ5MTUwNSwiZXhwIjoyMDYyODUxNTA1fQ.CRjLiaTHjLjW-dmtF73XqtLUcABcCaDGfGwsenP-jEI';
+    const token = process.env.HA_TOKEN;
+    if (!token) {
+        console.error('Error: HA_TOKEN not set in .env file');
+        process.exit(1);
+    }
     const apiUrl = 'http://localhost:3000/api/lights/ha';
     const deviceId = 'ha_light.downstairs_fire_extinguisher'; 
 

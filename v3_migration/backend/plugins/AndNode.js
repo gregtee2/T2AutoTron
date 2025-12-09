@@ -79,5 +79,5 @@
         component: AndNodeComponent
     });
 
-    console.log("[AndNode] Registered (DRY refactored)");
+    // console.log("[AndNode] Registered (DRY refactored)");
 })();

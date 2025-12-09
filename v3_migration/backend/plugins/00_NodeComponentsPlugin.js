@@ -380,5 +380,5 @@
         THEME
     };
 
-    console.log("[NodeComponentsPlugin] Registered window.T2Components with", Object.keys(window.T2Components).length, "exports");
+    // console.log("[NodeComponentsPlugin] Registered window.T2Components with", Object.keys(window.T2Components).length, "exports");
 })();

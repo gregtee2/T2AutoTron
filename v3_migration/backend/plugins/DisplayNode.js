@@ -222,5 +222,5 @@
         component: DisplayNodeComponent
     });
 
-    console.log("[DisplayNode] Registered (DRY refactored)");
+    // console.log("[DisplayNode] Registered (DRY refactored)");
 })();

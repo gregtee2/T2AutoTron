@@ -79,13 +79,10 @@
                 ["All", "Light", "Switch", "Sensor", "Binary Sensor", "Media Player", "Fan", "Cover", "Weather"],
                 "All",
                 (v) => { 
-                    console.log(`[HADeviceStateOutputNode] Filter type onChange called with: ${v}`);
                     this.properties.filterType = v;
-                    console.log(`[HADeviceStateOutputNode] properties.filterType is now: ${this.properties.filterType}`);
                     this.log("filterChanged", `Filter changed to ${v}`, false);
                     // Check if current selection is still valid
                     const newOptions = this.getDeviceOptions();
-                    console.log(`[HADeviceStateOutputNode] Got ${newOptions.length} options after filter change`);
                     if (this.properties.selectedDeviceName && !newOptions.includes(this.properties.selectedDeviceName)) {
                         this.properties.selectedDeviceId = null;
                         this.properties.selectedDeviceName = null;
@@ -102,13 +99,10 @@
                 ["All Letters", "ABC", "DEF", "GHI", "JKL", "MNO", "PQR", "STU", "VWX", "YZ"],
                 "All Letters",
                 (v) => { 
-                    console.log(`[HADeviceStateOutputNode] Letter filter onChange called with: ${v}`);
                     this.properties.letterFilter = v;
-                    console.log(`[HADeviceStateOutputNode] properties.letterFilter is now: ${this.properties.letterFilter}`);
                     this.log("letterFilterChanged", `Letter filter changed to ${v}`, false);
                     // Check if current selection is still valid
                     const newOptions = this.getDeviceOptions();
-                    console.log(`[HADeviceStateOutputNode] Got ${newOptions.length} options after letter filter change`);
                     if (this.properties.selectedDeviceName && !newOptions.includes(this.properties.selectedDeviceName)) {
                         this.properties.selectedDeviceId = null;
                         this.properties.selectedDeviceName = null;
@@ -145,8 +139,19 @@
                     this.log("socket", "Connected", false);
                     this.fetchDevices();
                 };
+                
+                // Listen for graph load complete event to refresh devices
+                this._onGraphLoadComplete = () => {
+                    this.fetchDevices();
+                    // Also fetch state for selected device
+                    if (this.properties.selectedDeviceId) {
+                        this.fetchDeviceState(this.properties.selectedDeviceId);
+                    }
+                };
+                
                 window.socket.on("device-state-update", this._onDeviceStateUpdate);
                 window.socket.on("connect", this._onConnect);
+                window.addEventListener("graphLoadComplete", this._onGraphLoadComplete);
             }
         }
 
@@ -227,7 +232,7 @@
                 false // exclude auxiliary entities
             );
 
-            console.log(`[HADeviceStateOutputNode] getDeviceOptions: filterType=${this.properties.filterType}, letterFilter=${this.properties.letterFilter}, deviceCount=${this.devices.length}, filtered=${filtered.length}`);
+            this.log("getDeviceOptions", `filterType=${this.properties.filterType}, letterFilter=${this.properties.letterFilter}, deviceCount=${this.devices.length}, filtered=${filtered.length}`, false);
 
             return this.deviceManagerReady && filtered.length
                 ? filtered.map(d => d.name).sort((a, b) => a.localeCompare(b))
@@ -249,10 +254,9 @@
                     deviceControl.value = "Select Device";
                 }
                 
-                console.log(`[HADeviceStateOutputNode] updateDeviceDropdown: Setting ${options.length} options, updateDropdown exists: ${!!deviceControl.updateDropdown}`);
+                this.log("updateDeviceDropdown", `Setting ${options.length} options`, false);
                 if (deviceControl.updateDropdown) {
                     deviceControl.updateDropdown();
-                    console.log(`[HADeviceStateOutputNode] updateDeviceDropdown: Called updateDropdown()`);
                 }
             }
         }
@@ -515,6 +519,11 @@
                 if (this._onDeviceStateUpdate) window.socket.off("device-state-update", this._onDeviceStateUpdate);
                 if (this._onConnect) window.socket.off("connect", this._onConnect);
             }
+            
+            // Remove window event listener
+            if (this._onGraphLoadComplete) {
+                window.removeEventListener("graphLoadComplete", this._onGraphLoadComplete);
+            }
         }
     }
 
@@ -615,5 +624,5 @@
         component: HADeviceStateOutputNodeComponent
     });
 
-    console.log("[HADeviceStateOutputNode] Registered");
+    // console.log("[HADeviceStateOutputNode] Registered");
 })();

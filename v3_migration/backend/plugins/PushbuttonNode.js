@@ -250,5 +250,5 @@
         component: PushbuttonNodeComponent
     });
 
-    console.log("[PushbuttonNode] Registered (DRY refactored)");
+    // console.log("[PushbuttonNode] Registered (DRY refactored)");
 })();

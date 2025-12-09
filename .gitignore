@@ -27,3 +27,7 @@ Thumbs.db
 # Temporary files
 temp_*
 *.tmp
+
+# Test files with potential secrets
+test_ha_payload.js
+debug_ha_device.js

@@ -33,7 +33,7 @@ export function ForecastPanel() {
         socket.on('disconnect', onDisconnect);
         socket.on('ha-connection-status', onHaStatus);
         socket.on('forecast-update', (data) => {
-            console.log('Forecast received:', data);
+            // Debug: console.log('Forecast received:', data);
             setForecastData(data);
         });
         

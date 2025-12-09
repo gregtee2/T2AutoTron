@@ -50,50 +50,58 @@
         }
 
         data(inputs) {
-            let hsvIn = inputs.hsv_in?.[0];
+            const hsvIn = inputs.hsv_in?.[0];
             const enableIn = inputs.enable?.[0];
 
-            // 1. Check HSV Buffer Override
-            if (this.properties.selectedHsvBuffer && window.AutoTronBuffer) {
-                const bufferVal = window.AutoTronBuffer.get(this.properties.selectedHsvBuffer);
-                if (bufferVal && typeof bufferVal === 'object' && 'hue' in bufferVal) {
-                    hsvIn = bufferVal;
-                }
-            }
-
-            // Update internal state for UI visualization
+            // Update internal state for UI visualization (always track socket input)
             if (hsvIn) {
                 this.properties.lastInputHSV = hsvIn;
             }
 
-            // 2. Check Enable Buffer Override
-            let isEnabled = (enableIn !== undefined) ? !!enableIn : this.properties.enabled;
+            // 1. Determine if HSV Buffer override is enabled
+            // Priority: Enable Buffer > Socket input > Checkbox
+            let hsvBufferEnabled = this.properties.enabled;
+            if (enableIn !== undefined) {
+                hsvBufferEnabled = !!enableIn;
+            }
             if (this.properties.selectedBuffer && window.AutoTronBuffer) {
                 const bufferVal = window.AutoTronBuffer.get(this.properties.selectedBuffer);
                 if (bufferVal !== undefined) {
-                    isEnabled = !!bufferVal;
+                    hsvBufferEnabled = !!bufferVal;
                 }
             }
 
-            if (!isEnabled || !hsvIn) {
-                return { hsv_out: hsvIn || { hue: 0, saturation: 0, brightness: 0 } };
+            // 2. If HSV Buffer override is enabled AND HSV Buffer is selected, OUTPUT HSV BUFFER DIRECTLY (bypass sliders)
+            if (hsvBufferEnabled && this.properties.selectedHsvBuffer && window.AutoTronBuffer) {
+                const bufferVal = window.AutoTronBuffer.get(this.properties.selectedHsvBuffer);
+                if (bufferVal && typeof bufferVal === 'object' && 'hue' in bufferVal) {
+                    // Store for UI to show in output swatch
+                    this.properties.lastOutputHSV = bufferVal;
+                    return { hsv_out: bufferVal };
+                }
             }
 
-            // Logic from v2 modifyHSV
+            // 3. No input? Return default
+            if (!hsvIn) {
+                const passthrough = { hue: 0, saturation: 0, brightness: 0 };
+                this.properties.lastOutputHSV = passthrough;
+                return { hsv_out: passthrough };
+            }
+
+            // 4. Apply slider modifications (ALWAYS when we have input and no HSV buffer override)
             let hue = (hsvIn.hue * 360 + this.properties.hueShift) % 360;
             if (hue < 0) hue += 360;
             
-            // v2 logic: overwrites saturation/brightness with slider values
             const saturation = Math.max(0, Math.min(1, this.properties.saturationScale));
             const brightness = Math.max(0, Math.min(254, this.properties.brightnessScale));
 
-            return {
-                hsv_out: {
-                    hue: hue / 360,
-                    saturation: saturation,
-                    brightness: brightness
-                }
+            const output = {
+                hue: hue / 360,
+                saturation: saturation,
+                brightness: brightness
             };
+            this.properties.lastOutputHSV = output;
+            return { hsv_out: output };
         }
 
         restore(state) {
@@ -126,9 +134,40 @@
     // -------------------------------------------------------------------------
     // COMPONENT
     // -------------------------------------------------------------------------
-    const Slider = ({ label, value, min, max, step, onChange, disabled }) => {
+    
+    // Tooltips - define all help text in one place
+    const tooltips = {
+        node: "Modifies HSV (Hue, Saturation, Brightness) color values. Can shift hue, adjust saturation/brightness, or pass through an HSV buffer directly.",
+        inputs: {
+            hsv_in: "HSV object input: { hue: 0-1, saturation: 0-1, brightness: 0-254 }",
+            enable: "Boolean: When false, HSV Buffer override is disabled"
+        },
+        outputs: {
+            hsv_out: "Modified HSV object. Shows Input→Modified or Buffer value"
+        },
+        controls: {
+            enabled: "Master enable. Can be overridden by Enable socket or Enable Buffer",
+            enableBuffer: "Select a Trigger buffer to control the Enable state remotely",
+            hsvBuffer: "When enabled + HSV Buffer selected: outputs buffer value directly, bypassing sliders",
+            hueShift: "Rotate hue by degrees (-360 to +360). 180 = complementary color",
+            saturation: "Color intensity (0 = gray, 1 = full color)",
+            brightness: "Light intensity (0 = off, 254 = max)",
+            reset: "Reset all sliders to defaults (0, 1.0, 254)",
+            invertHue: "Shift hue by 180° (complementary color)",
+            doubleBri: "Double the brightness (capped at 254)",
+            savePreset: "Save current slider values as a named preset"
+        }
+    };
+    
+    // Get HelpIcon from shared controls
+    const HelpIcon = window.T2Controls?.HelpIcon;
+    
+    const Slider = ({ label, value, min, max, step, onChange, disabled, tooltip, HelpIcon }) => {
         return React.createElement('div', { className: 'hsv-mod-slider-row', style: { opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? 'none' : 'auto' } }, [
-            React.createElement('span', { key: 'l', className: 'hsv-mod-slider-label' }, label),
+            React.createElement('div', { key: 'lbl-wrap', style: { display: 'flex', alignItems: 'center', gap: '4px' } }, [
+                React.createElement('span', { key: 'l', className: 'hsv-mod-slider-label' }, label),
+                tooltip && HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltip, size: 12 })
+            ]),
             React.createElement('input', {
                 key: 'i',
                 type: 'range',
@@ -197,26 +236,42 @@
             return () => clearInterval(interval);
         }, [data.properties.lastInputHSV]);
 
+        // Poll for output changes too
+        const [lastOutputHSV, setLastOutputHSV] = useState(data.properties.lastOutputHSV || null);
+        useEffect(() => {
+            const interval = setInterval(() => {
+                if (data.properties.lastOutputHSV !== lastOutputHSV) {
+                    setLastOutputHSV(data.properties.lastOutputHSV);
+                }
+            }, 200);
+            return () => clearInterval(interval);
+        }, [data.properties.lastOutputHSV, lastOutputHSV]);
+
         // Calculate Colors
+        // Input swatch: always show the HSV IN socket value
         const inputHSV = state.lastInputHSV || { hue: 0, saturation: 0, brightness: 0 };
         const inputRGB = ColorUtils.hsvToRgb(inputHSV.hue, inputHSV.saturation, inputHSV.brightness / 254);
         const inputColor = `rgb(${inputRGB[0]},${inputRGB[1]},${inputRGB[2]})`;
 
-        let outputColor = inputColor;
-        // Determine effective enabled state
-        let isEnabled = state.enabled;
+        // Output swatch: show actual output (could be HSV buffer, modified, or passthrough)
+        const outputHSV = lastOutputHSV || inputHSV;
+        const outRGB = ColorUtils.hsvToRgb(outputHSV.hue, outputHSV.saturation, outputHSV.brightness / 254);
+        const outputColor = `rgb(${outRGB[0]},${outRGB[1]},${outRGB[2]})`;
+
+        // Determine if HSV Buffer override is active (for disabling sliders)
+        let hsvBufferEnabled = state.enabled;
         if (state.selectedBuffer && window.AutoTronBuffer) {
             const bufVal = window.AutoTronBuffer.get(state.selectedBuffer);
-            if (bufVal !== undefined) isEnabled = !!bufVal;
+            if (bufVal !== undefined) hsvBufferEnabled = !!bufVal;
         }
-
-        if (isEnabled) {
-            let h = (inputHSV.hue * 360 + state.hueShift) % 360;
-            if (h < 0) h += 360;
-            const s = Math.max(0, Math.min(1, state.saturationScale));
-            const v = Math.max(0, Math.min(254, state.brightnessScale));
-            const outRGB = ColorUtils.hsvToRgb(h / 360, s, v / 254);
-            outputColor = `rgb(${outRGB[0]},${outRGB[1]},${outRGB[2]})`;
+        
+        // Check if HSV buffer override is actually active
+        let hsvBufferOverrideActive = false;
+        if (hsvBufferEnabled && state.selectedHsvBuffer && window.AutoTronBuffer) {
+            const bufVal = window.AutoTronBuffer.get(state.selectedHsvBuffer);
+            if (bufVal && typeof bufVal === 'object' && 'hue' in bufVal) {
+                hsvBufferOverrideActive = true;
+            }
         }
 
         const handleReset = () => {
@@ -253,6 +308,19 @@
             }
         };
 
+        // Determine status for indicator
+        let statusColor = '#888';  // gray = idle/no input
+        let statusText = 'No Input';
+        const hasInput = !!(state.lastInputHSV && (state.lastInputHSV.hue || state.lastInputHSV.saturation || state.lastInputHSV.brightness));
+        
+        if (hsvBufferOverrideActive) {
+            statusColor = '#ff9800';  // orange = override active
+            statusText = 'Override';
+        } else if (hasInput) {
+            statusColor = '#4caf50';  // green = modifying
+            statusText = 'Modifying';
+        }
+
         return React.createElement('div', { className: 'hsv-mod-node-tron' }, [
             // Header
             React.createElement('div', { key: 'header', className: 'hsv-mod-header' }, [
@@ -262,9 +330,23 @@
                         style: { cursor: "pointer", fontSize: "12px", color: '#b388ff' },
                         onPointerDown: (e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }
                     }, isCollapsed ? "▶" : "▼"),
-                    React.createElement('span', { key: 'title', className: 'hsv-mod-title' }, data.label)
+                    // Status indicator dot
+                    React.createElement('div', {
+                        key: 'status',
+                        title: statusText,
+                        style: {
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: statusColor,
+                            boxShadow: `0 0 4px ${statusColor}`,
+                            transition: 'background-color 0.3s, box-shadow 0.3s'
+                        }
+                    }),
+                    React.createElement('span', { key: 'title', className: 'hsv-mod-title' }, data.label),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
                 ]),
-                React.createElement('label', { key: 'right', className: 'hsv-mod-checkbox' }, [
+                React.createElement('label', { key: 'right', className: 'hsv-mod-checkbox', title: tooltips.controls.enabled }, [
                     React.createElement('input', {
                         key: 'cb',
                         type: 'checkbox',
@@ -285,14 +367,24 @@
                                 init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: input.socket, nodeId: data.id, side: "input", key } }),
                                 unmount: ref => emit({ type: "unmount", data: { element: ref } })
                             }),
-                            React.createElement('span', { key: 'lbl', className: 'hsv-mod-socket-label' }, input.label)
+                            React.createElement('span', { 
+                                key: 'lbl', 
+                                className: 'hsv-mod-socket-label',
+                                title: tooltips.inputs[key] || ''
+                            }, input.label),
+                            tooltips.inputs[key] && HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.inputs[key], size: 10 })
                         ])
                     )
                 ),
                 React.createElement('div', { key: 'out', style: { display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'flex-end' } }, 
                     Object.entries(data.outputs).map(([key, output]) => 
                         React.createElement('div', { key, style: { display: 'flex', alignItems: 'center', gap: '5px' } }, [
-                            React.createElement('span', { key: 'lbl', className: 'hsv-mod-socket-label' }, output.label),
+                            tooltips.outputs[key] && HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.outputs[key], size: 10 }),
+                            React.createElement('span', { 
+                                key: 'lbl', 
+                                className: 'hsv-mod-socket-label',
+                                title: tooltips.outputs[key] || ''
+                            }, output.label),
                             React.createElement(RefComponent, {
                                 key: 'ref',
                                 init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }),
@@ -312,7 +404,10 @@
                 // Buffer Selectors
                 React.createElement('div', { key: 'bufs', style: { marginBottom: '10px', borderBottom: '1px solid rgba(179, 136, 255, 0.2)', paddingBottom: '5px' } }, [
                     React.createElement('div', { key: 'enableRow', className: 'hsv-mod-select-row' }, [
-                        React.createElement('span', { key: 'lbl', className: 'hsv-mod-slider-label' }, "Enable Buf:"),
+                        React.createElement('div', { key: 'lblContainer', style: { display: 'flex', alignItems: 'center', gap: '4px' } }, [
+                            React.createElement('span', { key: 'lbl', className: 'hsv-mod-slider-label' }, "Enable Buf:"),
+                            HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.enableBuffer, size: 12 })
+                        ]),
                         React.createElement('select', {
                             key: 'sel',
                             className: 'hsv-mod-select',
@@ -324,7 +419,10 @@
                         ])
                     ]),
                     React.createElement('div', { key: 'hsvRow', className: 'hsv-mod-select-row' }, [
-                        React.createElement('span', { key: 'lbl', className: 'hsv-mod-slider-label' }, "HSV Buf:"),
+                        React.createElement('div', { key: 'lblContainer', style: { display: 'flex', alignItems: 'center', gap: '4px' } }, [
+                            React.createElement('span', { key: 'lbl', className: 'hsv-mod-slider-label' }, "HSV Buf:"),
+                            HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.hsvBuffer, size: 12 })
+                        ]),
                         React.createElement('select', {
                             key: 'sel',
                             className: 'hsv-mod-select',
@@ -343,26 +441,29 @@
                     React.createElement('div', { key: 'out', className: 'hsv-mod-swatch', style: { background: outputColor } }, "Output")
                 ]),
 
-                // Sliders
+                // Sliders - disabled when HSV Buffer override is active
                 React.createElement(Slider, { 
                     key: 'hue', label: "Hue Shift", value: state.hueShift, min: -360, max: 360, step: 1, 
-                    onChange: v => updateState({ hueShift: v }), disabled: !isEnabled 
+                    onChange: v => updateState({ hueShift: v }), disabled: hsvBufferOverrideActive,
+                    tooltip: tooltips.controls.hueShift, HelpIcon: HelpIcon
                 }),
                 React.createElement(Slider, { 
                     key: 'sat', label: "Saturation", value: state.saturationScale, min: 0, max: 1, step: 0.01, 
-                    onChange: v => updateState({ saturationScale: v }), disabled: !isEnabled 
+                    onChange: v => updateState({ saturationScale: v }), disabled: hsvBufferOverrideActive,
+                    tooltip: tooltips.controls.saturation, HelpIcon: HelpIcon
                 }),
                 React.createElement(Slider, { 
                     key: 'bri', label: "Brightness", value: state.brightnessScale, min: 0, max: 254, step: 1, 
-                    onChange: v => updateState({ brightnessScale: v }), disabled: !isEnabled 
+                    onChange: v => updateState({ brightnessScale: v }), disabled: hsvBufferOverrideActive,
+                    tooltip: tooltips.controls.brightness, HelpIcon: HelpIcon
                 }),
 
                 // Buttons
                 React.createElement('div', { key: 'btns', style: { display: 'flex', gap: '5px', marginTop: '5px', flexWrap: 'wrap' } }, [
-                    React.createElement('button', { key: 'rst', className: 'hsv-mod-btn', onClick: handleReset }, "Reset"),
-                    React.createElement('button', { key: 'inv', className: 'hsv-mod-btn', onClick: handleInvertHue }, "Inv Hue"),
-                    React.createElement('button', { key: 'dbl', className: 'hsv-mod-btn', onClick: handleDoubleBrightness }, "2x Bri"),
-                    React.createElement('button', { key: 'save', className: 'hsv-mod-btn', onClick: savePreset }, "Save Preset")
+                    React.createElement('button', { key: 'rst', className: 'hsv-mod-btn', onClick: handleReset, title: tooltips.controls.reset }, "Reset"),
+                    React.createElement('button', { key: 'inv', className: 'hsv-mod-btn', onClick: handleInvertHue, title: tooltips.controls.invertHue }, "Inv Hue"),
+                    React.createElement('button', { key: 'dbl', className: 'hsv-mod-btn', onClick: handleDoubleBrightness, title: tooltips.controls.doubleBri }, "2x Bri"),
+                    React.createElement('button', { key: 'save', className: 'hsv-mod-btn', onClick: savePreset, title: tooltips.controls.savePreset }, "Save Preset")
                 ]),
 
                 // Presets
@@ -389,5 +490,5 @@
         component: HSVModifierNodeComponent
     });
 
-    console.log("[HSVModifierNode] Registered");
+    // console.log("[HSVModifierNode] Registered");
 })();

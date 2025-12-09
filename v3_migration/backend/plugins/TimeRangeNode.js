@@ -305,5 +305,5 @@
         component: TimeRangeNodeComponent
     });
 
-    console.log("[TimeRangeNode] Registered");
+    // console.log("[TimeRangeNode] Registered");
 })();

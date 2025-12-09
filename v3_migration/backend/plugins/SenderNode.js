@@ -17,19 +17,42 @@
     // -------------------------------------------------------------------------
     window.AutoTronBuffer = window.AutoTronBuffer || {
         data: {},
+        sources: {},  // Track the source node for each buffer key
+        lastTrigger: null, // Track the most recent trigger source for attribution
         listeners: [],
-        set(key, value) {
+        set(key, value, source = null) {
             // Only notify if value actually changed to prevent loops
             if (JSON.stringify(this.data[key]) !== JSON.stringify(value)) {
                 this.data[key] = value;
+                if (source) {
+                    this.sources[key] = { name: source, timestamp: Date.now() };
+                    // Track as last active trigger source (for device command attribution)
+                    this.lastTrigger = { source, key, timestamp: Date.now() };
+                }
                 this.notify(key);
             }
         },
         get(key) {
             return this.data[key];
         },
+        getSource(key) {
+            // Return source if set within last 10 seconds, otherwise null
+            const src = this.sources[key];
+            if (src && Date.now() - src.timestamp < 10000) {
+                return src.name;
+            }
+            return null;
+        },
+        // Get the most recent trigger source (within last 5 seconds)
+        getLastTriggerSource() {
+            if (this.lastTrigger && Date.now() - this.lastTrigger.timestamp < 5000) {
+                return this.lastTrigger.source;
+            }
+            return null;
+        },
         delete(key) {
             delete this.data[key];
+            delete this.sources[key];
             this.notify(key);
         },
         subscribe(callback) {
@@ -84,7 +107,8 @@
                     }
                 }
 
-                window.AutoTronBuffer.set(finalName, inputData);
+                // Store with source name (buffer name without type prefix for cleaner display)
+                window.AutoTronBuffer.set(finalName, inputData, baseName);
                 this.properties.lastValue = inputData;
                 this.properties.finalName = finalName; // Store for UI
                 this.properties.registeredName = finalName;
@@ -201,5 +225,5 @@
         component: SenderNodeComponent
     });
 
-    console.log("[SenderNode] Registered");
+    // console.log("[SenderNode] Registered");
 })();

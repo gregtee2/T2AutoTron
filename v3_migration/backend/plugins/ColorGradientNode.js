@@ -969,5 +969,5 @@
         component: ColorGradientNodeComponent
     });
 
-    console.log("[ColorGradientNode] Registered");
+    // console.log("[ColorGradientNode] Registered");
 })();

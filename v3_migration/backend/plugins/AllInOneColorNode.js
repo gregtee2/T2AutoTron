@@ -373,5 +373,5 @@
         component: AllInOneColorNodeComponent
     });
 
-    console.log("[AllInOneColorNode] Registered");
+    // console.log("[AllInOneColorNode] Registered");
 })();

@@ -253,5 +253,5 @@
         component: HADeviceStateDisplayNodeComponent
     });
 
-    console.log("[HADeviceStateDisplayNode] Registered");
+    // console.log("[HADeviceStateDisplayNode] Registered");
 })();

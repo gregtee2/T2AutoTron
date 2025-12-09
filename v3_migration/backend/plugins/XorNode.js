@@ -73,5 +73,5 @@
         component: XorNodeComponent
     });
 
-    console.log("[XorNode] Registered (DRY refactored)");
+    // console.log("[XorNode] Registered (DRY refactored)");
 })();

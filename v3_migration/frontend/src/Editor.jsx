@@ -8,6 +8,10 @@ import { ReactPlugin, Presets } from "rete-react-plugin";
 import { DataflowEngine } from "rete-engine";
 import "./sockets"; // Import socket patch globally
 
+// Debug mode - set to true to enable verbose console logging
+const EDITOR_DEBUG = false;
+const debug = (...args) => EDITOR_DEBUG && debug('', ...args);
+
 import { Dock } from "./ui/Dock";
 import { ForecastPanel } from "./ui/ForecastPanel";
 import { FastContextMenu } from "./FastContextMenu";
@@ -280,7 +284,7 @@ export function Editor() {
                         const nodeView = area.nodeViews.get(node.id);
                         if (nodeView && nodeView.element) {
                             nodeView.element.style.zIndex = '-10';
-                            console.log('[Backdrop] Set z-index on creation for:', node.id);
+                            debug('[Backdrop] Set z-index on creation for:', node.id);
                         }
                     }, 50);
                 }
@@ -298,11 +302,11 @@ export function Editor() {
         connection.addPipe(context => {
             if (context.type === 'connectionpick') {
                 isConnectionDragging = true;
-                console.log("[Editor] Connection pick - wire dragging started");
+                debug(" Connection pick - wire dragging started");
             } else if (context.type === 'connectiondrop') {
                 isConnectionDragging = false;
                 isPanningWhileConnecting = false;
-                console.log("[Editor] Connection drop - wire dragging ended");
+                debug(" Connection drop - wire dragging ended");
             }
             return context;
         });
@@ -361,7 +365,7 @@ export function Editor() {
         // Note: This is a partial reset, the full resetAllDragStates is defined after backdrop state
         const resetDragState = () => {
             if (isSelecting) {
-                console.log('[Editor] Safety reset: clearing stuck lasso selection');
+                debug(' Safety reset: clearing stuck lasso selection');
                 isSelecting = false;
                 selectionBox.style.display = 'none';
             }
@@ -389,7 +393,7 @@ export function Editor() {
         const onPointerDown = (e) => {
             // Enable Lasso on Ctrl + Left Click
             if ((e.ctrlKey || e.metaKey) && e.button === 0) {
-                // Debug: console.log("[Editor] Lasso start");
+                // Debug: debug(" Lasso start");
                 e.stopPropagation(); 
                 e.preventDefault();
                 isSelecting = true;
@@ -446,18 +450,18 @@ export function Editor() {
 
         const onPointerUp = (e) => {
             if (!isSelecting) return;
-            // Debug: console.log("[Editor] Lasso end");
+            // Debug: debug(" Lasso end");
             
             // Measure BEFORE hiding
             const boxRect = selectionBox.getBoundingClientRect();
-            // Debug: console.log("[Editor] Box Rect:", boxRect);
+            // Debug: debug(" Box Rect:", boxRect);
 
             isSelecting = false;
             selectionBox.style.display = 'none';
             
             // Skip if box is too small (just a click)
             if (boxRect.width < 5 && boxRect.height < 5) {
-                // Debug: console.log("[Editor] Selection box too small, ignoring");
+                // Debug: debug(" Selection box too small, ignoring");
                 return;
             }
             
@@ -481,11 +485,11 @@ export function Editor() {
                 }
             });
             
-            // Debug: console.log(`[Editor] Found ${nodesToSelect.length} nodes in selection area`);
+            // Debug: debug(` Found ${nodesToSelect.length} nodes in selection area`);
             
             // Select the nodes and track them for group movement
             nodesToSelect.forEach(({ node, view }) => {
-                // Debug: console.log(`[Editor] Selecting node ${node.id}`, view.element);
+                // Debug: debug(` Selecting node ${node.id}`, view.element);
                 
                 // Track this node in our lasso selection
                 lassoSelectedNodes.add(node.id);
@@ -510,13 +514,13 @@ export function Editor() {
                 selectedCount++;
             });
             
-            // Debug: console.log(`[Editor] Selected ${selectedCount} nodes, tracked:`, Array.from(lassoSelectedNodes));
+            // Debug: debug(` Selected ${selectedCount} nodes, tracked:`, Array.from(lassoSelectedNodes));
         };
         
         // Function to clear lasso selection
         const clearLassoSelection = () => {
             if (lassoSelectedNodes.size > 0) {
-                // Debug: console.log('[Editor] Clearing lasso selection');
+                // Debug: debug(' Clearing lasso selection');
                 lassoSelectedNodes.forEach(nodeId => {
                     const view = area.nodeViews.get(nodeId);
                     if (view && view.element) {
@@ -594,7 +598,7 @@ export function Editor() {
                 // Safety timeout: reset after 500ms to prevent stuck state
                 groupMovingTimeout = setTimeout(() => {
                     if (isGroupMoving) {
-                        console.log('[Editor] Safety reset: clearing stuck isGroupMoving');
+                        debug(' Safety reset: clearing stuck isGroupMoving');
                         isGroupMoving = false;
                     }
                     groupMovingTimeout = null;
@@ -607,18 +611,18 @@ export function Editor() {
         const resetAllDragStates = () => {
             // Reset lasso selection
             if (isSelecting) {
-                console.log('[Editor] Resetting stuck lasso selection');
+                debug(' Resetting stuck lasso selection');
                 isSelecting = false;
                 selectionBox.style.display = 'none';
             }
             // Reset group moving
             if (isGroupMoving) {
-                console.log('[Editor] Resetting stuck group moving');
+                debug(' Resetting stuck group moving');
                 setGroupMoving(false);
             }
             // Reset backdrop drag state
             if (backdropDragState.isDragging) {
-                console.log('[Editor] Resetting stuck backdrop drag');
+                debug(' Resetting stuck backdrop drag');
                 backdropDragState.isDragging = false;
                 backdropDragState.activeBackdropId = null;
             }
@@ -724,12 +728,12 @@ export function Editor() {
                 if (node) {
                     const def = nodeRegistry.getByInstance(node);
                     if (def && def.isBackdrop && node.properties.locked) {
-                        // Debug: console.log('[Editor] Blocked pick on locked backdrop:', nodeId);
+                        // Debug: debug(' Blocked pick on locked backdrop:', nodeId);
                         return; // Return undefined to block the event
                     }
                 }
                 
-                // Debug: console.log('[Editor] Node picked (Rete event):', nodeId, 'Shift held:', shiftKeyRef.current);
+                // Debug: debug(' Node picked (Rete event):', nodeId, 'Shift held:', shiftKeyRef.current);
                 
                 // If Shift is NOT held and clicking a new node, clear previous selection
                 if (!shiftKeyRef.current && !lassoSelectedNodes.has(nodeId)) {
@@ -754,7 +758,7 @@ export function Editor() {
                     view.element.style.outline = '3px solid #00f3ff';
                 }
                 
-                // Debug: console.log('[Editor] Selection after pick:', Array.from(lassoSelectedNodes));
+                // Debug: debug(' Selection after pick:', Array.from(lassoSelectedNodes));
             }
             return context;
         });
@@ -849,7 +853,7 @@ export function Editor() {
                         
                         // Update captures to get current nodes inside
                         updateBackdropCaptures();
-                        // Debug: console.log('[Backdrop] Started dragging, captured nodes:', node.properties.capturedNodes);
+                        // Debug: debug('[Backdrop] Started dragging, captured nodes:', node.properties.capturedNodes);
                     }
                     
                     // Move all captured nodes by the same delta
@@ -880,7 +884,7 @@ export function Editor() {
             // Reset state when drag ends
             if (context.type === 'nodedragged') {
                 if (programmaticMoveRef.current) return context;
-                // Debug: console.log('[Backdrop] Drag ended, resetting state');
+                // Debug: debug('[Backdrop] Drag ended, resetting state');
                 backdropDragState.isDragging = false;
                 backdropDragState.activeBackdropId = null;
                 
@@ -902,7 +906,7 @@ export function Editor() {
             const nodeView = area.nodeViews.get(nodeId);
             if (nodeView && nodeView.element) {
                 nodeView.element.style.pointerEvents = locked ? 'none' : 'auto';
-                console.log('[Editor] Updated backdrop lock state:', nodeId, 'locked:', locked);
+                debug(' Updated backdrop lock state:', nodeId, 'locked:', locked);
             }
         };
         
@@ -946,7 +950,7 @@ export function Editor() {
 
         // Load plugins FIRST, then create editor
         editorPromise = loadPlugins().then(() => {
-            console.log("[Editor] External plugins loaded, now creating editor...");
+            debug(" External plugins loaded, now creating editor...");
             return createEditor(container);
         }).then((result) => {
             editorInstance = result.editor;
@@ -984,11 +988,11 @@ export function Editor() {
                     });
                     container.dispatchEvent(wheelEvent);
                     
-                    console.log('[Editor] Container initialized and focused');
+                    debug(' Container initialized and focused');
                     
                     // Expose a global reset function for debugging/recovery
                     window.resetEditorView = () => {
-                        console.log('[Editor] Manual reset triggered');
+                        debug(' Manual reset triggered');
                         
                         // Use requestAnimationFrame to avoid blocking the main thread
                         requestAnimationFrame(() => {
@@ -1063,7 +1067,7 @@ export function Editor() {
                                         deltaY: 0
                                     });
                                     container.dispatchEvent(wheelEvent);
-                                    console.log('[Editor] Reset complete');
+                                    debug(' Reset complete');
                                 }, 50);
                             }, 50);
                         }); // End requestAnimationFrame
@@ -1080,7 +1084,7 @@ export function Editor() {
                     // Only act once when container first gets proper dimensions
                     if (!hasInitializedFromResize && width > 0 && height > 0) {
                         hasInitializedFromResize = true;
-                        console.log('[Editor] ResizeObserver: Container now has size', width, height);
+                        debug(' ResizeObserver: Container now has size', width, height);
                         
                         // Trigger area recalculation by focusing and dispatching events
                         setTimeout(() => {
@@ -1105,7 +1109,7 @@ export function Editor() {
 
         // Listen for graphLoadComplete event to do a final reset (outside promise for cleanup access)
         const onGraphLoadComplete = () => {
-            console.log('[Editor] graphLoadComplete event received - triggering view reset');
+            debug(' graphLoadComplete event received - triggering view reset');
             if (window.resetEditorView) {
                 window.resetEditorView();
             }
@@ -1129,12 +1133,12 @@ export function Editor() {
             // Ignore inputs
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
 
-            console.log(`[Editor] KeyDown: ${e.code} (Ctrl: ${e.ctrlKey}, Meta: ${e.metaKey})`);
+            debug(` KeyDown: ${e.code} (Ctrl: ${e.ctrlKey}, Meta: ${e.metaKey})`);
             
             // F5 or Ctrl+Shift+R - Reset editor view (fix frozen pan/zoom)
             if (e.code === 'F5' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyR')) {
                 e.preventDefault();
-                console.log('[Editor] View reset shortcut triggered');
+                debug(' View reset shortcut triggered');
                 if (window.resetEditorView) {
                     window.resetEditorView();
                 }
@@ -1147,7 +1151,7 @@ export function Editor() {
             const selector = selectorRef.current;
             
             if (!editor || !area) {
-                console.log('[Editor] No editor/area ref available');
+                debug(' No editor/area ref available');
                 return;
             }
 
@@ -1169,22 +1173,22 @@ export function Editor() {
                 // Also check our lasso selection ref (fallback)
                 for (const nodeId of lassoSelectedNodesRef.current) {
                     const node = editor.getNode(nodeId);
-                    console.log(`[Editor] Checking node ${nodeId}: exists=${!!node}`);
+                    debug(` Checking node ${nodeId}: exists=${!!node}`);
                     if (node) {
                         nodeIds.add(nodeId);
                     }
                 }
                 
-                console.log(`[Editor] Found ${nodeIds.size} selected nodes:`, Array.from(nodeIds));
+                debug(` Found ${nodeIds.size} selected nodes:`, Array.from(nodeIds));
                 return Array.from(nodeIds);
             };
 
             // Delete
             if (e.code === 'Delete' || e.code === 'Backspace') {
-                console.log(`[Editor] Delete key pressed. lassoSelectedNodesRef.current size:`, lassoSelectedNodesRef.current.size);
-                console.log(`[Editor] lassoSelectedNodesRef.current contents:`, Array.from(lassoSelectedNodesRef.current));
+                debug(` Delete key pressed. lassoSelectedNodesRef.current size:`, lassoSelectedNodesRef.current.size);
+                debug(` lassoSelectedNodesRef.current contents:`, Array.from(lassoSelectedNodesRef.current));
                 const nodeIds = getSelectedNodeIds();
-                console.log(`[Editor] Deleting ${nodeIds.length} nodes:`, nodeIds);
+                debug(` Deleting ${nodeIds.length} nodes:`, nodeIds);
                 
                 if (nodeIds.length > 0) {
                     // Save state for undo before deleting
@@ -1223,7 +1227,7 @@ export function Editor() {
                         nodes: deletedNodes,
                         connections: deletedConnections
                     });
-                    console.log('[Editor] Saved undo state:', undoStackRef.current.length, 'items in stack');
+                    debug(' Saved undo state:', undoStackRef.current.length, 'items in stack');
                     
                     // Now perform the deletion
                     for (const nodeId of nodeIds) {
@@ -1243,12 +1247,12 @@ export function Editor() {
                 e.preventDefault();
                 
                 if (undoStackRef.current.length === 0) {
-                    console.log('[Editor] Nothing to undo');
+                    debug(' Nothing to undo');
                     return;
                 }
                 
                 const undoAction = undoStackRef.current.pop();
-                console.log('[Editor] Undoing:', undoAction.type, undoAction.nodes.length, 'nodes');
+                debug(' Undoing:', undoAction.type, undoAction.nodes.length, 'nodes');
                 
                 if (undoAction.type === 'delete') {
                     const idMap = {}; // Old ID -> New ID
@@ -1323,7 +1327,7 @@ export function Editor() {
                             }
                         }
                         
-                        console.log('[Editor] Undo complete - restored', undoAction.nodes.length, 'nodes');
+                        debug(' Undo complete - restored', undoAction.nodes.length, 'nodes');
                     } finally {
                         programmaticMoveRef.current = false;
                         area?.updateBackdropCaptures?.();
@@ -1337,11 +1341,11 @@ export function Editor() {
                     const nodeIds = getSelectedNodeIds();
 
                     if (nodeIds.length === 0) {
-                        console.log("[Editor] Nothing selected to copy");
+                        debug(" Nothing selected to copy");
                         return;
                     }
 
-                    console.log(`[Editor] Copying ${nodeIds.length} nodes`);
+                    debug(` Copying ${nodeIds.length} nodes`);
 
                     const selectedNodes = [];
                     const selectedNodeIds = new Set(nodeIds);
@@ -1361,7 +1365,7 @@ export function Editor() {
                     }
 
                     if (selectedNodes.length === 0) {
-                        console.log("[Editor] Nothing selected to copy (no nodes in selection)");
+                        debug(" Nothing selected to copy (no nodes in selection)");
                         return;
                     }
 
@@ -1379,7 +1383,7 @@ export function Editor() {
 
                     const clipboardData = { nodes: selectedNodes, connections: selectedConnections };
                     localStorage.setItem('rete-clipboard', JSON.stringify(clipboardData));
-                    console.log('Copied to clipboard:', clipboardData);
+                    debug('Copied to clipboard:', clipboardData);
                 } catch (err) {
                     console.error("[Editor] Copy failed:", err);
                 }
@@ -1389,7 +1393,7 @@ export function Editor() {
             if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV') {
                 const clipboardText = localStorage.getItem('rete-clipboard');
                 if (!clipboardText) {
-                    console.log("[Editor] Clipboard empty");
+                    debug(" Clipboard empty");
                     return;
                 }
 
@@ -1509,7 +1513,7 @@ export function Editor() {
                             }
                         }
                     }
-                    console.log('Pasted from clipboard');
+                    debug('Pasted from clipboard');
 
                 } catch (err) {
                     console.error("[Editor] Paste failed:", err);
@@ -1522,7 +1526,7 @@ export function Editor() {
                 if (area.area) {
                     area.area.zoom(1, 0, 0);
                     area.area.translate(0, 0);
-                    console.log('[Editor] Viewport reset via Home key');
+                    debug(' Viewport reset via Home key');
                 }
             }
             
@@ -1530,7 +1534,7 @@ export function Editor() {
             if (e.code === 'Escape') {
                 if (window.resetEditorDragState) {
                     window.resetEditorDragState();
-                    console.log('[Editor] Drag state reset via Escape key');
+                    debug(' Drag state reset via Escape key');
                 }
             }
         };
@@ -1555,7 +1559,7 @@ export function Editor() {
         
         // Handle delete from Electron IPC (when Delete/Backspace pressed in Electron)
         const handleElectronDelete = () => {
-            console.log('[Editor] Received delete from Electron IPC');
+            debug(' Received delete from Electron IPC');
             // Simulate a Delete keydown event
             const fakeEvent = {
                 code: 'Delete',
@@ -1690,13 +1694,13 @@ export function Editor() {
 
             // Save to localStorage for quick reload
             try { if (jsonString.length < 2000000) { localStorage.removeItem('saved-graph'); localStorage.setItem('saved-graph', jsonString); } } catch(e) { console.warn('localStorage skipped'); }
-            console.log('Graph saved to localStorage');
+            debug('Graph saved to localStorage');
 
             // Also save to an Electron-accessible temp file so the desktop app can reload even if localStorage is empty
             if (window.api?.saveTempFile) {
                 try {
                     await window.api.saveTempFile('autotron_graph.json', jsonString);
-                    console.log('[handleSave] Saved temp file for Electron reload');
+                    debug('[handleSave] Saved temp file for Electron reload');
                 } catch (err) {
                     console.warn('[handleSave] Failed to save temp file via Electron API', err);
                 }
@@ -1715,7 +1719,7 @@ export function Editor() {
                     const writable = await handle.createWritable();
                     await writable.write(jsonString);
                     await writable.close();
-                    console.log('Graph saved to file');
+                    debug('Graph saved to file');
                     return;
                 } catch (err) {
                     if (err.name === 'AbortError') return; // User cancelled
@@ -1731,7 +1735,7 @@ export function Editor() {
             a.download = `autotron_graph_${Date.now()}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            console.log('Graph saved via download');
+            debug('Graph saved via download');
 
         } catch (err) {
             console.error('Failed to save graph:', err);
@@ -1838,7 +1842,7 @@ export function Editor() {
                     const result = await window.api.readTempFile('autotron_graph.json');
                     if (result?.success && result.content) {
                         saved = result.content;
-                        console.log('[handleLoad] Loaded graph from Electron temp file');
+                        debug('[handleLoad] Loaded graph from Electron temp file');
                     }
                 } catch (err) {
                     console.warn('[handleLoad] Failed to read Electron temp file', err);
@@ -1851,7 +1855,7 @@ export function Editor() {
             }
 
             const graphData = JSON.parse(saved);
-            console.log(`[handleLoad] Loading graph with ${graphData.nodes?.length} nodes`);
+            debug(`[handleLoad] Loading graph with ${graphData.nodes?.length} nodes`);
             
             // Validate graph structure
             const validation = validateGraph(graphData);
@@ -1864,7 +1868,7 @@ export function Editor() {
                 // Attempt repair
                 const repairResult = repairGraph(graphData);
                 if (repairResult.repaired) {
-                    console.log('[handleLoad] Graph repaired:', repairResult.fixes);
+                    debug('[handleLoad] Graph repaired:', repairResult.fixes);
                     if (window.T2Toast) {
                         window.T2Toast.info(`Graph repaired: ${repairResult.fixes.length} fixes applied`, 3000);
                     }
@@ -1970,7 +1974,7 @@ export function Editor() {
             // This completes the zoom-out-before-load optimization
             const allNodes = editorInstance.getNodes();
             if (allNodes.length > 0 && areaInstance) {
-                console.log('[handleLoad] Zooming to fit', allNodes.length, 'nodes...');
+                debug('[handleLoad] Zooming to fit', allNodes.length, 'nodes...');
                 try {
                     await AreaExtensions.zoomAt(areaInstance, allNodes, { scale: 0.9 });
                 } catch (zoomErr) {
@@ -1981,9 +1985,9 @@ export function Editor() {
             // CRITICAL: Process the entire graph immediately after loading
             // This ensures all node data flows are established before UI interaction
             if (processImmediateRef.current) {
-                console.log('[handleLoad] Processing graph immediately...');
+                debug('[handleLoad] Processing graph immediately...');
                 await processImmediateRef.current();
-                console.log('[handleLoad] Graph processing complete');
+                debug('[handleLoad] Graph processing complete');
             }
             
             // Re-enable cascading updates after load is complete
@@ -1992,17 +1996,17 @@ export function Editor() {
             // Restore viewport state from saved graph (or default if not present)
             // Use a longer delay (300ms) to ensure all node rendering and state updates are complete
             // This is critical for Electron where timing issues can break pan/zoom
-            console.log('[handleLoad] Setting up viewport restoration timer...');
+            debug('[handleLoad] Setting up viewport restoration timer...');
             setTimeout(() => {
-                console.log('[handleLoad] Viewport restoration timer fired, areaInstance:', !!areaInstance, 'area:', !!areaInstance?.area);
+                debug('[handleLoad] Viewport restoration timer fired, areaInstance:', !!areaInstance, 'area:', !!areaInstance?.area);
                 if (areaInstance?.area) {
                     const viewport = graphData.viewport || { x: 0, y: 0, k: 1 };
                     const savedK = viewport.k || 1;
                     const savedX = viewport.x || 0;
                     const savedY = viewport.y || 0;
                     
-                    console.log('[handleLoad] Restoring viewport:', { savedX, savedY, savedK });
-                    console.log('[handleLoad] Current transform before restore:', { ...areaInstance.area.transform });
+                    debug('[handleLoad] Restoring viewport:', { savedX, savedY, savedK });
+                    debug('[handleLoad] Current transform before restore:', { ...areaInstance.area.transform });
                     
                     // Directly set the transform values (the area.transform object is mutable)
                     const transform = areaInstance.area.transform;
@@ -2020,7 +2024,7 @@ export function Editor() {
                     // Also emit a transformed event to notify any listeners
                     areaInstance.emit({ type: 'transformed', data: { transform } });
                     
-                    console.log('[handleLoad] Transform after restore:', { ...areaInstance.area.transform });
+                    debug('[handleLoad] Transform after restore:', { ...areaInstance.area.transform });
                     
                     const container = areaInstance.container;
                     if (container) {
@@ -2060,7 +2064,7 @@ export function Editor() {
                 }
             }, 300);
             
-            console.log('Graph loaded');
+            debug('Graph loaded');
         } catch (err) {
             console.error('Failed to load graph:', err);
             loadingRef.current = false;
@@ -2076,7 +2080,7 @@ export function Editor() {
         try {
             const connections = editorInstance.getConnections();
             const nodes = editorInstance.getNodes();
-            console.log(`[handleClear] Removing ${connections.length} connections and ${nodes.length} nodes`);
+            debug(`[handleClear] Removing ${connections.length} connections and ${nodes.length} nodes`);
             
             for (const conn of connections) {
                 await editorInstance.removeConnection(conn.id);
@@ -2087,7 +2091,7 @@ export function Editor() {
             
             // Verify clear succeeded
             const remainingNodes = editorInstance.getNodes();
-            console.log(`[handleClear] Complete. Remaining nodes: ${remainingNodes.length}`);
+            debug(`[handleClear] Complete. Remaining nodes: ${remainingNodes.length}`);
             
             if (remainingNodes.length > 0) {
                 console.error('[handleClear] Failed to remove all nodes! Remaining:', remainingNodes.map(n => n.id));
@@ -2133,7 +2137,7 @@ export function Editor() {
             a.download = `graph-${Date.now()}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            console.log('Graph exported');
+            debug('Graph exported');
         } catch (err) {
             console.error('Failed to export graph:', err);
         }
@@ -2151,7 +2155,7 @@ export function Editor() {
             // Attempt repair
             const repairResult = repairGraph(graphData);
             if (repairResult.repaired) {
-                console.log('[handleImport] Graph repaired:', repairResult.fixes);
+                debug('[handleImport] Graph repaired:', repairResult.fixes);
                 if (window.T2Toast) {
                     window.T2Toast.info(`Graph repaired: ${repairResult.fixes.length} fixes applied`, 3000);
                 }
@@ -2285,7 +2289,7 @@ export function Editor() {
             // This prevents API flood from callbacks queued during import
             setTimeout(() => {
                 window.graphLoading = false;
-                console.log('[handleImport] Graph loading complete - API calls now enabled');
+                debug('[handleImport] Graph loading complete - API calls now enabled');
                 // Emit event so nodes can refresh their data now that loading is complete
                 window.dispatchEvent(new CustomEvent('graphLoadComplete'));
                 
@@ -2298,7 +2302,7 @@ export function Editor() {
             // Restore console
             Object.assign(console, originalConsole);
             console.log('%c✅ IMPORT COMPLETE', 'background: green; color: white; font-size: 16px;');
-            console.log('Graph imported successfully. Pan/zoom should work now.');
+            debug('Graph imported successfully. Pan/zoom should work now.');
             
         } catch (err) {
             // Restore console on error

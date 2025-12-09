@@ -359,5 +359,5 @@
         component: LogicOperationsNodeComponent
     });
 
-    console.log("[LogicOperationsNode] Registered");
+    // console.log("[LogicOperationsNode] Registered");
 })();

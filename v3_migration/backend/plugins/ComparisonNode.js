@@ -181,5 +181,5 @@
         component: ComparisonNodeComponent
     });
 
-    console.log("[ComparisonNode] Registered (DRY refactored)");
+    // console.log("[ComparisonNode] Registered (DRY refactored)");
 })();

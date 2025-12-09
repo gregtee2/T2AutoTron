@@ -269,5 +269,5 @@
         checkDependencies
     };
 
-    console.log("[BaseNodePlugin] Registered window.T2Node with base class and utilities");
+    // console.log("[BaseNodePlugin] Registered window.T2Node with base class and utilities");
 })();

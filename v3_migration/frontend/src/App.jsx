@@ -21,10 +21,22 @@ function App() {
   const [panelHeight, setPanelHeight] = useState(() => parseInt(localStorage.getItem('panelHeight')) || 150);
   const [panelFontSize, setPanelFontSize] = useState(() => parseInt(localStorage.getItem('panelFontSize')) || 11);
   const [pluginLoading, setPluginLoading] = useState({ isLoading: true, progress: 0, status: 'Starting...', loadedCount: 0, totalCount: 0, error: null });
+  // Ticker for live countdown updates in Upcoming Events (increments every 30s to force re-render)
+  const [countdownTicker, setCountdownTicker] = useState(0);
+  // Event log filter: 'all', 'app', 'ha'
+  const [eventLogFilter, setEventLogFilter] = useState(() => localStorage.getItem('eventLogFilter') || 'all');
   const eventLogRef = useRef(null);
   const resizeRef = useRef(null);
   const maxLogEntries = 100;
   const toast = useToast();
+
+  // Live countdown timer - update every 30 seconds to refresh relative time display
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCountdownTicker(t => t + 1);
+    }, 30000); // 30 seconds
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Subscribe to plugin loading progress
   useEffect(() => {
@@ -251,14 +263,6 @@ function App() {
         error={pluginLoading.error}
       />
       
-      <div className="status-indicators">
-        <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
-          {isConnected ? 'Backend' : 'Backend ✕'}
-        </div>
-        <div className={`connection-status ha-status ${haStatus.connected ? 'connected' : 'disconnected'}`}>
-          {haStatus.connected ? `HA (${haStatus.deviceCount})` : 'HA ✕'}
-        </div>
-      </div>
       <div className="editor-wrapper">
         <Editor />
       </div>
@@ -290,6 +294,11 @@ function App() {
           <div className="panel-header">
             <span className="panel-title">Event Log</span>
             <div className="panel-controls">
+              <div className="filter-buttons">
+                <button className={`filter-btn ${eventLogFilter === 'all' ? 'active' : ''}`} onClick={() => { setEventLogFilter('all'); localStorage.setItem('eventLogFilter', 'all'); }}>All</button>
+                <button className={`filter-btn ${eventLogFilter === 'app' ? 'active' : ''}`} onClick={() => { setEventLogFilter('app'); localStorage.setItem('eventLogFilter', 'app'); }}>App</button>
+                <button className={`filter-btn ${eventLogFilter === 'ha' ? 'active' : ''}`} onClick={() => { setEventLogFilter('ha'); localStorage.setItem('eventLogFilter', 'ha'); }}>HA</button>
+              </div>
               <button className="font-size-btn" onClick={() => { const s = Math.max(8, panelFontSize - 1); setPanelFontSize(s); localStorage.setItem('panelFontSize', s); }}>A-</button>
               <span className="font-size-label">{panelFontSize}px</span>
               <button className="font-size-btn" onClick={() => { const s = Math.min(16, panelFontSize + 1); setPanelFontSize(s); localStorage.setItem('panelFontSize', s); }}>A+</button>
@@ -300,7 +309,14 @@ function App() {
             {eventLogs.length === 0 ? (
               <div className="empty-message">No events yet...</div>
             ) : (
-              eventLogs.map((log, index) => (
+              eventLogs
+                .filter(log => {
+                  if (eventLogFilter === 'all') return true;
+                  if (eventLogFilter === 'app') return log.details?.triggeredBy || log.details?.source === 'app';
+                  if (eventLogFilter === 'ha') return log.details?.source === 'HA' && !log.details?.triggeredBy;
+                  return true;
+                })
+                .map((log, index) => (
                 <div key={index} className={`log-entry log-${log.type}`} title={log.details?.triggeredBy ? `Triggered by: ${log.details.triggeredBy}` : (log.details?.source === 'HA' ? 'Triggered externally (HA, physical switch, etc.)' : '')}>
                   <span className="log-time">{log.timestamp}</span>
                   <span className={`log-type-badge ${log.type}`}>{log.type === 'trigger' ? 'external' : log.type}</span>

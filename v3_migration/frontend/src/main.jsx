@@ -3,8 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-console.log('=== T2AutoTron Starting ===');
-console.log('Running in:', typeof window.api !== 'undefined' ? 'Electron' : 'Browser');
+// Startup info (only show environment, not verbose logs)
+if (typeof window.api !== 'undefined') {
+  console.log('T2AutoTron running in Electron mode');
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

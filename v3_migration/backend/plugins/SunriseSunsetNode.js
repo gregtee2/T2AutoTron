@@ -513,5 +513,5 @@
         component: SunriseSunsetNodeComponent
     });
 
-    console.log("[SunriseSunsetNode] Registered");
+    // console.log("[SunriseSunsetNode] Registered");
 })();

@@ -378,5 +378,5 @@
         component: HSVControlNodeComponent
     });
 
-    console.log("[HSVControlNode] Registered");
+    // console.log("[HSVControlNode] Registered");
 })();

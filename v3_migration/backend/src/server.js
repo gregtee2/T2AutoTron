@@ -1,7 +1,12 @@
 require('dotenv').config({ path: './.env' });
-console.log('Starting server.js...');
-console.log('OPENWEATHERMAP_API_KEY:', process.env.OPENWEATHERMAP_API_KEY);
-console.log('HA_TOKEN:', process.env.HA_TOKEN ? 'Loaded' : 'Not set');
+
+// Debug mode - set VERBOSE_LOGGING=true in .env to enable detailed console output
+const DEBUG = process.env.VERBOSE_LOGGING === 'true';
+const debug = (...args) => DEBUG && console.log('[DEBUG]', ...args);
+
+debug('Starting server.js...');
+debug('OPENWEATHERMAP_API_KEY:', process.env.OPENWEATHERMAP_API_KEY ? 'Set' : 'Not set');
+debug('HA_TOKEN:', process.env.HA_TOKEN ? 'Loaded' : 'Not set');
 
 const express = require('express');
 const http = require('http');
@@ -22,8 +27,7 @@ const mongoose = require('mongoose');
 const fs = require('fs').promises;
 const path = require('path');
 
-
-console.log('Weather imports:', {
+debug('Weather imports:', {
   fetchWeatherData: typeof fetchWeatherData,
   fetchForecastData: typeof fetchForecastData
 });
@@ -47,13 +51,13 @@ const io = new Server(server, {
 // Log Socket.IO errors
 io.on('error', (error) => {
   logger.log('Socket.IO server error: ' + error.message, 'error', false, 'socket:error', { stack: error.stack });
-  console.log('Socket.IO server error:', error.message);
+  console.error('Socket.IO server error:', error.message);
 });
 
 // Log client connections/disconnections
 io.on('connection', (socket) => {
   logger.log(`Socket.IO client connected: ${socket.id}`, 'info', false, 'socket:connect');
-  console.log(`Socket.IO client connected: ${socket.id}`);
+  debug(`Socket.IO client connected: ${socket.id}`);
 
   // === CLIENT LOGGING ===
   socket.on('log', ({ message, level, timestamp }) => {
@@ -77,15 +81,13 @@ io.on('connection', (socket) => {
 
   // === HA CONNECTION STATUS REQUEST ===
   socket.on('request-ha-status', () => {
-    console.log('[HA Status] Request received');
+    debug('[HA Status] Request received');
     const haManager = deviceManagers.getManager('ha_');
-    console.log('[HA Status] haManager:', haManager);
-    console.log('[HA Status] haManager type:', typeof haManager);
-    console.log('[HA Status] haManager keys:', haManager ? Object.keys(haManager) : 'null');
+    debug('[HA Status] haManager type:', typeof haManager);
     
     if (haManager && typeof haManager.getConnectionStatus === 'function') {
       const status = haManager.getConnectionStatus();
-      console.log('[HA Status] getConnectionStatus returned:', status);
+      debug('[HA Status] getConnectionStatus returned:', status);
       socket.emit('ha-connection-status', {
         connected: status.isConnected,
         wsConnected: status.wsConnected,
@@ -93,11 +95,11 @@ io.on('connection', (socket) => {
         host: status.host
       });
     } else {
-      console.log('[HA Status] getConnectionStatus not available, checking direct props');
+      debug('[HA Status] getConnectionStatus not available, checking direct props');
       // Try direct access as fallback
       if (haManager) {
-        console.log('[HA Status] Direct isConnected:', haManager.isConnected);
-        console.log('[HA Status] Direct devices length:', haManager.devices?.length);
+        debug('[HA Status] Direct isConnected:', haManager.isConnected);
+        debug('[HA Status] Direct devices length:', haManager.devices?.length);
       }
       socket.emit('ha-connection-status', {
         connected: false,
@@ -143,22 +145,22 @@ io.on('connection', (socket) => {
   // === DISCONNECT ===
   socket.on('disconnect', (reason) => {
     logger.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`, 'warn', false, 'socket:disconnect');
-    console.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`);
+    debug(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`);
   });
 });
 
 // Endpoint to list plugins - Moved before static files to ensure priority
 app.get('/api/plugins', async (req, res) => {
-  console.log('API Request: /api/plugins');
+  debug('API Request: /api/plugins');
   try {
     const pluginsDir = path.join(__dirname, '../plugins');
-    console.log('Looking for plugins in:', pluginsDir);
+    debug('Looking for plugins in:', pluginsDir);
     
     // Ensure directory exists
     try {
       await fs.access(pluginsDir);
     } catch {
-      console.log('Plugins directory not found, creating...');
+      debug('Plugins directory not found, creating...');
       await fs.mkdir(pluginsDir, { recursive: true });
     }
 
@@ -175,7 +177,7 @@ app.get('/api/plugins', async (req, res) => {
     });
     
     const pluginPaths = jsFiles.map(file => `plugins/${file}`);
-    console.log('Found plugins (sorted):', pluginPaths);
+    debug('Found plugins (sorted):', pluginPaths.length, 'files');
     res.json(pluginPaths);
   } catch (error) {
     logger.log(`Failed to list plugins: ${error.message}`, 'error', false, 'plugins:error', { stack: error.stack });
@@ -561,93 +563,89 @@ app.use(require('./config/cors'));
 app.use(require('./api/middleware/errorHandler'));
 
 // Initialize DeviceService
-console.log('Initializing DeviceService...');
+debug('Initializing DeviceService...');
 async function initializeDeviceService() {
   const managers = await loadManagers();
   const deviceService = new DeviceService(managers, {
     controlDeviceBase: deviceManagers.controlDevice,
     initializeDevices: deviceManagers.initializeDevices
   });
-  console.log('DeviceService initialized with managers:', Object.keys(managers));
+  debug('DeviceService initialized with managers:', Object.keys(managers));
   return deviceService;
 }
 
 // Load routes
 async function setupRoutes(deviceService) {
   await loadRoutes(app, io, deviceService);
-  console.log('Routes set up successfully');
+  debug('Routes set up successfully');
 }
 
 async function displayBanner() {
-  console.log('Displaying banner...');
   const banner = figlet.textSync('T2Automations', { font: 'Slant' });
   console.log(chalk.green(banner));
-  console.log(chalk.cyan('Welcome to T2Automations - With Shelly Support and Energy Metering'));
-  await logger.log('Banner displayed', 'info', false, 'banner:display');
-  console.log('Banner displayed');
+  console.log(chalk.cyan('Welcome to T2Automations - Visual Node-Based Home Automation'));
+  await logger.log('Server starting', 'info', false, 'banner:display');
 }
 
 async function initializeModules(deviceService) {
-  console.log('Setting up notifications...');
+  debug('Setting up notifications...');
   const notificationEmitter = await setupNotifications(io);
   io.sockets.notificationEmitter = notificationEmitter;
-  console.log('Notifications set up');
+  debug('Notifications set up');
 
-  console.log('Initializing devices...');
+  debug('Initializing devices...');
   try {
     const devices = await deviceService.initialize(io, notificationEmitter, logger.log.bind(logger));
     deviceService.setIo(io);
-    console.log(`Initialized devices: ${Object.keys(devices).length} types`);
+    debug(`Initialized devices: ${Object.keys(devices).length} types`);
   } catch (error) {
-    console.error('Failed to initialize devices:', error);
+    console.error('Failed to initialize devices:', error.message);
     logger.log(`Failed to initialize devices: ${error.message}`, 'error', false, 'devices:init:error', { stack: error.stack });
   }
 
-  console.log('Fetching initial weather data...');
+  debug('Fetching initial weather data...');
   const initialWeather = await fetchWeatherData(true);
-  console.log('Initial weather data:', initialWeather);
+  debug('Initial weather data:', initialWeather ? 'received' : 'none');
 
-  console.log('Fetching initial forecast data...');
+  debug('Fetching initial forecast data...');
   const initialForecast = await fetchForecastData(true);
-  console.log('Initial forecast data:', initialForecast);
+  debug('Initial forecast data:', initialForecast ? `${initialForecast.length} days` : 'none');
 
   if (initialWeather) {
     io.emit('weather-update', initialWeather);
-    console.log('Emitted initial weather-update');
+    debug('Emitted initial weather-update');
     await logger.log('Emitted initial weather-update', 'info', false, 'weather-update:initial');
   }
 
   if (initialForecast) {
     io.emit('forecast-update', initialForecast);
-    console.log('Emitted initial forecast-update');
+    debug('Emitted initial forecast-update');
     await logger.log('Emitted initial forecast-update', 'info', false, 'forecast-update:initial');
   }
 
-  console.log('Weather data fetched');
+  debug('Weather data fetched');
 
   let lastWeatherDate = null;
   let lastForecastDate = null;
 
   setInterval(async () => {
-    console.log('Fetching periodic weather data...');
+    debug('Fetching periodic weather data...');
     const updatedWeather = await fetchWeatherData(true);
-    console.log('Periodic weather data:', updatedWeather);
 
-    console.log('Fetching periodic forecast data...');
+    debug('Fetching periodic forecast data...');
     const updatedForecast = await fetchForecastData(true);
-    console.log('Periodic forecast data:', updatedForecast);
 
     if (updatedWeather && (!lastWeatherDate || updatedWeather.date !== lastWeatherDate)) {
       io.emit('weather-update', updatedWeather);
       lastWeatherDate = updatedWeather.date;
-      console.log('Emitted periodic weather-update');
+      debug('Emitted periodic weather-update');
       await logger.log('Emitted weather-update with new data', 'info', false, 'weather-update:periodic');
     }
 
     if (updatedForecast && updatedForecast.length > 0 && (!lastForecastDate || updatedForecast[0]?.date !== lastForecastDate)) {
       io.emit('forecast-update', updatedForecast);
       lastForecastDate = updatedForecast[0]?.date;
-      console.log('Emitted periodic forecast-update');
+      debug('Emitted periodic forecast-update');
       await logger.log('Emitted forecast-update with new data', 'info', false, 'forecast-update:periodic');
     }
   }, 3 * 60 * 1000);
@@ -657,24 +655,24 @@ async function initializeModules(deviceService) {
 
 async function startServer() {
   try {
-    console.log('Starting server setup...');
+    debug('Starting server setup...');
     await displayBanner();
-    console.log('Connecting to MongoDB...');
+    debug('Connecting to MongoDB...');
     await connectMongoDB();
-    console.log('Initializing DeviceService...');
+    debug('Initializing DeviceService...');
     const deviceService = await initializeDeviceService();
-    console.log('Setting up routes...');
+    debug('Setting up routes...');
     await setupRoutes(deviceService);
-    console.log('Initializing modules...');
+    debug('Initializing modules...');
     await initializeModules(deviceService);
-    console.log('Starting server on port...');
+    debug('Starting server on port...');
     const PORT = config.get('port');
     server.listen(PORT, () => {
       logger.log(`Server running on http://localhost:${PORT}`, 'info', false, 'server:start');
-      console.log(chalk.cyan(`Server is fully operational on port ${PORT} with Shelly, Osram SMART+, and Energy Metering`));
+      console.log(chalk.cyan(`✓ Server running on http://localhost:${PORT}`));
     });
   } catch (err) {
-    console.log('Startup error:', err);
+    console.error('Startup error:', err.message);
     logger.log(`Startup failed: ${err.message}`, 'error', false, 'error:startup');
     process.exit(1);
   }

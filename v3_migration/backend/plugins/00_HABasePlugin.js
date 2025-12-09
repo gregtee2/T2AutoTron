@@ -355,5 +355,5 @@
         removeSocketListeners
     };
 
-    console.log("[HABasePlugin] T2HAUtils loaded with:", Object.keys(window.T2HAUtils).join(", "));
+    // console.log("[HABasePlugin] T2HAUtils loaded with:", Object.keys(window.T2HAUtils).join(", "));
 })();

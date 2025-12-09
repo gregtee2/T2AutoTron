@@ -32,7 +32,19 @@ HUE_BRIDGE_IP=192.168.x.x
 HUE_USERNAME=your_hue_username
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
+
+# Debug mode - set to true for verbose server logging
+VERBOSE_LOGGING=false
 ```
+
+## Debug Logging
+
+Debug logging is **disabled by default**. To enable verbose logging:
+
+**Backend (server.js):** Set `VERBOSE_LOGGING=true` in `.env`
+**Frontend (Editor.jsx):** Set `EDITOR_DEBUG = true` at top of file
+**Frontend (sockets.js):** Set `SOCKET_DEBUG = true` at top of file
+**Plugins:** Use `this.properties.debug = true` per-node
 
 ## Device ID Prefixes
 
@@ -360,7 +372,7 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 1 | Debug console logging | ✅ Done | Registration logs commented out, remaining logs guarded by debug flag |
+| 1 | Debug console logging | ✅ Done | All logs gated by `VERBOSE_LOGGING` env var (backend) or `EDITOR_DEBUG`/`SOCKET_DEBUG` flags (frontend) |
 | 2 | Clean build artifacts | ✅ Done | Only 1-2 files in assets/ |
 | 3 | Fix hardcoded HA URL | ✅ Done | Uses `process.env.HA_HOST` with fallback |
 | 4 | Package.json metadata | ✅ Done | v2.1.0-beta.1, proper author/homepage/keywords |

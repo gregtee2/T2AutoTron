@@ -301,5 +301,5 @@
         component: IntegerSelectorNodeComponent
     });
 
-    console.log("[IntegerSelectorNode] Registered (DRY refactored)");
+    // console.log("[IntegerSelectorNode] Registered (DRY refactored)");
 })();

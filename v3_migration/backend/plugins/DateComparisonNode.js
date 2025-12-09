@@ -344,5 +344,5 @@
         component: DateComparisonNodeComponent
     });
 
-    console.log("[DateComparisonNode] Registered");
+    // console.log("[DateComparisonNode] Registered");
 })();

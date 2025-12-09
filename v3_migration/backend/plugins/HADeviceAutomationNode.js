@@ -594,5 +594,5 @@
         component: HADeviceAutomationNodeComponent
     });
 
-    console.log("[HADeviceAutomationNode] Registered");
+    // console.log("[HADeviceAutomationNode] Registered");
 })();

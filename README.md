@@ -126,8 +126,13 @@ npm run build
 
 ## Known Issues
 
-1. **Debug logging**: Extensive console logging is still active for debugging purposes.
-2. **Some settings require restart**: Certain environment variable changes need a server restart to take effect.
+1. **Some settings require restart**: Certain environment variable changes need a server restart to take effect (HA token updates work immediately).
+
+## Debug Mode
+
+Debug logging is disabled by default. To enable verbose logging:
+- **Backend**: Set `VERBOSE_LOGGING=true` in `v3_migration/backend/.env`
+- **Frontend**: Set `EDITOR_DEBUG = true` in `Editor.jsx` or `SOCKET_DEBUG = true` in `sockets.js`
 
 ## Credits
 

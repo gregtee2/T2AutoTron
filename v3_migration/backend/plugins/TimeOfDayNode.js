@@ -444,5 +444,5 @@
         component: TimeOfDayNodeComponent
     });
 
-    console.log("[TimeOfDayNode] Registered");
+    // console.log("[TimeOfDayNode] Registered");
 })();

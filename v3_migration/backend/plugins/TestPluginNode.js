@@ -92,5 +92,5 @@
         component: TestReceiverNodeComponent
     });
 
-    console.log("[TestPluginNode] Registered");
+    // console.log("[TestPluginNode] Registered");
 })();

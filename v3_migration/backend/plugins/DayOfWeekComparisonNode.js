@@ -376,5 +376,5 @@
         component: DayOfWeekComparisonNodeComponent
     });
 
-    console.log("[DayOfWeekComparisonNode] Registered");
+    // console.log("[DayOfWeekComparisonNode] Registered");
 })();
