@@ -83,6 +83,7 @@
                 colorMode: 'custom',
                 predefinedWedge: 'warm-to-cool',
                 directMode: false,
+                colorBias: 0.5,  // 0-1, 0.5 = linear, <0.5 biases toward end, >0.5 biases toward start
                 fromColor: { r: 255, g: 0, b: 0 },
                 toColor: { r: 0, g: 0, b: 255 },
                 fromBrightness: 254,
@@ -127,6 +128,7 @@
             this.colorMode = this.properties.colorMode;
             this.predefinedWedge = this.properties.predefinedWedge;
             this.directMode = this.properties.directMode;
+            this.colorBias = this.properties.colorBias !== undefined ? this.properties.colorBias : 0.5;
             this.fromColor = this.properties.fromColor;
             this.toColor = this.properties.toColor;
             this.fromBrightness = this.properties.fromBrightness;
@@ -159,6 +161,7 @@
             this.properties.colorMode = this.colorMode;
             this.properties.predefinedWedge = this.predefinedWedge;
             this.properties.directMode = this.directMode;
+            this.properties.colorBias = this.colorBias;
             this.properties.fromColor = this.fromColor;
             this.properties.toColor = this.toColor;
             this.properties.fromBrightness = this.fromBrightness;
@@ -340,19 +343,32 @@
                 if (this.directMode) {
                     const from = this.fromColor || { r: 255, g: 0, b: 0 };
                     const to = this.toColor || { r: 0, g: 0, b: 255 };
-                    const r = Math.round(from.r + position * (to.r - from.r));
-                    const g = Math.round(from.g + position * (to.g - from.g));
-                    const b = Math.round(from.b + position * (to.b - from.b));
+                    
+                    // Apply color bias to position (power curve)
+                    // bias = 0.5 → linear, bias < 0.5 → favor end color, bias > 0.5 → favor from color
+                    const bias = this.colorBias !== undefined ? this.colorBias : 0.5;
+                    let biasedPosition = position;
+                    if (bias !== 0.5 && position > 0 && position < 1) {
+                        // Convert bias (0-1) to power: 0→4, 0.5→1, 1→0.25
+                        const power = bias < 0.5 
+                            ? 1 + (0.5 - bias) * 6  // bias 0 → power 4, bias 0.5 → power 1
+                            : 1 / (1 + (bias - 0.5) * 6);  // bias 0.5 → power 1, bias 1 → power 0.25
+                        biasedPosition = Math.pow(position, power);
+                    }
+                    
+                    const r = Math.round(from.r + biasedPosition * (to.r - from.r));
+                    const g = Math.round(from.g + biasedPosition * (to.g - from.g));
+                    const b = Math.round(from.b + biasedPosition * (to.b - from.b));
                     this.lastColor = { r, g, b };
 
                     // Convert RGB to HSV for output compatibility
                     // ColorUtils.rgbToHsv returns { hue, sat, val } with values 0-1
                     const hsv = ColorUtils.rgbToHsv(r, g, b);
                     
-                    // Interpolate brightness between fromBrightness and toBrightness
+                    // Interpolate brightness between fromBrightness and toBrightness (also uses biased position)
                     const fromBri = this.fromBrightness !== undefined ? this.fromBrightness : 254;
                     const toBri = this.toBrightness !== undefined ? this.toBrightness : 254;
-                    const interpolatedBrightness = Math.round(fromBri + position * (toBri - fromBri));
+                    const interpolatedBrightness = Math.round(fromBri + biasedPosition * (toBri - fromBri));
                     const brightness = this.useBrightnessOverride ? this.brightnessOverride : interpolatedBrightness;
 
                     return {
@@ -398,6 +414,7 @@
                 toColor: this.toColor,
                 fromBrightness: this.fromBrightness,
                 toBrightness: this.toBrightness,
+                colorBias: this.colorBias,
                 startHue: this.startHue,
                 startSaturation: this.startSaturation,
                 startBrightness: this.startBrightness,
@@ -499,6 +516,7 @@
         const [isInRange, setIsInRange] = useState(data.isInRange || false);
         const [lastColor, setLastColor] = useState(data.lastColor);
         const [isCollapsed, setIsCollapsed] = useState(false);
+        const [colorBias, setColorBias] = useState(data.colorBias !== undefined ? data.colorBias : 0.5);
         
         // Track input overrides for time values
         const [inputStartTime, setInputStartTime] = useState(null);
@@ -535,6 +553,7 @@
             setTimeSteps(data.timeSteps);
             setUseBrightnessOverride(data.useBrightnessOverride);
             setBrightnessOverride(data.brightnessOverride);
+            if (data.colorBias !== undefined) setColorBias(data.colorBias);
         }, [data]);
 
         // Update gradient canvas
@@ -568,14 +587,24 @@
             for (let i = 0; i < steps; i++) {
                 const t = i / steps;
                 if (directMode) {
+                    // Apply color bias to position (power curve) - same logic as data() method
+                    const bias = colorBias !== undefined ? colorBias : 0.5;
+                    let biasedT = t;
+                    if (bias !== 0.5 && t > 0 && t < 1) {
+                        const power = bias < 0.5 
+                            ? 1 + (0.5 - bias) * 6 
+                            : 1 / (1 + (bias - 0.5) * 6);
+                        biasedT = Math.pow(t, power);
+                    }
+                    
                     // Direct RGB interpolation with brightness
-                    const r = Math.round(fromColor.r + t * (toColor.r - fromColor.r));
-                    const g = Math.round(fromColor.g + t * (toColor.g - fromColor.g));
-                    const b = Math.round(fromColor.b + t * (toColor.b - fromColor.b));
+                    const r = Math.round(fromColor.r + biasedT * (toColor.r - fromColor.r));
+                    const g = Math.round(fromColor.g + biasedT * (toColor.g - fromColor.g));
+                    const b = Math.round(fromColor.b + biasedT * (toColor.b - fromColor.b));
                     // Interpolate brightness and apply as a multiplier (0-254 -> 0-1)
                     const fromBri = fromBrightness !== undefined ? fromBrightness : 254;
                     const toBri = toBrightness !== undefined ? toBrightness : 254;
-                    const briMultiplier = (fromBri + t * (toBri - fromBri)) / 254;
+                    const briMultiplier = (fromBri + biasedT * (toBri - fromBri)) / 254;
                     const rAdj = Math.round(r * briMultiplier);
                     const gAdj = Math.round(g * briMultiplier);
                     const bAdj = Math.round(b * briMultiplier);
@@ -624,8 +653,33 @@
             
             if (rangeMode === 'time') {
                 // Time mode: show times from start to end
-                const startMins = to24HourMinutes(startTimeHours, startTimeMinutes, startTimePeriod);
-                let endMins = to24HourMinutes(endTimeHours, endTimeMinutes, endTimePeriod);
+                // Use input values if available, otherwise use local settings
+                let effectiveStartHours = startTimeHours;
+                let effectiveStartMinutes = startTimeMinutes;
+                let effectiveStartPeriod = startTimePeriod;
+                let effectiveEndHours = endTimeHours;
+                let effectiveEndMinutes = endTimeMinutes;
+                let effectiveEndPeriod = endTimePeriod;
+                
+                if (inputStartTime) {
+                    const parsed = parseTimeInput(inputStartTime);
+                    if (parsed) {
+                        effectiveStartHours = parsed.hours;
+                        effectiveStartMinutes = parsed.minutes;
+                        effectiveStartPeriod = parsed.period;
+                    }
+                }
+                if (inputEndTime) {
+                    const parsed = parseTimeInput(inputEndTime);
+                    if (parsed) {
+                        effectiveEndHours = parsed.hours;
+                        effectiveEndMinutes = parsed.minutes;
+                        effectiveEndPeriod = parsed.period;
+                    }
+                }
+                
+                const startMins = to24HourMinutes(effectiveStartHours, effectiveStartMinutes, effectiveStartPeriod);
+                let endMins = to24HourMinutes(effectiveEndHours, effectiveEndMinutes, effectiveEndPeriod);
                 
                 // Handle overnight (end time before start time)
                 if (endMins <= startMins) {
@@ -710,7 +764,7 @@
             ctx.lineTo(markerX, gradientHeight + 8);
             ctx.closePath();
             ctx.fill();
-        }, [directMode, fromColor, toColor, fromBrightness, toBrightness, startHue, startSaturation, startBrightness, endHue, endSaturation, endBrightness, position, isInRange, rangeMode, startValue, endValue, startTimeHours, startTimeMinutes, startTimePeriod, endTimeHours, endTimeMinutes, endTimePeriod, timerDuration, timerUnit]);
+        }, [directMode, fromColor, toColor, fromBrightness, toBrightness, colorBias, startHue, startSaturation, startBrightness, endHue, endSaturation, endBrightness, position, isInRange, rangeMode, startValue, endValue, startTimeHours, startTimeMinutes, startTimePeriod, endTimeHours, endTimeMinutes, endTimePeriod, timerDuration, timerUnit, inputStartTime, inputEndTime]);
 
         // Periodic update for runtime state
         useEffect(() => {
@@ -997,6 +1051,33 @@
                             className: 'cgn-slider', 
                             style: getSliderStyle(toBrightness, 0, 254) 
                         })
+                    ]),
+                    // Color Bias slider - skews gradient toward start or end color
+                    el('div', { key: 'colorBias', className: 'cgn-section cgn-hsv-group' }, [
+                        el('label', { key: 'label', className: 'cgn-label cgn-tooltip', 'data-tooltip': "Shifts the gradient balance. 0 = mostly End color, 0.5 = linear, 1 = mostly From color. Useful for fine-tuning color transitions." }, [
+                            el('span', { key: 'text' }, `Color Bias: ${colorBias.toFixed(2)}`), 
+                            el('span', { key: 'icon', className: 'cgn-info-icon' }, "?")
+                        ]),
+                        el('div', { key: 'sliderRow', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+                            el('span', { key: 'labelEnd', style: { fontSize: '10px', color: '#888', minWidth: '24px' } }, 'End'),
+                            el('input', { 
+                                key: 'input', 
+                                type: 'range', 
+                                min: 0, 
+                                max: 1, 
+                                step: 0.01,
+                                value: colorBias, 
+                                onChange: (e) => {
+                                    const val = parseFloat(e.target.value);
+                                    setColorBias(val);
+                                    data.colorBias = val;
+                                    triggerUpdate();
+                                }, 
+                                className: 'cgn-slider', 
+                                style: { flex: 1, ...getSliderStyle(colorBias, 0, 1) }
+                            }),
+                            el('span', { key: 'labelFrom', style: { fontSize: '10px', color: '#888', minWidth: '32px' } }, 'From')
+                        ])
                     ])
                 ]) : null,
 
