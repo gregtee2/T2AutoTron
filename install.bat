@@ -180,10 +180,9 @@ echo  ===============================================
 echo.
 echo  To start T2AutoTron:
 echo.
-echo     Double-click:  start.bat
+echo     Double-click:  start_servers.bat
 echo.
-echo  The app will open in your browser at:
-echo     http://localhost:5173
+echo  The app will open in Electron (desktop window).
 echo.
 echo  First time? Click the Settings (gear) icon to
 echo  configure Home Assistant, Hue, etc.

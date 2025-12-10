@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # T2AutoTron 2.1 - Update Tool (Mac/Linux)
-
-set -e
+# Works like ComfyUI updater - just run it and it updates!
 
 echo ""
 echo "==============================================="
@@ -14,61 +13,71 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Check for git
+# Check for git - install if missing
 if ! command -v git &> /dev/null; then
-    echo "  ERROR: Git is not installed!"
+    echo "  Git is not installed - attempting to install..."
     echo ""
-    echo "  Please install Git:"
-    echo "    macOS:  brew install git"
-    echo "    Ubuntu: sudo apt install git"
-    echo ""
-    echo "  Or download the latest ZIP from GitHub:"
-    echo "  https://github.com/gregtee2/T2AutoTron/archive/refs/heads/main.zip"
-    echo ""
-    exit 1
-fi
-
-# Check if this is a git repo
-if [ ! -d ".git" ]; then
-    echo "  ERROR: This folder is not a Git repository!"
-    echo ""
-    echo "  If you downloaded as ZIP, you cannot use this updater."
-    echo "  Instead, download a fresh ZIP from:"
-    echo "  https://github.com/gregtee2/T2AutoTron/archive/refs/heads/main.zip"
-    echo ""
-    exit 1
-fi
-
-# Show current branch
-echo "  Current branch: $(git branch --show-current)"
-echo ""
-
-# Check for uncommitted changes
-if ! git diff --quiet 2>/dev/null; then
-    echo "  WARNING: You have uncommitted local changes!"
-    echo ""
-    echo "  These files have been modified:"
-    git diff --name-only
-    echo ""
-    read -p "  Stash changes and continue? (y/n): " STASH
-    if [[ "$STASH" =~ ^[Yy]$ ]]; then
-        echo "  Stashing local changes..."
-        git stash push -m "Auto-stash before update $(date)"
-        echo "  Your changes are saved. Use 'git stash pop' to restore them."
-        echo ""
+    
+    # Try to install git
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get update && sudo apt-get install -y git
+    elif command -v brew &> /dev/null; then
+        brew install git
+    elif command -v yum &> /dev/null; then
+        sudo yum install -y git
     else
-        echo "  Update cancelled."
-        exit 0
+        echo "  ERROR: Could not install Git automatically."
+        echo ""
+        echo "  Please install Git manually:"
+        echo "    macOS:  brew install git"
+        echo "    Ubuntu: sudo apt install git"
+        echo ""
+        exit 1
     fi
+    
+    if ! command -v git &> /dev/null; then
+        echo "  ERROR: Git installation failed."
+        exit 1
+    fi
+    echo "  Git installed successfully!"
+    echo ""
+fi
+
+# Check if this is a git repo - if not, convert it
+if [ ! -d ".git" ]; then
+    echo "  This folder is not yet connected to Git."
+    echo "  Converting to Git-enabled install..."
+    echo ""
+    
+    # Initialize and connect to repo
+    git init
+    git remote add origin https://github.com/gregtee2/T2AutoTron.git
+    
+    echo "  Fetching latest version..."
+    git fetch origin stable
+    
+    # Reset to stable (keeps local files)
+    git reset origin/stable
+    git checkout -b stable
+    
+    echo ""
+    echo "  Successfully connected to Git!"
+    echo ""
+fi
+
+# Make sure we have the remote
+if ! git remote -v | grep -q "origin"; then
+    echo "  Adding remote origin..."
+    git remote add origin https://github.com/gregtee2/T2AutoTron.git
 fi
 
 # Fetch and check for updates
-echo "  [1/3] Checking for updates..."
-git fetch origin stable
+echo "  [1/4] Checking for updates..."
+git fetch origin stable 2>/dev/null || git fetch origin
 
 BEHIND=$(git rev-list HEAD..origin/stable --count 2>/dev/null || echo "0")
 
-if [ "$BEHIND" -eq 0 ]; then
+if [ "$BEHIND" -eq 0 ] || [ -z "$BEHIND" ]; then
     echo ""
     echo "==============================================="
     echo "   Already up to date!"
@@ -85,23 +94,38 @@ git log HEAD..origin/stable --oneline --no-decorate -10
 echo "  -----------------------------------------------"
 echo ""
 
-# Pull updates
-echo "  [2/3] Downloading updates..."
-git pull origin stable
+# Stash any local changes
+STASHED=0
+if ! git diff --quiet 2>/dev/null; then
+    echo "  Stashing local changes..."
+    git stash push -m "Auto-stash before update"
+    STASHED=1
+fi
+
+# Pull updates - use reset for clean update
+echo "  [2/4] Downloading updates..."
+git checkout stable 2>/dev/null || git checkout -b stable origin/stable 2>/dev/null
+git reset --hard origin/stable
 
 # Update dependencies
 echo ""
-echo "  [3/3] Updating dependencies..."
-
-echo "    Backend..."
+echo "  [3/4] Updating backend dependencies..."
 cd "$SCRIPT_DIR/v3_migration/backend"
-npm install --silent
+npm install --silent 2>/dev/null || npm install
 
-echo "    Frontend..."
+echo ""
+echo "  [4/4] Updating frontend dependencies..."
 cd "$SCRIPT_DIR/v3_migration/frontend"
-npm install --silent
+npm install --silent 2>/dev/null || npm install
 
 cd "$SCRIPT_DIR"
+
+# Restore stashed changes
+if [ "$STASHED" -eq 1 ]; then
+    echo ""
+    echo "  Restoring your local changes..."
+    git stash pop 2>/dev/null || true
+fi
 
 # Done!
 echo ""
@@ -112,7 +136,7 @@ echo ""
 echo "  Updated $BEHIND commit(s)."
 echo ""
 echo "  To start T2AutoTron, run:"
-echo "    ./start.sh"
+echo "    ./start_servers.sh"
 echo ""
 echo "==============================================="
 echo ""
