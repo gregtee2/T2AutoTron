@@ -113,6 +113,12 @@ body {
   letter-spacing: 1px;
 }
 
+.panel-hint {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 9px;
+  font-style: italic;
+}
+
 .panel-clear-btn {
   background: rgba(255, 100, 100, 0.2);
   border: 1px solid rgba(255, 100, 100, 0.5);
@@ -312,6 +318,17 @@ body {
 }
 
 /* Upcoming Events Entries */
+/* Add hint text to Upcoming Events panel header */
+.upcoming-events-panel .panel-title::after {
+  content: " — click to locate node";
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 9px;
+  font-style: italic;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .event-entry {
   display: flex;
   gap: 10px;
@@ -320,10 +337,20 @@ body {
   margin-bottom: 3px;
   align-items: center;
   background: rgba(0, 0, 0, 0.2);
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .event-entry:hover {
   background: rgba(0, 243, 255, 0.1);
+}
+
+.event-entry.clickable:hover {
+  background: rgba(0, 243, 255, 0.2);
+  transform: translateX(3px);
+}
+
+.event-entry.clickable:active {
+  transform: translateX(1px);
 }
 
 .event-time {

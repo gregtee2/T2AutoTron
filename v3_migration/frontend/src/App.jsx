@@ -303,7 +303,9 @@ function App() {
   // Function for nodes to register their scheduled events
   const registerScheduledEvents = useCallback((nodeId, events) => {
     // events should be array of { time: Date, action: string, deviceName: string }
-    scheduledEventsRegistry.current[nodeId] = events;
+    // We add nodeId to each event so we can navigate to it when clicked
+    const eventsWithNodeId = events.map(e => ({ ...e, nodeId }));
+    scheduledEventsRegistry.current[nodeId] = eventsWithNodeId;
     
     // Aggregate all events from all nodes, sort by time, and update state
     const allEvents = [];
@@ -376,6 +378,33 @@ function App() {
     const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return `${time} (${relative})`;
   };
+
+  // Focus on a specific node in the editor (pan/zoom to it)
+  const focusNode = useCallback(async (nodeId) => {
+    if (!nodeId) return;
+    
+    const area = window._t2Area;
+    const editor = window._t2Editor;
+    
+    if (!area || !editor) {
+      console.warn('[focusNode] Editor not ready');
+      return;
+    }
+    
+    const node = editor.getNode(nodeId);
+    if (!node) {
+      console.warn('[focusNode] Node not found:', nodeId);
+      return;
+    }
+    
+    try {
+      // Import AreaExtensions dynamically to use zoomAt
+      const { AreaExtensions } = await import('rete-area-plugin');
+      await AreaExtensions.zoomAt(area, [node], { scale: 1.0 });
+    } catch (err) {
+      console.warn('[focusNode] Failed to zoom to node:', err);
+    }
+  }, []);
 
   return (
     <div className="app-container">
@@ -463,7 +492,13 @@ function App() {
               <div className="empty-message">No scheduled events...</div>
             ) : (
               upcomingEvents.map((event, index) => (
-                <div key={index} className={`event-entry event-${event.action || 'unknown'}`}>
+                <div 
+                  key={index} 
+                  className={`event-entry event-${event.action || 'unknown'}${event.nodeId ? ' clickable' : ''}`}
+                  onClick={() => event.nodeId && focusNode(event.nodeId)}
+                  title={event.nodeId ? 'Click to jump to this node' : ''}
+                  style={event.nodeId ? { cursor: 'pointer' } : {}}
+                >
                   <span className="event-time">{formatEventTime(event.time)}</span>
                   <span className={`event-action ${event.action}`}>{event.action || 'event'}</span>
                   <span className="event-device">{event.deviceName || event.device || 'Unknown'}</span>
