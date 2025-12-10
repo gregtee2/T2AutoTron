@@ -2317,6 +2317,13 @@ export function Editor() {
                 // Emit event so nodes can refresh their data now that loading is complete
                 window.dispatchEvent(new CustomEvent('graphLoadComplete'));
                 
+                // Process all nodes through the engine to propagate values
+                // This ensures HA devices sync to their trigger states after load
+                if (processImmediateRef.current) {
+                    debug('[handleImport] Running processImmediate to sync node states');
+                    processImmediateRef.current();
+                }
+                
                 // Final safety reset of editor view after all loading is complete
                 if (window.resetEditorView) {
                     setTimeout(() => window.resetEditorView(), 100);

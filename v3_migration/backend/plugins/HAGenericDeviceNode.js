@@ -296,13 +296,19 @@
                     this.fetchDevices();
                 };
                 
-                // Listen for graph load complete event to refresh devices
-                this._onGraphLoadComplete = () => {
-                    this.fetchDevices();
-                    // Also fetch state for each selected device
-                    this.properties.selectedDeviceIds.filter(Boolean).forEach(id => {
-                        this.fetchDeviceState(id);
-                    });
+                // Listen for graph load complete event to refresh devices and sync state
+                this._onGraphLoadComplete = async () => {
+                    await this.fetchDevices();
+                    // Fetch state for each selected device
+                    await Promise.all(
+                        this.properties.selectedDeviceIds.filter(Boolean).map(id => this.fetchDeviceState(id))
+                    );
+                    
+                    // Reset the flag so next data() call processes the initial trigger
+                    this.skipInitialTrigger = true;
+                    
+                    // Trigger engine update - this will cascade through the graph
+                    this.triggerUpdate();
                 };
                 
                 window.socket.on("device-state-update", this._onDeviceStateUpdate);
