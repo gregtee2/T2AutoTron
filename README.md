@@ -26,54 +26,81 @@
 
 ## 🚀 Quick Start
 
-**Requirements:** [Node.js 18+](https://nodejs.org/)
+**Requirements:** Windows 10/11, macOS, or Linux
 
-### Option 1: One-Click Installer (Recommended)
+### Step 1: Download
 
+**Option A: ZIP Download (Easiest)**
+1. Download: [T2AutoTron-stable.zip](https://github.com/gregtee2/T2AutoTron/archive/refs/heads/stable.zip)
+2. Extract to a folder (e.g., `C:\T2AutoTron`)
+
+**Option B: Git Clone (For Developers)**
 ```bash
 git clone https://github.com/gregtee2/T2AutoTron.git
 cd T2AutoTron
 ```
 
-**Windows:** Double-click `install.bat`, then `start.bat`
+### Step 2: Install
+
+**Windows:** Double-click `install.bat`
 
 **Mac/Linux:**
 ```bash
-chmod +x install.sh start.sh
-./install.sh
-./start.sh
+chmod +x install.sh && ./install.sh
 ```
 
-### Option 2: Manual Install
+> ⏱️ First install takes 1-2 minutes. Node.js is installed automatically if needed.
 
+### Step 3: Run
+
+**Windows:** Double-click `start_servers.bat`
+
+**Mac/Linux:**
 ```bash
-# Install dependencies
-cd v3_migration/backend && npm install
-cd ../frontend && npm install
-
-# Start servers (two terminals)
-cd v3_migration/backend && npm start    # Terminal 1
-cd v3_migration/frontend && npm run dev  # Terminal 2
+./start_servers.sh
 ```
 
-### Then...
+The app opens in an Electron desktop window. 
 
-1. **Open** http://localhost:5173
-2. **Configure:** Click **🔧 Settings & API Keys** to add your Home Assistant token, Hue bridge, etc.
-3. **Build automations!**
+### Step 4: Configure
 
-> 📖 **First time?** See the [Getting Started Guide](v3_migration/GETTING_STARTED.md) for a step-by-step tutorial.
+1. Click the **⚙️ Settings** gear icon
+2. Enter your **Home Assistant URL** (e.g., `http://homeassistant.local:8123`)
+3. Enter your **Home Assistant Token** ([How to get a token](https://www.home-assistant.io/docs/authentication/#your-account-profile))
+4. Click **Test Connection** → should show green checkmark
+5. Click **Save**
+
+### Step 5: Update (Anytime)
+
+**Windows:** Double-click `update.bat`
+
+**Mac/Linux:**
+```bash
+./update.sh
+```
+
+> 🔄 Works like ComfyUI - one click to update! Automatically installs Git if needed and converts ZIP downloads to Git-enabled.
 
 ---
 
-## Links & Community
+## 📁 File Reference
 
-- [Getting Started Guide](v3_migration/GETTING_STARTED.md)
-- [Node Development Guide](v3_migration/frontend/RETE_NODE_GUIDE.md)
-- [Plugin Architecture](v3_migration/PLUGIN_ARCHITECTURE.md)
-- [Demo Video](https://www.youtube.com/results?search_query=T2AutoTron) <!-- Replace with actual demo link if available -->
-- [Issues & Feature Requests](https://github.com/gregtee2/T2AutoTron/issues)
-- [Discussions](https://github.com/gregtee2/T2AutoTron/discussions)
+| File | Purpose |
+|------|---------|
+| `install.bat` / `install.sh` | One-click installer (installs Node.js + dependencies) |
+| `start_servers.bat` / `start_servers.sh` | **Recommended** - Launches backend + Electron app |
+| `start.bat` / `start.sh` | Alternative - Launches backend + browser (tab may sleep) |
+| `update.bat` / `update.sh` | One-click updater (auto-converts ZIP to Git) |
+
+---
+
+## 🔗 Links & Community
+
+- 📖 [Getting Started Guide](v3_migration/GETTING_STARTED.md) - Step-by-step tutorial
+- 🔧 [Node Development Guide](v3_migration/frontend/RETE_NODE_GUIDE.md) - Create custom nodes
+- 🧩 [Plugin Architecture](v3_migration/PLUGIN_ARCHITECTURE.md) - Extend T2AutoTron
+- 🐛 [Issues & Feature Requests](https://github.com/gregtee2/T2AutoTron/issues)
+- 💬 [Discussions](https://github.com/gregtee2/T2AutoTron/discussions)
 
 ---
 
@@ -172,6 +199,28 @@ See [`v3_migration/frontend/RETE_NODE_GUIDE.md`](v3_migration/frontend/RETE_NODE
 See [`v3_migration/PLUGIN_ARCHITECTURE.md`](v3_migration/PLUGIN_ARCHITECTURE.md) for the plugin system documentation.
 
 ## Development
+
+### Manual Install (For Developers)
+
+If you prefer manual setup or need more control:
+
+```bash
+# Clone the repo
+git clone https://github.com/gregtee2/T2AutoTron.git
+cd T2AutoTron
+
+# Install dependencies
+cd v3_migration/backend && npm install
+cd ../frontend && npm install
+
+# Create environment config
+cd ../backend
+cp .env.example .env  # Edit with your settings
+
+# Start servers (two terminals)
+cd v3_migration/backend && npm start    # Terminal 1: Backend on port 3000
+cd v3_migration/frontend && npm run dev  # Terminal 2: Frontend on port 5173
+```
 
 ### Frontend (Rete.js Editor)
 ```bash
