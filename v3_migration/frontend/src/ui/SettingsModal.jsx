@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import './SettingsModal.css';
+import { DiscoveryPanel } from './DiscoveryPanel';
 
 // Theme settings configuration (stored in localStorage, not server)
 const THEME_SETTINGS = [
@@ -696,6 +697,25 @@ export function SettingsModal({ isOpen, onClose }) {
                                         onChange={handleImportBackup}
                                     />
                                 </div>
+                            </div>
+
+                            {/* Network Discovery Section */}
+                            <div className="settings-category">
+                                <div 
+                                    className="settings-category-header"
+                                    onClick={() => toggleCategory('Discovery')}
+                                >
+                                    <span>
+                                        {expandedCategories['Discovery'] ? '▼' : '▶'} 
+                                        📡 Network Device Discovery
+                                    </span>
+                                </div>
+                                
+                                {expandedCategories['Discovery'] && (
+                                    <div className="settings-category-content">
+                                        <DiscoveryPanel />
+                                    </div>
+                                )}
                             </div>
 
                             {/* Theme Settings Section */}

@@ -1,3 +1,4 @@
+// Note: emitHueStatus is used by hueManager for broadcast, here we emit directly to socket
 const logger = require('../logging/logger');
 const { fetchWeatherData } = require('../weather/weatherService');
 const { fetchForecastData } = require('../weather/forecastService');
@@ -6,7 +7,46 @@ const { deviceToggleSchema, haTokenSchema, logEventSchema, validate } = require(
 const authManager = require('./middleware/authMiddleware');
 
 module.exports = (deviceService) => (socket) => {
+    // Handle request for Hue connection status
+    socket.on('request-hue-status', () => {
+      let connected = false;
+      let bridgeIp = process.env.HUE_BRIDGE_IP || null;
+      let deviceCount = 0;
+      try {
+        const allDevices = deviceService.getAllDevices();
+        const hueLights = allDevices['hue_'] || [];
+        deviceCount = hueLights.length;
+        connected = deviceCount > 0;
+      } catch (e) {
+        // fallback: not connected
+      }
+      socket.emit('hue-connection-status', {
+        connected,
+        bridgeIp,
+        deviceCount
+      });
+    });
   logger.log(`Socket.IO client connected: ${socket.id}`, 'info', false, `socket:connect:${socket.id}`);
+
+  // Automatically emit Hue status to the newly connected client
+  {
+    let connected = false;
+    let bridgeIp = process.env.HUE_BRIDGE_IP || null;
+    let deviceCount = 0;
+    try {
+      const allDevices = deviceService.getAllDevices();
+      const hueLights = allDevices['hue_'] || [];
+      deviceCount = hueLights.length;
+      connected = deviceCount > 0;
+    } catch (e) {
+      // fallback: not connected
+    }
+    socket.emit('hue-connection-status', {
+      connected,
+      bridgeIp,
+      deviceCount
+    });
+  }
 
   // Emit initial device list
   const emitDeviceList = () => {

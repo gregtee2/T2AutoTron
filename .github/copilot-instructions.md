@@ -426,3 +426,91 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 - **Developer Experience**: Debug flags per node, `window.T2Toast` for plugins
 - **Stability**: Error boundaries prevent full crashes
 
+---
+
+## Git Workflow & Branch Strategy
+
+### Branch Structure
+
+| Branch | Purpose | Merge Target |
+|--------|---------|--------------|
+| `main` | Stable production code. Only merge from `sandbox` after testing. | — |
+| `sandbox` | Active development branch. All new features and fixes go here first. | `main` |
+
+### Development Workflow
+
+1. **Always work on `sandbox` branch** for new features and bug fixes.
+2. **Test thoroughly** on `sandbox` before merging to `main`.
+3. **Merge to `main`** only when `sandbox` is stable and tested.
+
+### Common Git Commands
+
+```bash
+# Check current branch
+git branch
+
+# Switch to sandbox for development
+git checkout sandbox
+
+# Pull latest changes
+git pull origin sandbox
+
+# Stage and commit changes
+git add .
+git commit -m "feat: Add new feature description"
+
+# Push to sandbox
+git push origin sandbox
+
+# When ready to release to main:
+git checkout main
+git pull origin main
+git merge sandbox
+git push origin main
+git checkout sandbox  # Return to development branch
+```
+
+### Commit Message Conventions
+
+Use conventional commit prefixes:
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation changes
+- `refactor:` - Code refactoring (no functional change)
+- `style:` - Formatting, whitespace (no code change)
+- `test:` - Adding or updating tests
+- `chore:` - Build process, dependencies, config
+
+**Examples:**
+```
+feat: Add Hue connection status to Control Panel
+fix: Resolve pluginLoader.js syntax error
+docs: Update copilot-instructions with Git workflow
+refactor: Move socket handlers to separate module
+```
+
+### Handling Merge Conflicts
+
+1. Pull both branches to ensure they're up to date
+2. Attempt merge: `git merge sandbox` (from main)
+3. If conflicts occur, resolve manually in VS Code
+4. Stage resolved files: `git add <file>`
+5. Complete merge: `git commit`
+
+### Quick Reference
+
+```bash
+# Start new feature (from sandbox)
+git checkout sandbox
+git pull origin sandbox
+# ... make changes ...
+git add .
+git commit -m "feat: Description"
+git push origin sandbox
+
+# Deploy to production
+git checkout main
+git merge sandbox
+git push origin main
+git checkout sandbox
+```

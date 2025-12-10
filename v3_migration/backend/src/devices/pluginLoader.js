@@ -116,6 +116,7 @@ function normalizeRoute(route, file) {
     kasaRoutes: { type: 'light', prefix: 'kasa', legacyParams: [null] },
     shellyRoutes: { type: 'light', prefix: 'shelly', legacyParams: [null] },
     deviceRoutes: { type: '', prefix: 'devices', legacyParams: null }, // Mounts at /api/devices
+    discoveryRoutes: { type: '', prefix: 'discovery', legacyParams: null }, // Mounts at /api/discovery
     nodeRoutes: { type: 'node', prefix: 'nodes', legacyParams: null }
   };
   return routeMap[fileName] || { type: fileName.replace('Routes', '').toLowerCase(), prefix: fileName.replace('Routes', '').toLowerCase(), legacyParams: null };

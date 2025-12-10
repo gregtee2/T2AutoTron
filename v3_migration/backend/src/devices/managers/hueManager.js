@@ -26,6 +26,16 @@ const logWithTimestamp = (message, level = 'info') => {
 let hueClient = null;
 const hueLights = [];
 
+// Helper to emit Hue connection status to all clients
+function emitHueStatus(io, connected, bridgeIp, deviceCount) {
+  if (!io) return;
+  io.emit('hue-connection-status', {
+    connected,
+    bridgeIp: bridgeIp || process.env.HUE_BRIDGE_IP || null,
+    deviceCount: deviceCount || 0
+  });
+}
+
 async function setupHue(io, notificationEmitter) {
   try {
     if (!process.env.HUE_BRIDGE_IP || !process.env.HUE_USERNAME) {
@@ -43,6 +53,9 @@ async function setupHue(io, notificationEmitter) {
       await hueLight.updateState(io, notificationEmitter);
     }
 
+    // Emit status after successful connection and lights load
+    emitHueStatus(io, true, process.env.HUE_BRIDGE_IP, hueLights.length);
+
     setInterval(async () => {
       try {
         await Promise.all(hueLights.map(light => light.updateState(io, notificationEmitter)));
@@ -55,6 +68,7 @@ async function setupHue(io, notificationEmitter) {
     return hueLights;
   } catch (err) {
     logWithTimestamp(`Hue setup failed: ${err.message}`, 'error');
+    emitHueStatus(io, false, process.env.HUE_BRIDGE_IP, 0);
     throw err;
   }
 }
@@ -92,4 +106,12 @@ async function controlHueDevice(deviceId, state) {
   }
 }
 
-module.exports = { setupHue, controlHueDevice, hueClient, hueLights };
+function getConnectionStatus() {
+  return {
+    isConnected: !!hueClient,
+    deviceCount: hueLights.length,
+    bridgeIp: process.env.HUE_BRIDGE_IP || null
+  };
+}
+
+module.exports = { setupHue, controlHueDevice, hueClient, hueLights, getConnectionStatus, emitHueStatus };

@@ -4,6 +4,7 @@ import { SettingsModal } from './SettingsModal';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 import { socket } from '../socket';
 import { getLoadingState } from '../registries/PluginLoader';
+import { onPluginProgress } from '../registries/PluginLoader';
 
 export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedChanges }) {
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -24,12 +25,31 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
         kasa: { connected: false, deviceCount: 0 },
         shelly: { connected: false, deviceCount: 0 }
     });
-    const [pluginStatus, setPluginStatus] = useState({ loaded: 0, failed: 0 });
+    const [pluginStatus, setPluginStatus] = useState({ loaded: 0, failed: 0, total: 0 });
+    let unsubscribePlugin;
     const dockRef = useRef(null);
     const fileInputRef = useRef(null);
 
     // Listen for "?" key to open shortcuts modal
     useEffect(() => {
+                // Subscribe to plugin progress updates for live plugin count
+                unsubscribePlugin = onPluginProgress((loadState) => {
+                    // eslint-disable-next-line no-console
+                    console.log('[Dock] Plugin progress update:', loadState);
+                    let loadedPlugins = 0;
+                    let totalPlugins = loadState.totalCount || 0;
+                    if (window.nodeRegistry && typeof window.nodeRegistry.getAll === 'function') {
+                        loadedPlugins = window.nodeRegistry.getAll().length;
+                        if (!totalPlugins || loadedPlugins > totalPlugins) totalPlugins = loadedPlugins;
+                    } else {
+                        loadedPlugins = loadState.loadedCount;
+                    }
+                    setPluginStatus({
+                        loaded: loadedPlugins,
+                        failed: loadState.failedPlugins?.length || 0,
+                        total: totalPlugins
+                    });
+                });
         const handleKeyDown = (e) => {
             // Ignore if typing in an input
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
@@ -45,13 +65,16 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
 
     // Subscribe to connection status updates
     useEffect(() => {
-        const onConnect = () => setConnectionStatus(prev => ({ ...prev, backend: true }));
+        const onConnect = () => {
+            setConnectionStatus(prev => ({ ...prev, backend: true }));
+            socket.emit('request-hue-status');
+        };
         const onDisconnect = () => setConnectionStatus(prev => ({ ...prev, backend: false }));
         const onHaStatus = (data) => setConnectionStatus(prev => ({ 
             ...prev, 
             ha: { connected: data.connected, wsConnected: data.wsConnected, deviceCount: data.deviceCount || 0 }
         }));
-        
+
         // Listen for device counts from various integrations
         const onDeviceCounts = (data) => {
             if (data.hue) setConnectionStatus(prev => ({ ...prev, hue: data.hue }));
@@ -59,19 +82,48 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
             if (data.shelly) setConnectionStatus(prev => ({ ...prev, shelly: data.shelly }));
         };
 
+        // Listen for hue connection status
+        const onHueStatus = (data) => {
+            setConnectionStatus(prev => ({
+                ...prev,
+                hue: {
+                    connected: data.connected,
+                    deviceCount: data.deviceCount || 0,
+                    bridgeIp: data.bridgeIp || null
+                }
+            }));
+        };
+
         socket.on('connect', onConnect);
         socket.on('disconnect', onDisconnect);
         socket.on('ha-connection-status', onHaStatus);
         socket.on('device-counts', onDeviceCounts);
-        
+        socket.on('hue-connection-status', onHueStatus);
+
         // Initial status
         setConnectionStatus(prev => ({ ...prev, backend: socket.connected }));
-        
+
+        // Request initial hue status if already connected
+        if (socket.connected) {
+            socket.emit('request-hue-status');
+        }
+
         // Get initial plugin status
         const loadState = getLoadingState();
+        // Use nodeRegistry for actual loaded plugin count
+        let loadedPlugins = 0;
+        let totalPlugins = loadState.totalCount || 0;
+        if (window.nodeRegistry && typeof window.nodeRegistry.getAll === 'function') {
+            loadedPlugins = window.nodeRegistry.getAll().length;
+            // If totalCount is missing or less than loaded, use loadedPlugins as total
+            if (!totalPlugins || loadedPlugins > totalPlugins) totalPlugins = loadedPlugins;
+        } else {
+            loadedPlugins = loadState.loadedCount;
+        }
         setPluginStatus({ 
-            loaded: loadState.loadedCount, 
-            failed: loadState.failedPlugins?.length || 0 
+            loaded: loadedPlugins, 
+            failed: loadState.failedPlugins?.length || 0,
+            total: totalPlugins
         });
 
         return () => {
@@ -79,6 +131,8 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
             socket.off('disconnect', onDisconnect);
             socket.off('ha-connection-status', onHaStatus);
             socket.off('device-counts', onDeviceCounts);
+            socket.off('hue-connection-status', onHueStatus);
+            if (unsubscribePlugin) unsubscribePlugin();
         };
     }, []);
 
@@ -231,13 +285,16 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
                                     : 'Offline'}
                             </span>
                         </div>
-                        {connectionStatus.hue.deviceCount > 0 && (
-                            <div className={`dock-status-item ${connectionStatus.hue.connected ? 'connected' : 'disconnected'}`}>
-                                <span className="dock-status-dot"></span>
-                                <span className="dock-status-label">Philips Hue</span>
-                                <span className="dock-status-value">{connectionStatus.hue.deviceCount} lights</span>
-                            </div>
-                        )}
+                        {/* Always show Hue bridge status */}
+                        <div className={`dock-status-item ${connectionStatus.hue.connected ? 'connected' : 'disconnected'}`}> 
+                            <span className="dock-status-dot"></span>
+                            <span className="dock-status-label">Philips Hue</span>
+                            <span className="dock-status-value">
+                                {connectionStatus.hue.connected
+                                    ? `${connectionStatus.hue.deviceCount || 0} lights${connectionStatus.hue.bridgeIp ? ` (${connectionStatus.hue.bridgeIp})` : ''}`
+                                    : 'Offline'}
+                            </span>
+                        </div>
                         {connectionStatus.kasa.deviceCount > 0 && (
                             <div className={`dock-status-item ${connectionStatus.kasa.connected ? 'connected' : 'disconnected'}`}>
                                 <span className="dock-status-dot"></span>
@@ -249,7 +306,9 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
                             <span className="dock-status-dot" style={{ background: pluginStatus.failed > 0 ? '#f59e0b' : '#10b981' }}></span>
                             <span className="dock-status-label">Plugins</span>
                             <span className="dock-status-value">
-                                {pluginStatus.loaded} loaded{pluginStatus.failed > 0 ? ` (${pluginStatus.failed} failed)` : ''}
+                                {pluginStatus.total > 0
+                                    ? `${pluginStatus.loaded} / ${pluginStatus.total} loaded${pluginStatus.failed > 0 ? ` (${pluginStatus.failed} failed)` : ''}`
+                                    : `${pluginStatus.loaded} loaded`}
                             </span>
                         </div>
                     </div>

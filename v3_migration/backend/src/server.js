@@ -1,3 +1,4 @@
+
 require('dotenv').config({ path: './.env' });
 
 // Debug mode - set VERBOSE_LOGGING=true in .env to enable detailed console output
@@ -618,6 +619,15 @@ async function initializeModules(deviceService) {
     const devices = await deviceService.initialize(io, notificationEmitter, logger.log.bind(logger));
     deviceService.setIo(io);
     debug(`Initialized devices: ${Object.keys(devices).length} types`);
+    // Force emit Hue status after device init (for debug)
+    try {
+      const { emitHueStatus } = require('./devices/managers/hueManager');
+      const allDevices = deviceService.getAllDevices();
+      const hueLights = allDevices['hue_'] || [];
+      emitHueStatus(io, hueLights.length > 0, process.env.HUE_BRIDGE_IP, hueLights.length);
+    } catch (e) {
+      console.log('[server.js] Could not emit initial hue status:', e.message);
+    }
   } catch (error) {
     console.error('Failed to initialize devices:', error.message);
     logger.log(`Failed to initialize devices: ${error.message}`, 'error', false, 'devices:init:error', { stack: error.stack });
