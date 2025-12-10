@@ -196,9 +196,9 @@ function App() {
       // Debug: console.log('HA connection status:', data);
     }
 
-    // Listen for device state changes from backend (real-time HA WebSocket updates)
+    // Listen for device state changes from backend (real-time updates from HA, Hue, Kasa, Shelly)
     function onDeviceStateUpdate(data) {
-      const { id, state, on, name } = data;
+      const { id, state, on, name, vendor } = data;
       if (!id) return;
       
       // Determine current state
@@ -206,7 +206,7 @@ function App() {
       const currentOn = on !== undefined ? on : (state === 'on' || state === 'playing' || state === 'open');
       // Get friendly name from various possible fields
       const deviceName = name || data.friendly_name || data.attributes?.friendly_name || 
-        id.replace('ha_', '').replace('kasa_', '').replace(/\./g, ' ').replace(/_/g, ' ');
+        id.replace('ha_', '').replace('kasa_', '').replace('hue_', '').replace(/\./g, ' ').replace(/_/g, ' ');
       
       // Check if state actually changed (filter out repeated updates for logging)
       if (lastState && lastState.on === currentOn) {
@@ -220,13 +220,23 @@ function App() {
       const pending = pendingCommands.get(id);
       const stateStr = currentOn ? 'ON' : 'OFF';
       
+      // Determine the source/vendor for display
+      // Priority: explicit vendor field > infer from ID prefix > default to 'External'
+      let source = vendor || 'External';
+      if (!vendor) {
+        if (id.startsWith('ha_')) source = 'HA';
+        else if (id.startsWith('hue_')) source = 'Hue';
+        else if (id.startsWith('kasa_')) source = 'Kasa';
+        else if (id.startsWith('shelly_')) source = 'Shelly';
+      }
+      
       if (pending && (Date.now() - pending.timestamp) < 5000) {
         // This change was triggered by a node in the app
         addEventLog('device', `${deviceName} → ${stateStr}`, { source: 'app', triggeredBy: pending.nodeTitle });
         pendingCommands.delete(id);
       } else {
-        // This change came from HA (physical switch, other automation, etc.)
-        addEventLog('trigger', `${deviceName} → ${stateStr}`, { source: 'HA' });
+        // This change came externally (physical switch, other automation, etc.)
+        addEventLog('trigger', `${deviceName} → ${stateStr}`, { source });
       }
     }
 
@@ -429,16 +439,16 @@ function App() {
                 .filter(log => {
                   if (eventLogFilter === 'all') return true;
                   if (eventLogFilter === 'app') return log.details?.triggeredBy || log.details?.source === 'app';
-                  if (eventLogFilter === 'ha') return log.details?.source === 'HA' && !log.details?.triggeredBy;
+                  if (eventLogFilter === 'ha') return log.details?.source && log.details.source !== 'app' && !log.details?.triggeredBy;
                   return true;
                 })
                 .map((log, index) => (
-                <div key={index} className={`log-entry log-${log.type}`} title={log.details?.triggeredBy ? `Triggered by: ${log.details.triggeredBy}` : (log.details?.source === 'HA' ? 'Triggered externally (HA, physical switch, etc.)' : '')}>
+                <div key={index} className={`log-entry log-${log.type}`} title={log.details?.triggeredBy ? `Triggered by: ${log.details.triggeredBy}` : (log.details?.source && log.details.source !== 'app' ? `Triggered externally via ${log.details.source}` : '')}>
                   <span className="log-time">{log.timestamp}</span>
                   <span className={`log-type-badge ${log.type}`}>{log.type === 'trigger' ? 'external' : log.type}</span>
                   <span className="log-message">{log.message}</span>
                   {log.details?.triggeredBy && <span className="log-source app-source">via {log.details.triggeredBy}</span>}
-                  {log.details?.source === 'HA' && !log.details?.triggeredBy && <span className="log-source external-source">via HA</span>}
+                  {log.details?.source && log.details.source !== 'app' && !log.details?.triggeredBy && <span className="log-source external-source">via {log.details.source}</span>}
                 </div>
               ))
             )}
