@@ -34,8 +34,8 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
     useEffect(() => {
                 // Subscribe to plugin progress updates for live plugin count
                 unsubscribePlugin = onPluginProgress((loadState) => {
-                    // eslint-disable-next-line no-console
-                    console.log('[Dock] Plugin progress update:', loadState);
+                    // Debug logging disabled - enable if needed for troubleshooting
+                    // console.log('[Dock] Plugin progress update:', loadState);
                     let loadedPlugins = 0;
                     let totalPlugins = loadState.totalCount || 0;
                     if (window.nodeRegistry && typeof window.nodeRegistry.getAll === 'function') {

@@ -17,6 +17,35 @@ import { ForecastPanel } from "./ui/ForecastPanel";
 import { FastContextMenu } from "./FastContextMenu";
 import { validateGraph, repairGraph } from "./utils/graphValidation";
 
+// Custom Socket Component - adds data-socket-type and title for CSS styling
+const CustomSocket = React.memo(({ data, socketKey, side }) => {
+    // Get socket type name from the socket object
+    const socketType = data?.name || 'any';
+    
+    // Determine semantic type from socket key (hsv_in, hsv_out, scene_hsv, etc.)
+    let semanticType = socketType;
+    if (socketKey && typeof socketKey === 'string') {
+        const keyLower = socketKey.toLowerCase();
+        if (keyLower.includes('hsv') || keyLower.includes('color')) {
+            semanticType = 'hsv_info';
+        } else if (keyLower.includes('trigger') || keyLower.includes('enable') || keyLower.includes('active')) {
+            semanticType = 'boolean';
+        } else if (keyLower.includes('light') || keyLower.includes('device')) {
+            semanticType = 'light_info';
+        }
+    }
+    
+    // Build title for tooltip and CSS fallback matching
+    const title = `${socketKey || 'socket'} (${semanticType})`;
+    
+    // Only set structural styles - let CSS handle colors via data-socket-type attribute
+    return React.createElement('div', {
+        className: 'rete-socket',
+        'data-socket-type': semanticType,
+        title: title
+    });
+});
+
 // Registry
 import { nodeRegistry } from "./registries/NodeRegistry";
 import { loadPlugins } from "./registries/PluginLoader";
@@ -232,6 +261,20 @@ export function Editor() {
                         return def.component;
                     }
                     return Presets.classic.Node;
+                },
+                socket(context) {
+                    // Return a wrapper that passes socket key and side to CustomSocket
+                    const socketKey = context.key;
+                    const side = context.side;
+                    
+                    // Return a component factory that wraps CustomSocket with context
+                    return function SocketWithContext({ data }) {
+                        return React.createElement(CustomSocket, {
+                            data: data,
+                            socketKey: socketKey,
+                            side: side
+                        });
+                    };
                 },
                 control(context) {
                     if (context.payload instanceof ClassicPreset.Control) {

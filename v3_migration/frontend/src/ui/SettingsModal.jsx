@@ -84,6 +84,25 @@ const SETTINGS_CONFIG = [
     }
 ];
 
+// Helper functions for socket color preview
+const darkenColorPreview = (hex) => {
+    try {
+        const r = Math.max(0, parseInt(hex.slice(1, 3), 16) - 40);
+        const g = Math.max(0, parseInt(hex.slice(3, 5), 16) - 40);
+        const b = Math.max(0, parseInt(hex.slice(5, 7), 16) - 40);
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    } catch { return hex; }
+};
+
+const lightenColorPreview = (hex) => {
+    try {
+        const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + 50);
+        const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + 50);
+        const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + 50);
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    } catch { return hex; }
+};
+
 export function SettingsModal({ isOpen, onClose }) {
     const [settings, setSettings] = useState({});
     const [loading, setLoading] = useState(true);
@@ -1030,6 +1049,64 @@ export function SettingsModal({ isOpen, onClose }) {
                                             borderRadius: '4px'
                                         }}>
                                             🔌 Customize socket connector colors by data type. These appear on all nodes.
+                                        </div>
+                                        
+                                        {/* Live Preview Node */}
+                                        <div style={{
+                                            background: 'linear-gradient(145deg, #1e2428, #2a3238)',
+                                            border: '1px solid rgba(95, 179, 179, 0.3)',
+                                            borderRadius: '8px',
+                                            padding: '12px',
+                                            marginBottom: '16px',
+                                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '11px',
+                                                color: '#5fb3b3',
+                                                marginBottom: '10px',
+                                                fontWeight: '600',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px'
+                                            }}>
+                                                <span>📦</span> Preview Node
+                                            </div>
+                                            
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                {/* Inputs side */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    {Object.entries(socketColors).slice(0, 3).map(([type, config]) => (
+                                                        <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <div style={{
+                                                                width: '14px',
+                                                                height: '14px',
+                                                                borderRadius: '50%',
+                                                                background: `linear-gradient(145deg, ${config.color}, ${darkenColorPreview(config.color)})`,
+                                                                border: `2px solid ${lightenColorPreview(config.color)}`,
+                                                                boxShadow: `0 0 8px ${config.color}80`
+                                                            }} />
+                                                            <span style={{ fontSize: '10px', color: '#8a959e' }}>{type}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                
+                                                {/* Outputs side */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                                                    {Object.entries(socketColors).slice(3).map(([type, config]) => (
+                                                        <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <span style={{ fontSize: '10px', color: '#8a959e' }}>{type}</span>
+                                                            <div style={{
+                                                                width: '14px',
+                                                                height: '14px',
+                                                                borderRadius: '50%',
+                                                                background: `linear-gradient(145deg, ${config.color}, ${darkenColorPreview(config.color)})`,
+                                                                border: `2px solid ${lightenColorPreview(config.color)}`,
+                                                                boxShadow: `0 0 8px ${config.color}80`
+                                                            }} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         </div>
                                         
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
