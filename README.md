@@ -112,7 +112,7 @@ Build automations by connecting nodes visually - no coding required.
 ![Context Menu](screenshots/Context_Menu.png)
 
 ### 37+ Node Types
-- **Device Control**: Home Assistant, Philips Hue, TP-Link Kasa
+- **Device Control**: Home Assistant, Philips Hue (direct bridge control), TP-Link Kasa
 - **Logic**: AND, OR, XOR, Comparison, Conditional Switch
 - **Timing**: Time of Day, Time Range, Sunrise/Sunset, Delay, Debounce
 - **Color**: HSV Control, Color Gradient, All-In-One Color Picker
@@ -161,6 +161,14 @@ Configure all your integrations in one place with connection testing.
 - ✅ **Auto-Save**: Every 2 minutes to prevent work loss
 
 ## Recent Updates (December 2024)
+
+### Direct Hue Bridge Control 💡 (NEW!)
+- **HueLightNode**: Control Philips Hue lights directly without Home Assistant
+  - No Home Assistant required - connects directly to your Hue Bridge
+  - Real-time HSV color control while lights are on
+  - Toggle All and All Off buttons for quick control
+  - Trigger input for automation flows
+  - Perfect for users who only have Hue lights and don't need HA
 
 ### Weather Works Out of the Box! 🌤️
 - **Open-Meteo Fallback**: Weather features now work without any API keys!

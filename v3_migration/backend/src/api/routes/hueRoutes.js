@@ -41,7 +41,8 @@ module.exports = function (hueApi, hueLights, io) { // Added io parameter
         hue: Joi.number().integer().min(0).max(65535),
         sat: Joi.number().integer().min(0).max(254),
         bri: Joi.number().integer().min(1).max(254),
-        effect: Joi.string().valid('none', 'colorloop', 'candle', 'fireplace') // All supported effects
+        effect: Joi.string().valid('none', 'colorloop', 'candle', 'fireplace'),
+        transitiontime: Joi.number().integer().min(0).max(65535) // Transition time in 100ms units
     }).unknown(false);
 
     router.get('/', async (req, res) => {
@@ -99,7 +100,7 @@ module.exports = function (hueApi, hueLights, io) { // Added io parameter
 
     router.put('/:id/state', async (req, res) => {
         const { id } = req.params;
-        const { on, hue, sat, bri, effect } = req.body;
+        const { on, hue, sat, bri, effect, transitiontime } = req.body;
         logWithTimestamp(`PUT /api/lights/hue/${id}/state: ${JSON.stringify(req.body)}`, 'info');
 
         const { error } = stateSchema.validate(req.body);
@@ -124,6 +125,7 @@ module.exports = function (hueApi, hueLights, io) { // Added io parameter
                 if (typeof sat === 'number') state.sat(Math.min(Math.max(sat, 0), 254));
                 if (typeof bri === 'number') state.bri(Math.min(Math.max(bri, 1), 254));
             }
+            if (typeof transitiontime === 'number') state.transitiontime(transitiontime);
             if (typeof effect === 'string' && ['none', 'colorloop', 'candle', 'fireplace'].includes(effect.toLowerCase())) {
                 state.effect(effect.toLowerCase());
             } else if (effect !== undefined) {
