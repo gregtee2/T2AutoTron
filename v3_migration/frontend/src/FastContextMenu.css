@@ -6,6 +6,7 @@
     position: fixed;
     z-index: 10000;
     min-width: 180px;
+    max-width: 220px;
     background: linear-gradient(145deg, rgba(12, 18, 28, 0.98), rgba(8, 14, 22, 0.98));
     border: 1px solid rgba(0, 243, 255, 0.5);
     border-radius: 8px;
@@ -66,6 +67,8 @@
 
 .fast-submenu {
     position: absolute;
+    left: 100%;
+    top: 0;
     min-width: 200px;
     max-height: 400px;
     overflow-y: auto;
@@ -105,4 +108,98 @@
     height: 1px;
     background: rgba(0, 243, 255, 0.2);
     margin: 4px 8px;
+}
+
+/* Search input container */
+.fast-menu-search {
+    position: relative;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+}
+
+.fast-menu-search input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 28px 8px 10px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.fast-menu-search input:focus {
+    border-color: rgba(0, 243, 255, 0.6);
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+}
+
+.fast-menu-search input::placeholder {
+    color: rgba(184, 230, 234, 0.5);
+}
+
+.search-clear {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(184, 230, 234, 0.6);
+    cursor: pointer;
+    font-size: 10px;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.search-clear:hover {
+    color: #fff;
+}
+
+/* Results container */
+.fast-menu-results {
+    /* No max-height - let menu grow to fit content */
+    /* Submenus use absolute positioning so overflow must be visible */
+    overflow: visible;
+}
+
+/* Empty state */
+.fast-menu-empty {
+    padding: 16px;
+    text-align: center;
+    color: rgba(184, 230, 234, 0.5);
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* Search result item styling */
+.fast-menu-item.search-result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.category-hint {
+    font-size: 10px;
+    color: rgba(0, 243, 255, 0.5);
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+/* Custom scrollbar for results */
+.fast-menu-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.fast-menu-results::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+}
+
+.fast-menu-results::-webkit-scrollbar-thumb {
+    background: rgba(0, 243, 255, 0.4);
+    border-radius: 3px;
+}
+
+.fast-menu-results::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 243, 255, 0.6);
 }
