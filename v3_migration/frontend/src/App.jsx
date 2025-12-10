@@ -5,6 +5,7 @@ import { onPluginProgress } from './registries/PluginLoader';
 import ErrorBoundary from './ErrorBoundary';
 import { ToastContainer, ToastExposer, useToast } from './ui/Toast';
 import { LoadingOverlay } from './ui/LoadingOverlay';
+import UpdateModal from './components/UpdateModal';
 import './App.css';
 import './test-sockets.js'; // Test socket patch
 
@@ -137,6 +138,7 @@ function App() {
   const [panelHeight, setPanelHeight] = useState(() => parseInt(localStorage.getItem('panelHeight')) || 150);
   const [panelFontSize, setPanelFontSize] = useState(() => parseInt(localStorage.getItem('panelFontSize')) || 11);
   const [pluginLoading, setPluginLoading] = useState({ isLoading: true, progress: 0, status: 'Starting...', loadedCount: 0, totalCount: 0, error: null });
+  const [updateInfo, setUpdateInfo] = useState(null);  // For update notifications
   // Ticker for live countdown updates in Upcoming Events (increments every 30s to force re-render)
   const [countdownTicker, setCountdownTicker] = useState(0);
   // Event log filter: 'all', 'app', 'ha'
@@ -264,6 +266,16 @@ function App() {
       addEventLog('trigger', `${type}: ${name}`, value);
     }
 
+    // Listen for update available notifications
+    function onUpdateAvailable(data) {
+      // Don't show if user already skipped this version this session
+      const skippedVersion = sessionStorage.getItem('updateSkipped');
+      if (skippedVersion === data.newVersion) {
+        return;
+      }
+      setUpdateInfo(data);
+    }
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('ha-connection-status', onHaConnectionStatus);
@@ -272,6 +284,7 @@ function App() {
     socket.on('node_executed', onNodeExecuted);
     socket.on('scheduled_events', onScheduledEvents);
     socket.on('trigger_event', onTriggerEvent);
+    socket.on('update-available', onUpdateAvailable);
 
     connectSocket();
 
@@ -284,6 +297,7 @@ function App() {
       socket.off('node_executed', onNodeExecuted);
       socket.off('scheduled_events', onScheduledEvents);
       socket.off('trigger_event', onTriggerEvent);
+      socket.off('update-available', onUpdateAvailable);
       disconnectSocket();
     };
   }, []);
@@ -406,8 +420,41 @@ function App() {
     }
   }, []);
 
+  // Zoom to fit all nodes in the viewport (zoom extents)
+  const zoomExtents = useCallback(async () => {
+    const area = window._t2Area;
+    const editor = window._t2Editor;
+    
+    if (!area || !editor) {
+      console.warn('[zoomExtents] Editor not ready');
+      return;
+    }
+    
+    const allNodes = editor.getNodes();
+    if (allNodes.length === 0) {
+      console.warn('[zoomExtents] No nodes in graph');
+      return;
+    }
+    
+    try {
+      const { AreaExtensions } = await import('rete-area-plugin');
+      // Use 0.7 scale to ensure all nodes fit with padding
+      await AreaExtensions.zoomAt(area, allNodes, { scale: 0.7 });
+    } catch (err) {
+      console.warn('[zoomExtents] Failed to zoom:', err);
+    }
+  }, []);
+
   return (
     <div className="app-container">
+      {/* Update Modal - shows when update is available */}
+      {updateInfo && updateInfo.hasUpdate && (
+        <UpdateModal 
+          updateInfo={updateInfo}
+          onClose={() => setUpdateInfo(null)}
+        />
+      )}
+      
       {/* Loading Overlay - shows during plugin loading */}
       <LoadingOverlay 
         isLoading={pluginLoading.isLoading}
@@ -484,7 +531,7 @@ function App() {
           </div>
         </div>
         <div className="panel upcoming-events-panel">
-          <div className="panel-header">
+          <div className="panel-header clickable-header" onClick={zoomExtents} title="Click to zoom to fit all nodes">
             <span className="panel-title">Upcoming Events</span>
           </div>
           <div className="panel-content">

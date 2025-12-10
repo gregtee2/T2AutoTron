@@ -55,10 +55,26 @@ io.on('error', (error) => {
   console.error('Socket.IO server error:', error.message);
 });
 
+// Update service for checking updates
+const updateService = require('./services/updateService');
+
 // Log client connections/disconnections
 io.on('connection', (socket) => {
   logger.log(`Socket.IO client connected: ${socket.id}`, 'info', false, 'socket:connect');
   debug(`Socket.IO client connected: ${socket.id}`);
+
+  // === CHECK FOR UPDATES ON CONNECTION ===
+  (async () => {
+    try {
+      const updateInfo = await updateService.checkForUpdates();
+      if (updateInfo.hasUpdate) {
+        socket.emit('update-available', updateInfo);
+        debug(`[Update] Notified client of update: ${updateInfo.currentVersion} → ${updateInfo.newVersion}`);
+      }
+    } catch (err) {
+      debug('[Update] Check failed:', err.message);
+    }
+  })();
 
   // === CLIENT LOGGING ===
   socket.on('log', ({ message, level, timestamp }) => {
@@ -582,6 +598,10 @@ app.use(express.json());
 app.use(require('./api/middleware/csp'));
 app.use(require('./config/cors'));
 app.use(require('./api/middleware/errorHandler'));
+
+// Update routes
+const updateRoutes = require('./api/updateRoutes');
+app.use('/api/update', updateRoutes);
 
 // Initialize DeviceService
 debug('Initializing DeviceService...');

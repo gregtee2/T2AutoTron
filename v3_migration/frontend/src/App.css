@@ -320,13 +320,23 @@ body {
 /* Upcoming Events Entries */
 /* Add hint text to Upcoming Events panel header */
 .upcoming-events-panel .panel-title::after {
-  content: " — click to locate node";
+  content: " — click events to locate, header to zoom all";
   color: rgba(255, 255, 255, 0.35);
   font-size: 9px;
   font-style: italic;
   font-weight: normal;
   text-transform: none;
   letter-spacing: 0;
+}
+
+/* Clickable panel header for zoom extents */
+.clickable-header {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.clickable-header:hover {
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.25), rgba(0, 150, 200, 0.15)) !important;
 }
 
 .event-entry {
