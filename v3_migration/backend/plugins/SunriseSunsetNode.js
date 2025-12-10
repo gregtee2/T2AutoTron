@@ -620,23 +620,23 @@
                 React.createElement('div', { key: 'ci', className: 'control-row' }, [
                     React.createElement('span', { key: 'l', className: 'control-label' }, `City: ${state.city}`)
                 ]),
-                // Info
+                // Info - display times in the configured timezone
                 React.createElement('div', { key: 'inf', className: 'info-display' }, [
                     React.createElement('div', { key: 'sr', className: 'info-row' }, [
                         React.createElement('span', { key: 'l', className: 'info-label' }, "Sunrise:"),
-                        React.createElement('span', { key: 'v', className: 'info-value' }, state.sunrise_time ? DateTime.fromJSDate(new Date(state.sunrise_time)).toFormat("hh:mm a") : "N/A")
+                        React.createElement('span', { key: 'v', className: 'info-value' }, state.sunrise_time ? DateTime.fromJSDate(new Date(state.sunrise_time)).setZone(state.timezone).toFormat("hh:mm a") : "N/A")
                     ]),
                     React.createElement('div', { key: 'ss', className: 'info-row' }, [
                         React.createElement('span', { key: 'l', className: 'info-label' }, "Sunset:"),
-                        React.createElement('span', { key: 'v', className: 'info-value' }, state.sunset_time ? DateTime.fromJSDate(new Date(state.sunset_time)).toFormat("hh:mm a") : "N/A")
+                        React.createElement('span', { key: 'v', className: 'info-value' }, state.sunset_time ? DateTime.fromJSDate(new Date(state.sunset_time)).setZone(state.timezone).toFormat("hh:mm a") : "N/A")
                     ]),
                     React.createElement('div', { key: 'no', className: 'info-row' }, [
                         React.createElement('span', { key: 'l', className: 'info-label' }, "Next On:"),
-                        React.createElement('span', { key: 'v', className: 'info-value' }, state.next_on_date ? DateTime.fromJSDate(new Date(state.next_on_date)).toFormat("hh:mm a") : "N/A")
+                        React.createElement('span', { key: 'v', className: 'info-value' }, state.next_on_date ? DateTime.fromJSDate(new Date(state.next_on_date)).setZone(state.timezone).toFormat("hh:mm a") : "N/A")
                     ]),
                     React.createElement('div', { key: 'nf', className: 'info-row' }, [
                         React.createElement('span', { key: 'l', className: 'info-label' }, "Next Off:"),
-                        React.createElement('span', { key: 'v', className: 'info-value' }, state.next_off_date ? DateTime.fromJSDate(new Date(state.next_off_date)).toFormat("hh:mm a") : "N/A")
+                        React.createElement('span', { key: 'v', className: 'info-value' }, state.next_off_date ? DateTime.fromJSDate(new Date(state.next_off_date)).setZone(state.timezone).toFormat("hh:mm a") : "N/A")
                     ]),
                     React.createElement('div', { key: 'cd', className: 'countdown' }, countdown)
                 ]),

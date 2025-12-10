@@ -214,7 +214,7 @@
         const [state, setState] = useState({ ...data.properties });
         const [weatherData, setWeatherData] = useState({
             solar: null, temp: null, humidity: null, wind: null, windDir: null,
-            hourlyRain: null, eventRain: null, dailyRain: null
+            hourlyRain: null, eventRain: null, dailyRain: null, _source: null
         });
         const [history, setHistory] = useState({
             solar: [], temp: [], humidity: [], wind: [],
@@ -333,7 +333,8 @@
                     windDir: data.winddir,
                     hourlyRain: data.hourlyrainin,
                     eventRain: data.eventrainin,
-                    dailyRain: data.dailyrainin
+                    dailyRain: data.dailyrainin,
+                    _source: data._source || 'ambient' // Track weather data source
                 };
                 setWeatherData(newData);
                 setHistory(prev => {
@@ -391,7 +392,22 @@
                         style: { cursor: "pointer", fontSize: "14px", color: '#ffb74d' },
                         onPointerDown: (e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }
                     }, isCollapsed ? "▶" : "▼"),
-                    React.createElement('div', { key: 'l', className: "weather-node-title" }, "Weather Logic")
+                    React.createElement('div', { key: 'l', className: "weather-node-title" }, "Weather Logic"),
+                    // Show weather source badge
+                    weatherData._source && React.createElement('span', {
+                        key: 'src',
+                        title: weatherData._source === 'open-meteo' 
+                            ? 'Using Open-Meteo (free fallback). Configure Ambient Weather API for more data.' 
+                            : 'Using Ambient Weather personal station',
+                        style: {
+                            fontSize: '9px',
+                            padding: '2px 6px',
+                            borderRadius: '8px',
+                            background: weatherData._source === 'open-meteo' ? 'rgba(255, 152, 0, 0.3)' : 'rgba(76, 175, 80, 0.3)',
+                            color: weatherData._source === 'open-meteo' ? '#ffb74d' : '#4caf50',
+                            border: `1px solid ${weatherData._source === 'open-meteo' ? 'rgba(255, 152, 0, 0.5)' : 'rgba(76, 175, 80, 0.5)'}`
+                        }
+                    }, weatherData._source === 'open-meteo' ? '☁️ Open-Meteo' : '📡 Ambient')
                 ]),
                 React.createElement('div', { key: 's', className: "weather-status-indicator", style: { background: statusColor, boxShadow: `0 0 5px ${statusColor}` } })
             ]),

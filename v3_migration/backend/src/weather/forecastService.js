@@ -78,36 +78,137 @@ async function fetchForecastData(forceRefresh = false, haToken = null) {
         }
       }
 
-      // === OPENWEATHER CALL ===
+      // === OPENWEATHER CALL (if API key available) ===
       const apiKey = process.env.OPENWEATHERMAP_API_KEY;
-      if (!apiKey) {
-        debugLog('ERROR: OPENWEATHERMAP_API_KEY missing');
-        throw new Error('OPENWEATHERMAP_API_KEY missing');
-      }
-
+      
       if (!lat || !lon) {
-        debugLog('ERROR: No location data available');
-        throw new Error('No location data available');
+        // Try global location settings as last resort
+        lat = process.env.LOCATION_LATITUDE || '32.7767';
+        lon = process.env.LOCATION_LONGITUDE || '-96.7970';
+        debugLog(`Using global location settings: ${lat}, ${lon}`);
       }
 
-      const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=imperial`;
-      debugLog(`Fetching weather from: ${url.replace(apiKey, 'HIDDEN')}`);
+      // Try OpenWeatherMap first, then fall back to Open-Meteo
+      let data = null;
+      let useOpenMeteo = false;
+      
+      if (apiKey) {
+        try {
+          const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=imperial`;
+          debugLog(`Fetching weather from OpenWeatherMap: ${url.replace(apiKey, 'HIDDEN')}`);
 
-      const response = await fetch(url, { timeout: 10000 });
-      debugLog(`OpenWeather response: ${response.status}`);
+          const response = await fetch(url, { timeout: 10000 });
+          debugLog(`OpenWeather response: ${response.status}`);
 
-      if (!response.ok) {
-        const text = await response.text();
-        debugLog(`OpenWeather error body: ${text}`);
-        throw new Error(`OpenWeather HTTP ${response.status}`);
+          if (!response.ok) {
+            const text = await response.text();
+            debugLog(`OpenWeather error body: ${text}`);
+            throw new Error(`OpenWeather HTTP ${response.status}`);
+          }
+
+          data = await response.json();
+          debugLog(`OpenWeather data items: ${data?.list?.length}`);
+
+          if (!data?.list) throw new Error('No forecast list');
+        } catch (owmErr) {
+          debugLog(`OpenWeatherMap failed: ${owmErr.message}, trying Open-Meteo fallback`);
+          useOpenMeteo = true;
+        }
+      } else {
+        debugLog('No OPENWEATHERMAP_API_KEY, using Open-Meteo fallback');
+        useOpenMeteo = true;
+      }
+      
+      // === OPEN-METEO FALLBACK (free, no API key required) ===
+      if (useOpenMeteo) {
+        try {
+          const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode,sunrise,sunset&timezone=auto&forecast_days=7`;
+          debugLog(`Fetching from Open-Meteo: ${omUrl}`);
+          
+          const omResponse = await fetch(omUrl, { timeout: 10000 });
+          if (!omResponse.ok) throw new Error(`Open-Meteo HTTP ${omResponse.status}`);
+          
+          const omData = await omResponse.json();
+          debugLog(`Open-Meteo data: ${omData?.daily?.time?.length} days`);
+          
+          if (!omData?.daily?.time) throw new Error('No Open-Meteo daily data');
+          
+          // Map Open-Meteo weather codes to conditions
+          const weatherCodeToCondition = (code) => {
+            const map = {
+              0: { condition: 'Clear', icon: '01d', desc: 'Clear sky' },
+              1: { condition: 'Clear', icon: '01d', desc: 'Mainly clear' },
+              2: { condition: 'Clouds', icon: '02d', desc: 'Partly cloudy' },
+              3: { condition: 'Clouds', icon: '03d', desc: 'Overcast' },
+              45: { condition: 'Fog', icon: '50d', desc: 'Foggy' },
+              48: { condition: 'Fog', icon: '50d', desc: 'Depositing rime fog' },
+              51: { condition: 'Drizzle', icon: '09d', desc: 'Light drizzle' },
+              53: { condition: 'Drizzle', icon: '09d', desc: 'Moderate drizzle' },
+              55: { condition: 'Drizzle', icon: '09d', desc: 'Dense drizzle' },
+              61: { condition: 'Rain', icon: '10d', desc: 'Slight rain' },
+              63: { condition: 'Rain', icon: '10d', desc: 'Moderate rain' },
+              65: { condition: 'Rain', icon: '10d', desc: 'Heavy rain' },
+              71: { condition: 'Snow', icon: '13d', desc: 'Slight snow' },
+              73: { condition: 'Snow', icon: '13d', desc: 'Moderate snow' },
+              75: { condition: 'Snow', icon: '13d', desc: 'Heavy snow' },
+              80: { condition: 'Rain', icon: '09d', desc: 'Rain showers' },
+              81: { condition: 'Rain', icon: '09d', desc: 'Moderate rain showers' },
+              82: { condition: 'Rain', icon: '09d', desc: 'Violent rain showers' },
+              95: { condition: 'Thunderstorm', icon: '11d', desc: 'Thunderstorm' },
+              96: { condition: 'Thunderstorm', icon: '11d', desc: 'Thunderstorm with hail' },
+              99: { condition: 'Thunderstorm', icon: '11d', desc: 'Thunderstorm with heavy hail' }
+            };
+            return map[code] || { condition: 'Unknown', icon: '01d', desc: 'Unknown' };
+          };
+          
+          // Format Open-Meteo sunrise/sunset times
+          const formatOMTime = (isoTime) => {
+            if (!isoTime) return 'N/A';
+            const date = new Date(isoTime);
+            const h = date.getHours();
+            const m = date.getMinutes();
+            const period = h >= 12 ? 'PM' : 'AM';
+            const displayHour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+            return `${displayHour}:${m.toString().padStart(2, '0')} ${period}`;
+          };
+          
+          // Convert Open-Meteo format to our standard format
+          const daily = omData.daily.time.slice(0, 5).map((dateStr, i) => {
+            const weatherInfo = weatherCodeToCondition(omData.daily.weathercode[i]);
+            return {
+              date: new Date(dateStr).getTime(),
+              high: Math.round(omData.daily.temperature_2m_max[i] * 9/5 + 32), // C to F
+              low: Math.round(omData.daily.temperature_2m_min[i] * 9/5 + 32),
+              condition: weatherInfo.condition,
+              icon: weatherInfo.icon,
+              description: weatherInfo.desc,
+              precip: omData.daily.precipitation_probability_max[i] || 0,
+              humidity: null, // Not available in Open-Meteo daily
+              wind: null, // Not available in Open-Meteo daily without extra params
+              sunrise: formatOMTime(omData.daily.sunrise[i]),
+              sunset: formatOMTime(omData.daily.sunset[i]),
+              solarNoon: null,
+              _source: 'open-meteo'
+            };
+          });
+          
+          cachedForecast = daily;
+          lastFetchTime = Date.now();
+          debugLog(`Open-Meteo success! Returning ${daily.length} days`);
+          return daily;
+          
+        } catch (omErr) {
+          debugLog(`Open-Meteo fallback failed: ${omErr.message}`);
+          throw omErr;
+        }
       }
 
-      const data = await response.json();
-      debugLog(`OpenWeather data items: ${data?.list?.length}`);
-
-      if (!data?.list) throw new Error('No forecast list');
-
-      // === FORMAT 5-DAY DATA ===
+      // === FORMAT 5-DAY DATA (OpenWeatherMap) ===
+      // Only runs if we got data from OpenWeatherMap (not Open-Meteo)
+      if (!data || !data.list) {
+        throw new Error('No weather data available');
+      }
+      
       // Group by day and calculate actual high/low from all readings
       const dailyMap = {};
       

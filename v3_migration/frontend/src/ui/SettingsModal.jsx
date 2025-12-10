@@ -274,32 +274,68 @@ export function SettingsModal({ isOpen, onClose }) {
                  result.address.country].filter(Boolean).join(', ') :
                 result.display_name.split(',').slice(0, 3).join(',');
             
-            // Determine timezone based on US state or longitude
+            // Determine timezone based on US state, country, or longitude
             let suggestedTz = 'UTC';
             const state = result.address?.state?.toLowerCase() || '';
+            const country = result.address?.country?.toLowerCase() || '';
             
-            // US state-based timezone detection (more accurate)
-            if (state.includes('hawaii')) {
-                suggestedTz = 'Pacific/Honolulu';
-            } else if (state.includes('alaska')) {
-                suggestedTz = 'America/Anchorage';
-            } else if (['california', 'nevada', 'oregon', 'washington'].some(s => state.includes(s))) {
-                suggestedTz = 'America/Los_Angeles';
-            } else if (['arizona'].some(s => state.includes(s))) {
-                suggestedTz = 'America/Phoenix';
-            } else if (['colorado', 'montana', 'wyoming', 'utah', 'new mexico', 'idaho'].some(s => state.includes(s))) {
-                suggestedTz = 'America/Denver';
-            } else if (['texas', 'oklahoma', 'kansas', 'nebraska', 'south dakota', 'north dakota', 
-                        'minnesota', 'iowa', 'missouri', 'arkansas', 'louisiana', 'wisconsin', 
-                        'illinois', 'mississippi', 'alabama', 'tennessee'].some(s => state.includes(s))) {
-                suggestedTz = 'America/Chicago';
-            } else if (['new york', 'pennsylvania', 'new jersey', 'connecticut', 'massachusetts',
-                        'rhode island', 'vermont', 'new hampshire', 'maine', 'delaware', 'maryland',
-                        'virginia', 'west virginia', 'north carolina', 'south carolina', 'georgia',
-                        'florida', 'ohio', 'michigan', 'indiana', 'kentucky', 'district of columbia'].some(s => state.includes(s))) {
-                suggestedTz = 'America/New_York';
+            // Country-based timezone detection for common countries
+            if (country.includes('portugal')) {
+                suggestedTz = 'Europe/Lisbon';
+            } else if (country.includes('spain')) {
+                suggestedTz = 'Europe/Madrid';
+            } else if (country.includes('france')) {
+                suggestedTz = 'Europe/Paris';
+            } else if (country.includes('germany')) {
+                suggestedTz = 'Europe/Berlin';
+            } else if (country.includes('italy')) {
+                suggestedTz = 'Europe/Rome';
+            } else if (country.includes('united kingdom') || country.includes('ireland')) {
+                suggestedTz = 'Europe/London';
+            } else if (country.includes('netherlands')) {
+                suggestedTz = 'Europe/Amsterdam';
+            } else if (country.includes('belgium')) {
+                suggestedTz = 'Europe/Brussels';
+            } else if (country.includes('australia')) {
+                suggestedTz = 'Australia/Sydney';
+            } else if (country.includes('japan')) {
+                suggestedTz = 'Asia/Tokyo';
+            } else if (country.includes('china')) {
+                suggestedTz = 'Asia/Shanghai';
+            } else if (country.includes('india')) {
+                suggestedTz = 'Asia/Kolkata';
+            } else if (country.includes('brazil')) {
+                suggestedTz = 'America/Sao_Paulo';
+            } else if (country.includes('canada')) {
+                // Canadian provinces
+                if (state.includes('british columbia')) suggestedTz = 'America/Vancouver';
+                else if (state.includes('alberta')) suggestedTz = 'America/Edmonton';
+                else if (state.includes('saskatchewan')) suggestedTz = 'America/Regina';
+                else if (state.includes('manitoba')) suggestedTz = 'America/Winnipeg';
+                else if (state.includes('ontario')) suggestedTz = 'America/Toronto';
+                else if (state.includes('quebec')) suggestedTz = 'America/Montreal';
+                else suggestedTz = 'America/Toronto';
+            } else if (country.includes('united states') || country.includes('usa')) {
+                // US state-based timezone detection
+                if (state.includes('hawaii')) {
+                    suggestedTz = 'Pacific/Honolulu';
+                } else if (state.includes('alaska')) {
+                    suggestedTz = 'America/Anchorage';
+                } else if (['california', 'nevada', 'oregon', 'washington'].some(s => state.includes(s))) {
+                    suggestedTz = 'America/Los_Angeles';
+                } else if (['arizona'].some(s => state.includes(s))) {
+                    suggestedTz = 'America/Phoenix';
+                } else if (['colorado', 'montana', 'wyoming', 'utah', 'new mexico', 'idaho'].some(s => state.includes(s))) {
+                    suggestedTz = 'America/Denver';
+                } else if (['texas', 'oklahoma', 'kansas', 'nebraska', 'south dakota', 'north dakota', 
+                            'minnesota', 'iowa', 'missouri', 'arkansas', 'louisiana', 'wisconsin', 
+                            'illinois', 'mississippi', 'alabama', 'tennessee'].some(s => state.includes(s))) {
+                    suggestedTz = 'America/Chicago';
+                } else {
+                    suggestedTz = 'America/New_York';
+                }
             } else {
-                // Fallback to longitude-based for non-US locations
+                // Fallback to longitude-based for other locations
                 const lonNum = parseFloat(lon);
                 if (lonNum >= -125 && lonNum < -115) suggestedTz = 'America/Los_Angeles';
                 else if (lonNum >= -115 && lonNum < -102) suggestedTz = 'America/Denver';
@@ -307,6 +343,7 @@ export function SettingsModal({ isOpen, onClose }) {
                 else if (lonNum >= -87 && lonNum < -67) suggestedTz = 'America/New_York';
                 else if (lonNum >= -10 && lonNum < 3) suggestedTz = 'Europe/London';
                 else if (lonNum >= 3 && lonNum < 15) suggestedTz = 'Europe/Paris';
+                else if (lonNum >= 15 && lonNum < 30) suggestedTz = 'Europe/Berlin';
             }
             
             // Update settings - ALWAYS update timezone when searching

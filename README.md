@@ -162,6 +162,17 @@ Configure all your integrations in one place with connection testing.
 
 ## Recent Updates (December 2024)
 
+### Weather Works Out of the Box! 🌤️
+- **Open-Meteo Fallback**: Weather features now work without any API keys!
+  - Uses free [Open-Meteo API](https://open-meteo.com/) as automatic fallback
+  - 5-Day Forecast panel works immediately after install
+  - WeatherLogicNode shows current conditions
+  - Source indicator shows which API is providing data (Open-Meteo or Ambient Weather)
+- **Global Location Settings**: Configure your city in Settings → Location
+  - City search with automatic coordinates and timezone detection
+  - Used by Sunrise/Sunset node and weather services
+  - Supports international cities with proper timezone handling
+
 ### Settings & API Keys Panel
 - **New UI**: Accessible via "🔧 Settings & API Keys" button in the Dock
 - **Test Connections**: Verify API credentials before saving
