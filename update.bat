@@ -80,10 +80,10 @@ if errorlevel 1 (
 
 REM Fetch and show what's new
 echo  [1/3] Checking for updates...
-git fetch origin main
+git fetch origin stable
 
 REM Count commits behind
-for /f %%i in ('git rev-list HEAD..origin/main --count 2^>nul') do set "BEHIND=%%i"
+for /f %%i in ('git rev-list HEAD..origin/stable --count 2^>nul') do set "BEHIND=%%i"
 if "%BEHIND%"=="" set "BEHIND=0"
 
 if "%BEHIND%"=="0" (
@@ -101,13 +101,13 @@ echo  Found %BEHIND% new commit(s)!
 echo.
 echo  Recent changes:
 echo  -----------------------------------------------
-git log HEAD..origin/main --oneline --no-decorate -10
+git log HEAD..origin/stable --oneline --no-decorate -10
 echo  -----------------------------------------------
 echo.
 
 REM Pull updates
 echo  [2/3] Downloading updates...
-git pull origin main
+git pull origin stable
 if errorlevel 1 (
     color 0C
     echo  ERROR: Git pull failed!

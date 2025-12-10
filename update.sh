@@ -64,9 +64,9 @@ fi
 
 # Fetch and check for updates
 echo "  [1/3] Checking for updates..."
-git fetch origin main
+git fetch origin stable
 
-BEHIND=$(git rev-list HEAD..origin/main --count 2>/dev/null || echo "0")
+BEHIND=$(git rev-list HEAD..origin/stable --count 2>/dev/null || echo "0")
 
 if [ "$BEHIND" -eq 0 ]; then
     echo ""
@@ -81,13 +81,13 @@ echo "  Found $BEHIND new commit(s)!"
 echo ""
 echo "  Recent changes:"
 echo "  -----------------------------------------------"
-git log HEAD..origin/main --oneline --no-decorate -10
+git log HEAD..origin/stable --oneline --no-decorate -10
 echo "  -----------------------------------------------"
 echo ""
 
 # Pull updates
 echo "  [2/3] Downloading updates..."
-git pull origin main
+git pull origin stable
 
 # Update dependencies
 echo ""
