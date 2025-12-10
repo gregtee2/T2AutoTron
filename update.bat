@@ -34,8 +34,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Check if this is a git repo
-if not exist ".git" (
+REM Check if this is a git repo using git command (more reliable than checking .git folder)
+git rev-parse --git-dir >nul 2>&1
+if errorlevel 1 (
     color 0C
     echo  ERROR: This folder is not a Git repository!
     echo.
