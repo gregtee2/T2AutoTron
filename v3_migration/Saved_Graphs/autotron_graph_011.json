@@ -681,7 +681,7 @@
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
           "lastValue": false,
-          "lastTriggerSource": null
+          "lastTriggerSource": "House Lights ON/Off"
         }
       }
     },
@@ -713,7 +713,7 @@
         "properties": {
           "selectedBuffer": "[Trigger]Sunset",
           "lastValue": false,
-          "lastTriggerSource": null
+          "lastTriggerSource": "Sunset"
         }
       }
     },
@@ -1322,7 +1322,7 @@
         "properties": {
           "selectedBuffer": "[Trigger]Sunset",
           "lastValue": false,
-          "lastTriggerSource": null
+          "lastTriggerSource": "Sunset"
         }
       }
     },
@@ -1339,7 +1339,7 @@
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
           "lastValue": false,
-          "lastTriggerSource": null
+          "lastTriggerSource": "House Lights ON/Off"
         }
       }
     },
@@ -1356,7 +1356,7 @@
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
           "lastValue": false,
-          "lastTriggerSource": null
+          "lastTriggerSource": "House Lights ON/Off"
         }
       }
     },
@@ -1593,7 +1593,7 @@
             "s": 1,
             "v": 0.596078431372549
           },
-          "lastTriggerSource": null
+          "lastTriggerSource": "Sconce Top Lights"
         }
       }
     },
@@ -1621,7 +1621,7 @@
             "s": 1,
             "v": 0.5333333333333333
           },
-          "lastTriggerSource": null
+          "lastTriggerSource": "Sconce Bottom Light"
         }
       }
     },
@@ -1743,7 +1743,7 @@
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
           "lastValue": false,
-          "lastTriggerSource": null
+          "lastTriggerSource": "House Lights ON/Off"
         }
       }
     },
@@ -1887,7 +1887,7 @@
             "s": 0.89,
             "v": 0.2627450980392157
           },
-          "lastTriggerSource": null
+          "lastTriggerSource": "Bar Warm"
         }
       }
     },
@@ -1908,7 +1908,7 @@
             "saturation": 1,
             "brightness": 124
           },
-          "lastTriggerSource": null
+          "lastTriggerSource": "Bar Cool"
         }
       }
     },
@@ -2085,7 +2085,7 @@
             "Downstairs Fire Extinguisher (ha_light.downstairs_fire_extinguisher)",
             "Hue color Leg Lamg (ha_light.hue_color_leg_lamg)"
           ],
-          "status": "Loaded 813 devices",
+          "status": "Control applied to 2 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": true,
@@ -2165,13 +2165,13 @@
         "properties": {
           "bufferName": "Office Colors",
           "lastValue": {
-            "hue": 0.47293447293447294,
-            "saturation": 0.5763546798029556,
-            "brightness": 144,
+            "hue": 0.12698412698412695,
+            "saturation": 0.45901639344262296,
+            "brightness": 90,
             "rgb": {
-              "r": 86,
-              "g": 203,
-              "b": 184
+              "r": 183,
+              "g": 163,
+              "b": 99
             },
             "directMode": true
           },
@@ -2227,13 +2227,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Office Colors",
           "lastValue": {
-            "hue": 0.47293447293447294,
-            "saturation": 0.5763546798029556,
-            "brightness": 144,
+            "hue": 0.12698412698412695,
+            "saturation": 0.45901639344262296,
+            "brightness": 90,
             "rgb": {
-              "r": 86,
-              "g": 203,
-              "b": 184
+              "r": 183,
+              "g": 163,
+              "b": 99
             },
             "directMode": true
           },
@@ -2348,7 +2348,7 @@
             "saturation": 1,
             "brightness": 131
           },
-          "lastTriggerSource": null
+          "lastTriggerSource": "Dinning Room Table"
         }
       }
     },
@@ -2638,7 +2638,7 @@
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
           "lastValue": false,
-          "lastTriggerSource": null
+          "lastTriggerSource": "House Lights ON/Off"
         }
       }
     },
@@ -2694,7 +2694,7 @@
         "properties": {
           "selectedBuffer": "[Trigger]9:30 On",
           "lastValue": false,
-          "lastTriggerSource": null
+          "lastTriggerSource": "9:30 On"
         }
       }
     },
@@ -2747,7 +2747,7 @@
             "saturation": 1,
             "brightness": 124
           },
-          "lastTriggerSource": null
+          "lastTriggerSource": "Bar Cool"
         }
       }
     },
@@ -2902,7 +2902,7 @@
         "properties": {
           "selectedBuffer": "[Trigger]1AM Off",
           "lastValue": false,
-          "lastTriggerSource": null
+          "lastTriggerSource": "1AM Off"
         }
       }
     },
@@ -2920,7 +2920,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "db334ce99e14017a",
+            "id": "46496abdec6b1dd1",
             "control": null,
             "showControl": true
           },
@@ -2929,7 +2929,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "f7d16926a4a9895c",
+            "id": "fa5e16fcc41258c4",
             "control": null,
             "showControl": true
           },
@@ -2938,7 +2938,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "0a7de321f07c788a",
+            "id": "906e8ffcccdde07f",
             "control": null,
             "showControl": true
           },
@@ -2947,7 +2947,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "e0442c48ce6b5f3f",
+            "id": "6316fceaf044b021",
             "control": null,
             "showControl": true
           },
@@ -2956,7 +2956,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "5194bf0614f9e4da",
+            "id": "4f0c7102469e7d93",
             "control": null,
             "showControl": true
           }
@@ -2968,7 +2968,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "a86e87e3794fdc54"
+            "id": "4d2fba00a8286b39"
           }
         },
         "controls": {},
@@ -3080,7 +3080,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "117ca798643db7a0",
+            "id": "884141a0361a6eee",
             "control": null,
             "showControl": true
           },
@@ -3089,7 +3089,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "e901a77148d28c6d",
+            "id": "a562c4b52c5e831e",
             "control": null,
             "showControl": true
           },
@@ -3098,7 +3098,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "618e3ce0ce7fe3ac",
+            "id": "15fb84cc2909467f",
             "control": null,
             "showControl": true
           },
@@ -3107,7 +3107,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "6b88ad16dacddaf3",
+            "id": "e35119211f47a03d",
             "control": null,
             "showControl": true
           },
@@ -3116,7 +3116,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "ca0d03f94ea2c6a5",
+            "id": "ba6fbdde7369000e",
             "control": null,
             "showControl": true
           }
@@ -3128,7 +3128,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "80a8073bb0fa40df"
+            "id": "263714c2cd9d454f"
           }
         },
         "controls": {},
@@ -3292,7 +3292,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "a973ae3ecd815443",
+            "id": "5ae73198adbbf4d2",
             "control": null,
             "showControl": true
           },
@@ -3301,7 +3301,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "1d2cea4670b436a8",
+            "id": "4a944ce1dbdd5b9e",
             "control": null,
             "showControl": true
           },
@@ -3310,7 +3310,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "06dab4e2ad60b358",
+            "id": "22e6eed9e4043e47",
             "control": null,
             "showControl": true
           },
@@ -3319,7 +3319,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "bfcbd3d89fb24ab6",
+            "id": "8fc2e4d09ec16d4f",
             "control": null,
             "showControl": true
           },
@@ -3328,7 +3328,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "355563a376d41613",
+            "id": "ed01fa843e68c288",
             "control": null,
             "showControl": true
           }
@@ -3340,7 +3340,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "1aba0551cd0964e5"
+            "id": "f5df4f9ac35fd665"
           }
         },
         "controls": {},
@@ -3452,7 +3452,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "235bb394d6a84d0c",
+            "id": "766302a0ebf9c8d1",
             "control": null,
             "showControl": true
           },
@@ -3461,7 +3461,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "ad0c228e6fcaa51f",
+            "id": "2a2a15c7c3e35c27",
             "control": null,
             "showControl": true
           },
@@ -3470,7 +3470,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "b391bf8da18d8c77",
+            "id": "f0205ac9d24b2555",
             "control": null,
             "showControl": true
           },
@@ -3479,7 +3479,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "9b36afc023289f3f",
+            "id": "b5f0e8c3557af5be",
             "control": null,
             "showControl": true
           },
@@ -3488,7 +3488,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "1a37b1498210b6d6",
+            "id": "0332e5a63baa070b",
             "control": null,
             "showControl": true
           }
@@ -3500,7 +3500,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "4a43684d34ca6c0e"
+            "id": "e7f32fb9b4fa01f4"
           }
         },
         "controls": {},
@@ -3512,7 +3512,7 @@
           "colorMode": "custom",
           "predefinedWedge": "warm-to-cool",
           "directMode": true,
-          "colorBias": 0.5,
+          "colorBias": 0.66,
           "fromColor": {
             "r": 13,
             "g": 232,
@@ -3550,7 +3550,7 @@
         "colorMode": "custom",
         "predefinedWedge": "warm-to-cool",
         "directMode": true,
-        "colorBias": 0.5,
+        "colorBias": 0.66,
         "fromColor": {
           "r": 13,
           "g": 232,
@@ -3586,13 +3586,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 18,
-        "position": 0.3,
+        "lastTimeStep": 30,
+        "position": 0.5,
         "isInRange": true,
         "lastColor": {
-          "r": 86,
-          "g": 203,
-          "b": 184
+          "r": 183,
+          "g": 163,
+          "b": 99
         },
         "inputStartTime": "8:00 AM",
         "inputEndTime": "10:00 PM"
@@ -3738,7 +3738,7 @@
               "name": "any"
             },
             "label": "Input 1",
-            "id": "22fac5b7c46b2cab",
+            "id": "e530a1180983ab9e",
             "control": null,
             "showControl": true
           },
@@ -3747,7 +3747,7 @@
               "name": "any"
             },
             "label": "Input 2",
-            "id": "88ebcd45c2cd5062",
+            "id": "7b776cb83c722ce0",
             "control": null,
             "showControl": true
           }
@@ -3759,7 +3759,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "84f64561aede9ae7"
+            "id": "9df4e6e5ef7c0bc8"
           }
         },
         "controls": {},
@@ -3787,7 +3787,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "af1521dfc1750aca",
+            "id": "b67eee1a43631390",
             "control": null,
             "showControl": true
           }
@@ -3799,7 +3799,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "ab38af1bda39b365"
+            "id": "9bedc1df7994256e"
           }
         },
         "controls": {},
@@ -3813,8 +3813,8 @@
           "enabled": true,
           "history": [
             {
-              "time": "12:14:12 PM",
-              "timestamp": 1765397652848,
+              "time": "2:58:59 PM",
+              "timestamp": 1765407539114,
               "value": false,
               "type": "boolean"
             }
@@ -3855,7 +3855,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "5c7cb9632e87757f",
+            "id": "00293d478d32b528",
             "control": null,
             "showControl": true
           }
@@ -3867,7 +3867,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "cbb3f9b75273193a"
+            "id": "b3d5d26c082d14eb"
           }
         },
         "controls": {},
@@ -3881,8 +3881,8 @@
           "enabled": true,
           "history": [
             {
-              "time": "12:14:12 PM",
-              "timestamp": 1765397652848,
+              "time": "2:58:59 PM",
+              "timestamp": 1765407539114,
               "value": false,
               "type": "boolean"
             }
@@ -3986,7 +3986,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "ab0b6a2bf4391d6b",
+            "id": "7b4a0753356d6902",
             "control": null,
             "showControl": true
           }
@@ -3998,7 +3998,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "0197511b497b1e69"
+            "id": "86088376d8a5f319"
           }
         },
         "controls": {},
@@ -4012,8 +4012,8 @@
           "enabled": true,
           "history": [
             {
-              "time": "12:14:12 PM",
-              "timestamp": 1765397652849,
+              "time": "2:58:59 PM",
+              "timestamp": 1765407539115,
               "value": false,
               "type": "boolean"
             }
@@ -4026,679 +4026,679 @@
   ],
   "connections": [
     {
-      "id": "fa3025cc02d0548e",
+      "id": "d611433657d109e3",
       "source": "18c61864ae674e4a",
       "target": "8d4af06d6181b1c6",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "fb28ebbecd10ea45",
+      "id": "fdab9b360b85165f",
       "source": "cb4c3820c4b47079",
       "target": "d384f545fa2b7f45",
       "sourceOutput": "state",
       "targetInput": "in0"
     },
     {
-      "id": "54401cfb95ebc3fc",
+      "id": "773dda6382340e0e",
       "source": "b774e53e008efd8a",
       "target": "c01e165c7bfe62a5",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "d44f0025d671c68c",
+      "id": "f73830bc9b51224d",
       "source": "b774e53e008efd8a",
       "target": "5b0cc8a4356c0f1a",
       "sourceOutput": "state",
       "targetInput": "in0"
     },
     {
-      "id": "437062e61cbc51b5",
+      "id": "b4ab3c3cf495b71d",
       "source": "be6f5545a201a498",
       "target": "5b0cc8a4356c0f1a",
       "sourceOutput": "state",
       "targetInput": "in1"
     },
     {
-      "id": "196b6fd76927e432",
+      "id": "0ba984fa75d377d5",
       "source": "5b0cc8a4356c0f1a",
       "target": "079087acd1131ba1",
       "sourceOutput": "result",
       "targetInput": "in"
     },
     {
-      "id": "7c79f00bf8a7a20d",
+      "id": "13446f4d80714a87",
       "source": "8480926f954c2743",
       "target": "ccf1a34014c85926",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "97216f20c432cd25",
+      "id": "9abe68775f541152",
       "source": "d384f545fa2b7f45",
       "target": "d34623b94b64ad5c",
       "sourceOutput": "result",
       "targetInput": "in"
     },
     {
-      "id": "d1ff369df20bdde6",
+      "id": "bb4ade6acc951627",
       "source": "3809449d3be5a2d5",
       "target": "0cab81e8c5c154ff",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "3a69fa73a898322b",
+      "id": "2d3d56c33cddc8ab",
       "source": "90d3eea48e12005f",
       "target": "6ff49671565a0255",
       "sourceOutput": "out",
       "targetInput": "a"
     },
     {
-      "id": "4fef3e24e67873e2",
+      "id": "1c8fc5bfdc79643c",
       "source": "f4dd2d2e6355d1c9",
       "target": "6ff49671565a0255",
       "sourceOutput": "value",
       "targetInput": "b"
     },
     {
-      "id": "9f9996e1be2f0627",
+      "id": "acb4761f25917c58",
       "source": "6ff49671565a0255",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "1773939f1fffe9d5",
+      "id": "f8d5fb988e34cc9e",
       "source": "13d7d35bcd11958e",
       "target": "32214cb284b6c445",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "d54a817e14baa334",
+      "id": "b03a2e93b1d67ff1",
       "source": "8b0054e3d5a4b49f",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "8769505ddf15a7a7",
+      "id": "30607f012c391947",
       "source": "1556397fa0448d51",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "hsv_out",
       "targetInput": "data_3"
     },
     {
-      "id": "619b099a29c4f243",
+      "id": "e229a1206ca51d8d",
       "source": "757c6f3bd4fd74dd",
       "target": "7326e8f64d174170",
       "sourceOutput": "solar",
       "targetInput": "input"
     },
     {
-      "id": "bd4b21d516842245",
+      "id": "f9c2d8ee4b4786b0",
       "source": "757c6f3bd4fd74dd",
       "target": "50f4fa1dafd492f9",
       "sourceOutput": "solar",
       "targetInput": "in0"
     },
     {
-      "id": "e65f6a4ae1141c06",
+      "id": "f2c944a912a19701",
       "source": "bb5e204a7266087a",
       "target": "c602674304198387",
       "sourceOutput": "state",
       "targetInput": "trigger"
     },
     {
-      "id": "3429da50dae0496e",
+      "id": "0ab09b1ea852b010",
       "source": "d6bb910c707b1dd5",
       "target": "e0ea6f0875da65de",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "ee99d9ffe9d957e1",
+      "id": "68f537d96e549151",
       "source": "9e2a30f7a17e5bd5",
       "target": "2f7d4a81e11769d4",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "8c39914780ec58c2",
+      "id": "7831d68443c6915f",
       "source": "3fb3a20b014821a8",
       "target": "228368262223f1db",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "8c4c68e7efe5a8aa",
+      "id": "4c075c2f011b8cc1",
       "source": "cb87122766b2be7d",
       "target": "771f2954e396349a",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "cdbf3f8bdf79f9e9",
+      "id": "725961330aca1b66",
       "source": "8fa96b2599a3efbf",
       "target": "74640383197a8ca7",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "b5868f810f55ca36",
+      "id": "30f042c19e623b2d",
       "source": "620d9422ac54e63e",
       "target": "2c3e63e9a7123804",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "436c1e3848942652",
+      "id": "8b623a9190df0490",
       "source": "620d9422ac54e63e",
       "target": "57db63745a724bc3",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "e510cd335181be47",
+      "id": "bfdfcf177f4e202f",
       "source": "57db63745a724bc3",
       "target": "8be42cfaab24b585",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "3b62cd17740654fb",
+      "id": "ab588ba6b67b35f3",
       "source": "9289bd97b1d582f5",
       "target": "46fa426389043256",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "233a3403500bcbbd",
+      "id": "e6d523542584807d",
       "source": "9ccb7efe133cf25a",
       "target": "74640383197a8ca7",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "06a20916f55a3f59",
+      "id": "ee7ffceea887e68b",
       "source": "9e2a30f7a17e5bd5",
       "target": "ceb925173a2931a7",
       "sourceOutput": "out",
       "targetInput": "input"
     },
     {
-      "id": "cce3eb1b463f8305",
+      "id": "9d043bfd1ee31a47",
       "source": "8fa96b2599a3efbf",
       "target": "b8140146b61cbe8b",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "21053ca384327299",
+      "id": "8f105e7abb6a6123",
       "source": "638e3dd2992d1984",
       "target": "642f583dff788b72",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "7411b346b209fd2b",
+      "id": "2a7597b768136300",
       "source": "638e3dd2992d1984",
       "target": "09acc1353342ccb0",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "2c5a51a917acff71",
+      "id": "ee8d7a4d6586270a",
       "source": "80cb637e8dec510c",
       "target": "e2f1b055323b6048",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "527d38e67cd7af4c",
+      "id": "6936f21536a87050",
       "source": "f7641899a215dc7f",
       "target": "f9e613cfd22bb224",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "bd624ae2839d749d",
+      "id": "ea0e9df46a161fd8",
       "source": "80cb637e8dec510c",
       "target": "105adc7b3db42147",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "b539a4a2a61e4055",
+      "id": "4845f52f11ade320",
       "source": "8fa96b2599a3efbf",
       "target": "0f7a5498635fd32f",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "91f3be701fa98201",
+      "id": "5285084cb62ec88b",
       "source": "620d9422ac54e63e",
       "target": "f92212978a300d5a",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "000218bf14c0571f",
+      "id": "11acc1b8e9a5575d",
       "source": "f92212978a300d5a",
       "target": "dd6bece03850fcd1",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "084f86ea91d611e2",
+      "id": "1912ec453d2a8bce",
       "source": "c6a03d9be3047a22",
       "target": "0f7a5498635fd32f",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "9b661bb55202958a",
+      "id": "61241e19e61616bf",
       "source": "bb5e204a7266087a",
       "target": "fa3dd8e92a6fb03f",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "9ebeaed60c8f8c03",
+      "id": "76912a177176973f",
       "source": "9e2a30f7a17e5bd5",
       "target": "228368262223f1db",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "a78ce5e5dfe448ad",
+      "id": "4fb78a3f2325bcd2",
       "source": "9e2a30f7a17e5bd5",
       "target": "771f2954e396349a",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "1e8589c28a8f7242",
+      "id": "59310869babdf73a",
       "source": "9e2a30f7a17e5bd5",
       "target": "e88b0238fe4d8b6b",
       "sourceOutput": "out",
       "targetInput": "input"
     },
     {
-      "id": "c7a5eb1830342969",
+      "id": "ac3a31fb3a853f03",
       "source": "4e242756c2612585",
       "target": "5b71b0de41e3a529",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "bdc463716a3fbb1e",
+      "id": "50c95064c7aabf5e",
       "source": "a3d39e49f47f28f7",
       "target": "15bedae98acf174c",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "8833e7727f0f1f79",
+      "id": "8f80fe457961071e",
       "source": "56ee4fd527651afc",
       "target": "e318b65067c3608e",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "4a2dab5a699edf88",
+      "id": "b0c7fe17df76ddb9",
       "source": "39ab97626c5c2296",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "hsv_out",
       "targetInput": "data_2"
     },
     {
-      "id": "4c8f3356b4befb66",
+      "id": "84e384067ce642ed",
       "source": "93de143c8b853b9d",
       "target": "56ee4fd527651afc",
       "sourceOutput": "hsv_out",
       "targetInput": "data_2"
     },
     {
-      "id": "1b2916b4777a7d10",
+      "id": "c31265f81982a457",
       "source": "bf71124258f2c9f4",
       "target": "af5d78eb391594ce",
       "sourceOutput": "isInRange",
       "targetInput": "a"
     },
     {
-      "id": "e7dd292a085a4e11",
+      "id": "8ad2fbf78675a127",
       "source": "c50730db0a8fc75b",
       "target": "af5d78eb391594ce",
       "sourceOutput": "value",
       "targetInput": "b"
     },
     {
-      "id": "7f9a98a201a0caa0",
+      "id": "0df7761cde300ad4",
       "source": "af5d78eb391594ce",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "a2e221cb0b8a0e6d",
+      "id": "c129de6f2ee025fe",
       "source": "af5d78eb391594ce",
       "target": "56ee4fd527651afc",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "9f74987acab70896",
+      "id": "b851b748e2db391d",
       "source": "3f6956273b66f32c",
       "target": "56ee4fd527651afc",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "493e8731a527e382",
+      "id": "b2011464144d3ccf",
       "source": "a096aaaa5d139111",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "70e7d920b4f69bc3",
+      "id": "18f5d27df0d1da8d",
       "source": "b697f1460c4c6614",
       "target": "d5686fc3e43513d6",
       "sourceOutput": "out",
       "targetInput": "in1"
     },
     {
-      "id": "11cc3e12f26e029b",
+      "id": "cd2eac9d3ac965e6",
       "source": "50ff70ef0f2acc96",
       "target": "6ac17d4ab201b32b",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "d4d29fa0b8e775b0",
+      "id": "d320c4bc4d57dadf",
       "source": "d5686fc3e43513d6",
       "target": "3aebe89aed9eddb5",
       "sourceOutput": "result",
       "targetInput": "trigger"
     },
     {
-      "id": "3ea61480d937c859",
+      "id": "d42567186d999e7d",
       "source": "f7641899a215dc7f",
       "target": "d5686fc3e43513d6",
       "sourceOutput": "out",
       "targetInput": "in0"
     },
     {
-      "id": "27ddfd0ecbe8ce26",
+      "id": "07ee42addd8e5a49",
       "source": "e82bee10d637f7bd",
       "target": "39309e0384e43956",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "00f93319c5f025ca",
+      "id": "2d74992db9c64071",
       "source": "043a50dbfccdcd71",
       "target": "6b63b8e9fb86837c",
       "sourceOutput": "out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "8b56c1b5e717d6a0",
+      "id": "0b06af97b46100e1",
       "source": "6b63b8e9fb86837c",
       "target": "39309e0384e43956",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "78534e79ec5b753b",
+      "id": "cf10e386dc9c8068",
       "source": "8fa96b2599a3efbf",
       "target": "01446a4eb12772bd",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "43e1c1dd0c3f3a86",
+      "id": "1c263b4909c7329a",
       "source": "8fa96b2599a3efbf",
       "target": "9a4908a524f7808a",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "3f7ecf47d79b8de7",
+      "id": "c923bb16a211c0e5",
       "source": "8fa96b2599a3efbf",
       "target": "d08ef8707ab0fba4",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "41c6044671b634c3",
+      "id": "77e5ae28dab1bb15",
       "source": "d384f545fa2b7f45",
       "target": "e9c2d08063453f26",
       "sourceOutput": "result",
       "targetInput": "input"
     },
     {
-      "id": "11c02f88c5b06d5b",
+      "id": "a83b9b14277b3caa",
       "source": "e82bee10d637f7bd",
       "target": "23c01481261e42d1",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "3711830d7ee626f3",
+      "id": "edfe79e2d85f5678",
       "source": "6602e66d9ef41f54",
       "target": "f65af4c70a7f6f40",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "80539854d436e164",
+      "id": "026cdb232c6a579e",
       "source": "6602e66d9ef41f54",
       "target": "c1c9a5b0ed01c3b7",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "38d4536b1dd25efc",
+      "id": "f24c2ffad97cf29b",
       "source": "22ab7427bbcd0c0f",
       "target": "49f81a13d1267273",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "1d0ffc0bcf4f03f1",
+      "id": "86e86130951994e6",
       "source": "22ab7427bbcd0c0f",
       "target": "49f81a13d1267273",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "33547dab6a270d70",
+      "id": "3527810d283deb91",
       "source": "22ab7427bbcd0c0f",
       "target": "8d9e7c6d4ccc74b7",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "2277b0008facb243",
+      "id": "e5a2d2c4720bb6ea",
       "source": "22ab7427bbcd0c0f",
       "target": "8d9e7c6d4ccc74b7",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "136436c8612cb018",
+      "id": "4dfdafc8441791d5",
       "source": "49f81a13d1267273",
       "target": "f65af4c70a7f6f40",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "d1d0e53490251f2f",
+      "id": "409501652eb04a72",
       "source": "8d9e7c6d4ccc74b7",
       "target": "c1c9a5b0ed01c3b7",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "514ebc6bd7fa55e3",
+      "id": "aa71f1e266176cdc",
       "source": "ccbfbe4498e0188d",
       "target": "48772a09399ce435",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "8ca0a00bdc70ba53",
+      "id": "3ccb554f6974576d",
       "source": "63057be1d1af8894",
       "target": "48772a09399ce435",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "311ee8312205e8e7",
+      "id": "73ffb5492d6e64c7",
       "source": "2769561f4d1141e5",
       "target": "23c01481261e42d1",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "6cc0c1f6d7384146",
+      "id": "ef32dab3efa55474",
       "source": "83837d8f043f49cf",
       "target": "2769561f4d1141e5",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "02698a516569c530",
+      "id": "839a6801ec219e97",
       "source": "83837d8f043f49cf",
       "target": "2769561f4d1141e5",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "a3dc436551695b7b",
+      "id": "07839f2417fb4c1e",
       "source": "1a3bb2fd48d99245",
       "target": "04169d0d9714a784",
       "sourceOutput": "hsvInfo",
       "targetInput": "in"
     },
     {
-      "id": "e680d3e6983e90bd",
+      "id": "8bcb57e20278419f",
       "source": "a3d528fc57e1ff4d",
       "target": "1a3bb2fd48d99245",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "1507cfdb5ac6e595",
+      "id": "4aea1431d61ae3c2",
       "source": "a3d528fc57e1ff4d",
       "target": "1a3bb2fd48d99245",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "63d34e1e5a649a0b",
+      "id": "e32daefdc4519131",
       "source": "6b63b8e9fb86837c",
       "target": "12a91469cc39f498",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "41284095d6a04750",
+      "id": "5d747518e722ba04",
       "source": "d75099b0931e7056",
       "target": "f9e613cfd22bb224",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "93a0e4b70d612ec2",
+      "id": "3c4f8110ff10b8d3",
       "source": "12a91469cc39f498",
       "target": "0c96213adb3281f4",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "bbecea3093182818",
+      "id": "60548262022549c8",
       "source": "4e9efb3c40202f3d",
       "target": "444d3a77af409b04",
       "sourceOutput": "output",
       "targetInput": "in"
     },
     {
-      "id": "1b5d7fb3be91b088",
+      "id": "7d89d1d5126be8c1",
       "source": "4e9efb3c40202f3d",
       "target": "1c6a806bccd7eae4",
       "sourceOutput": "output",
       "targetInput": "input"
     },
     {
-      "id": "f2534b59a43657d7",
+      "id": "a04616c8364c440d",
       "source": "b774e53e008efd8a",
       "target": "4e9efb3c40202f3d",
       "sourceOutput": "state",
       "targetInput": "in2"
     },
     {
-      "id": "4db2d4d3be6f7318",
+      "id": "c769e6938085545c",
       "source": "720bd29f88ec7e96",
       "target": "4e9efb3c40202f3d",
       "sourceOutput": "state",
       "targetInput": "in1"
     },
     {
-      "id": "29f666b8eb131603",
+      "id": "16c263cebcd20908",
       "source": "50f4fa1dafd492f9",
       "target": "d384f545fa2b7f45",
       "sourceOutput": "result",
       "targetInput": "in1"
     },
     {
-      "id": "e7fb1dea0e6aeb86",
+      "id": "e02d939d55f019b9",
       "source": "537324f4d766e02b",
       "target": "15d23e2dcb5c4e04",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "f08184e90ffdb49e",
+      "id": "6c1ced2b70f2e0ff",
       "source": "8fa96b2599a3efbf",
       "target": "46fa426389043256",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "fb6632ac3181e9a3",
+      "id": "0271db27c235f4d2",
       "source": "537324f4d766e02b",
       "target": "5a64094e75fe69b7",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "92c6ebeffa383f13",
+      "id": "e6ce63dfdc0f4e9c",
       "source": "2b4775bb8684586e",
       "target": "315ccd48fd131de3",
       "sourceOutput": "device_state",
       "targetInput": "device_state"
     },
     {
-      "id": "31786af98b1ed53f",
+      "id": "478371f491edbfea",
       "source": "315ccd48fd131de3",
       "target": "18cb43271d9376b5",
       "sourceOutput": "out_battery",
       "targetInput": "device_state"
     },
     {
-      "id": "fd280f0e436b5531",
+      "id": "96b16473d98c426f",
       "source": "e82bee10d637f7bd",
       "target": "0c96213adb3281f4",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "43ffac80a3505046",
+      "id": "b68db1e3488a3708",
       "source": "18c61864ae674e4a",
       "target": "02289ed0e7497993",
       "sourceOutput": "state",
@@ -4706,8 +4706,8 @@
     }
   ],
   "viewport": {
-    "x": 1261.531974845139,
-    "y": -7416.45964759402,
-    "k": 1
+    "x": -88.55866174085881,
+    "y": 1936.6056220196936,
+    "k": 0.4687242217191611
   }
 }

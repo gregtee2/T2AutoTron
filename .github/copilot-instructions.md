@@ -103,6 +103,27 @@ Files prefixed with `00_` load first and provide shared utilities:
 ### Socket Types
 Access via `window.sockets`: `boolean`, `number`, `object`, `lightInfo`, `any`
 
+### Socket Styling (CSS)
+Sockets are styled via CSS using `data-socket-type` attribute set by `CustomSocket` in `Editor.jsx`.
+
+**Semantic type detection** (based on socket key name):
+- Keys containing `hsv` or `color` → `hsv_info` (purple)
+- Keys containing `trigger`, `enable`, `active` → `boolean` (green)
+- Keys containing `light`, `device` → `light_info` (gold)
+- All others use the socket's actual type name
+
+**CSS Variables** (customizable in Settings → Socket Colors):
+- `--socket-boolean-color`, `--socket-boolean-dark`, `--socket-boolean-border`
+- `--socket-number-color`, `--socket-number-dark`, `--socket-number-border`
+- `--socket-object-color`, `--socket-object-dark`, `--socket-object-border`
+- `--socket-hsv-color`, `--socket-hsv-dark`, `--socket-hsv-border`
+- `--socket-light-color`, `--socket-light-dark`, `--socket-light-border`
+
+**Files involved:**
+- `frontend/src/Editor.jsx` → `CustomSocket` component sets `data-socket-type`
+- `frontend/src/App.css` → Socket color styles (lines 590-760)
+- `frontend/src/ui/SettingsModal.jsx` → Socket Colors settings panel
+
 ### Node Categories
 `"Home Assistant"`, `"Logic"`, `"Timer/Event"`, `"CC_Control_Nodes"`, `"Color"`, `"Utility"`, `"Inputs"`, `"Other"`
 
