@@ -129,6 +129,8 @@
         const { data, emit } = props;
         const [state, setState] = useState(data.properties);
         const [countdown, setCountdown] = useState("Calculating...");
+        const [citySearch, setCitySearch] = useState("");
+        const [searchStatus, setSearchStatus] = useState("");
 
         const updateProperty = (key, value) => {
             data.properties[key] = value;
@@ -141,6 +143,66 @@
                 'latitude', 'longitude', 'timezone'].includes(key)) {
                 calculateTimes();
             }
+        };
+
+        // City/Zip search using Nominatim (OpenStreetMap)
+        const searchLocation = async () => {
+            if (!citySearch.trim()) return;
+            setSearchStatus("Searching...");
+            try {
+                const query = encodeURIComponent(citySearch.trim());
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`, {
+                    headers: { 'User-Agent': 'T2AutoTron/2.1' }
+                });
+                const results = await response.json();
+                if (results && results.length > 0) {
+                    const { lat, lon, display_name } = results[0];
+                    const cityName = display_name.split(',')[0];
+                    updateProperty('latitude', parseFloat(lat));
+                    updateProperty('longitude', parseFloat(lon));
+                    updateProperty('city', cityName);
+                    setSearchStatus(`Found: ${cityName}`);
+                    fetchSunTimes();
+                } else {
+                    setSearchStatus("Location not found");
+                }
+            } catch (error) {
+                setSearchStatus(`Error: ${error.message}`);
+            }
+        };
+
+        // Use browser geolocation
+        const useMyLocation = () => {
+            if (!navigator.geolocation) {
+                setSearchStatus("Geolocation not supported");
+                return;
+            }
+            setSearchStatus("Getting location...");
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude } = position.coords;
+                    updateProperty('latitude', latitude);
+                    updateProperty('longitude', longitude);
+                    // Reverse geocode to get city name
+                    try {
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
+                            headers: { 'User-Agent': 'T2AutoTron/2.1' }
+                        });
+                        const data = await response.json();
+                        const city = data.address?.city || data.address?.town || data.address?.county || 'Your Location';
+                        updateProperty('city', city);
+                        setSearchStatus(`Found: ${city}`);
+                    } catch {
+                        updateProperty('city', 'Your Location');
+                        setSearchStatus("Location set");
+                    }
+                    fetchSunTimes();
+                },
+                (error) => {
+                    setSearchStatus(`Error: ${error.message}`);
+                },
+                { timeout: 10000 }
+            );
         };
 
         const log = (message, level = 'info') => { if (state.debug || level === 'error') console.log(`[SunriseSunsetNode] ${message}`); };
@@ -265,22 +327,45 @@
         const fetchSunTimes = useCallback(async () => {
             updateProperty('status', "Fetching sun times...");
             try {
-                // Try to fetch from backend API if available, otherwise fallback
-                // Since we are in a plugin, we can try fetching from our own backend route if we had one
-                // For now, let's assume we can use a public API or just calculate locally if we had a library
-                // But wait, we don't have suncalc here.
-                // Let's try to fetch from the backend route /api/weather/sun if it exists, or just use a placeholder
+                const lat = data.properties.latitude;
+                const lon = data.properties.longitude;
                 
-                // Simulating fetch for now or using current time as base
+                // Use sunrise-sunset.org API (free, no key required)
+                const response = await fetch(
+                    `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&formatted=0`
+                );
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.status === 'OK' && result.results) {
+                        // API returns times in UTC
+                        const sunrise = new Date(result.results.sunrise);
+                        const sunset = new Date(result.results.sunset);
+                        
+                        updateProperty('sunrise_time', sunrise);
+                        updateProperty('sunset_time', sunset);
+                        updateProperty('status', `${data.properties.city} - Updated`);
+                        log(`Sun times for ${data.properties.city}: Sunrise ${sunrise.toLocaleTimeString()}, Sunset ${sunset.toLocaleTimeString()}`);
+                        calculateTimes();
+                        return;
+                    }
+                }
+                
+                // Fallback to estimated times if API fails
                 const now = DateTime.local();
-                updateProperty('sunrise_time', now.set({ hour: 6, minute: 0 }).toJSDate());
-                updateProperty('sunset_time', now.set({ hour: 18, minute: 0 }).toJSDate());
-                updateProperty('status', "Sun times set (Default).");
+                updateProperty('sunrise_time', now.set({ hour: 6, minute: 30 }).toJSDate());
+                updateProperty('sunset_time', now.set({ hour: 18, minute: 30 }).toJSDate());
+                updateProperty('status', `${data.properties.city} - Estimated`);
                 calculateTimes();
 
             } catch (error) {
                 log(`Error fetching sun times: ${error.message}`, 'error');
-                updateProperty('status', `Error: ${error.message}`);
+                // Use fallback times
+                const now = DateTime.local();
+                updateProperty('sunrise_time', now.set({ hour: 6, minute: 30 }).toJSDate());
+                updateProperty('sunset_time', now.set({ hour: 18, minute: 30 }).toJSDate());
+                updateProperty('status', `Fallback times (API error)`);
+                calculateTimes();
             }
         }, [state.latitude, state.longitude]);
 
@@ -311,7 +396,44 @@
             return () => clearInterval(timer);
         }, [data.properties.next_on_date, data.properties.next_off_date, triggerPulse, calculateTimes]);
 
-        useEffect(() => { fetchSunTimes(); }, []);
+        useEffect(() => {
+            // On mount, always fetch global location settings and apply them
+            const fetchGlobalLocationAndSunTimes = async () => {
+                try {
+                    // Always fetch global settings - they override node settings
+                    const response = await fetch('/api/settings');
+                    if (response.ok) {
+                        const result = await response.json();
+                        const settings = result.settings || {};
+                        
+                        // If global location is configured, use it
+                        if (settings.LOCATION_LATITUDE && settings.LOCATION_LONGITUDE) {
+                            const lat = parseFloat(settings.LOCATION_LATITUDE);
+                            const lon = parseFloat(settings.LOCATION_LONGITUDE);
+                            
+                            if (!isNaN(lat) && !isNaN(lon)) {
+                                updateProperty('latitude', lat);
+                                updateProperty('longitude', lon);
+                                if (settings.LOCATION_CITY) {
+                                    updateProperty('city', settings.LOCATION_CITY);
+                                }
+                                if (settings.LOCATION_TIMEZONE) {
+                                    updateProperty('timezone', settings.LOCATION_TIMEZONE);
+                                }
+                                log(`Applied global location: ${settings.LOCATION_CITY || 'Custom'} (${lat}, ${lon})`);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    log(`Could not fetch global location settings: ${err.message}`, 'warn');
+                }
+                
+                // Now fetch sun times with the (possibly updated) location
+                fetchSunTimes();
+            };
+            
+            fetchGlobalLocationAndSunTimes();
+        }, []);
 
         // Register scheduled events with the global registry for the Upcoming Events panel
         useEffect(() => {

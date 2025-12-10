@@ -63,6 +63,17 @@ const SETTINGS_CONFIG = [
         ]
     },
     {
+        category: 'Location',
+        icon: '📍',
+        description: 'Your location for sunrise/sunset calculations and weather',
+        settings: [
+            { key: 'LOCATION_CITY', label: 'City', placeholder: 'Dallas, TX', type: 'text' },
+            { key: 'LOCATION_LATITUDE', label: 'Latitude', placeholder: '32.7767', type: 'text' },
+            { key: 'LOCATION_LONGITUDE', label: 'Longitude', placeholder: '-96.7970', type: 'text' },
+            { key: 'LOCATION_TIMEZONE', label: 'Timezone', placeholder: 'America/Chicago', type: 'text' }
+        ]
+    },
+    {
         category: 'Server Settings',
         icon: '⚙️',
         settings: [
@@ -162,6 +173,10 @@ export function SettingsModal({ isOpen, onClose }) {
         }
     });
     const [socketColorsChanged, setSocketColorsChanged] = useState(false);
+    
+    // City search state for Location settings
+    const [searchingCity, setSearchingCity] = useState(false);
+    const [citySearchError, setCitySearchError] = useState(null);
 
     // Fetch current settings on mount
     useEffect(() => {
@@ -212,6 +227,105 @@ export function SettingsModal({ isOpen, onClose }) {
 
     const handleChange = (key, value) => {
         setSettings(prev => ({ ...prev, [key]: value }));
+    };
+    
+    // City search handler - uses OpenStreetMap Nominatim for geocoding
+    const handleCitySearch = async () => {
+        const cityName = settings.LOCATION_CITY;
+        if (!cityName || cityName.trim().length < 2) {
+            setCitySearchError('Please enter a city name first');
+            return;
+        }
+        
+        setSearchingCity(true);
+        setCitySearchError(null);
+        
+        try {
+            // Use OpenStreetMap Nominatim API (free, no API key required)
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?` +
+                `q=${encodeURIComponent(cityName)}&format=json&limit=1&addressdetails=1`,
+                {
+                    headers: {
+                        'User-Agent': 'T2AutoTron/2.1 (Home Automation App)'
+                    }
+                }
+            );
+            
+            if (!response.ok) {
+                throw new Error('Geocoding service unavailable');
+            }
+            
+            const data = await response.json();
+            
+            if (data.length === 0) {
+                setCitySearchError(`Could not find "${cityName}". Try adding state/country (e.g., "Dallas, TX, USA")`);
+                return;
+            }
+            
+            const result = data[0];
+            const lat = parseFloat(result.lat).toFixed(4);
+            const lon = parseFloat(result.lon).toFixed(4);
+            
+            // Build a nice display name
+            const displayName = result.address ? 
+                [result.address.city || result.address.town || result.address.village || result.name,
+                 result.address.state,
+                 result.address.country].filter(Boolean).join(', ') :
+                result.display_name.split(',').slice(0, 3).join(',');
+            
+            // Determine timezone based on US state or longitude
+            let suggestedTz = 'UTC';
+            const state = result.address?.state?.toLowerCase() || '';
+            
+            // US state-based timezone detection (more accurate)
+            if (state.includes('hawaii')) {
+                suggestedTz = 'Pacific/Honolulu';
+            } else if (state.includes('alaska')) {
+                suggestedTz = 'America/Anchorage';
+            } else if (['california', 'nevada', 'oregon', 'washington'].some(s => state.includes(s))) {
+                suggestedTz = 'America/Los_Angeles';
+            } else if (['arizona'].some(s => state.includes(s))) {
+                suggestedTz = 'America/Phoenix';
+            } else if (['colorado', 'montana', 'wyoming', 'utah', 'new mexico', 'idaho'].some(s => state.includes(s))) {
+                suggestedTz = 'America/Denver';
+            } else if (['texas', 'oklahoma', 'kansas', 'nebraska', 'south dakota', 'north dakota', 
+                        'minnesota', 'iowa', 'missouri', 'arkansas', 'louisiana', 'wisconsin', 
+                        'illinois', 'mississippi', 'alabama', 'tennessee'].some(s => state.includes(s))) {
+                suggestedTz = 'America/Chicago';
+            } else if (['new york', 'pennsylvania', 'new jersey', 'connecticut', 'massachusetts',
+                        'rhode island', 'vermont', 'new hampshire', 'maine', 'delaware', 'maryland',
+                        'virginia', 'west virginia', 'north carolina', 'south carolina', 'georgia',
+                        'florida', 'ohio', 'michigan', 'indiana', 'kentucky', 'district of columbia'].some(s => state.includes(s))) {
+                suggestedTz = 'America/New_York';
+            } else {
+                // Fallback to longitude-based for non-US locations
+                const lonNum = parseFloat(lon);
+                if (lonNum >= -125 && lonNum < -115) suggestedTz = 'America/Los_Angeles';
+                else if (lonNum >= -115 && lonNum < -102) suggestedTz = 'America/Denver';
+                else if (lonNum >= -102 && lonNum < -87) suggestedTz = 'America/Chicago';
+                else if (lonNum >= -87 && lonNum < -67) suggestedTz = 'America/New_York';
+                else if (lonNum >= -10 && lonNum < 3) suggestedTz = 'Europe/London';
+                else if (lonNum >= 3 && lonNum < 15) suggestedTz = 'Europe/Paris';
+            }
+            
+            // Update settings - ALWAYS update timezone when searching
+            setSettings(prev => ({
+                ...prev,
+                LOCATION_CITY: displayName,
+                LOCATION_LATITUDE: lat,
+                LOCATION_LONGITUDE: lon,
+                LOCATION_TIMEZONE: suggestedTz
+            }));
+            
+            setSuccess(`Found: ${displayName} (${lat}, ${lon})`);
+            setTimeout(() => setSuccess(null), 5000);
+            
+        } catch (err) {
+            setCitySearchError('Search failed: ' + err.message);
+        } finally {
+            setSearchingCity(false);
+        }
     };
     
     // Theme settings handlers
@@ -978,7 +1092,77 @@ export function SettingsModal({ isOpen, onClose }) {
                                                 </div>
                                             )}
                                             
-                                            {category.settings.map(setting => (
+                                            {/* Special handling for Location category - City Search */}
+                                            {category.category === 'Location' && (
+                                                <div className="settings-location-search">
+                                                    <p style={{ fontSize: '0.85rem', color: '#aaa', margin: '0 0 10px 0' }}>
+                                                        📍 Enter your city name and click "Search" to auto-fill coordinates.
+                                                    </p>
+                                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                                                        <input
+                                                            type="text"
+                                                            className="settings-input"
+                                                            value={settings.LOCATION_CITY || ''}
+                                                            onChange={e => handleChange('LOCATION_CITY', e.target.value)}
+                                                            placeholder="e.g., Dallas, TX, USA"
+                                                            style={{ flex: 1 }}
+                                                            onKeyDown={e => { if (e.key === 'Enter') handleCitySearch(); }}
+                                                        />
+                                                        <button
+                                                            className="settings-test-btn"
+                                                            onClick={handleCitySearch}
+                                                            disabled={searchingCity}
+                                                            style={{ whiteSpace: 'nowrap' }}
+                                                        >
+                                                            {searchingCity ? '⏳ Searching...' : '🔍 Search City'}
+                                                        </button>
+                                                    </div>
+                                                    {citySearchError && (
+                                                        <div className="settings-test-result error" style={{ marginBottom: '10px' }}>
+                                                            ❌ {citySearchError}
+                                                        </div>
+                                                    )}
+                                                    {/* Show lat/lon/timezone as read-only or editable */}
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                                        <div className="settings-field">
+                                                            <label className="settings-label">Latitude</label>
+                                                            <input
+                                                                type="text"
+                                                                className="settings-input"
+                                                                value={settings.LOCATION_LATITUDE || ''}
+                                                                onChange={e => handleChange('LOCATION_LATITUDE', e.target.value)}
+                                                                placeholder="32.7767"
+                                                            />
+                                                        </div>
+                                                        <div className="settings-field">
+                                                            <label className="settings-label">Longitude</label>
+                                                            <input
+                                                                type="text"
+                                                                className="settings-input"
+                                                                value={settings.LOCATION_LONGITUDE || ''}
+                                                                onChange={e => handleChange('LOCATION_LONGITUDE', e.target.value)}
+                                                                placeholder="-96.7970"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="settings-field" style={{ marginTop: '10px' }}>
+                                                        <label className="settings-label">Timezone</label>
+                                                        <input
+                                                            type="text"
+                                                            className="settings-input"
+                                                            value={settings.LOCATION_TIMEZONE || ''}
+                                                            onChange={e => handleChange('LOCATION_TIMEZONE', e.target.value)}
+                                                            placeholder="America/Chicago"
+                                                        />
+                                                        <span className="settings-key-hint">
+                                                            Common: America/New_York, America/Chicago, America/Denver, America/Los_Angeles
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Regular settings fields (skip for Location since we have custom UI) */}
+                                            {category.category !== 'Location' && category.settings.map(setting => (
                                                 <div key={setting.key} className="settings-field">
                                                     <label className="settings-label">
                                                         {setting.label}

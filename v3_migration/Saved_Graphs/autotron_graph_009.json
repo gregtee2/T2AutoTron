@@ -212,9 +212,9 @@
           "haToken": "",
           "sunrise_time": "2025-12-09T14:00:35.796Z",
           "sunset_time": "2025-12-10T02:00:35.796Z",
-          "next_on_date": "2025-12-11T00:00:35.796Z",
+          "next_on_date": "2025-12-10T00:00:35.796Z",
           "next_off_date": "2025-12-10T06:30:00.000Z",
-          "currentState": true,
+          "currentState": false,
           "status": "Sun times set (Default).",
           "debug": false,
           "pulseMode": false
@@ -238,7 +238,7 @@
           "compareOperator": ">",
           "compareThreshold": 80,
           "setVariable": "",
-          "_lastResult": true
+          "_lastResult": false
         }
       }
     },
@@ -605,7 +605,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "registeredName": "[Trigger]House Lights ON/Off",
           "finalName": "[Trigger]House Lights ON/Off"
         }
@@ -677,7 +677,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -942,7 +942,7 @@
         "properties": {
           "title": "Master Bedroom",
           "colorIndex": 4,
-          "customColor": "#274531",
+          "customColor": null,
           "fontSize": 60,
           "width": 4061.588357049524,
           "height": 3034.3289858213648,
@@ -1333,7 +1333,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -1350,7 +1350,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -1638,7 +1638,7 @@
         "properties": {
           "title": "Kitchen",
           "colorIndex": 0,
-          "customColor": "#2e4676",
+          "customColor": null,
           "fontSize": 60,
           "width": 4146.753766774588,
           "height": 3028.55197977325,
@@ -1737,7 +1737,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -2632,7 +2632,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -2880,7 +2880,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": true
+          "value": false
         }
       }
     },
@@ -4476,8 +4476,8 @@
     }
   ],
   "viewport": {
-    "x": -403.0508086262514,
-    "y": 405.4670180224649,
-    "k": 0.13620475346545682
+    "x": -1811.2622649250798,
+    "y": 354.7798354052773,
+    "k": 0.17866603943622236
   }
 }
