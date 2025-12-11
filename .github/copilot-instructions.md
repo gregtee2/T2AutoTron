@@ -387,7 +387,7 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 
 ## Beta Release Status
 
-**Current Grade: A- (90/100) | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.0-beta.15 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -396,7 +396,7 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 | 1 | Debug console logging | ✅ Done | All logs gated by `VERBOSE_LOGGING` env var (backend) or `EDITOR_DEBUG`/`SOCKET_DEBUG` flags (frontend) |
 | 2 | Clean build artifacts | ✅ Done | Only 1-2 files in assets/ |
 | 3 | Fix hardcoded HA URL | ✅ Done | Uses `process.env.HA_HOST` with fallback |
-| 4 | Package.json metadata | ✅ Done | v2.1.0-beta.1, proper author/homepage/keywords |
+| 4 | Package.json metadata | ✅ Done | v2.1.0-beta.15, proper author/homepage/keywords |
 | 5 | Error boundaries | ✅ Done | `ErrorBoundary.jsx` wraps App |
 | 6 | Secure token storage | ✅ Done | Uses sessionStorage (falls back to localStorage) |
 
@@ -419,6 +419,18 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 | 2 | Modularize server.js | ⏳ Not started | 4h (working fine as-is) |
 | 3 | Refactor plugins to T2Node | ⏳ Partial | Some use it, not all |
 
+### 🟢 RECENTLY ADDED (beta.12 - beta.15)
+
+| # | Feature | Notes |
+|---|---------|-------|
+| 1 | **Camera Panel** | Collapsible panel in Dock for IP camera streams (MJPEG/snapshot) |
+| 2 | **Update System** | Auto-check for updates from `stable` branch, toast notifications, one-click apply |
+| 3 | **Check for Updates Button** | Manual update check button in Control Panel Settings section |
+| 4 | **Performance Mode** | Toggle in Settings to reduce GPU usage (disables blur, glow, animations) |
+| 5 | **Graph Auto-Restore** | Graph saved before update, auto-restored after reload |
+| 6 | **Sleep Prevention** | Electron app prevents Windows from suspending during sleep |
+| 7 | **Toast Notification System** | Full toast system with `window.T2Toast` for plugins |
+
 ### 🟢 RECENTLY FIXED
 
 | # | Fix | Notes |
@@ -426,6 +438,8 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 | 1 | HA Token refresh | Settings panel now updates token immediately via `homeAssistantManager.updateConfig()` |
 | 2 | Pan/Zoom freeze | F5 resets view; auto-reset on graph load via `graphLoadComplete` event |
 | 3 | Reset performance | `resetEditorView()` uses `requestAnimationFrame` to avoid blocking (was 350ms+, now <16ms) |
+| 4 | DeviceStateControl CSS | No longer injects CSS on every render (major performance fix) |
+| 5 | Keyframe animations | Moved from dynamic injection to `node-styles.css` |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 
@@ -446,6 +460,37 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 - **User Experience**: Loading overlay, toast notifications, auto-save
 - **Developer Experience**: Debug flags per node, `window.T2Toast` for plugins
 - **Stability**: Error boundaries prevent full crashes
+- **Update System**: Auto-check from `stable` branch, preserves graph during updates
+- **Performance Mode**: GPU-friendly option for complex graphs (40+ nodes)
+- **Camera Integration**: IP camera panel with MJPEG/snapshot support
+
+---
+
+## Key UI Components
+
+### Control Panel (Dock.jsx)
+The right-side docked panel containing:
+- **Graph Controls**: New, Save, Load, Undo, Run buttons
+- **Connection Status**: HA, Hue, Socket.IO indicators
+- **Plugin Status**: Loaded/failed plugin count
+- **Camera Panel**: Collapsible IP camera viewer (CameraPanel.jsx)
+- **Settings Section**: Settings modal, Keyboard shortcuts, Check for Updates button
+
+### Settings Modal (SettingsModal.jsx)
+Tabbed modal with:
+- **Home Assistant**: URL, token, test connection
+- **Philips Hue**: Bridge IP, username, test connection
+- **Weather**: OpenWeatherMap API key
+- **Telegram**: Bot token, chat ID
+- **Cameras**: Add/edit/remove IP cameras
+- **Performance Mode**: Toggle for reduced GPU usage
+- **Socket Colors**: Customize socket type colors
+
+### Update System (UpdateModal.jsx + UpdateChecker.jsx)
+- `UpdateChecker.jsx`: Runs on app load, checks `stable` branch for new version
+- `UpdateModal.jsx`: Shows update notification, handles apply with graph preservation
+- Backend endpoint: `GET /api/update/check` returns version comparison
+- Backend endpoint: `POST /api/update/apply` runs `git pull origin stable`
 
 ---
 
@@ -455,14 +500,14 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 
 | Branch | Purpose | Merge Target |
 |--------|---------|--------------|
-| `main` | Stable production code. Only merge from `sandbox` after testing. | — |
-| `sandbox` | Active development branch. All new features and fixes go here first. | `main` |
+| `main` | Primary development branch. All new features and fixes go here. | `stable` |
+| `stable` | Production releases. Users pull updates from this branch. | — |
 
 ### Development Workflow
 
-1. **Always work on `sandbox` branch** for new features and bug fixes.
-2. **Test thoroughly** on `sandbox` before merging to `main`.
-3. **Merge to `main`** only when `sandbox` is stable and tested.
+1. **Work on `main` branch** for new features and bug fixes.
+2. **Test thoroughly** on `main` before pushing to `stable`.
+3. **Push to `stable`** when ready for user deployment: `git push origin main:stable`
 
 ### Common Git Commands
 
@@ -470,25 +515,21 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 # Check current branch
 git branch
 
-# Switch to sandbox for development
-git checkout sandbox
+# Ensure on main for development
+git checkout main
 
 # Pull latest changes
-git pull origin sandbox
+git pull origin main
 
 # Stage and commit changes
 git add .
 git commit -m "feat: Add new feature description"
 
-# Push to sandbox
-git push origin sandbox
-
-# When ready to release to main:
-git checkout main
-git pull origin main
-git merge sandbox
+# Push to main (development)
 git push origin main
-git checkout sandbox  # Return to development branch
+
+# Deploy to stable (production) - users get this via update check
+git push origin main:stable
 ```
 
 ### Commit Message Conventions
