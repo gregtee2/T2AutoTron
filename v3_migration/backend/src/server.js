@@ -603,6 +603,10 @@ app.use(require('./api/middleware/errorHandler'));
 const updateRoutes = require('./api/updateRoutes');
 app.use('/api/update', updateRoutes);
 
+// Camera routes
+const cameraRoutes = require('./api/cameras');
+app.use('/api/cameras', cameraRoutes);
+
 // Initialize DeviceService
 debug('Initializing DeviceService...');
 async function initializeDeviceService() {

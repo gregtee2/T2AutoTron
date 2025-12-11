@@ -1,0 +1,526 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+/**
+ * CameraPanel - Dock panel for viewing IP camera feeds
+ * Displays camera snapshots that refresh periodically
+ */
+export function CameraPanel({ isExpanded, onToggle }) {
+    const [cameras, setCameras] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [discovering, setDiscovering] = useState(false);
+    const [error, setError] = useState(null);
+    const [showSettings, setShowSettings] = useState(false);
+    const [credentials, setCredentials] = useState({ username: '', password: '' });
+    const [refreshInterval, setRefreshInterval] = useState(5000);
+    const [selectedCamera, setSelectedCamera] = useState(null);
+    const refreshTimerRef = useRef(null);
+    const [cameraTimestamps, setCameraTimestamps] = useState({});
+
+    // Fetch cameras on mount
+    useEffect(() => {
+        fetchCameras();
+        return () => {
+            if (refreshTimerRef.current) {
+                clearInterval(refreshTimerRef.current);
+            }
+        };
+    }, []);
+
+    // Set up refresh timer
+    useEffect(() => {
+        if (refreshTimerRef.current) {
+            clearInterval(refreshTimerRef.current);
+        }
+        
+        if (isExpanded && cameras.length > 0 && refreshInterval > 0) {
+            refreshTimerRef.current = setInterval(() => {
+                // Update timestamps to force image refresh
+                setCameraTimestamps(prev => {
+                    const updated = { ...prev };
+                    cameras.forEach(cam => {
+                        updated[cam.ip] = Date.now();
+                    });
+                    return updated;
+                });
+            }, refreshInterval);
+        }
+        
+        return () => {
+            if (refreshTimerRef.current) {
+                clearInterval(refreshTimerRef.current);
+            }
+        };
+    }, [isExpanded, cameras, refreshInterval]);
+
+    const fetchCameras = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/cameras');
+            if (response.ok) {
+                const data = await response.json();
+                setCameras(data.cameras || []);
+                if (data.defaultCredentials) {
+                    setCredentials(prev => ({
+                        ...prev,
+                        username: data.defaultCredentials.username || ''
+                    }));
+                }
+            }
+        } catch (err) {
+            setError('Failed to load cameras');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const discoverCameras = async () => {
+        setDiscovering(true);
+        setError(null);
+        
+        try {
+            const response = await fetch('/api/cameras/discover', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.found && data.found.length > 0) {
+                    // Add discovered cameras
+                    for (const cam of data.found) {
+                        await fetch('/api/cameras', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                ip: cam.ip,
+                                name: `Camera ${cam.ip.split('.').pop()}`,
+                                ...credentials
+                            })
+                        });
+                    }
+                    await fetchCameras();
+                    
+                    if (window.T2Toast) {
+                        window.T2Toast.success(`Found ${data.found.length} cameras!`);
+                    }
+                } else {
+                    if (window.T2Toast) {
+                        window.T2Toast.info('No cameras found on network');
+                    }
+                }
+            }
+        } catch (err) {
+            setError('Discovery failed');
+        } finally {
+            setDiscovering(false);
+        }
+    };
+
+    const saveCredentials = async () => {
+        try {
+            await fetch('/api/cameras/credentials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(credentials)
+            });
+            
+            if (window.T2Toast) {
+                window.T2Toast.success('Credentials saved');
+            }
+        } catch (err) {
+            setError('Failed to save credentials');
+        }
+    };
+
+    const addCamera = async (ip) => {
+        try {
+            await fetch('/api/cameras', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ip,
+                    name: `Camera ${ip.split('.').pop()}`,
+                    ...credentials
+                })
+            });
+            await fetchCameras();
+        } catch (err) {
+            setError('Failed to add camera');
+        }
+    };
+
+    const removeCamera = async (ip) => {
+        try {
+            await fetch(`/api/cameras/${ip}`, { method: 'DELETE' });
+            await fetchCameras();
+            if (selectedCamera === ip) {
+                setSelectedCamera(null);
+            }
+        } catch (err) {
+            setError('Failed to remove camera');
+        }
+    };
+
+    const styles = {
+        container: {
+            background: 'linear-gradient(180deg, rgba(12, 20, 35, 0.95) 0%, rgba(8, 15, 28, 0.98) 100%)',
+            borderRadius: '12px',
+            border: '1px solid rgba(0, 200, 255, 0.2)',
+            overflow: 'hidden',
+            marginBottom: '8px'
+        },
+        header: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 14px',
+            background: 'linear-gradient(90deg, rgba(0, 150, 200, 0.15), transparent)',
+            borderBottom: '1px solid rgba(0, 200, 255, 0.1)',
+            cursor: 'pointer'
+        },
+        title: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: '#00d4ff',
+            fontSize: '14px',
+            fontWeight: 600
+        },
+        icon: {
+            fontSize: '16px'
+        },
+        badge: {
+            background: 'rgba(0, 200, 255, 0.2)',
+            color: '#00d4ff',
+            padding: '2px 8px',
+            borderRadius: '10px',
+            fontSize: '11px'
+        },
+        content: {
+            padding: isExpanded ? '12px' : '0',
+            maxHeight: isExpanded ? '400px' : '0',
+            overflow: 'auto',
+            transition: 'all 0.3s ease'
+        },
+        grid: {
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+            gap: '10px'
+        },
+        cameraCard: {
+            background: 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            border: '1px solid rgba(0, 200, 255, 0.15)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+        },
+        cameraCardSelected: {
+            border: '2px solid #00d4ff',
+            boxShadow: '0 0 10px rgba(0, 200, 255, 0.3)'
+        },
+        cameraImage: {
+            width: '100%',
+            height: '100px',
+            objectFit: 'cover',
+            background: '#111'
+        },
+        cameraInfo: {
+            padding: '6px 8px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+        },
+        cameraName: {
+            color: '#b8e6ea',
+            fontSize: '11px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+        },
+        deleteBtn: {
+            background: 'rgba(255, 80, 80, 0.2)',
+            border: 'none',
+            color: '#ff6b6b',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '10px'
+        },
+        toolbar: {
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '10px',
+            flexWrap: 'wrap'
+        },
+        btn: {
+            background: 'rgba(0, 200, 255, 0.15)',
+            border: '1px solid rgba(0, 200, 255, 0.3)',
+            color: '#00d4ff',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+        },
+        btnActive: {
+            background: 'rgba(0, 200, 255, 0.3)'
+        },
+        settings: {
+            background: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '10px'
+        },
+        inputGroup: {
+            marginBottom: '8px'
+        },
+        label: {
+            color: '#8899aa',
+            fontSize: '11px',
+            marginBottom: '4px',
+            display: 'block'
+        },
+        input: {
+            width: '100%',
+            background: 'rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(0, 200, 255, 0.2)',
+            borderRadius: '4px',
+            padding: '6px 10px',
+            color: '#fff',
+            fontSize: '12px',
+            boxSizing: 'border-box'
+        },
+        fullView: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.9)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+        },
+        fullImage: {
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            objectFit: 'contain'
+        },
+        closeBtn: {
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: 'none',
+            color: '#fff',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '14px'
+        },
+        emptyState: {
+            textAlign: 'center',
+            padding: '20px',
+            color: '#667788'
+        },
+        refreshSelect: {
+            background: 'rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(0, 200, 255, 0.2)',
+            borderRadius: '4px',
+            padding: '6px',
+            color: '#fff',
+            fontSize: '11px'
+        }
+    };
+
+    const getSnapshotUrl = (ip) => {
+        const timestamp = cameraTimestamps[ip] || Date.now();
+        return `/api/cameras/snapshot/${ip}?t=${timestamp}`;
+    };
+
+    return (
+        <div style={styles.container}>
+            <div style={styles.header} onClick={onToggle}>
+                <div style={styles.title}>
+                    <span style={styles.icon}>📹</span>
+                    <span>Cameras</span>
+                    {cameras.length > 0 && (
+                        <span style={styles.badge}>{cameras.length}</span>
+                    )}
+                </div>
+                <span style={{ color: '#00d4ff' }}>{isExpanded ? '▼' : '▶'}</span>
+            </div>
+            
+            {isExpanded && (
+                <div style={styles.content}>
+                    {/* Toolbar */}
+                    <div style={styles.toolbar}>
+                        <button 
+                            style={{...styles.btn, ...(discovering ? styles.btnActive : {})}}
+                            onClick={discoverCameras}
+                            disabled={discovering}
+                        >
+                            {discovering ? '🔄 Scanning...' : '🔍 Discover'}
+                        </button>
+                        <button 
+                            style={{...styles.btn, ...(showSettings ? styles.btnActive : {})}}
+                            onClick={() => setShowSettings(!showSettings)}
+                        >
+                            ⚙️ Settings
+                        </button>
+                        <select 
+                            style={styles.refreshSelect}
+                            value={refreshInterval}
+                            onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                            title="Refresh interval"
+                        >
+                            <option value={0}>Manual</option>
+                            <option value={2000}>2s</option>
+                            <option value={5000}>5s</option>
+                            <option value={10000}>10s</option>
+                            <option value={30000}>30s</option>
+                        </select>
+                    </div>
+
+                    {/* Settings Panel */}
+                    {showSettings && (
+                        <div style={styles.settings}>
+                            <div style={styles.inputGroup}>
+                                <label style={styles.label}>Camera Username</label>
+                                <input 
+                                    type="text"
+                                    style={styles.input}
+                                    value={credentials.username}
+                                    onChange={(e) => setCredentials(p => ({...p, username: e.target.value}))}
+                                    placeholder="admin"
+                                />
+                            </div>
+                            <div style={styles.inputGroup}>
+                                <label style={styles.label}>Camera Password</label>
+                                <input 
+                                    type="password"
+                                    style={styles.input}
+                                    value={credentials.password}
+                                    onChange={(e) => setCredentials(p => ({...p, password: e.target.value}))}
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                            <div style={styles.inputGroup}>
+                                <label style={styles.label}>Add Camera by IP</label>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input 
+                                        type="text"
+                                        id="addCameraIp"
+                                        style={{...styles.input, flex: 1}}
+                                        placeholder="192.168.1.100"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                addCamera(e.target.value);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                    />
+                                    <button 
+                                        style={styles.btn}
+                                        onClick={() => {
+                                            const input = document.getElementById('addCameraIp');
+                                            if (input.value) {
+                                                addCamera(input.value);
+                                                input.value = '';
+                                            }
+                                        }}
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                            <button style={styles.btn} onClick={saveCredentials}>
+                                💾 Save Credentials
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Error Display */}
+                    {error && (
+                        <div style={{ color: '#ff6b6b', padding: '8px', fontSize: '12px' }}>
+                            ⚠️ {error}
+                        </div>
+                    )}
+
+                    {/* Camera Grid */}
+                    {loading ? (
+                        <div style={styles.emptyState}>Loading cameras...</div>
+                    ) : cameras.length === 0 ? (
+                        <div style={styles.emptyState}>
+                            <p>No cameras configured</p>
+                            <p style={{ fontSize: '11px' }}>Click Discover to scan your network</p>
+                        </div>
+                    ) : (
+                        <div style={styles.grid}>
+                            {cameras.map(camera => (
+                                <div 
+                                    key={camera.ip}
+                                    style={{
+                                        ...styles.cameraCard,
+                                        ...(selectedCamera === camera.ip ? styles.cameraCardSelected : {})
+                                    }}
+                                    onClick={() => setSelectedCamera(camera.ip)}
+                                >
+                                    <img 
+                                        src={getSnapshotUrl(camera.ip)}
+                                        alt={camera.name}
+                                        style={styles.cameraImage}
+                                        onError={(e) => {
+                                            e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23222" width="100" height="100"/><text x="50" y="55" text-anchor="middle" fill="%23666" font-size="12">No Signal</text></svg>';
+                                        }}
+                                    />
+                                    <div style={styles.cameraInfo}>
+                                        <span style={styles.cameraName} title={camera.ip}>
+                                            {camera.name}
+                                        </span>
+                                        <button 
+                                            style={styles.deleteBtn}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                removeCamera(camera.ip);
+                                            }}
+                                            title="Remove camera"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Full-screen view */}
+            {selectedCamera && (
+                <div style={styles.fullView} onClick={() => setSelectedCamera(null)}>
+                    <img 
+                        src={getSnapshotUrl(selectedCamera)}
+                        alt="Camera feed"
+                        style={styles.fullImage}
+                    />
+                    <button style={styles.closeBtn} onClick={() => setSelectedCamera(null)}>
+                        ✕ Close
+                    </button>
+                    <div style={{ color: '#fff', marginTop: '10px' }}>
+                        {cameras.find(c => c.ip === selectedCamera)?.name || selectedCamera}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default CameraPanel;

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Dock.css';
 import { SettingsModal } from './SettingsModal';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
+import { CameraPanel } from './CameraPanel';
 import { socket } from '../socket';
 import { getLoadingState } from '../registries/PluginLoader';
 import { onPluginProgress } from '../registries/PluginLoader';
@@ -17,6 +18,7 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [graphExpanded, setGraphExpanded] = useState(true);
     const [statusExpanded, setStatusExpanded] = useState(true);
+    const [camerasExpanded, setCamerasExpanded] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [connectionStatus, setConnectionStatus] = useState({
         backend: socket.connected,
@@ -314,6 +316,12 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
                     </div>
                 )}
             </div>
+
+            {/* Camera Panel */}
+            <CameraPanel 
+                isExpanded={camerasExpanded} 
+                onToggle={() => setCamerasExpanded(!camerasExpanded)} 
+            />
 
             {/* Settings Section */}
             <div className="dock-section">
