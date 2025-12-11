@@ -200,15 +200,6 @@ export function CameraPanel({ isExpanded, onToggle }) {
         }
     };
 
-    const openEditCamera = (camera) => {
-        setEditCamera(camera.ip);
-        setEditCreds({
-            name: camera.name || '',
-            username: camera.username || '',
-            password: '' // Don't show existing password, but allow entering new one
-        });
-    };
-
     const styles = {
         container: {
             background: 'linear-gradient(180deg, rgba(12, 20, 35, 0.95) 0%, rgba(8, 15, 28, 0.98) 100%)',
@@ -438,28 +429,156 @@ export function CameraPanel({ isExpanded, onToggle }) {
                     {/* Settings Panel */}
                     {showSettings && (
                         <div style={styles.settings}>
+                            {/* Camera Selector Dropdown */}
                             <div style={styles.inputGroup}>
-                                <label style={styles.label}>Camera Username</label>
-                                <input 
-                                    type="text"
-                                    style={styles.input}
-                                    value={credentials.username}
-                                    onChange={(e) => setCredentials(p => ({...p, username: e.target.value}))}
-                                    placeholder="admin"
-                                />
+                                <label style={styles.label}>Select Camera to Configure</label>
+                                <select
+                                    style={{...styles.input, cursor: 'pointer'}}
+                                    value={editCamera || ''}
+                                    onChange={(e) => {
+                                        const ip = e.target.value;
+                                        if (!ip) {
+                                            setEditCamera(null);
+                                            setEditCreds({ username: '', password: '', name: '' });
+                                            return;
+                                        }
+                                        // Check if it's an existing camera or a discovered one
+                                        const existing = cameras.find(c => c.ip === ip);
+                                        if (existing) {
+                                            setEditCamera(ip);
+                                            setEditCreds({
+                                                name: existing.name || '',
+                                                username: existing.username || '',
+                                                password: ''
+                                            });
+                                        } else {
+                                            // It's a newly discovered camera
+                                            setEditCamera(ip);
+                                            setEditCreds({
+                                                name: `Camera ${ip.split('.').pop()}`,
+                                                username: credentials.username || '',
+                                                password: credentials.password || ''
+                                            });
+                                        }
+                                    }}
+                                >
+                                    <option value="">-- Select a camera --</option>
+                                    {cameras.length > 0 && (
+                                        <optgroup label="📹 Configured Cameras">
+                                            {cameras.map(cam => (
+                                                <option key={cam.ip} value={cam.ip}>
+                                                    {cam.name} ({cam.ip})
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                    {discoveredIPs.length > 0 && (
+                                        <optgroup label="📡 Discovered (Not Configured)">
+                                            {discoveredIPs.map(cam => (
+                                                <option key={cam.ip} value={cam.ip}>
+                                                    {cam.ip} (Ports: {cam.ports.join(', ')})
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                </select>
                             </div>
-                            <div style={styles.inputGroup}>
-                                <label style={styles.label}>Camera Password</label>
-                                <input 
-                                    type="password"
-                                    style={styles.input}
-                                    value={credentials.password}
-                                    onChange={(e) => setCredentials(p => ({...p, password: e.target.value}))}
-                                    placeholder="••••••••"
-                                />
+
+                            {/* Camera Config Form - shows when a camera is selected */}
+                            {editCamera && (
+                                <div style={{
+                                    background: 'rgba(0, 0, 0, 0.2)',
+                                    borderRadius: '6px',
+                                    padding: '10px',
+                                    marginTop: '8px'
+                                }}>
+                                    <div style={styles.inputGroup}>
+                                        <label style={styles.label}>Camera Name</label>
+                                        <input 
+                                            type="text"
+                                            style={styles.input}
+                                            value={editCreds.name}
+                                            onChange={(e) => setEditCreds(p => ({...p, name: e.target.value}))}
+                                            placeholder="Front Door"
+                                        />
+                                    </div>
+                                    <div style={styles.inputGroup}>
+                                        <label style={styles.label}>Username</label>
+                                        <input 
+                                            type="text"
+                                            style={styles.input}
+                                            value={editCreds.username}
+                                            onChange={(e) => setEditCreds(p => ({...p, username: e.target.value}))}
+                                            placeholder="admin"
+                                        />
+                                    </div>
+                                    <div style={styles.inputGroup}>
+                                        <label style={styles.label}>Password {cameras.find(c => c.ip === editCamera) ? '(leave blank to keep current)' : ''}</label>
+                                        <input 
+                                            type="password"
+                                            style={styles.input}
+                                            value={editCreds.password}
+                                            onChange={(e) => setEditCreds(p => ({...p, password: e.target.value}))}
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                        <button 
+                                            style={{...styles.btn, flex: 1, justifyContent: 'center'}}
+                                            onClick={() => {
+                                                const isNew = !cameras.find(c => c.ip === editCamera);
+                                                if (isNew) {
+                                                    addCamera(editCamera, editCreds.name, editCreds);
+                                                } else {
+                                                    updateCamera();
+                                                }
+                                            }}
+                                        >
+                                            {cameras.find(c => c.ip === editCamera) ? '💾 Save Changes' : '➕ Add Camera'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Default credentials section */}
+                            <div style={{ 
+                                borderTop: '1px solid rgba(0, 200, 255, 0.15)', 
+                                marginTop: '12px', 
+                                paddingTop: '12px' 
+                            }}>
+                                <div style={{ color: '#8899aa', fontSize: '11px', marginBottom: '8px' }}>
+                                    Default credentials (used for new cameras)
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input 
+                                        type="text"
+                                        style={{...styles.input, flex: 1}}
+                                        value={credentials.username}
+                                        onChange={(e) => setCredentials(p => ({...p, username: e.target.value}))}
+                                        placeholder="Username"
+                                    />
+                                    <input 
+                                        type="password"
+                                        style={{...styles.input, flex: 1}}
+                                        value={credentials.password}
+                                        onChange={(e) => setCredentials(p => ({...p, password: e.target.value}))}
+                                        placeholder="Password"
+                                    />
+                                    <button style={styles.btn} onClick={saveCredentials} title="Save as default">
+                                        💾
+                                    </button>
+                                </div>
                             </div>
-                            <div style={styles.inputGroup}>
-                                <label style={styles.label}>Add Camera by IP</label>
+
+                            {/* Manual IP add */}
+                            <div style={{ 
+                                borderTop: '1px solid rgba(0, 200, 255, 0.15)', 
+                                marginTop: '12px', 
+                                paddingTop: '12px' 
+                            }}>
+                                <div style={{ color: '#8899aa', fontSize: '11px', marginBottom: '8px' }}>
+                                    Add camera by IP (if not discovered)
+                                </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <input 
                                         type="text"
@@ -467,8 +586,18 @@ export function CameraPanel({ isExpanded, onToggle }) {
                                         style={{...styles.input, flex: 1}}
                                         placeholder="192.168.1.100"
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                addCamera(e.target.value);
+                                            if (e.key === 'Enter' && e.target.value) {
+                                                // Add to discovered list for configuration
+                                                const ip = e.target.value;
+                                                if (!discoveredIPs.find(d => d.ip === ip) && !cameras.find(c => c.ip === ip)) {
+                                                    setDiscoveredIPs(prev => [...prev, { ip, ports: ['manual'] }]);
+                                                }
+                                                setEditCamera(ip);
+                                                setEditCreds({
+                                                    name: `Camera ${ip.split('.').pop()}`,
+                                                    username: credentials.username || '',
+                                                    password: credentials.password || ''
+                                                });
                                                 e.target.value = '';
                                             }
                                         }}
@@ -477,19 +606,25 @@ export function CameraPanel({ isExpanded, onToggle }) {
                                         style={styles.btn}
                                         onClick={() => {
                                             const input = document.getElementById('addCameraIp');
-                                            if (input.value) {
-                                                addCamera(input.value);
+                                            const ip = input?.value;
+                                            if (ip) {
+                                                if (!discoveredIPs.find(d => d.ip === ip) && !cameras.find(c => c.ip === ip)) {
+                                                    setDiscoveredIPs(prev => [...prev, { ip, ports: ['manual'] }]);
+                                                }
+                                                setEditCamera(ip);
+                                                setEditCreds({
+                                                    name: `Camera ${ip.split('.').pop()}`,
+                                                    username: credentials.username || '',
+                                                    password: credentials.password || ''
+                                                });
                                                 input.value = '';
                                             }
                                         }}
                                     >
-                                        Add
+                                        Configure
                                     </button>
                                 </div>
                             </div>
-                            <button style={styles.btn} onClick={saveCredentials}>
-                                💾 Save Credentials
-                            </button>
                         </div>
                     )}
 
@@ -497,170 +632,6 @@ export function CameraPanel({ isExpanded, onToggle }) {
                     {error && (
                         <div style={{ color: '#ff6b6b', padding: '8px', fontSize: '12px' }}>
                             ⚠️ {error}
-                        </div>
-                    )}
-
-                    {/* Discovered IPs List */}
-                    {discoveredIPs.length > 0 && (
-                        <div style={{
-                            background: 'rgba(0, 200, 255, 0.1)',
-                            borderRadius: '8px',
-                            padding: '10px',
-                            marginBottom: '10px',
-                            border: '1px solid rgba(0, 200, 255, 0.2)'
-                        }}>
-                            <div style={{ color: '#00d4ff', fontSize: '12px', marginBottom: '8px', fontWeight: 600 }}>
-                                📡 Discovered Cameras ({discoveredIPs.length})
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {discoveredIPs.map(cam => (
-                                    <div 
-                                        key={cam.ip}
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            background: 'rgba(0, 0, 0, 0.2)',
-                                            padding: '8px 10px',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        onClick={() => {
-                                            setShowAddCamera(cam.ip);
-                                            setNewCameraName(`Camera ${cam.ip.split('.').pop()}`);
-                                        }}
-                                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0, 200, 255, 0.15)'}
-                                        onMouseOut={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.2)'}
-                                    >
-                                        <div>
-                                            <span style={{ color: '#fff', fontSize: '13px', fontWeight: 500 }}>{cam.ip}</span>
-                                            <span style={{ color: '#667', fontSize: '11px', marginLeft: '8px' }}>
-                                                Ports: {cam.ports.join(', ')}
-                                            </span>
-                                        </div>
-                                        <span style={{ color: '#00d4ff', fontSize: '11px' }}>Click to add →</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Add Camera Modal */}
-                    {showAddCamera && (
-                        <div style={{
-                            background: 'rgba(0, 20, 40, 0.95)',
-                            borderRadius: '8px',
-                            padding: '14px',
-                            marginBottom: '10px',
-                            border: '1px solid rgba(0, 200, 255, 0.3)'
-                        }}>
-                            <div style={{ color: '#00d4ff', fontSize: '13px', marginBottom: '10px', fontWeight: 600 }}>
-                                ➕ Add Camera: {showAddCamera}
-                            </div>
-                            <div style={styles.inputGroup}>
-                                <label style={styles.label}>Camera Name</label>
-                                <input 
-                                    type="text"
-                                    style={styles.input}
-                                    value={newCameraName}
-                                    onChange={(e) => setNewCameraName(e.target.value)}
-                                    placeholder="Front Door"
-                                />
-                            </div>
-                            <div style={styles.inputGroup}>
-                                <label style={styles.label}>Username</label>
-                                <input 
-                                    type="text"
-                                    style={styles.input}
-                                    value={credentials.username}
-                                    onChange={(e) => setCredentials(p => ({...p, username: e.target.value}))}
-                                    placeholder="admin"
-                                />
-                            </div>
-                            <div style={styles.inputGroup}>
-                                <label style={styles.label}>Password</label>
-                                <input 
-                                    type="password"
-                                    style={styles.input}
-                                    value={credentials.password}
-                                    onChange={(e) => setCredentials(p => ({...p, password: e.target.value}))}
-                                    placeholder="••••••••"
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                                <button 
-                                    style={{...styles.btn, flex: 1, justifyContent: 'center'}}
-                                    onClick={() => addCamera(showAddCamera, newCameraName, credentials)}
-                                >
-                                    ✓ Add Camera
-                                </button>
-                                <button 
-                                    style={{...styles.btn, background: 'rgba(100, 100, 100, 0.3)'}}
-                                    onClick={() => { setShowAddCamera(null); setNewCameraName(''); }}
-                                >
-                                    ✕ Cancel
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Edit Camera Modal */}
-                    {editCamera && (
-                        <div style={{
-                            background: 'rgba(0, 20, 40, 0.95)',
-                            borderRadius: '8px',
-                            padding: '14px',
-                            marginBottom: '10px',
-                            border: '1px solid rgba(255, 180, 0, 0.3)'
-                        }}>
-                            <div style={{ color: '#ffaa00', fontSize: '13px', marginBottom: '10px', fontWeight: 600 }}>
-                                ✏️ Edit Camera: {editCamera}
-                            </div>
-                            <div style={styles.inputGroup}>
-                                <label style={styles.label}>Camera Name</label>
-                                <input 
-                                    type="text"
-                                    style={styles.input}
-                                    value={editCreds.name}
-                                    onChange={(e) => setEditCreds(p => ({...p, name: e.target.value}))}
-                                    placeholder="Front Door"
-                                />
-                            </div>
-                            <div style={styles.inputGroup}>
-                                <label style={styles.label}>Username</label>
-                                <input 
-                                    type="text"
-                                    style={styles.input}
-                                    value={editCreds.username}
-                                    onChange={(e) => setEditCreds(p => ({...p, username: e.target.value}))}
-                                    placeholder="admin"
-                                />
-                            </div>
-                            <div style={styles.inputGroup}>
-                                <label style={styles.label}>Password (leave blank to keep current)</label>
-                                <input 
-                                    type="password"
-                                    style={styles.input}
-                                    value={editCreds.password}
-                                    onChange={(e) => setEditCreds(p => ({...p, password: e.target.value}))}
-                                    placeholder="••••••••"
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                                <button 
-                                    style={{...styles.btn, flex: 1, justifyContent: 'center', background: 'rgba(255, 180, 0, 0.2)', borderColor: 'rgba(255, 180, 0, 0.4)'}}
-                                    onClick={updateCamera}
-                                >
-                                    💾 Save Changes
-                                </button>
-                                <button 
-                                    style={{...styles.btn, background: 'rgba(100, 100, 100, 0.3)'}}
-                                    onClick={() => setEditCamera(null)}
-                                >
-                                    ✕ Cancel
-                                </button>
-                            </div>
                         </div>
                     )}
 
@@ -700,7 +671,14 @@ export function CameraPanel({ isExpanded, onToggle }) {
                                                 style={{...styles.deleteBtn, background: 'rgba(0, 150, 255, 0.2)', color: '#00aaff'}}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    openEditCamera(camera);
+                                                    // Open settings panel and select this camera
+                                                    setShowSettings(true);
+                                                    setEditCamera(camera.ip);
+                                                    setEditCreds({
+                                                        name: camera.name || '',
+                                                        username: camera.username || '',
+                                                        password: ''
+                                                    });
                                                 }}
                                                 title="Edit credentials"
                                             >
