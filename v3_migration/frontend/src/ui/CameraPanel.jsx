@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 /**
  * CameraPanel - Dock panel for viewing IP camera feeds
  * Displays camera snapshots that refresh periodically
+ * @version 1.1.0 - Added unified dropdown selector for camera configuration
  */
 export function CameraPanel({ isExpanded, onToggle }) {
     const [cameras, setCameras] = useState([]);
