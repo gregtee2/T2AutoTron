@@ -281,17 +281,27 @@ async function applyUpdate() {
         
         console.log('[UpdateService] Update complete! Restarting...');
         
-        // Launch start_servers.bat and exit
-        const startScript = path.join(projectRoot, 'start_servers.bat');
-        if (fs.existsSync(startScript)) {
-            // Spawn detached process
-            const child = spawn('cmd', ['/c', startScript], {
-                cwd: projectRoot,
-                detached: true,
-                stdio: 'ignore'
-            });
-            child.unref();
-        }
+        // For production: just restart the backend server
+        // The frontend is already built and served statically
+        const backendDir = path.join(projectRoot, 'v3_migration/backend');
+        
+        // Create a simple restart script that waits for this process to exit
+        const restartScript = path.join(projectRoot, 'restart_backend.bat');
+        const scriptContent = `@echo off
+timeout /t 3 /nobreak >nul
+cd /d "${backendDir}"
+start "T2AutoTron Backend" /MIN cmd /k node src/server.js
+`;
+        fs.writeFileSync(restartScript, scriptContent);
+        
+        // Spawn the restart script detached
+        const child = spawn('cmd', ['/c', restartScript], {
+            cwd: projectRoot,
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: true
+        });
+        child.unref();
         
         // Exit current process after short delay
         setTimeout(() => {
