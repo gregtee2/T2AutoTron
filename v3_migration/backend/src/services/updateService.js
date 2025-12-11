@@ -210,19 +210,48 @@ async function applyUpdate() {
     console.log('[UpdateService] Project root:', projectRoot);
     
     try {
-        // Stash any local changes
+        // Backup config files that might be overwritten
+        const configDir = path.join(projectRoot, 'v3_migration/backend/config');
+        const configBackup = {};
+        if (fs.existsSync(configDir)) {
+            const configFiles = fs.readdirSync(configDir);
+            for (const file of configFiles) {
+                if (file.endsWith('.json')) {
+                    const filePath = path.join(configDir, file);
+                    try {
+                        configBackup[file] = fs.readFileSync(filePath, 'utf8');
+                        console.log(`[UpdateService] Backed up config: ${file}`);
+                    } catch (e) { /* ignore */ }
+                }
+            }
+        }
+        
+        // Stash any local changes (tracked files)
         console.log('[UpdateService] Stashing local changes...');
         try {
-            execSync('git stash', { cwd: projectRoot, stdio: 'pipe' });
+            execSync('git stash --include-untracked', { cwd: projectRoot, stdio: 'pipe' });
         } catch (e) {
             // Ignore if nothing to stash
         }
         
-        // Fetch and pull from stable
+        // Fetch and reset to stable (force overwrite)
         console.log('[UpdateService] Fetching updates from stable branch...');
         execSync(`git fetch origin ${UPDATE_BRANCH}`, { cwd: projectRoot, stdio: 'pipe' });
         execSync(`git checkout ${UPDATE_BRANCH}`, { cwd: projectRoot, stdio: 'pipe' });
-        execSync(`git pull origin ${UPDATE_BRANCH}`, { cwd: projectRoot, stdio: 'pipe' });
+        execSync(`git reset --hard origin/${UPDATE_BRANCH}`, { cwd: projectRoot, stdio: 'pipe' });
+        
+        // Restore config files
+        if (Object.keys(configBackup).length > 0) {
+            console.log('[UpdateService] Restoring config files...');
+            if (!fs.existsSync(configDir)) {
+                fs.mkdirSync(configDir, { recursive: true });
+            }
+            for (const [file, content] of Object.entries(configBackup)) {
+                const filePath = path.join(configDir, file);
+                fs.writeFileSync(filePath, content, 'utf8');
+                console.log(`[UpdateService] Restored config: ${file}`);
+            }
+        }
         
         // Run npm install in case dependencies changed
         console.log('[UpdateService] Installing dependencies...');

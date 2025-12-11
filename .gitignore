@@ -13,6 +13,10 @@ build/
 .env.local
 .env.*.local
 
+# User config files (local settings, don't overwrite on update)
+v3_migration/backend/config/cameras.json
+v3_migration/backend/config/settings.json
+
 # IDE
 .vscode/
 .idea/
