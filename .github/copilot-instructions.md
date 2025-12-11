@@ -450,6 +450,24 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 - Performance optimization
 - Analytics/Telemetry (opt-in)
 
+### 🔵 FUTURE NATIVE DEVICE SUPPORT
+
+Additional local-API smart devices to support (no cloud required):
+
+| Priority | Device | Protocol | npm Package | Notes |
+|----------|--------|----------|-------------|-------|
+| 1 | **LIFX** | UDP LAN (no hub) | `lifx-lan-client` | Excellent local API, no bridge needed |
+| 2 | **Wiz (Philips)** | UDP local (port 38899) | `wiz-local-control` | Very affordable bulbs ($10-15) |
+| 3 | **WLED** | REST API + WebSocket | Direct HTTP | DIY LED strips, huge community |
+| 4 | **Yeelight (Xiaomi)** | TCP JSON | `yeelight2` | Enable "LAN Control" in app first |
+| 5 | **Tuya/Smart Life** | TCP (needs keys) | `tuyapi` | Huge ecosystem, one-time key extraction |
+
+**Implementation Pattern** (same as HueLightNode/KasaLightNode):
+- Backend routes: `src/api/routes/{device}Routes.js`
+- Device manager: `src/devices/managers/{device}Manager.js`
+- Frontend plugin: `backend/plugins/{Device}LightNode.js`
+- Settings panel: Add connection config to SettingsModal.jsx
+
 ---
 
 ### What's Working Well
