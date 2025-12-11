@@ -26,14 +26,36 @@ function UpdateModal({ updateInfo, onClose, onApplyUpdate }) {
       const result = await response.json();
       setUpdateStatus(result.message || 'Updating... The app will restart shortly.');
       
-      // Show message for a bit before closing
+      // Show message then auto-reload after server restarts
       setTimeout(() => {
-        setUpdateStatus('Update applied! Restarting...');
+        setUpdateStatus('Update applied! Reloading page...');
+        // Try to reload - if server is down, keep trying
+        setTimeout(() => {
+          const tryReload = () => {
+            fetch('/api/health', { method: 'GET' })
+              .then(() => window.location.reload())
+              .catch(() => setTimeout(tryReload, 2000));
+          };
+          tryReload();
+        }, 3000);
       }, 2000);
       
     } catch (err) {
-      setUpdateStatus(`Update failed: ${err.message}`);
-      setIsUpdating(false);
+      // Server might have restarted already - try to reload
+      if (err.message.includes('fetch') || err.message.includes('network')) {
+        setUpdateStatus('Server restarting... Reloading page...');
+        setTimeout(() => {
+          const tryReload = () => {
+            fetch('/api/health', { method: 'GET' })
+              .then(() => window.location.reload())
+              .catch(() => setTimeout(tryReload, 2000));
+          };
+          tryReload();
+        }, 3000);
+      } else {
+        setUpdateStatus(`Update failed: ${err.message}`);
+        setIsUpdating(false);
+      }
     }
   };
 
