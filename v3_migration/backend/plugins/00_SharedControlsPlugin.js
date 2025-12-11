@@ -547,7 +547,12 @@
     }
 
     function ColorBarControlComponent({ data }) {
-        const { brightness, hs_color, entityType } = data.data || {};
+        const { brightness, hs_color, entityType, state, on } = data.data || {};
+        
+        // Check if device is ON - must explicitly be 'on' or true
+        // Default to OFF if state is undefined/unknown
+        const isOn = state === 'on' || on === true;
+        
         let barColor = '#444';
         
         if (hs_color && hs_color.length === 2) {
@@ -556,7 +561,10 @@
             barColor = THEME.warning;
         }
         
-        const widthPercent = brightness ? (brightness / 255) * 100 : 0;
+        // When device is off (or state unknown), show 0% width; when on, show brightness
+        // Also handle Hue brightness which is 0-254, not 0-255
+        const normalizedBrightness = brightness > 0 ? brightness : 0;
+        const widthPercent = isOn ? (normalizedBrightness / 255) * 100 : 0;
 
         return React.createElement('div', {
             style: { 
@@ -575,7 +583,7 @@
                 height: '100%', 
                 backgroundColor: barColor, 
                 transition: 'all 0.3s ease', 
-                boxShadow: `0 0 10px ${barColor}` 
+                boxShadow: isOn && widthPercent > 0 ? `0 0 10px ${barColor}` : 'none' 
             }
         }));
     }

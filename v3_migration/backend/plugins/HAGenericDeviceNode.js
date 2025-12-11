@@ -709,7 +709,13 @@
                 const colorbar = this.controls[`${base}colorbar`];
                 const power = this.controls[`${base}power`];
                 if (indicator) indicator.data = { state: state.state || (state.on ? "on" : "off") };
-                if (colorbar) colorbar.data = { brightness: state.brightness ?? 0, hs_color: state.hs_color ?? [0, 0], entityType: id.split('.')[0] };
+                if (colorbar) colorbar.data = { 
+                    brightness: state.brightness ?? 0, 
+                    hs_color: state.hs_color ?? [0, 0], 
+                    entityType: id.split('.')[0],
+                    state: state.state || (state.on ? "on" : "off"),
+                    on: state.on
+                };
                 if (power) power.data = { power: state.power ?? null, energy: state.energy ?? null };
             });
         }

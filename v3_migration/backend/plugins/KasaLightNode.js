@@ -1,18 +1,18 @@
 /**
- * HueLightNode.js - Philips Hue Light Control Node
+ * KasaLightNode.js - TP-Link Kasa Light Control Node
  * 
- * Direct Hue Bridge control without Home Assistant dependency.
- * Uses same styling and structure as HAGenericDeviceNode.
+ * Direct Kasa bulb control for color-capable lights.
+ * Uses same styling and structure as HueLightNode.
  */
 (function() {
     if (!window.Rete || !window.React || !window.RefComponent || !window.sockets) {
-        console.error("[HueLightNode] Missing dependencies");
+        console.error("[KasaLightNode] Missing dependencies");
         return;
     }
 
     // Check for shared controls
     if (!window.T2Controls) {
-        console.error("[HueLightNode] Missing T2Controls - ensure 00_SharedControlsPlugin.js loads first");
+        console.error("[KasaLightNode] Missing T2Controls - ensure 00_SharedControlsPlugin.js loads first");
         return;
     }
 
@@ -37,7 +37,7 @@
     // TOOLTIPS
     // -------------------------------------------------------------------------
     const tooltips = {
-        node: "Control Philips Hue lights directly via the Hue Bridge.\n\nNo Home Assistant required - connects directly to your Hue Bridge.\n\nConnect trigger to turn devices on/off.\nConnect HSV Info to control light color.",
+        node: "Control TP-Link Kasa color bulbs directly.\n\nSupports color-capable Kasa bulbs (KL series).\n\nConnect trigger to turn devices on/off.\nConnect HSV Info to control light color.",
         inputs: {
             trigger: "Boolean signal to control lights.\n\nTRUE = turn on, FALSE = turn off",
             hsv_info: "HSV color object from color nodes.\n\nFormat: { hue: 0-1, saturation: 0-1, brightness: 0-254 }\n\nApplies color to all selected lights."
@@ -46,9 +46,9 @@
             all_devices: "Array of all selected light states.\n\nUseful for chaining to other nodes."
         },
         controls: {
-            addDevice: "Add a new Hue light to control",
+            addDevice: "Add a new Kasa light to control",
             removeDevice: "Remove the last added light",
-            refresh: "Refresh list of available lights from Hue Bridge",
+            refresh: "Refresh list of available lights from Kasa",
             trigger: "Manually trigger all lights with current settings"
         }
     };
@@ -56,9 +56,9 @@
     // -------------------------------------------------------------------------
     // NODE CLASS
     // -------------------------------------------------------------------------
-    class HueLightNode extends ClassicPreset.Node {
+    class KasaLightNode extends ClassicPreset.Node {
         constructor(changeCallback) {
-            super("Hue Lights");
+            super("Kasa Lights");
             this.width = 420;
             this.changeCallback = changeCallback;
 
@@ -66,12 +66,12 @@
                 selectedDeviceIds: [],
                 selectedDeviceNames: [],
                 status: "Initializing...",
-                bridgeConnected: false,
+                kasaConnected: false,
                 transitionTime: 1000,
                 customTitle: ""
             };
 
-            this.devices = [];  // Available devices from Hue Bridge
+            this.devices = [];  // Available devices from Kasa
             this.perDeviceState = {};
             this.lastTriggerValue = undefined;
             this.lastHsvInput = null;
@@ -82,18 +82,19 @@
                 this.addInput("hsv_info", new ClassicPreset.Input(sockets.object || new ClassicPreset.Socket('object'), "HSV Info"));
                 this.addOutput("all_devices", new ClassicPreset.Output(sockets.lightInfo || new ClassicPreset.Socket('lightInfo'), "All Devices"));
             } catch (e) {
-                console.error("[HueLightNode] Error adding sockets:", e);
+                console.error("[KasaLightNode] Error adding sockets:", e);
             }
 
             this.setupControls();
+            this.initializeSocketIO();
             
             // Defer initial fetch until after node is fully initialized (has id)
             setTimeout(() => this.fetchDevices(), 100);
         }
 
         setupControls() {
-            // Filter dropdown (to match HA node)
-            this.addControl("filter", new DropdownControl("Filter Devices", ["All", "Lights", "Groups"], "All", (v) => {
+            // Filter dropdown (to match HueLightNode)
+            this.addControl("filter", new DropdownControl("Filter Devices", ["All", "Bulbs Only"], "Bulbs Only", (v) => {
                 this.properties.filterType = v;
                 this.triggerUpdate();
             }));
@@ -119,6 +120,38 @@
             }, { min: 0, max: 10000, step: 100 }));
         }
 
+        initializeSocketIO() {
+            // Listen for real-time device state updates
+            if (window.socket) {
+                window.socket.on('device-state-update', (data) => this.handleDeviceStateUpdate(data));
+            }
+        }
+
+        handleDeviceStateUpdate(data) {
+            // Only handle kasa devices
+            if (!data.id || !data.id.startsWith('kasa_')) return;
+            
+            const index = this.properties.selectedDeviceIds.indexOf(data.id);
+            if (index === -1) return;
+
+            // Update local state
+            this.perDeviceState[data.id] = {
+                ...this.perDeviceState[data.id],
+                on: data.on ?? this.perDeviceState[data.id]?.on,
+                state: data.on ? 'on' : 'off',
+                brightness: data.brightness ?? this.perDeviceState[data.id]?.brightness,
+                hue: data.hue ?? this.perDeviceState[data.id]?.hue,
+                saturation: data.saturation ?? this.perDeviceState[data.id]?.saturation,
+                hs_color: [
+                    data.hue ?? this.perDeviceState[data.id]?.hs_color?.[0] ?? 0,
+                    data.saturation ?? this.perDeviceState[data.id]?.hs_color?.[1] ?? 0
+                ]
+            };
+
+            this.updateDeviceControls(data.id, this.perDeviceState[data.id]);
+            this.updateStatus(`Real-time: "${this.properties.selectedDeviceNames[index]}" ${data.on ? 'On' : 'Off'}`);
+        }
+
         triggerUpdate() {
             // Only trigger if node is fully initialized (has id)
             if (this.id && this.changeCallback) this.changeCallback();
@@ -131,29 +164,41 @@
         }
 
         getDeviceOptions() {
-            const options = this.devices.map(d => d.name);
+            const filterType = this.properties.filterType || "Bulbs Only";
+            let filteredDevices = this.devices;
+            
+            if (filterType === "Bulbs Only") {
+                filteredDevices = this.devices.filter(d => d.supportsColor || d.supportsBrightness);
+            }
+            
+            const options = filteredDevices.map(d => d.name);
             options.sort((a, b) => a.localeCompare(b));
             return options;
         }
 
         async fetchDevices() {
-            this.updateStatus("Fetching Hue lights...");
+            this.updateStatus("Fetching Kasa lights...");
             try {
-                const response = await fetch('/api/lights/hue');
+                const response = await fetch('/api/lights/kasa');
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
                 const data = await response.json();
                 
                 if (data.success && Array.isArray(data.lights)) {
-                    this.devices = data.lights.map(light => ({
-                        id: `hue_${light.id}`,
-                        name: light.name || `Light ${light.id}`,
-                        rawId: light.id,
-                        state: light.state || {}
-                    }));
-                    this.properties.bridgeConnected = true;
-                    this.updateStatus(`Loaded ${this.devices.length} Hue light(s)`);
+                    // Filter to only color-capable bulbs by default
+                    this.devices = data.lights
+                        .filter(light => light.type === 'bulb' || light.supportsColor || light.supportsBrightness)
+                        .map(light => ({
+                            id: light.id.startsWith('kasa_') ? light.id : `kasa_${light.id}`,
+                            name: light.name || `Light ${light.id}`,
+                            rawId: light.id.replace(/^kasa_/, ''),
+                            supportsColor: light.supportsColor || false,
+                            supportsBrightness: light.supportsBrightness || false
+                        }));
+                    
+                    this.properties.kasaConnected = true;
+                    this.updateStatus(`Loaded ${this.devices.length} Kasa light(s)`);
                     
                     // Update dropdowns for existing devices
                     this.properties.selectedDeviceIds.forEach((id, index) => {
@@ -163,15 +208,23 @@
                             if (ctrl.updateDropdown) ctrl.updateDropdown();
                         }
                     });
+                    
+                    // Fetch state for already selected devices
+                    this.properties.selectedDeviceIds.forEach((id) => {
+                        if (id) {
+                            const rawId = id.replace('kasa_', '');
+                            this.fetchDeviceState(rawId);
+                        }
+                    });
                 } else {
                     this.devices = [];
-                    this.properties.bridgeConnected = false;
-                    this.updateStatus("No lights found or Hue Bridge not configured");
+                    this.properties.kasaConnected = false;
+                    this.updateStatus("No Kasa lights found");
                 }
             } catch (error) {
-                console.error('[HueLightNode] Failed to fetch devices:', error);
+                console.error('[KasaLightNode] Failed to fetch devices:', error);
                 this.devices = [];
-                this.properties.bridgeConnected = false;
+                this.properties.kasaConnected = false;
                 this.updateStatus(`Error: ${error.message}`);
             }
             this.triggerUpdate();
@@ -184,7 +237,7 @@
             this.properties.selectedDeviceIds.push(null);
             this.properties.selectedDeviceNames.push("Select Device");
 
-            // Add device controls (same pattern as HAGenericDeviceNode)
+            // Add device controls (same pattern as HueLightNode)
             this.addControl(`${base}select`, new DropdownControl(
                 `Device ${index + 1}`, 
                 ["Select Device", ...this.getDeviceOptions()], 
@@ -251,27 +304,29 @@
 
         async fetchDeviceState(rawId) {
             try {
-                const response = await fetch(`/api/lights/hue/${rawId}`);
+                const response = await fetch(`/api/lights/kasa/${rawId}/state`);
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.success && data.light) {
-                        const state = data.light.state || {};
-                        const id = `hue_${rawId}`;
+                    if (data.success && data.state) {
+                        const state = data.state;
+                        const id = `kasa_${rawId}`;
                         this.perDeviceState[id] = {
                             on: state.on || false,
                             state: state.on ? 'on' : 'off',
-                            brightness: state.bri || 0,
-                            // Convert Hue's 0-65535 to 0-360 degrees
+                            brightness: state.brightness || 0,
+                            hue: state.hue || 0,
+                            saturation: state.saturation || 0,
+                            // Convert Kasa's 0-360 hue and 0-100 sat to hs_color format
                             hs_color: [
-                                ((state.hue || 0) / 65535) * 360, 
-                                ((state.sat || 0) / 254) * 100
+                                state.hue || 0, 
+                                state.saturation || 0
                             ]
                         };
                         this.updateDeviceControls(id, this.perDeviceState[id]);
                     }
                 }
             } catch (error) {
-                console.error(`[HueLightNode] Failed to fetch state for ${rawId}:`, error);
+                console.error(`[KasaLightNode] Failed to fetch state for ${rawId}:`, error);
             }
         }
 
@@ -311,29 +366,34 @@
             
             if (ids.length === 0) return;
 
-            console.log(`[HueLightNode] Applying HSV to ${ids.length} lights:`, hsvInfo);
+            console.log(`[KasaLightNode] Applying HSV to ${ids.length} lights:`, hsvInfo);
 
             await Promise.all(ids.map(async (id) => {
-                const rawId = id.replace('hue_', '');
+                const rawId = id.replace('kasa_', '');
                 
                 // Normalize HSV values (handle both 0-1 and 0-360/0-100 ranges)
-                const hue = hsvInfo.hue <= 1 ? hsvInfo.hue : hsvInfo.hue / 360;
-                const sat = hsvInfo.saturation <= 1 ? hsvInfo.saturation : hsvInfo.saturation / 100;
-                const bri = hsvInfo.brightness <= 1 ? hsvInfo.brightness * 254 : 
-                            hsvInfo.brightness <= 254 ? hsvInfo.brightness : 254;
+                // Kasa expects: hue 0-360, saturation 0-100, brightness 1-100
+                const hue = hsvInfo.hue <= 1 ? Math.round(hsvInfo.hue * 360) : Math.round(hsvInfo.hue);
+                const sat = hsvInfo.saturation <= 1 ? Math.round(hsvInfo.saturation * 100) : Math.round(hsvInfo.saturation);
+                const bri = hsvInfo.brightness <= 1 ? Math.round(hsvInfo.brightness * 100) : 
+                            hsvInfo.brightness <= 100 ? Math.round(hsvInfo.brightness) :
+                            Math.round((hsvInfo.brightness / 254) * 100);
 
                 const payload = {
                     on: true,
-                    hue: Math.round(hue * 65535),
-                    sat: Math.round(sat * 254),
-                    bri: Math.round(Math.max(1, Math.min(254, bri)))
+                    hsv: {
+                        hue: Math.max(0, Math.min(360, hue)),
+                        saturation: Math.max(0, Math.min(100, sat)),
+                        brightness: Math.max(1, Math.min(100, bri))
+                    },
+                    transition: this.properties.transitionTime
                 };
 
                 try {
-                    console.log(`[HueLightNode] HSV PUT /api/lights/hue/${rawId}/state:`, JSON.stringify(payload));
+                    console.log(`[KasaLightNode] HSV POST /api/lights/kasa/${rawId}/state:`, JSON.stringify(payload));
                     
-                    const response = await fetch(`/api/lights/hue/${rawId}/state`, {
-                        method: 'PUT',
+                    const response = await fetch(`/api/lights/kasa/${rawId}/state`, {
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
@@ -341,15 +401,17 @@
                     if (response.ok) {
                         this.perDeviceState[id] = {
                             ...this.perDeviceState[id],
-                            hue: payload.hue,
-                            sat: payload.sat,
-                            brightness: payload.bri,
-                            hs_color: [hsvInfo.hue * 360, hsvInfo.saturation * 100]
+                            on: true,
+                            state: 'on',
+                            hue: payload.hsv.hue,
+                            saturation: payload.hsv.saturation,
+                            brightness: payload.hsv.brightness,
+                            hs_color: [payload.hsv.hue, payload.hsv.saturation]
                         };
                         this.updateDeviceControls(id, this.perDeviceState[id]);
                     }
                 } catch (e) {
-                    console.error(`[HueLightNode] HSV apply failed for ${id}:`, e);
+                    console.error(`[KasaLightNode] HSV apply failed for ${id}:`, e);
                 }
             }));
 
@@ -361,12 +423,12 @@
             const anyOn = this.properties.selectedDeviceIds.some(id => 
                 id && this.perDeviceState[id]?.on
             );
-            console.log(`[HueLightNode] Toggle All: anyOn=${anyOn}, will set to ${!anyOn}`);
+            console.log(`[KasaLightNode] Toggle All: anyOn=${anyOn}, will set to ${!anyOn}`);
             await this.setDevicesState(!anyOn);
         }
 
         async onAllOff() {
-            console.log('[HueLightNode] All Off triggered');
+            console.log('[KasaLightNode] All Off triggered');
             await this.setDevicesState(false);
         }
 
@@ -381,35 +443,46 @@
             const transitionMs = this.properties.transitionTime;
 
             await Promise.all(ids.map(async (id) => {
-                const rawId = id.replace('hue_', '');
+                const rawId = id.replace('kasa_', '');
+                const endpoint = turnOn ? 'on' : 'off';
                 
-                // Build payload exactly like v2.0 did
-                let payload;
+                // Build payload
+                let payload = { transition: transitionMs };
+                
                 if (turnOn && hsvInfo) {
-                    // ON with color
+                    // ON with color - use state endpoint
+                    const hue = hsvInfo.hue <= 1 ? Math.round(hsvInfo.hue * 360) : Math.round(hsvInfo.hue);
+                    const sat = hsvInfo.saturation <= 1 ? Math.round(hsvInfo.saturation * 100) : Math.round(hsvInfo.saturation);
+                    const bri = hsvInfo.brightness <= 1 ? Math.round(hsvInfo.brightness * 100) : 
+                                hsvInfo.brightness <= 100 ? Math.round(hsvInfo.brightness) :
+                                Math.round((hsvInfo.brightness / 254) * 100);
+                    
                     payload = {
                         on: true,
-                        hue: Math.round((hsvInfo.hue <= 1 ? hsvInfo.hue : hsvInfo.hue / 360) * 65535),
-                        sat: Math.round((hsvInfo.saturation <= 1 ? hsvInfo.saturation : hsvInfo.saturation / 100) * 254),
-                        bri: Math.round(hsvInfo.brightness <= 1 ? hsvInfo.brightness * 254 : 
-                                        hsvInfo.brightness <= 254 ? hsvInfo.brightness : 254)
+                        hsv: {
+                            hue: Math.max(0, Math.min(360, hue)),
+                            saturation: Math.max(0, Math.min(100, sat)),
+                            brightness: Math.max(1, Math.min(100, bri))
+                        },
+                        transition: transitionMs
                     };
-                } else {
-                    // Simple on/off (v2.0 style)
-                    payload = { on: turnOn };
                 }
 
                 try {
-                    console.log(`[HueLightNode] PUT /api/lights/hue/${rawId}/state:`, JSON.stringify(payload));
+                    const url = turnOn && hsvInfo 
+                        ? `/api/lights/kasa/${rawId}/state`
+                        : `/api/lights/kasa/${rawId}/${endpoint}`;
                     
-                    const response = await fetch(`/api/lights/hue/${rawId}/state`, {
-                        method: 'PUT',
+                    console.log(`[KasaLightNode] POST ${url}:`, JSON.stringify(payload));
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
 
                     const data = await response.json();
-                    console.log(`[HueLightNode] Response for ${rawId}:`, data);
+                    console.log(`[KasaLightNode] Response for ${rawId}:`, data);
 
                     if (response.ok && data.success) {
                         this.perDeviceState[id] = { 
@@ -418,17 +491,18 @@
                             state: turnOn ? "on" : "off"
                         };
                         if (turnOn && hsvInfo) {
-                            this.perDeviceState[id].hue = payload.hue;
-                            this.perDeviceState[id].sat = payload.sat;
-                            this.perDeviceState[id].bri = payload.bri;
+                            this.perDeviceState[id].hue = payload.hsv.hue;
+                            this.perDeviceState[id].saturation = payload.hsv.saturation;
+                            this.perDeviceState[id].brightness = payload.hsv.brightness;
+                            this.perDeviceState[id].hs_color = [payload.hsv.hue, payload.hsv.saturation];
                         }
                         this.updateDeviceControls(id, this.perDeviceState[id]);
                     } else {
-                        console.error(`[HueLightNode] API error for ${id}:`, data.error || data);
+                        console.error(`[KasaLightNode] API error for ${id}:`, data.error || data);
                         this.updateStatus(`Error: ${data.error || 'API failed'}`);
                     }
                 } catch (e) {
-                    console.error(`[HueLightNode] Set state failed for ${id}:`, e);
+                    console.error(`[KasaLightNode] Set state failed for ${id}:`, e);
                     this.updateStatus(`Error: ${e.message}`);
                 }
             }));
@@ -510,7 +584,7 @@
                 ));
 
                 if (id) {
-                    const rawId = id.replace('hue_', '');
+                    const rawId = id.replace('kasa_', '');
                     this.fetchDeviceState(rawId);
                 }
             });
@@ -529,9 +603,9 @@
     }
 
     // -------------------------------------------------------------------------
-    // COMPONENT (matches HAGenericDeviceNode styling)
+    // COMPONENT (matches HueLightNode styling)
     // -------------------------------------------------------------------------
-    function HueLightNodeComponent({ data, emit }) {
+    function KasaLightNodeComponent({ data, emit }) {
         const [seed, setSeed] = useState(0);
         const [isCollapsed, setIsCollapsed] = useState(false);
         const [customTitle, setCustomTitle] = useState(data.properties.customTitle || "");
@@ -597,12 +671,12 @@
             state?.on || state?.state === 'on'
         );
         
-        // Dynamic border style based on device state
+        // Dynamic border style based on device state (Kasa uses orange/brown theme)
         const borderStyle = anyDeviceOn 
-            ? '2px solid #00ff64' 
-            : '1px solid rgba(0, 243, 255, 0.3)';
+            ? '2px solid #ff9800' 
+            : '1px solid rgba(255, 152, 0, 0.3)';
         const boxShadowStyle = anyDeviceOn 
-            ? '0 0 15px rgba(0, 255, 100, 0.4), inset 0 0 10px rgba(0, 255, 100, 0.1)' 
+            ? '0 0 15px rgba(255, 152, 0, 0.4), inset 0 0 10px rgba(255, 152, 0, 0.1)' 
             : 'none';
 
         return React.createElement('div', { 
@@ -629,7 +703,7 @@
                             type: 'text',
                             className: 'ha-node-title-input',
                             value: customTitle,
-                            placeholder: "Hue Lights",
+                            placeholder: "Kasa Lights",
                             onChange: handleTitleChange,
                             onBlur: handleTitleBlur,
                             onKeyDown: handleTitleKeyDown,
@@ -643,20 +717,20 @@
                             onDoubleClick: (e) => { e.stopPropagation(); setIsEditingTitle(true); },
                             onPointerDown: (e) => e.stopPropagation(),
                             title: 'Double-click to edit title'
-                        }, customTitle || "Hue Lights"),
-                    // Hue Bridge Connection Status Indicator
+                        }, customTitle || "Kasa Lights"),
+                    // Kasa Connection Status Indicator
                     React.createElement('div', { 
-                        key: 'hue-status',
+                        key: 'kasa-status',
                         style: { 
                             display: 'flex', 
                             alignItems: 'center', 
                             gap: '6px',
                             padding: '4px 8px',
                             borderRadius: '12px',
-                            background: data.properties.bridgeConnected 
-                                ? 'rgba(0, 255, 100, 0.15)' 
+                            background: data.properties.kasaConnected 
+                                ? 'rgba(255, 152, 0, 0.15)' 
                                 : 'rgba(255, 50, 50, 0.15)',
-                            border: `1px solid ${data.properties.bridgeConnected ? '#00ff64' : '#ff3232'}`
+                            border: `1px solid ${data.properties.kasaConnected ? '#ff9800' : '#ff3232'}`
                         }
                     }, [
                         React.createElement('div', { 
@@ -665,11 +739,11 @@
                                 width: '8px', 
                                 height: '8px', 
                                 borderRadius: '50%',
-                                background: data.properties.bridgeConnected ? '#00ff64' : '#ff3232',
-                                boxShadow: data.properties.bridgeConnected 
-                                    ? '0 0 6px #00ff64' 
+                                background: data.properties.kasaConnected ? '#ff9800' : '#ff3232',
+                                boxShadow: data.properties.kasaConnected 
+                                    ? '0 0 6px #ff9800' 
                                     : '0 0 6px #ff3232',
-                                animation: data.properties.bridgeConnected ? 'none' : 'blink 1s infinite'
+                                animation: data.properties.kasaConnected ? 'none' : 'blink 1s infinite'
                             }
                         }),
                         React.createElement('span', { 
@@ -679,9 +753,9 @@
                                 fontWeight: 'bold',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.5px',
-                                color: data.properties.bridgeConnected ? '#00ff64' : '#ff3232'
+                                color: data.properties.kasaConnected ? '#ff9800' : '#ff3232'
                             }
-                        }, data.properties.bridgeConnected ? 'HUE' : 'HUE ✕')
+                        }, data.properties.kasaConnected ? 'KASA' : 'KASA ✕')
                     ]),
                     // Help icon with node tooltip
                     HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
@@ -728,7 +802,7 @@
                     const isOn = indicator?.control?.data?.state === "on";
                     if (name === "Select Device") return null;
                     return React.createElement('div', { key: index, style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#c5cdd3" } }, [
-                        React.createElement('div', { key: 'dot', style: { width: "8px", height: "8px", borderRadius: "50%", background: isOn ? "#4fc3f7" : "#333", boxShadow: isOn ? "0 0 5px #4fc3f7" : "none" } }),
+                        React.createElement('div', { key: 'dot', style: { width: "8px", height: "8px", borderRadius: "50%", background: isOn ? "#ff9800" : "#333", boxShadow: isOn ? "0 0 5px #ff9800" : "none" } }),
                         React.createElement('span', { key: 'name' }, name)
                     ]);
                 })
@@ -778,13 +852,13 @@
     // -------------------------------------------------------------------------
     // REGISTER
     // -------------------------------------------------------------------------
-    window.nodeRegistry.register('HueLightNode', {
-        label: "Hue Lights",
+    window.nodeRegistry.register('KasaLightNode', {
+        label: "Kasa Lights",
         category: "Other",
-        nodeClass: HueLightNode,
-        factory: (cb) => new HueLightNode(cb),
-        component: HueLightNodeComponent
+        nodeClass: KasaLightNode,
+        factory: (cb) => new KasaLightNode(cb),
+        component: KasaLightNodeComponent
     });
 
-    console.log('[HueLightNode] Registered successfully');
+    console.log('[KasaLightNode] Registered successfully');
 })();
