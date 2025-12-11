@@ -15,10 +15,22 @@ function UpdateModal({ updateInfo, onClose, onApplyUpdate }) {
 
   const handleApplyUpdate = async () => {
     setIsUpdating(true);
-    setUpdateStatus('Starting update...');
+    setUpdateStatus('Saving current graph...');
     
-    // Mark that we're updating so we don't show modal again after reload
+    // Trigger a graph save before updating so user doesn't lose their work
+    try {
+      if (window.triggerGraphSave) {
+        await window.triggerGraphSave();
+        setUpdateStatus('Graph saved! Starting update...');
+      }
+    } catch (err) {
+      console.warn('Pre-update graph save failed:', err);
+      // Continue with update anyway - localStorage may already have recent save
+    }
+    
+    // Mark that we're updating so we auto-load graph after reload
     sessionStorage.setItem('justUpdated', 'true');
+    sessionStorage.setItem('autoLoadAfterUpdate', 'true');
     
     try {
       const response = await fetch('/api/update/apply', {

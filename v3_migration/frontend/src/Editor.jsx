@@ -1808,6 +1808,49 @@ export function Editor() {
             console.error('Failed to save graph:', err);
         }
     };
+    
+    // Expose triggerGraphSave for UpdateModal to save before update
+    useEffect(() => {
+        window.triggerGraphSave = async () => {
+            if (!editorInstance || !areaInstance) return;
+            try {
+                const nodes = editorInstance.getNodes().map(n => {
+                    const serializedNode = typeof n.toJSON === 'function' ? n.toJSON() : { ...n };
+                    if (n.properties) serializedNode.properties = n.properties;
+                    return {
+                        id: n.id,
+                        label: n.label,
+                        position: areaInstance.nodeViews.get(n.id)?.position || { x: 0, y: 0 },
+                        data: serializedNode
+                    };
+                });
+                const connections = editorInstance.getConnections().map(c => ({
+                    id: c.id,
+                    source: c.source,
+                    target: c.target,
+                    sourceOutput: c.sourceOutput,
+                    targetInput: c.targetInput
+                }));
+                const viewport = areaInstance.area?.transform 
+                    ? { x: areaInstance.area.transform.x, y: areaInstance.area.transform.y, k: areaInstance.area.transform.k }
+                    : { x: 0, y: 0, k: 1 };
+                
+                const graphData = { nodes, connections, viewport, preUpdateSave: true, timestamp: Date.now() };
+                const jsonString = JSON.stringify(graphData);
+                
+                if (jsonString.length < 2000000) {
+                    localStorage.setItem('saved-graph', jsonString);
+                    debug('[triggerGraphSave] Graph saved before update');
+                }
+            } catch (e) {
+                console.warn('[triggerGraphSave] Failed:', e);
+            }
+        };
+        
+        return () => {
+            delete window.triggerGraphSave;
+        };
+    }, [editorInstance, areaInstance]);
 
     // Auto-save to localStorage every 2 minutes
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -1890,6 +1933,45 @@ export function Editor() {
             }
         };
     }, [editorInstance, areaInstance, hasUnsavedChanges]);
+    
+    // Auto-load graph after update - check for autoLoadAfterUpdate flag
+    useEffect(() => {
+        if (!editorInstance || !areaInstance || !engineInstance) return;
+        
+        const shouldAutoLoad = sessionStorage.getItem('autoLoadAfterUpdate') === 'true';
+        if (shouldAutoLoad) {
+            // Clear the flag first to prevent infinite loops
+            sessionStorage.removeItem('autoLoadAfterUpdate');
+            
+            debug('[AutoLoad] Detected post-update reload, attempting to restore graph...');
+            
+            // Small delay to ensure editor is fully initialized
+            const timer = setTimeout(async () => {
+                try {
+                    const saved = localStorage.getItem('saved-graph');
+                    if (saved) {
+                        debug('[AutoLoad] Found saved graph, loading...');
+                        // Call handleLoad logic directly instead of using the function
+                        // to avoid dependency issues
+                        const graphData = JSON.parse(saved);
+                        if (graphData.nodes && graphData.nodes.length > 0) {
+                            // Trigger the load
+                            if (window.T2Toast) {
+                                window.T2Toast.info('Restoring your graph after update...', 3000);
+                            }
+                            // Use a small delay then call handleLoad via button simulation
+                            // or directly invoke the load logic
+                            document.dispatchEvent(new CustomEvent('autoLoadGraph'));
+                        }
+                    }
+                } catch (err) {
+                    console.warn('[AutoLoad] Failed to auto-load graph:', err);
+                }
+            }, 1000);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [editorInstance, areaInstance, engineInstance]);
 
     const handleLoad = async () => {
         if (!editorInstance || !areaInstance || !engineInstance) {
@@ -2138,6 +2220,17 @@ export function Editor() {
             alert('Failed to load graph');
         }
     };
+    
+    // Listen for autoLoadGraph event (triggered after update)
+    useEffect(() => {
+        const handleAutoLoad = () => {
+            debug('[AutoLoadEvent] Received autoLoadGraph event, calling handleLoad...');
+            handleLoad();
+        };
+        
+        document.addEventListener('autoLoadGraph', handleAutoLoad);
+        return () => document.removeEventListener('autoLoadGraph', handleAutoLoad);
+    }, [editorInstance, areaInstance, engineInstance]);
 
     const handleClear = async () => {
         if (!editorInstance) {

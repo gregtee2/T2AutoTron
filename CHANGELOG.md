@@ -5,6 +5,28 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0-beta.14] - 2025-12-11
+
+### Added
+- **⚡ Performance Mode**: New toggle in Settings to reduce GPU usage with many nodes
+  - Disables backdrop-filter blur on nodes (biggest performance impact)
+  - Simplifies glow shadows to basic drop shadows
+  - Stops infinite pulse/glow animations
+  - Removes transition effects on nodes
+  - Look for ⚡ indicator in bottom-left when active
+  - Recommended for 40+ nodes or lower-end GPUs
+- **Graph Auto-Restore After Update**: Your graph is now automatically saved before applying updates and restored after reload
+- **Sleep Prevention (Electron)**: Electron app now prevents Windows from suspending the app during sleep mode
+
+### Fixed
+- DeviceStateControl no longer injects CSS on every render (major performance fix)
+- Moved keyframe animations to CSS file instead of dynamic injection
+
+### Changed
+- Update modal now shows "Saving current graph..." before applying update
+
+---
+
 ## [2.1.0-beta.2] - 2024-12-10
 
 ### Added
