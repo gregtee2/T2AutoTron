@@ -596,6 +596,10 @@ div[style*="position: fixed"] input::placeholder {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   position: relative !important;
   cursor: crosshair !important;
+  /* Default gray background if no type matches */
+  background: linear-gradient(145deg, #64748b, #475569) !important;
+  border: 2px solid #94a3b8 !important;
+  box-shadow: 0 0 10px rgba(100, 116, 139, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Socket outer glow ring */
@@ -612,7 +616,8 @@ div[style*="position: fixed"] input::placeholder {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* Socket inner highlight */
+/* Socket inner highlight - disabled for cleaner look */
+/*
 .rete-socket::after {
   content: '' !important;
   position: absolute !important;
@@ -624,6 +629,7 @@ div[style*="position: fixed"] input::placeholder {
   background: rgba(255, 255, 255, 0.3) !important;
   transition: all 0.25s ease !important;
 }
+*/
 
 /* Boolean sockets - Green/Emerald */
 .rete-socket[data-socket-type="boolean"],
@@ -743,22 +749,7 @@ div[style*="position: fixed"] input::placeholder {
     inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
 }
 
-/* Default/Unknown socket fallback - Slate */
-.rete-socket:not([data-socket-type]):not([title]) {
-  background: linear-gradient(145deg, #64748b, #475569) !important;
-  border: 2px solid #94a3b8 !important;
-  box-shadow: 
-    0 0 10px rgba(100, 116, 139, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.1) !important;
-}
-
-.rete-socket:not([data-socket-type]):not([title]):hover {
-  transform: scale(1.2) !important;
-  box-shadow: 
-    0 0 18px rgba(100, 116, 139, 0.6),
-    0 0 0 4px rgba(100, 116, 139, 0.2),
-    inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
-}
+/* (Default styling now applied in base .rete-socket rule above) */
 
 /* Connected socket pulse animation */
 @keyframes socket-pulse {

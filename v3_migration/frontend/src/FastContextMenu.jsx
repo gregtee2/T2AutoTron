@@ -3,7 +3,7 @@
 // Replaces sluggish rete-context-menu-plugin with vanilla DOM for speed
 // ============================================================================
 
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import './FastContextMenu.css';
 
 export function FastContextMenu({ 
@@ -14,10 +14,55 @@ export function FastContextMenu({
     onSelect 
 }) {
     const menuRef = useRef(null);
+    const searchInputRef = useRef(null);
     const [activeSubmenu, setActiveSubmenu] = useState(null);
     const [submenuPosition, setSubmenuPosition] = useState({ x: 0, y: 0 });
+    const [searchQuery, setSearchQuery] = useState('');
     const hoverTimeoutRef = useRef(null);
     const leaveTimeoutRef = useRef(null);
+
+    // Reset search when menu closes/opens
+    useEffect(() => {
+        if (visible) {
+            setSearchQuery('');
+            setActiveSubmenu(null);
+            // Focus search input after a brief delay for DOM to render
+            setTimeout(() => {
+                searchInputRef.current?.focus();
+            }, 50);
+        }
+    }, [visible]);
+
+    // Filter items based on search query
+    const filteredItems = useMemo(() => {
+        if (!searchQuery.trim()) {
+            return items; // No search - return original category structure
+        }
+        
+        const query = searchQuery.toLowerCase();
+        const matchingItems = [];
+        
+        // Flatten and search all subitems
+        for (const category of items) {
+            if (category.subitems) {
+                for (const subitem of category.subitems) {
+                    if (subitem.label && subitem.label.toLowerCase().includes(query)) {
+                        matchingItems.push({
+                            ...subitem,
+                            categoryHint: category.label // Show which category it's from
+                        });
+                    }
+                }
+            } else if (category.label && category.label.toLowerCase().includes(query)) {
+                matchingItems.push(category);
+            }
+        }
+        
+        return matchingItems;
+    }, [items, searchQuery]);
+
+    // Check if we're in search mode (showing flat results)
+    const isSearchMode = searchQuery.trim().length > 0;
 
     // Close menu on outside click
     useEffect(() => {
@@ -60,12 +105,6 @@ export function FastContextMenu({
         }
 
         if (item.subitems && item.subitems.length > 0) {
-            // Show submenu immediately for responsiveness
-            const rect = e.currentTarget.getBoundingClientRect();
-            setSubmenuPosition({
-                x: rect.right - 2,
-                y: rect.top
-            });
             setActiveSubmenu(index);
         } else {
             // Clear submenu when hovering non-submenu item
@@ -109,8 +148,8 @@ export function FastContextMenu({
     // Adjust position to keep menu on screen
     const adjustedPosition = { ...position };
     if (typeof window !== 'undefined') {
-        const menuWidth = 200;
-        const menuHeight = items.length * 36;
+        const menuWidth = 220;
+        const menuHeight = Math.min(filteredItems.length * 36 + 50, 400); // Account for search bar
         
         if (position.x + menuWidth > window.innerWidth) {
             adjustedPosition.x = window.innerWidth - menuWidth - 10;
@@ -129,44 +168,92 @@ export function FastContextMenu({
                 top: adjustedPosition.y
             }}
         >
-            {items.map((item, index) => (
-                <div
-                    key={item.label || index}
-                    className={`fast-menu-item ${item.subitems ? 'has-submenu' : ''} ${activeSubmenu === index ? 'active' : ''}`}
-                    onMouseEnter={(e) => handleItemMouseEnter(e, item, index)}
-                    onMouseLeave={handleItemMouseLeave}
-                    onClick={() => handleItemClick(item)}
-                >
-                    <span className="menu-label">{item.label}</span>
-                    {item.subitems && <span className="submenu-arrow">▶</span>}
-                    
-                    {/* Submenu */}
-                    {activeSubmenu === index && item.subitems && (
-                        <div 
-                            className="fast-submenu"
-                            style={{
-                                left: '100%',
-                                top: 0
-                            }}
-                            onMouseEnter={handleSubmenuMouseEnter}
-                            onMouseLeave={handleSubmenuMouseLeave}
+            {/* Search Input */}
+            <div className="fast-menu-search">
+                <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search nodes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && filteredItems.length === 1) {
+                            // Auto-select if only one result
+                            const item = filteredItems[0];
+                            if (!item.subitems) {
+                                handleItemClick(item);
+                            }
+                        }
+                        e.stopPropagation();
+                    }}
+                />
+                {searchQuery && (
+                    <span 
+                        className="search-clear"
+                        onClick={(e) => { e.stopPropagation(); setSearchQuery(''); searchInputRef.current?.focus(); }}
+                    >
+                        ✕
+                    </span>
+                )}
+            </div>
+
+            {/* Results container */}
+            <div className="fast-menu-results">
+                {filteredItems.length === 0 ? (
+                    <div className="fast-menu-empty">No nodes found</div>
+                ) : isSearchMode ? (
+                    /* Search mode - flat list of matching nodes */
+                    filteredItems.map((item, index) => (
+                        <div
+                            key={item.label || index}
+                            className="fast-menu-item search-result"
+                            onClick={() => handleItemClick(item)}
                         >
-                            {item.subitems.map((subitem, subIndex) => (
-                                <div
-                                    key={subitem.label || subIndex}
-                                    className="fast-menu-item"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleItemClick(subitem);
-                                    }}
-                                >
-                                    <span className="menu-label">{subitem.label}</span>
-                                </div>
-                            ))}
+                            <span className="menu-label">{item.label}</span>
+                            {item.categoryHint && (
+                                <span className="category-hint">{item.categoryHint}</span>
+                            )}
                         </div>
-                    )}
-                </div>
-            ))}
+                    ))
+                ) : (
+                    /* Normal mode - categories with submenus */
+                    filteredItems.map((item, index) => (
+                        <div
+                            key={item.label || index}
+                            className={`fast-menu-item ${item.subitems ? 'has-submenu' : ''} ${activeSubmenu === index ? 'active' : ''}`}
+                            onMouseEnter={(e) => handleItemMouseEnter(e, item, index)}
+                            onMouseLeave={handleItemMouseLeave}
+                            onClick={() => handleItemClick(item)}
+                        >
+                            <span className="menu-label">{item.label}</span>
+                            {item.subitems && <span className="submenu-arrow">▶</span>}
+                            
+                            {/* Submenu */}
+                            {activeSubmenu === index && item.subitems && (
+                                <div 
+                                    className="fast-submenu"
+                                    onMouseEnter={handleSubmenuMouseEnter}
+                                    onMouseLeave={handleSubmenuMouseLeave}
+                                >
+                                    {item.subitems.map((subitem, subIndex) => (
+                                        <div
+                                            key={subitem.label || subIndex}
+                                            className="fast-menu-item"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleItemClick(subitem);
+                                            }}
+                                        >
+                                            <span className="menu-label">{subitem.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
         </div>
     );
 }
