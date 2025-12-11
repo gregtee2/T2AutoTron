@@ -12,6 +12,8 @@ export function CameraPanel({ isExpanded, onToggle }) {
     const [error, setError] = useState(null);
     const [showSettings, setShowSettings] = useState(false);
     const [showAddCamera, setShowAddCamera] = useState(null); // IP being configured
+    const [editCamera, setEditCamera] = useState(null); // Camera being edited
+    const [editCreds, setEditCreds] = useState({ username: '', password: '', name: '' });
     const [credentials, setCredentials] = useState({ username: '', password: '' });
     const [newCameraName, setNewCameraName] = useState('');
     const [refreshInterval, setRefreshInterval] = useState(5000);
@@ -170,6 +172,41 @@ export function CameraPanel({ isExpanded, onToggle }) {
         } catch (err) {
             setError('Failed to remove camera');
         }
+    };
+
+    const updateCamera = async () => {
+        if (!editCamera) return;
+        try {
+            await fetch('/api/cameras', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ip: editCamera,
+                    name: editCreds.name,
+                    username: editCreds.username,
+                    password: editCreds.password
+                })
+            });
+            setEditCamera(null);
+            // Force refresh of this camera's snapshot
+            setCameraTimestamps(prev => ({ ...prev, [editCamera]: Date.now() }));
+            await fetchCameras();
+            
+            if (window.T2Toast) {
+                window.T2Toast.success(`Camera ${editCamera} updated!`);
+            }
+        } catch (err) {
+            setError('Failed to update camera');
+        }
+    };
+
+    const openEditCamera = (camera) => {
+        setEditCamera(camera.ip);
+        setEditCreds({
+            name: camera.name || '',
+            username: camera.username || '',
+            password: '' // Don't show existing password, but allow entering new one
+        });
     };
 
     const styles = {
@@ -568,6 +605,65 @@ export function CameraPanel({ isExpanded, onToggle }) {
                         </div>
                     )}
 
+                    {/* Edit Camera Modal */}
+                    {editCamera && (
+                        <div style={{
+                            background: 'rgba(0, 20, 40, 0.95)',
+                            borderRadius: '8px',
+                            padding: '14px',
+                            marginBottom: '10px',
+                            border: '1px solid rgba(255, 180, 0, 0.3)'
+                        }}>
+                            <div style={{ color: '#ffaa00', fontSize: '13px', marginBottom: '10px', fontWeight: 600 }}>
+                                ✏️ Edit Camera: {editCamera}
+                            </div>
+                            <div style={styles.inputGroup}>
+                                <label style={styles.label}>Camera Name</label>
+                                <input 
+                                    type="text"
+                                    style={styles.input}
+                                    value={editCreds.name}
+                                    onChange={(e) => setEditCreds(p => ({...p, name: e.target.value}))}
+                                    placeholder="Front Door"
+                                />
+                            </div>
+                            <div style={styles.inputGroup}>
+                                <label style={styles.label}>Username</label>
+                                <input 
+                                    type="text"
+                                    style={styles.input}
+                                    value={editCreds.username}
+                                    onChange={(e) => setEditCreds(p => ({...p, username: e.target.value}))}
+                                    placeholder="admin"
+                                />
+                            </div>
+                            <div style={styles.inputGroup}>
+                                <label style={styles.label}>Password (leave blank to keep current)</label>
+                                <input 
+                                    type="password"
+                                    style={styles.input}
+                                    value={editCreds.password}
+                                    onChange={(e) => setEditCreds(p => ({...p, password: e.target.value}))}
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                <button 
+                                    style={{...styles.btn, flex: 1, justifyContent: 'center', background: 'rgba(255, 180, 0, 0.2)', borderColor: 'rgba(255, 180, 0, 0.4)'}}
+                                    onClick={updateCamera}
+                                >
+                                    💾 Save Changes
+                                </button>
+                                <button 
+                                    style={{...styles.btn, background: 'rgba(100, 100, 100, 0.3)'}}
+                                    onClick={() => setEditCamera(null)}
+                                >
+                                    ✕ Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Camera Grid */}
                     {loading ? (
                         <div style={styles.emptyState}>Loading cameras...</div>
@@ -599,16 +695,28 @@ export function CameraPanel({ isExpanded, onToggle }) {
                                         <span style={styles.cameraName} title={camera.ip}>
                                             {camera.name}
                                         </span>
-                                        <button 
-                                            style={styles.deleteBtn}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeCamera(camera.ip);
-                                            }}
-                                            title="Remove camera"
-                                        >
-                                            ✕
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                            <button 
+                                                style={{...styles.deleteBtn, background: 'rgba(0, 150, 255, 0.2)', color: '#00aaff'}}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openEditCamera(camera);
+                                                }}
+                                                title="Edit credentials"
+                                            >
+                                                ✎
+                                            </button>
+                                            <button 
+                                                style={styles.deleteBtn}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    removeCamera(camera.ip);
+                                                }}
+                                                title="Remove camera"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}

@@ -96,19 +96,21 @@ router.post('/', (req, res) => {
     
     // Check if camera already exists
     const existingIndex = cameraConfig.cameras.findIndex(c => c.ip === ip);
+    const existingCamera = existingIndex >= 0 ? cameraConfig.cameras[existingIndex] : null;
     
     const camera = {
         ip,
-        name: name || `Camera ${ip}`,
-        username: username || cameraConfig.defaultCredentials?.username || '',
-        password: password || cameraConfig.defaultCredentials?.password || '',
-        snapshotPath: snapshotPath || '/cgi-bin/snapshot.cgi',
-        rtspPath: rtspPath || '/stream1',
-        addedAt: new Date().toISOString()
+        name: name || existingCamera?.name || `Camera ${ip}`,
+        username: username !== undefined ? username : (existingCamera?.username || cameraConfig.defaultCredentials?.username || ''),
+        // Only update password if a new one is provided (non-empty string)
+        password: password ? password : (existingCamera?.password || cameraConfig.defaultCredentials?.password || ''),
+        snapshotPath: snapshotPath || existingCamera?.snapshotPath || '/cgi-bin/snapshot.cgi',
+        rtspPath: rtspPath || existingCamera?.rtspPath || '/stream1',
+        addedAt: existingCamera?.addedAt || new Date().toISOString()
     };
     
     if (existingIndex >= 0) {
-        cameraConfig.cameras[existingIndex] = { ...cameraConfig.cameras[existingIndex], ...camera };
+        cameraConfig.cameras[existingIndex] = camera;
     } else {
         cameraConfig.cameras.push(camera);
     }
