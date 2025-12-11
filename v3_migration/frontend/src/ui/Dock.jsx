@@ -369,12 +369,12 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
                         ❓ Keyboard Shortcuts
                     </button>
                     <button 
-                        onClick={handleCheckUpdates} 
-                        disabled={checkingUpdates}
+                        onClick={handleCheckForUpdates} 
+                        disabled={checkingUpdate}
                         className="dock-btn dock-btn-update"
                         title="Check for available updates"
                     >
-                        {checkingUpdates ? '⏳ Checking...' : '🔄 Check for Updates'}
+                        {checkingUpdate ? '⏳ Checking...' : '🔄 Check for Updates'}
                     </button>
                 </div>
             </div>
