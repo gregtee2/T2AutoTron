@@ -278,7 +278,13 @@ function App() {
       if (skippedVersion === data.newVersion) {
         return;
       }
-      setUpdateInfo(data);
+      
+      // Show toast notification with "View Details" action
+      toast.info(`🚀 Update available: ${data.currentVersion} → ${data.newVersion}`, {
+        duration: 0, // Don't auto-dismiss
+        actionLabel: 'View Details',
+        action: () => setUpdateInfo(data)
+      });
     }
 
     socket.on('connect', onConnect);

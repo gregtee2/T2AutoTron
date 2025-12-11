@@ -13,7 +13,7 @@ const TOAST_CONFIG = {
 };
 
 // Individual Toast component
-function ToastItem({ id, type, message, duration, onRemove }) {
+function ToastItem({ id, type, message, duration, onRemove, action, actionLabel }) {
     const [isExiting, setIsExiting] = useState(false);
     const config = TOAST_CONFIG[type] || TOAST_CONFIG.info;
 
@@ -32,10 +32,20 @@ function ToastItem({ id, type, message, duration, onRemove }) {
         setTimeout(() => onRemove(id), 300);
     };
 
+    const handleAction = () => {
+        if (action) {
+            action();
+        }
+        handleClose();
+    };
+
     return (
         <div className={`toast ${config.className} ${isExiting ? 'toast-exit' : ''}`}>
             <span className="toast-icon">{config.icon}</span>
             <span className="toast-message">{message}</span>
+            {action && actionLabel && (
+                <button className="toast-action" onClick={handleAction}>{actionLabel}</button>
+            )}
             <button className="toast-close" onClick={handleClose}>×</button>
         </div>
     );
@@ -46,9 +56,12 @@ export function ToastContainer({ children }) {
     const [toasts, setToasts] = useState([]);
     let toastId = 0;
 
-    const addToast = useCallback((type, message, duration = 4000) => {
+    const addToast = useCallback((type, message, options = {}) => {
         const id = ++toastId;
-        setToasts(prev => [...prev, { id, type, message, duration }]);
+        const duration = typeof options === 'number' ? options : (options.duration ?? 4000);
+        const action = typeof options === 'object' ? options.action : null;
+        const actionLabel = typeof options === 'object' ? options.actionLabel : null;
+        setToasts(prev => [...prev, { id, type, message, duration, action, actionLabel }]);
         return id;
     }, []);
 
@@ -58,10 +71,10 @@ export function ToastContainer({ children }) {
 
     // Convenience methods
     const toast = {
-        success: (msg, duration) => addToast('success', msg, duration),
-        error: (msg, duration) => addToast('error', msg, duration ?? 6000), // Errors stay longer
-        warning: (msg, duration) => addToast('warning', msg, duration),
-        info: (msg, duration) => addToast('info', msg, duration),
+        success: (msg, options) => addToast('success', msg, options),
+        error: (msg, options) => addToast('error', msg, typeof options === 'number' ? options : { duration: 6000, ...options }), // Errors stay longer
+        warning: (msg, options) => addToast('warning', msg, options),
+        info: (msg, options) => addToast('info', msg, options),
         dismiss: removeToast,
         dismissAll: () => setToasts([])
     };
@@ -78,6 +91,8 @@ export function ToastContainer({ children }) {
                         message={t.message}
                         duration={t.duration}
                         onRemove={removeToast}
+                        action={t.action}
+                        actionLabel={t.actionLabel}
                     />
                 ))}
             </div>
