@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, crashReporter, dialog, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, session, crashReporter, dialog, globalShortcut, powerSaveBlocker } = require('electron');
 const path = require('path');
 const fs = require('fs'); // For synchronous operations
 const fsPromises = require('fs').promises; // For asynchronous operations
@@ -450,6 +450,11 @@ ipcMain.on('crash-renderer', () => {
 });
 
 app.whenReady().then(async () => {
+    // === PREVENT SYSTEM SLEEP ===
+    // This keeps the system awake so automations continue running
+    const sleepBlockerId = powerSaveBlocker.start('prevent-app-suspension');
+    console.log(`Sleep prevention enabled (blocker ID: ${sleepBlockerId})`);
+    
     // Ensure temp directory exists at startup
     try {
         await fsPromises.mkdir(app.getPath('temp'), { recursive: true });
