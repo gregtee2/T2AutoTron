@@ -58,6 +58,21 @@ io.on('error', (error) => {
 // Update service for checking updates
 const updateService = require('./services/updateService');
 
+// === PERIODIC UPDATE CHECK (every 5 minutes) ===
+let lastNotifiedVersion = null;
+setInterval(async () => {
+  try {
+    const updateInfo = await updateService.checkForUpdates(true); // Force check
+    if (updateInfo.hasUpdate && updateInfo.newVersion !== lastNotifiedVersion) {
+      lastNotifiedVersion = updateInfo.newVersion;
+      io.emit('update-available', updateInfo); // Broadcast to ALL connected clients
+      debug(`[Update] Broadcast update notification: ${updateInfo.currentVersion} → ${updateInfo.newVersion}`);
+    }
+  } catch (err) {
+    debug('[Update] Periodic check failed:', err.message);
+  }
+}, 5 * 60 * 1000); // Check every 5 minutes
+
 // Log client connections/disconnections
 io.on('connection', (socket) => {
   logger.log(`Socket.IO client connected: ${socket.id}`, 'info', false, 'socket:connect');
