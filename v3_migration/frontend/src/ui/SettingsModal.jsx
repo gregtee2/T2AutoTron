@@ -718,6 +718,111 @@ export function SettingsModal({ isOpen, onClose }) {
                                 </div>
                             </div>
 
+                            {/* Performance Mode Section */}
+                            <div className="settings-category">
+                                <div 
+                                    className="settings-category-header"
+                                    onClick={() => toggleCategory('Performance')}
+                                    style={{ background: 'linear-gradient(135deg, rgba(255, 170, 0, 0.15), rgba(255, 100, 50, 0.1))' }}
+                                >
+                                    <span>
+                                        {expandedCategories['Performance'] ? '▼' : '▶'} 
+                                        ⚡ Performance Mode
+                                    </span>
+                                    {window.getPerformanceMode?.() && (
+                                        <span style={{ fontSize: '10px', color: '#10b981' }}>● ACTIVE</span>
+                                    )}
+                                </div>
+                                
+                                {expandedCategories['Performance'] && (
+                                    <div className="settings-category-content">
+                                        <div className="settings-info" style={{ 
+                                            fontSize: '11px', 
+                                            color: '#ffaa00', 
+                                            marginBottom: '12px',
+                                            padding: '10px',
+                                            background: 'rgba(255, 170, 0, 0.1)',
+                                            borderRadius: '4px',
+                                            border: '1px solid rgba(255, 170, 0, 0.2)'
+                                        }}>
+                                            ⚠️ <strong>Enable this if you experience lag or high GPU usage with many nodes.</strong>
+                                            <br /><br />
+                                            Performance Mode disables:
+                                            <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                                                <li>Backdrop blur effects on nodes (biggest impact)</li>
+                                                <li>Complex glow shadows</li>
+                                                <li>Infinite pulse/glow animations</li>
+                                                <li>Transition effects on nodes</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'space-between',
+                                            padding: '12px',
+                                            background: 'rgba(0, 0, 0, 0.3)',
+                                            borderRadius: '6px'
+                                        }}>
+                                            <div>
+                                                <div style={{ color: '#e0e0e0', fontSize: '13px', fontWeight: '500' }}>
+                                                    Performance Mode
+                                                </div>
+                                                <div style={{ color: '#888', fontSize: '11px', marginTop: '2px' }}>
+                                                    Recommended for 40+ nodes
+                                                </div>
+                                            </div>
+                                            <label style={{ 
+                                                position: 'relative', 
+                                                display: 'inline-block',
+                                                width: '50px',
+                                                height: '26px'
+                                            }}>
+                                                <input 
+                                                    type="checkbox"
+                                                    checked={window.getPerformanceMode?.() || false}
+                                                    onChange={(e) => {
+                                                        window.setPerformanceMode?.(e.target.checked);
+                                                        // Force re-render
+                                                        setExpandedCategories(prev => ({ ...prev }));
+                                                    }}
+                                                    style={{ opacity: 0, width: 0, height: 0 }}
+                                                />
+                                                <span style={{
+                                                    position: 'absolute',
+                                                    cursor: 'pointer',
+                                                    top: 0, left: 0, right: 0, bottom: 0,
+                                                    background: window.getPerformanceMode?.() ? '#10b981' : '#444',
+                                                    transition: 'background 0.2s',
+                                                    borderRadius: '26px'
+                                                }}>
+                                                    <span style={{
+                                                        position: 'absolute',
+                                                        content: '',
+                                                        height: '20px',
+                                                        width: '20px',
+                                                        left: window.getPerformanceMode?.() ? '26px' : '3px',
+                                                        bottom: '3px',
+                                                        background: '#fff',
+                                                        transition: 'left 0.2s',
+                                                        borderRadius: '50%'
+                                                    }} />
+                                                </span>
+                                            </label>
+                                        </div>
+                                        
+                                        <div style={{ 
+                                            marginTop: '12px', 
+                                            fontSize: '10px', 
+                                            color: '#666',
+                                            textAlign: 'center'
+                                        }}>
+                                            Changes apply immediately. Look for ⚡ indicator in bottom-left when active.
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Network Discovery Section */}
                             <div className="settings-category">
                                 <div 

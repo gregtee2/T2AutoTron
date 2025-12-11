@@ -1,0 +1,159 @@
+/* ============================================================================
+   PERFORMANCE MODE - Disables expensive CSS effects for better performance
+   ============================================================================
+   
+   When the body has class 'performance-mode', these overrides disable:
+   - backdrop-filter blur on nodes (MAJOR performance impact)
+   - Complex multi-layer box-shadows
+   - Infinite CSS animations (pulse, glow, etc.)
+   - Transition effects on nodes
+   
+   This can dramatically improve performance with 60+ nodes.
+   ============================================================================ */
+
+/* ============================================================================
+   DISABLE BACKDROP-FILTER ON NODES
+   This is the #1 performance killer - blur is extremely GPU intensive
+   ============================================================================ */
+
+body.performance-mode .ha-node-tron,
+body.performance-mode .hsv-node-tron,
+body.performance-mode .hsv-mod-node-tron,
+body.performance-mode .logic-node,
+body.performance-mode .weather-node-tron,
+body.performance-mode .kasa-node,
+body.performance-mode .color-gradient-node,
+body.performance-mode .sender-node-tron,
+body.performance-mode .receiver-node-tron,
+body.performance-mode .pushbutton-node,
+body.performance-mode .display-node,
+body.performance-mode .sunrise-sunset-node,
+body.performance-mode .time-of-day-node,
+body.performance-mode .backdrop-node,
+body.performance-mode [class*="-node-tron"],
+body.performance-mode [class*="-node"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ============================================================================
+   SIMPLIFY BOX-SHADOWS
+   Replace multi-layer glow shadows with simple drop shadow
+   ============================================================================ */
+
+body.performance-mode .ha-node-tron,
+body.performance-mode .hsv-node-tron,
+body.performance-mode .hsv-mod-node-tron,
+body.performance-mode .logic-node,
+body.performance-mode .weather-node-tron,
+body.performance-mode .kasa-node,
+body.performance-mode .color-gradient-node,
+body.performance-mode .sender-node-tron,
+body.performance-mode .receiver-node-tron,
+body.performance-mode [class*="-node-tron"] {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Simplified hover state */
+body.performance-mode .ha-node-tron:hover,
+body.performance-mode .hsv-node-tron:hover,
+body.performance-mode .hsv-mod-node-tron:hover,
+body.performance-mode [class*="-node-tron"]:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* ============================================================================
+   DISABLE INFINITE ANIMATIONS
+   These run constantly and waste GPU cycles
+   ============================================================================ */
+
+/* Device state pulse animations */
+body.performance-mode [style*="animation: flash-pulse"],
+body.performance-mode .device-indicator.on,
+body.performance-mode .device-on-indicator {
+  animation: none !important;
+}
+
+/* Socket pulse animations */
+body.performance-mode .rete-socket {
+  animation: none !important;
+}
+
+/* Active device glow pulse - just disable with animation: none on the elements */
+body.performance-mode .device-indicator.on,
+body.performance-mode .device-on-indicator,
+body.performance-mode [style*="flash-pulse"],
+body.performance-mode [style*="pulse-glow"],
+body.performance-mode [style*="device-pulse"] {
+  animation: none !important;
+}
+
+/* Disable loading/progress animations (keep them for modals which are temporary) */
+body.performance-mode .loading-logo {
+  animation: none !important;
+}
+
+/* ============================================================================
+   REDUCE TRANSITIONS
+   Faster/simpler transitions on nodes
+   ============================================================================ */
+
+body.performance-mode .ha-node-tron,
+body.performance-mode .hsv-node-tron,
+body.performance-mode .hsv-mod-node-tron,
+body.performance-mode .logic-node,
+body.performance-mode .weather-node-tron,
+body.performance-mode [class*="-node-tron"],
+body.performance-mode [class*="-node"] {
+  transition: none !important;
+}
+
+/* Keep some transitions for UI feedback */
+body.performance-mode button,
+body.performance-mode input,
+body.performance-mode select {
+  transition: background 0.1s ease, border-color 0.1s ease !important;
+}
+
+/* ============================================================================
+   SIMPLIFY CONNECTION LINES
+   Remove drop-shadow filter from SVG paths
+   ============================================================================ */
+
+body.performance-mode .rete-connection path {
+  filter: none !important;
+}
+
+body.performance-mode .rete-connection:hover path {
+  filter: none !important;
+  stroke-width: 4px !important;
+}
+
+/* ============================================================================
+   REDUCE SOCKET STYLING COMPLEXITY
+   ============================================================================ */
+
+body.performance-mode .rete-socket {
+  box-shadow: none !important;
+  transition: transform 0.1s ease !important;
+}
+
+body.performance-mode .rete-socket:hover {
+  box-shadow: 0 0 4px currentColor !important;
+  transform: scale(1.1) !important;
+}
+
+/* ============================================================================
+   INDICATOR - Show performance mode is active
+   ============================================================================ */
+
+body.performance-mode::after {
+  content: '⚡';
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  font-size: 16px;
+  opacity: 0.3;
+  z-index: 9999;
+  pointer-events: none;
+}

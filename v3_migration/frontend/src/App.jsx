@@ -7,7 +7,33 @@ import { ToastContainer, ToastExposer, useToast } from './ui/Toast';
 import { LoadingOverlay } from './ui/LoadingOverlay';
 import UpdateModal from './components/UpdateModal';
 import './App.css';
+import './styles/performance-mode.css'; // Performance mode overrides
 import './test-sockets.js'; // Test socket patch
+
+// Apply performance mode from localStorage on page load
+const applyPerformanceModeFromStorage = () => {
+  try {
+    const performanceMode = localStorage.getItem('t2-performance-mode');
+    if (performanceMode === 'true') {
+      document.body.classList.add('performance-mode');
+    }
+  } catch (err) {
+    console.warn('Failed to apply performance mode:', err);
+  }
+};
+applyPerformanceModeFromStorage();
+
+// Expose for Settings modal
+window.setPerformanceMode = (enabled) => {
+  if (enabled) {
+    document.body.classList.add('performance-mode');
+    localStorage.setItem('t2-performance-mode', 'true');
+  } else {
+    document.body.classList.remove('performance-mode');
+    localStorage.setItem('t2-performance-mode', 'false');
+  }
+};
+window.getPerformanceMode = () => document.body.classList.contains('performance-mode');
 
 // Apply stored category theme colors to CSS variables on startup
 const applyCategoryColorsFromStorage = () => {

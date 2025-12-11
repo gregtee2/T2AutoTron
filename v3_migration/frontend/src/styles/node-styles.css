@@ -44,6 +44,13 @@
   50% { opacity: 0.3; }
 }
 
+/* Device state indicator pulse - used by DeviceStateControl */
+@keyframes flash-pulse {
+  0% { opacity: 1; box-shadow: 0 0 5px currentColor; }
+  50% { opacity: 0.6; box-shadow: 0 0 2px currentColor; }
+  100% { opacity: 1; box-shadow: 0 0 5px currentColor; }
+}
+
 /* ============================================================================
    HA GENERIC DEVICE NODE
    ============================================================================ */

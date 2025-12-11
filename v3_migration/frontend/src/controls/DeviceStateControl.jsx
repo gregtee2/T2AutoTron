@@ -14,19 +14,8 @@ export class DeviceStateControl extends ClassicPreset.Control {
 export function DeviceStateControlComponent({ data }) {
     const state = data.getState ? data.getState(data.deviceId) : null;
 
-    // Define keyframes for flashing animation
-    React.useEffect(() => {
-        const style = document.createElement('style');
-        style.innerHTML = `
-            @keyframes flash-pulse {
-                0% { opacity: 1; box-shadow: 0 0 5px currentColor; }
-                50% { opacity: 0.6; box-shadow: 0 0 2px currentColor; }
-                100% { opacity: 1; box-shadow: 0 0 5px currentColor; }
-            }
-        `;
-        document.head.appendChild(style);
-        return () => document.head.removeChild(style);
-    }, []);
+    // Check if performance mode is active
+    const isPerformanceMode = document.body.classList.contains('performance-mode');
 
     if (!state) {
         return (
@@ -61,14 +50,15 @@ export function DeviceStateControlComponent({ data }) {
         }
     }
 
-    // Status Indicator Style
+    // Status Indicator Style - disable animation in performance mode
     const indicatorStyle = {
         width: "14px",
         height: "14px",
         borderRadius: "50%",
         background: color,
         border: "1px solid rgba(255,255,255,0.3)",
-        animation: isOn ? "flash-pulse 2s infinite ease-in-out" : "none",
+        // Only animate if NOT in performance mode
+        animation: (isOn && !isPerformanceMode) ? "flash-pulse 2s infinite ease-in-out" : "none",
         color: color, // Used by currentColor in keyframes
         marginRight: "8px",
         flexShrink: 0,
