@@ -6,10 +6,13 @@ import { CameraPanel } from './CameraPanel';
 import { socket } from '../socket';
 import { getLoadingState } from '../registries/PluginLoader';
 import { onPluginProgress } from '../registries/PluginLoader';
+import { useToast } from './Toast';
 
 export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedChanges }) {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
+    const [checkingUpdate, setCheckingUpdate] = useState(false);
+    const toast = useToast();
     const [position, setPosition] = useState(() => {
         const saved = localStorage.getItem('dock-position');
         return saved ? JSON.parse(saved) : { x: 20, y: 20 };
@@ -219,6 +222,39 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
         // Reset input value to allow selecting the same file again
         e.target.value = '';
     };
+    
+    // Check for updates on demand
+    const handleCheckForUpdates = async () => {
+        if (checkingUpdate) return;
+        
+        setCheckingUpdate(true);
+        try {
+            const response = await fetch('/api/update/check?force=true');
+            const data = await response.json();
+            
+            if (data.hasUpdate) {
+                // Show update modal via App.jsx by emitting socket event
+                // or using a callback - for now we'll show toast with action
+                toast.info(`🚀 Update available: ${data.currentVersion} → ${data.newVersion}`, {
+                    duration: 0,
+                    actionLabel: 'View Details',
+                    action: () => {
+                        // Emit event that App.jsx listens for
+                        socket.emit('request-show-update-modal', data);
+                        // Also dispatch window event as backup
+                        window.dispatchEvent(new CustomEvent('showUpdateModal', { detail: data }));
+                    }
+                });
+            } else {
+                toast.success(`✓ You're up to date! (v${data.currentVersion})`, 4000);
+            }
+        } catch (err) {
+            console.error('Failed to check for updates:', err);
+            toast.error('Failed to check for updates: ' + err.message, 5000);
+        } finally {
+            setCheckingUpdate(false);
+        }
+    };
 
     return (
         <div
@@ -331,6 +367,14 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
                     </button>
                     <button onClick={() => setShortcutsOpen(true)} className="dock-btn dock-btn-help">
                         ❓ Keyboard Shortcuts
+                    </button>
+                    <button 
+                        onClick={handleCheckUpdates} 
+                        disabled={checkingUpdates}
+                        className="dock-btn dock-btn-update"
+                        title="Check for available updates"
+                    >
+                        {checkingUpdates ? '⏳ Checking...' : '🔄 Check for Updates'}
                     </button>
                 </div>
             </div>

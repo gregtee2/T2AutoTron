@@ -5,6 +5,16 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0-beta.15] - 2025-12-11
+
+### Added
+- **🔄 Check for Updates Button**: New button in Control Panel Settings section to manually check for updates on-demand
+  - Shows spinner while checking
+  - Displays toast notification with result
+  - Opens Update modal if update is available
+
+---
+
 ## [2.1.0-beta.14] - 2025-12-11
 
 ### Added
