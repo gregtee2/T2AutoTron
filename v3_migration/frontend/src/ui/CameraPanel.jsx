@@ -6,11 +6,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
  */
 export function CameraPanel({ isExpanded, onToggle }) {
     const [cameras, setCameras] = useState([]);
+    const [discoveredIPs, setDiscoveredIPs] = useState([]); // IPs found but not yet configured
     const [loading, setLoading] = useState(true);
     const [discovering, setDiscovering] = useState(false);
     const [error, setError] = useState(null);
     const [showSettings, setShowSettings] = useState(false);
+    const [showAddCamera, setShowAddCamera] = useState(null); // IP being configured
     const [credentials, setCredentials] = useState({ username: '', password: '' });
+    const [newCameraName, setNewCameraName] = useState('');
     const [refreshInterval, setRefreshInterval] = useState(5000);
     const [selectedCamera, setSelectedCamera] = useState(null);
     const refreshTimerRef = useRef(null);
@@ -88,24 +91,21 @@ export function CameraPanel({ isExpanded, onToggle }) {
                 const data = await response.json();
                 
                 if (data.found && data.found.length > 0) {
-                    // Add discovered cameras
-                    for (const cam of data.found) {
-                        await fetch('/api/cameras', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                ip: cam.ip,
-                                name: `Camera ${cam.ip.split('.').pop()}`,
-                                ...credentials
-                            })
-                        });
-                    }
-                    await fetchCameras();
+                    // Filter out already configured cameras
+                    const configuredIPs = cameras.map(c => c.ip);
+                    const newIPs = data.found.filter(cam => !configuredIPs.includes(cam.ip));
+                    
+                    setDiscoveredIPs(newIPs);
                     
                     if (window.T2Toast) {
-                        window.T2Toast.success(`Found ${data.found.length} cameras!`);
+                        if (newIPs.length > 0) {
+                            window.T2Toast.success(`Found ${newIPs.length} new camera(s)! Click to configure.`);
+                        } else {
+                            window.T2Toast.info(`Found ${data.found.length} cameras, all already configured.`);
+                        }
                     }
                 } else {
+                    setDiscoveredIPs([]);
                     if (window.T2Toast) {
                         window.T2Toast.info('No cameras found on network');
                     }
@@ -134,18 +134,27 @@ export function CameraPanel({ isExpanded, onToggle }) {
         }
     };
 
-    const addCamera = async (ip) => {
+    const addCamera = async (ip, name, creds) => {
         try {
             await fetch('/api/cameras', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ip,
-                    name: `Camera ${ip.split('.').pop()}`,
-                    ...credentials
+                    name: name || `Camera ${ip.split('.').pop()}`,
+                    username: creds?.username || credentials.username,
+                    password: creds?.password || credentials.password
                 })
             });
+            // Remove from discovered list
+            setDiscoveredIPs(prev => prev.filter(d => d.ip !== ip));
+            setShowAddCamera(null);
+            setNewCameraName('');
             await fetchCameras();
+            
+            if (window.T2Toast) {
+                window.T2Toast.success(`Camera ${ip} added!`);
+            }
         } catch (err) {
             setError('Failed to add camera');
         }
@@ -454,10 +463,115 @@ export function CameraPanel({ isExpanded, onToggle }) {
                         </div>
                     )}
 
+                    {/* Discovered IPs List */}
+                    {discoveredIPs.length > 0 && (
+                        <div style={{
+                            background: 'rgba(0, 200, 255, 0.1)',
+                            borderRadius: '8px',
+                            padding: '10px',
+                            marginBottom: '10px',
+                            border: '1px solid rgba(0, 200, 255, 0.2)'
+                        }}>
+                            <div style={{ color: '#00d4ff', fontSize: '12px', marginBottom: '8px', fontWeight: 600 }}>
+                                📡 Discovered Cameras ({discoveredIPs.length})
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {discoveredIPs.map(cam => (
+                                    <div 
+                                        key={cam.ip}
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            background: 'rgba(0, 0, 0, 0.2)',
+                                            padding: '8px 10px',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onClick={() => {
+                                            setShowAddCamera(cam.ip);
+                                            setNewCameraName(`Camera ${cam.ip.split('.').pop()}`);
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0, 200, 255, 0.15)'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = 'rgba(0, 0, 0, 0.2)'}
+                                    >
+                                        <div>
+                                            <span style={{ color: '#fff', fontSize: '13px', fontWeight: 500 }}>{cam.ip}</span>
+                                            <span style={{ color: '#667', fontSize: '11px', marginLeft: '8px' }}>
+                                                Ports: {cam.ports.join(', ')}
+                                            </span>
+                                        </div>
+                                        <span style={{ color: '#00d4ff', fontSize: '11px' }}>Click to add →</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Add Camera Modal */}
+                    {showAddCamera && (
+                        <div style={{
+                            background: 'rgba(0, 20, 40, 0.95)',
+                            borderRadius: '8px',
+                            padding: '14px',
+                            marginBottom: '10px',
+                            border: '1px solid rgba(0, 200, 255, 0.3)'
+                        }}>
+                            <div style={{ color: '#00d4ff', fontSize: '13px', marginBottom: '10px', fontWeight: 600 }}>
+                                ➕ Add Camera: {showAddCamera}
+                            </div>
+                            <div style={styles.inputGroup}>
+                                <label style={styles.label}>Camera Name</label>
+                                <input 
+                                    type="text"
+                                    style={styles.input}
+                                    value={newCameraName}
+                                    onChange={(e) => setNewCameraName(e.target.value)}
+                                    placeholder="Front Door"
+                                />
+                            </div>
+                            <div style={styles.inputGroup}>
+                                <label style={styles.label}>Username</label>
+                                <input 
+                                    type="text"
+                                    style={styles.input}
+                                    value={credentials.username}
+                                    onChange={(e) => setCredentials(p => ({...p, username: e.target.value}))}
+                                    placeholder="admin"
+                                />
+                            </div>
+                            <div style={styles.inputGroup}>
+                                <label style={styles.label}>Password</label>
+                                <input 
+                                    type="password"
+                                    style={styles.input}
+                                    value={credentials.password}
+                                    onChange={(e) => setCredentials(p => ({...p, password: e.target.value}))}
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                <button 
+                                    style={{...styles.btn, flex: 1, justifyContent: 'center'}}
+                                    onClick={() => addCamera(showAddCamera, newCameraName, credentials)}
+                                >
+                                    ✓ Add Camera
+                                </button>
+                                <button 
+                                    style={{...styles.btn, background: 'rgba(100, 100, 100, 0.3)'}}
+                                    onClick={() => { setShowAddCamera(null); setNewCameraName(''); }}
+                                >
+                                    ✕ Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Camera Grid */}
                     {loading ? (
                         <div style={styles.emptyState}>Loading cameras...</div>
-                    ) : cameras.length === 0 ? (
+                    ) : cameras.length === 0 && discoveredIPs.length === 0 ? (
                         <div style={styles.emptyState}>
                             <p>No cameras configured</p>
                             <p style={{ fontSize: '11px' }}>Click Discover to scan your network</p>
