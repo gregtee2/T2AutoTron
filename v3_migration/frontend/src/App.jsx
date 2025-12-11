@@ -268,6 +268,11 @@ function App() {
 
     // Listen for update available notifications
     function onUpdateAvailable(data) {
+      // Don't show if we just applied an update (prevents double-update issue)
+      if (sessionStorage.getItem('justUpdated') === 'true') {
+        sessionStorage.removeItem('justUpdated');
+        return;
+      }
       // Don't show if user already skipped this version this session
       const skippedVersion = sessionStorage.getItem('updateSkipped');
       if (skippedVersion === data.newVersion) {

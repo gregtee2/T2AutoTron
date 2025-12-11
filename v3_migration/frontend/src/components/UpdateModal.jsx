@@ -17,6 +17,9 @@ function UpdateModal({ updateInfo, onClose, onApplyUpdate }) {
     setIsUpdating(true);
     setUpdateStatus('Starting update...');
     
+    // Mark that we're updating so we don't show modal again after reload
+    sessionStorage.setItem('justUpdated', 'true');
+    
     try {
       const response = await fetch('/api/update/apply', {
         method: 'POST',
