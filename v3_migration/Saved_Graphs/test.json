@@ -1,0 +1,309 @@
+{
+  "nodes": [
+    {
+      "id": "01b36eb21745a622",
+      "label": "Timeline Color",
+      "position": {
+        "x": 199.77320615991977,
+        "y": -41.85642590702277
+      },
+      "data": {
+        "id": "01b36eb21745a622",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0.7921470884992139,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "numerical",
+          "startValue": 0,
+          "endValue": 100,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "colorMode": "rainbow",
+          "colorStops": [
+            {
+              "position": 0,
+              "rgb": {
+                "r": 255,
+                "g": 100,
+                "b": 0
+              }
+            },
+            {
+              "position": 1,
+              "rgb": {
+                "r": 0,
+                "g": 100,
+                "b": 255
+              }
+            }
+          ],
+          "editorWidth": 360,
+          "editorHeight": 180,
+          "showColorEditor": false,
+          "previewMode": true,
+          "previewPosition": 0.3130679430321268,
+          "position": 0.3130679430321268,
+          "isInRange": true,
+          "outputHue": 0.3130081300813008,
+          "outputSaturation": 0.891304347826087,
+          "outputBrightness": 216,
+          "outputRgb": {
+            "r": 42,
+            "g": 195,
+            "b": 21
+          }
+        }
+      }
+    },
+    {
+      "id": "aa09704f929aebd7",
+      "label": "Debug",
+      "position": {
+        "x": 1146.463431415404,
+        "y": 63.38573644025568
+      },
+      "data": {
+        "inputs": {
+          "input": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input",
+            "id": "738dad53b6c408d5",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "82ba045f004efec1"
+          }
+        },
+        "controls": {},
+        "label": "Debug",
+        "id": "aa09704f929aebd7",
+        "width": 260,
+        "properties": {
+          "name": "",
+          "toConsole": true,
+          "maxHistory": 10,
+          "enabled": true,
+          "history": [
+            {
+              "time": "7:27:58 PM",
+              "timestamp": 1765510078223,
+              "value": {
+                "hue": 0.3130081300813008,
+                "saturation": 0.891304347826087,
+                "brightness": 216,
+                "rgb": {
+                  "r": 42,
+                  "g": 195,
+                  "b": 21
+                }
+              },
+              "type": "object"
+            },
+            {
+              "time": "7:27:58 PM",
+              "timestamp": 1765510078189,
+              "value": {
+                "hue": 0.3130081300813008,
+                "saturation": 0.891304347826087,
+                "brightness": 216,
+                "rgb": {
+                  "r": 42,
+                  "g": 195,
+                  "b": 21
+                }
+              },
+              "type": "object"
+            },
+            {
+              "time": "7:27:58 PM",
+              "timestamp": 1765510078151,
+              "value": {
+                "hue": 0.3130081300813008,
+                "saturation": 0.891304347826087,
+                "brightness": 216,
+                "rgb": {
+                  "r": 42,
+                  "g": 195,
+                  "b": 21
+                }
+              },
+              "type": "object"
+            },
+            {
+              "time": "7:27:58 PM",
+              "timestamp": 1765510078114,
+              "value": {
+                "hue": 0.3130081300813008,
+                "saturation": 0.891304347826087,
+                "brightness": 216,
+                "rgb": {
+                  "r": 42,
+                  "g": 195,
+                  "b": 21
+                }
+              },
+              "type": "object"
+            },
+            {
+              "time": "7:27:58 PM",
+              "timestamp": 1765510078081,
+              "value": {
+                "hue": 0.3130081300813008,
+                "saturation": 0.891304347826087,
+                "brightness": 216,
+                "rgb": {
+                  "r": 42,
+                  "g": 195,
+                  "b": 21
+                }
+              },
+              "type": "object"
+            },
+            {
+              "time": "7:27:58 PM",
+              "timestamp": 1765510078047,
+              "value": {
+                "hue": 0.3130081300813008,
+                "saturation": 0.891304347826087,
+                "brightness": 216,
+                "rgb": {
+                  "r": 42,
+                  "g": 195,
+                  "b": 21
+                }
+              },
+              "type": "object"
+            },
+            {
+              "time": "7:27:58 PM",
+              "timestamp": 1765510078014,
+              "value": {
+                "hue": 0.3130081300813008,
+                "saturation": 0.891304347826087,
+                "brightness": 216,
+                "rgb": {
+                  "r": 42,
+                  "g": 195,
+                  "b": 21
+                }
+              },
+              "type": "object"
+            },
+            {
+              "time": "7:27:57 PM",
+              "timestamp": 1765510077981,
+              "value": {
+                "hue": 0.3130081300813008,
+                "saturation": 0.891304347826087,
+                "brightness": 216,
+                "rgb": {
+                  "r": 42,
+                  "g": 195,
+                  "b": 21
+                }
+              },
+              "type": "object"
+            },
+            {
+              "time": "7:27:57 PM",
+              "timestamp": 1765510077948,
+              "value": {
+                "hue": 0.3130081300813008,
+                "saturation": 0.891304347826087,
+                "brightness": 216,
+                "rgb": {
+                  "r": 42,
+                  "g": 195,
+                  "b": 21
+                }
+              },
+              "type": "object"
+            },
+            {
+              "time": "7:27:57 PM",
+              "timestamp": 1765510077914,
+              "value": {
+                "hue": 0.3130081300813008,
+                "saturation": 0.891304347826087,
+                "brightness": 216,
+                "rgb": {
+                  "r": 42,
+                  "g": 195,
+                  "b": 21
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "currentValue": {
+            "hue": 0.3130081300813008,
+            "saturation": 0.891304347826087,
+            "brightness": 216,
+            "rgb": {
+              "r": 42,
+              "g": 195,
+              "b": 21
+            }
+          },
+          "messageCount": 897
+        },
+        "selected": false
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "4c849facc2d7ad1b",
+      "source": "01b36eb21745a622",
+      "target": "aa09704f929aebd7",
+      "sourceOutput": "hsvInfo",
+      "targetInput": "input"
+    }
+  ],
+  "viewport": {
+    "x": 327.2489082336426,
+    "y": 139.32086181640622,
+    "k": 0.6239445717393904
+  }
+}

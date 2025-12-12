@@ -5,6 +5,41 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0-beta.16] - 2025-12-11
+
+### Added
+- **🎨 Timeline Color Node** (`SplineTimelineColorNode`): New time-based color gradient node with spline curve control
+  - **Visual Spline Editor**: Drag control points to shape brightness and saturation curves over time
+  - **Dual Curve Mode**: Toggle between editing brightness curve (white) and saturation curve (pink)
+  - **Multiple Range Modes**:
+    - **Numerical**: Map a 0-100 input value to the gradient
+    - **Time**: Automatically output colors based on time of day (e.g., 6 AM to 10 PM)
+    - **Timer**: Triggered countdown that sweeps through the gradient
+  - **Custom Color Stops**: Define your own gradient colors or use rainbow mode
+  - **Preview Playhead**: Drag the playhead to preview colors at any position
+  - **HSV Output**: Outputs `{ hue, saturation, brightness, rgb }` for connecting to lights
+  - Perfect for sunrise/sunset lighting automation, mood transitions, and timed color effects
+
+- **📈 Spline Curve Node** (`SplineCurveNode`): General-purpose spline curve for value mapping
+  - Input any value, output a curve-shaped transformation
+  - Catmull-Rom interpolation for smooth curves
+
+- **🌈 Spline Hue Curve Node** (`SplineHueCurveNode`): Hue-specific spline for color transitions
+  - Maps input values through a hue curve
+  - Great for rainbow effects and color cycling
+
+- **🔧 Spline Base Plugin** (`00_SplineBasePlugin.js`): Shared spline utilities
+  - Provides `window.T2Spline` with `evaluate()`, `createDefaultCurve()`, `clamp()` functions
+  - Used by all spline-based nodes for consistent curve behavior
+
+### Fixed
+- **Timeline Color Node**: Fixed critical bug where copy/pasted or loaded nodes would not output HSV values
+  - Root cause: `data()` method was calling `changeCallback()` which triggered `engine.reset()` mid-fetch
+  - This cancelled remaining node fetches, causing only the first Timeline Color node to work
+  - Fix: Removed `changeCallback()` from inside `data()` - the method should be pure (calculate and return only)
+
+---
+
 ## [2.1.0-beta.15] - 2025-12-11
 
 ### Added

@@ -301,6 +301,24 @@ useEffect(() => {
 - Use `onPointerDown={(e) => e.stopPropagation()}` on interactive controls (sliders, buttons)
 - **Do NOT** use on socket containers (blocks wire connections)
 
+### 4. Never Call changeCallback Inside data()
+```javascript
+// ❌ WRONG - causes engine.reset() mid-fetch, cancels other nodes
+data(inputs) {
+    // ... calculate output ...
+    if (this.changeCallback) this.changeCallback(); // BAD!
+    return output;
+}
+
+// ✅ CORRECT - data() should be pure, only calculate and return
+data(inputs) {
+    // ... calculate output ...
+    this.properties.someValue = calculatedValue; // Store for UI sync
+    return output; // Just return, no side effects
+}
+```
+The `data()` method is called by the DataflowEngine during graph processing. Calling `changeCallback()` inside it triggers `engine.reset()` which cancels remaining node fetches, causing only the first node to work.
+
 ## Development Commands
 
 ```bash

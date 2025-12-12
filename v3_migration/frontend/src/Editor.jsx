@@ -8,9 +8,11 @@ import { ReactPlugin, Presets } from "rete-react-plugin";
 import { DataflowEngine } from "rete-engine";
 import "./sockets"; // Import socket patch globally
 
+
 // Debug mode - set to true to enable verbose console logging
-const EDITOR_DEBUG = false;
-const debug = (...args) => EDITOR_DEBUG && debug('', ...args);
+window.EDITOR_DEBUG = false;
+const EDITOR_DEBUG = window.EDITOR_DEBUG;
+const debug = (...args) => EDITOR_DEBUG && console.debug('[Editor]', ...args);
 
 import { Dock } from "./ui/Dock";
 import { ForecastPanel } from "./ui/ForecastPanel";
@@ -140,12 +142,21 @@ export function Editor() {
                 processScheduled = false;
                 processTimeout = null;
                 
+                const nodes = editor.getNodes();
+                const connections = editor.getConnections();
+                // One-time debug log - press F12 and type: window._debugProcess = true
+                const shouldDebug = window._debugProcess;
+                if (shouldDebug) {
+                    console.log('[Editor] process() - nodes:', nodes.map(n => `${n.id}:${n.label}`));
+                    console.log('[Editor] process() - connections:', connections.map(c => `${c.source}:${c.sourceOutput} -> ${c.target}:${c.targetInput}`));
+                    window._debugProcess = false; // Only log once
+                }
                 engine.reset();
-                for (const node of editor.getNodes()) {
+                for (const node of nodes) {
                     try {
                         await engine.fetch(node.id);
                     } catch (e) {
-                        // Silently ignore nodes without data() method
+                        // Silently ignore fetch errors (cancelled, no data method, etc.)
                     }
                 }
             }, 16); // ~60fps - batches calls within same frame
@@ -1552,7 +1563,8 @@ export function Editor() {
                                         id: node.id,
                                         label: 'node',
                                         translate: () => {},
-                                        unmount: () => {}
+                                        unmount: () => {},
+                                        unselect: () => {}
                                     }, true);
                                 }
                             }
@@ -1580,6 +1592,16 @@ export function Editor() {
                             }
                         }
                     }
+                    
+                    // CRITICAL: Process the pasted nodes to establish data flow
+                    // Without this, connections exist but data doesn't flow
+                    if (engineInstance && editor) {
+                        engineInstance.reset();
+                        for (const n of editor.getNodes()) {
+                            try { await engineInstance.fetch(n.id); } catch (e) { }
+                        }
+                    }
+                    
                     debug('Pasted from clipboard');
 
                 } catch (err) {
@@ -2399,6 +2421,17 @@ export function Editor() {
 
                     if (node) {
                         node.id = nodeData.id;
+
+                        // DEBUG: Check restore condition for Timeline Color (use originalConsole to bypass suppression)
+                        if (nodeData.label === 'Timeline Color') {
+                            originalConsole.log('[DEBUG-IMPORT] Timeline Color restore check:', {
+                                hasRestore: typeof node.restore === 'function',
+                                hasData: !!nodeData.data,
+                                dataKeys: nodeData.data ? Object.keys(nodeData.data) : 'N/A',
+                                propertiesKeys: nodeData.data?.properties ? Object.keys(nodeData.data.properties) : 'N/A',
+                                previewModeValue: nodeData.data?.properties?.previewMode
+                            });
+                        }
 
                         // Restore properties and state
                         if (typeof node.restore === 'function' && nodeData.data) {

@@ -445,6 +445,16 @@
             const hsvInput = inputs.hsv_info?.[0];
             const trigger = inputs.trigger?.[0];
 
+            // DEBUG: Log inputs received
+            if (window.EDITOR_DEBUG) {
+                console.log('[HueLightNode] data() received:', {
+                    nodeId: this.id,
+                    hsvInput: hsvInput,
+                    trigger: trigger,
+                    hasLightsOn: this.hasLightsOn?.()
+                });
+            }
+
             // Handle trigger changes
             if (trigger !== undefined && trigger !== this.lastTriggerValue) {
                 this.lastTriggerValue = trigger;

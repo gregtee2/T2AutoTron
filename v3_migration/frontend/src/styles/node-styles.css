@@ -2368,13 +2368,13 @@
   border-radius: var(--node-radius);
   color: var(--node-color-text, var(--node-device-text));
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  min-width: 440px;
-  max-width: 480px;
+  /* Width is controlled by inline style based on editorWidth */
   display: flex;
   flex-direction: column;
   transition: all var(--transition-normal);
   user-select: none;
   padding: 0;
+  overflow: hidden;
 }
 
 .color-gradient-node.active {
