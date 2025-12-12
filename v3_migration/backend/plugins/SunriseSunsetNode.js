@@ -131,6 +131,9 @@
         const [countdown, setCountdown] = useState("Calculating...");
         const [citySearch, setCitySearch] = useState("");
         const [searchStatus, setSearchStatus] = useState("");
+        const [isEditingTitle, setIsEditingTitle] = useState(false);
+        const titleInputRef = useRef(null);
+        const editingStartTitleRef = useRef(state.customName || "");
 
         const updateProperty = (key, value) => {
             data.properties[key] = value;
@@ -144,6 +147,13 @@
                 calculateTimes();
             }
         };
+
+        useEffect(() => {
+            if (isEditingTitle && titleInputRef.current) {
+                titleInputRef.current.focus();
+                titleInputRef.current.select();
+            }
+        }, [isEditingTitle]);
 
         // City/Zip search using Nominatim (OpenStreetMap)
         const searchLocation = async () => {
@@ -489,7 +499,37 @@
         const outputs = Object.entries(data.outputs).map(([key, output]) => ({ key, ...output }));
 
         return React.createElement('div', { className: 'sunrise-sunset-node' }, [
-            React.createElement('div', { key: 't', className: 'title' }, data.label),
+            React.createElement('div', { key: 't', className: 'title' },
+                isEditingTitle
+                    ? React.createElement('input', {
+                        key: 'ti',
+                        ref: titleInputRef,
+                        type: 'text',
+                        value: state.customName || "",
+                        placeholder: data.label || 'Sunrise/Sunset Trigger',
+                        onChange: (e) => updateProperty('customName', e.target.value),
+                        onBlur: () => setIsEditingTitle(false),
+                        onKeyDown: (e) => {
+                            if (e.key === 'Enter') setIsEditingTitle(false);
+                            if (e.key === 'Escape') {
+                                updateProperty('customName', editingStartTitleRef.current || "");
+                                setIsEditingTitle(false);
+                            }
+                        },
+                        onPointerDown: (e) => e.stopPropagation(),
+                        style: { width: '100%' }
+                    })
+                    : React.createElement('span', {
+                        key: 'ts',
+                        style: { cursor: 'text' },
+                        onDoubleClick: (e) => {
+                            e.stopPropagation();
+                            editingStartTitleRef.current = state.customName || "";
+                            setIsEditingTitle(true);
+                        },
+                        title: 'Double-click to edit title'
+                    }, state.customName || data.label)
+            ),
             // Outputs Section
             React.createElement('div', { key: 'os', className: 'ss-outputs-section' },
                 outputs.map(output => React.createElement('div', { key: output.key, className: 'ss-output-row' }, [

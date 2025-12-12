@@ -27,6 +27,7 @@ const deviceManagers = require('./devices/managers/deviceManagers');
 const mongoose = require('mongoose');
 const fs = require('fs').promises;
 const path = require('path');
+const requireLocalOrPin = require('./api/middleware/requireLocalOrPin');
 
 debug('Weather imports:', {
   fetchWeatherData: typeof fetchWeatherData,
@@ -334,6 +335,7 @@ app.get('/api/sun/times', async (req, res) => {
 // Allowlist of settings that can be read/written via API
 const ALLOWED_SETTINGS = [
   'PORT', 'LOG_LEVEL', 'VERBOSE_LOGGING',
+  'APP_PIN',
   'HA_HOST', 'HA_TOKEN',
   'OPENWEATHERMAP_API_KEY',
   'AMBIENT_API_KEY', 'AMBIENT_APPLICATION_KEY', 'AMBIENT_MAC_ADDRESS',
@@ -343,11 +345,32 @@ const ALLOWED_SETTINGS = [
   'LOCATION_CITY', 'LOCATION_LATITUDE', 'LOCATION_LONGITUDE', 'LOCATION_TIMEZONE'
 ];
 
+const SECRET_SETTINGS = new Set([
+  'APP_PIN',
+  'HA_TOKEN',
+  'OPENWEATHERMAP_API_KEY',
+  'AMBIENT_API_KEY',
+  'AMBIENT_APPLICATION_KEY',
+  'HUE_USERNAME',
+  'TELEGRAM_BOT_TOKEN'
+]);
+
 // GET current settings (masked secrets)
-app.get('/api/settings', async (req, res) => {
+app.get('/api/settings', requireLocalOrPin, async (req, res) => {
   try {
     const envPath = path.join(__dirname, '../.env');
-    const envContent = await fs.readFile(envPath, 'utf-8');
+    let envContent = '';
+    try {
+      envContent = await fs.readFile(envPath, 'utf-8');
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        // First run: no .env yet
+        res.json({ success: true, settings: {} });
+        logger.log('Settings fetched via API (no .env found)', 'info', false, 'settings:read');
+        return;
+      }
+      throw err;
+    }
     
     const settings = {};
     const lines = envContent.split('\n');
@@ -362,7 +385,12 @@ app.get('/api/settings', async (req, res) => {
           
           // Only return allowed settings
           if (ALLOWED_SETTINGS.includes(key)) {
-            settings[key] = value;
+            // Never return secret values in plaintext
+            if (SECRET_SETTINGS.has(key)) {
+              settings[key] = value ? '********' : '';
+            } else {
+              settings[key] = value;
+            }
           }
         }
       }
@@ -377,7 +405,7 @@ app.get('/api/settings', async (req, res) => {
 });
 
 // POST update settings
-app.post('/api/settings', express.json(), async (req, res) => {
+app.post('/api/settings', requireLocalOrPin, express.json(), async (req, res) => {
   try {
     const { settings: newSettings } = req.body;
     
@@ -407,6 +435,13 @@ app.post('/api/settings', express.json(), async (req, res) => {
         logger.log(`Blocked attempt to set non-allowed key: ${key}`, 'warn', false, 'settings:blocked');
         continue;
       }
+
+      // Secrets: treat masked/empty value as "no change"
+      if (SECRET_SETTINGS.has(key)) {
+        if (value === '********' || value === '' || value == null) {
+          continue;
+        }
+      }
       
       // Sanitize value (prevent injection)
       const sanitizedValue = String(value).replace(/[\r\n]/g, '');
@@ -428,6 +463,9 @@ app.post('/api/settings', express.json(), async (req, res) => {
     // Update process.env for immediate effect (some settings)
     for (const [key, value] of Object.entries(newSettings)) {
       if (ALLOWED_SETTINGS.includes(key)) {
+        if (SECRET_SETTINGS.has(key) && (value === '********' || value === '' || value == null)) {
+          continue;
+        }
         process.env[key] = String(value);
       }
     }
@@ -457,17 +495,23 @@ app.post('/api/settings', express.json(), async (req, res) => {
 });
 
 // POST test connection for a service
-app.post('/api/settings/test', express.json(), async (req, res) => {
+app.post('/api/settings/test', requireLocalOrPin, express.json(), async (req, res) => {
   const { service, settings } = req.body;
   
   try {
     let result = { success: false, message: 'Unknown service' };
+
+    const getSetting = (key) => {
+      const val = settings?.[key];
+      if (val === '********') return undefined;
+      return val;
+    };
     
     switch (service) {
       case 'ha': {
         // Test Home Assistant connection
-        const host = settings.HA_HOST || process.env.HA_HOST;
-        const token = settings.HA_TOKEN || process.env.HA_TOKEN;
+        const host = getSetting('HA_HOST') || process.env.HA_HOST;
+        const token = getSetting('HA_TOKEN') || process.env.HA_TOKEN;
         
         if (!host || !token) {
           result = { success: false, message: 'Missing HA_HOST or HA_TOKEN' };
@@ -498,7 +542,7 @@ app.post('/api/settings/test', express.json(), async (req, res) => {
       
       case 'weather': {
         // Test OpenWeatherMap API
-        const apiKey = settings.OPENWEATHERMAP_API_KEY || process.env.OPENWEATHERMAP_API_KEY;
+        const apiKey = getSetting('OPENWEATHERMAP_API_KEY') || process.env.OPENWEATHERMAP_API_KEY;
         
         if (!apiKey) {
           result = { success: false, message: 'Missing OPENWEATHERMAP_API_KEY' };
@@ -531,8 +575,8 @@ app.post('/api/settings/test', express.json(), async (req, res) => {
       
       case 'hue': {
         // Test Philips Hue Bridge
-        const bridgeIp = settings.HUE_BRIDGE_IP || process.env.HUE_BRIDGE_IP;
-        const username = settings.HUE_USERNAME || process.env.HUE_USERNAME;
+        const bridgeIp = getSetting('HUE_BRIDGE_IP') || process.env.HUE_BRIDGE_IP;
+        const username = getSetting('HUE_USERNAME') || process.env.HUE_USERNAME;
         
         if (!bridgeIp || !username) {
           result = { success: false, message: 'Missing HUE_BRIDGE_IP or HUE_USERNAME' };
@@ -566,8 +610,8 @@ app.post('/api/settings/test', express.json(), async (req, res) => {
       
       case 'telegram': {
         // Test Telegram Bot
-        const botToken = settings.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
-        const chatId = settings.TELEGRAM_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
+        const botToken = getSetting('TELEGRAM_BOT_TOKEN') || process.env.TELEGRAM_BOT_TOKEN;
+        const chatId = getSetting('TELEGRAM_CHAT_ID') || process.env.TELEGRAM_CHAT_ID;
         
         if (!botToken) {
           result = { success: false, message: 'Missing TELEGRAM_BOT_TOKEN' };

@@ -64,6 +64,10 @@
     align-items: center;
 }
 
+.forecast-dock-slot:empty {
+    display: none;
+}
+
 .forecast-refresh-btn {
     background: rgba(0, 243, 255, 0.1);
     border: 1px solid #00f3ff;

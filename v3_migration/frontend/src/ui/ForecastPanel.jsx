@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { socket } from '../socket';
 import './ForecastPanel.css';
 
-export function ForecastPanel() {
+export function ForecastPanel({ dockSlotRef }) {
     const [expanded, setExpanded] = useState(true);
     const [devicesExpanded, setDevicesExpanded] = useState(true);
     const [forecastData, setForecastData] = useState(null);
@@ -331,6 +331,9 @@ export function ForecastPanel() {
                     {renderForecast()}
                 </div>
             )}
+
+            {/* Optional slot for merging the Control Panel into this right-side panel */}
+            <div className="forecast-dock-slot" ref={dockSlotRef} />
             
             {/* Active Devices Section */}
             <div className="devices-on-section" style={{ height: devicesExpanded ? devicesHeight : 'auto' }}>

@@ -5,6 +5,10 @@
 const express = require('express');
 const router = express.Router();
 const updateService = require('../services/updateService');
+const requireLocalOrPin = require('./middleware/requireLocalOrPin');
+
+// Updates are a high-risk operation: restrict to localhost or valid PIN
+router.use(requireLocalOrPin);
 
 /**
  * GET /api/update/check

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import './SettingsModal.css';
 import { DiscoveryPanel } from './DiscoveryPanel';
+import { authFetch, clearStoredPin, getPinRememberPreference, getStoredPin, setStoredPin } from '../auth/authClient';
 
 // Theme settings configuration (stored in localStorage, not server)
 const THEME_SETTINGS = [
@@ -114,6 +115,12 @@ export function SettingsModal({ isOpen, onClose }) {
     const [testResults, setTestResults] = useState({});
     const [testing, setTesting] = useState({});
     const fileInputRef = useRef(null);
+
+    // Local (client-side) PIN auth
+    const [pinInput, setPinInput] = useState('');
+    const [rememberPin, setRememberPin] = useState(() => getPinRememberPreference());
+    const [hasStoredPin, setHasStoredPin] = useState(() => !!getStoredPin());
+    const [showPin, setShowPin] = useState(false);
     
     // Theme settings state (stored in localStorage)
     const [themeSettings, setThemeSettings] = useState(() => {
@@ -202,8 +209,11 @@ export function SettingsModal({ isOpen, onClose }) {
     useEffect(() => {
         if (isOpen) {
             fetchSettings();
-            setExpandedCategories({ 'Home Assistant': true });
+            setExpandedCategories({ 'Security': true, 'Home Assistant': true });
             setTestResults({});
+            setRememberPin(getPinRememberPreference());
+            setHasStoredPin(!!getStoredPin());
+            setPinInput('');
         }
     }, [isOpen]);
 
@@ -211,7 +221,7 @@ export function SettingsModal({ isOpen, onClose }) {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/settings');
+            const response = await authFetch('/api/settings');
             if (!response.ok) throw new Error('Failed to fetch settings');
             const data = await response.json();
             setSettings(data.settings || {});
@@ -227,7 +237,7 @@ export function SettingsModal({ isOpen, onClose }) {
         setError(null);
         setSuccess(null);
         try {
-            const response = await fetch('/api/settings', {
+            const response = await authFetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ settings })
@@ -596,7 +606,7 @@ export function SettingsModal({ isOpen, onClose }) {
         setTestResults(prev => ({ ...prev, [service]: null }));
         
         try {
-            const response = await fetch('/api/settings/test', {
+            const response = await authFetch('/api/settings/test', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ service, settings })
@@ -689,7 +699,143 @@ export function SettingsModal({ isOpen, onClose }) {
                             {success && <div className="settings-success">{success}</div>}
 
                             <div className="settings-warning">
-                                ⚠️ API keys are stored in the server's .env file. Keep this secure!
+                                ⚠️ These settings are stored on the server (managed by this app). Keep the server secure.
+                            </div>
+
+                            {/* Security (PIN) Section */}
+                            <div className="settings-category">
+                                <div
+                                    className="settings-category-header"
+                                    onClick={() => toggleCategory('Security')}
+                                    style={{ background: 'linear-gradient(135deg, rgba(0, 243, 255, 0.12), rgba(0, 150, 200, 0.08))' }}
+                                >
+                                    <span>
+                                        {expandedCategories['Security'] ? '▼' : '▶'}
+                                        🔒 Security (This Device)
+                                    </span>
+                                    {hasStoredPin && (
+                                        <span style={{ fontSize: '10px', color: rememberPin ? '#00c896' : '#ffaa00' }}>
+                                            ● {rememberPin ? 'REMEMBERED' : 'SESSION'}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {expandedCategories['Security'] && (
+                                    <div className="settings-category-content">
+                                        <div className="settings-info" style={{
+                                            fontSize: '11px',
+                                            color: '#8a959e',
+                                            marginBottom: '10px',
+                                            padding: '8px',
+                                            background: 'rgba(0, 243, 255, 0.06)',
+                                            borderRadius: '4px'
+                                        }}>
+                                            Used to authorize protected actions (Settings tests, Updates) when accessing the server from another device.
+                                        </div>
+
+                                        <div className="settings-field">
+                                            <label className="settings-label">
+                                                App PIN
+                                                <button
+                                                    className="settings-show-btn"
+                                                    onClick={() => setShowPin(v => !v)}
+                                                    type="button"
+                                                >
+                                                    {showPin ? '🙈 Hide' : '👁️ Show'}
+                                                </button>
+                                            </label>
+                                            <input
+                                                type={showPin ? 'text' : 'password'}
+                                                className="settings-input"
+                                                value={pinInput}
+                                                onChange={(e) => setPinInput(e.target.value)}
+                                                placeholder={hasStoredPin ? 'Enter new PIN (leave blank to keep current)' : 'Enter PIN'}
+                                                autoComplete="off"
+                                            />
+                                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'center' }}>
+                                                <label style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12px', color: '#88ddff' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={rememberPin}
+                                                        onChange={(e) => {
+                                                            const next = e.target.checked;
+                                                            setRememberPin(next);
+                                                            const existing = getStoredPin();
+                                                            if (existing) setStoredPin(existing, { remember: next });
+                                                        }}
+                                                    />
+                                                    Remember PIN on this device
+                                                </label>
+                                                <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+                                                    <button
+                                                        className="settings-btn-small"
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const trimmed = pinInput.trim();
+                                                            if (trimmed) {
+                                                                setStoredPin(trimmed, { remember: rememberPin });
+                                                                setHasStoredPin(true);
+                                                                setPinInput('');
+                                                                (async () => {
+                                                                    try {
+                                                                        const resp = await authFetch('/api/settings', {
+                                                                            method: 'POST',
+                                                                            headers: { 'Content-Type': 'application/json' },
+                                                                            body: JSON.stringify({ settings: { APP_PIN: trimmed } })
+                                                                        });
+                                                                        if (!resp.ok) {
+                                                                            const text = await resp.text();
+                                                                            throw new Error(text || `HTTP ${resp.status}`);
+                                                                        }
+                                                                        setSuccess('PIN saved (server + this device).');
+                                                                        setTimeout(() => setSuccess(null), 3000);
+                                                                    } catch (e) {
+                                                                        // Still useful: local PIN is saved for this device.
+                                                                        setSuccess('PIN saved on this device. Server PIN update failed.');
+                                                                        setTimeout(() => setSuccess(null), 4000);
+                                                                    } finally {
+                                                                        fetchSettings();
+                                                                    }
+                                                                })();
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            background: 'rgba(0, 200, 150, 0.1)',
+                                                            borderColor: 'rgba(0, 200, 150, 0.4)',
+                                                            color: '#00c896'
+                                                        }}
+                                                        disabled={!pinInput.trim()}
+                                                    >
+                                                        💾 Save PIN
+                                                    </button>
+                                                    <button
+                                                        className="settings-btn-small"
+                                                        type="button"
+                                                        onClick={() => {
+                                                            clearStoredPin();
+                                                            setHasStoredPin(false);
+                                                            setPinInput('');
+                                                            setRememberPin(false);
+                                                            setSuccess('PIN cleared.');
+                                                            setTimeout(() => setSuccess(null), 3000);
+                                                        }}
+                                                        style={{
+                                                            background: 'rgba(199, 95, 95, 0.12)',
+                                                            borderColor: 'rgba(199, 95, 95, 0.45)',
+                                                            color: '#c75f5f'
+                                                        }}
+                                                        disabled={!hasStoredPin}
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div style={{ marginTop: '8px', fontSize: '11px', color: '#666' }}>
+                                                {hasStoredPin ? `PIN is saved (${rememberPin ? 'remembered' : 'this session'}).` : 'No PIN saved.'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Backup/Restore Section */}

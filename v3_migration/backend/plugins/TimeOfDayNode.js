@@ -118,6 +118,9 @@
         const { data, emit } = props;
         const [state, setState] = useState(data.properties);
         const [countdown, setCountdown] = useState("Calculating...");
+        const [isEditingTitle, setIsEditingTitle] = useState(false);
+        const titleInputRef = useRef(null);
+        const editingStartTitleRef = useRef(state.customName || "");
 
         const updateProperty = (key, value) => {
             data.properties[key] = value;
@@ -132,6 +135,13 @@
                 calculateTimes();
             }
         };
+
+        useEffect(() => {
+            if (isEditingTitle && titleInputRef.current) {
+                titleInputRef.current.focus();
+                titleInputRef.current.select();
+            }
+        }, [isEditingTitle]);
 
         const log = (message, level = 'info') => { if (state.debug || level === 'error') console.log(`[TimeOfDayNode] ${message}`); };
 
@@ -347,7 +357,38 @@
                 className: 'title',
                 style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }
             }, [
-                React.createElement('span', { key: 'label' }, '🕐 ' + data.label),
+                React.createElement('div', { key: 'label', style: { display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 } }, [
+                    React.createElement('span', { key: 'icon' }, '🕐'),
+                    isEditingTitle
+                        ? React.createElement('input', {
+                            key: 'ti',
+                            ref: titleInputRef,
+                            type: 'text',
+                            value: state.customName || "",
+                            placeholder: data.label || 'Time of Day',
+                            onChange: (e) => updateProperty('customName', e.target.value),
+                            onBlur: () => setIsEditingTitle(false),
+                            onKeyDown: (e) => {
+                                if (e.key === 'Enter') setIsEditingTitle(false);
+                                if (e.key === 'Escape') {
+                                    updateProperty('customName', editingStartTitleRef.current || "");
+                                    setIsEditingTitle(false);
+                                }
+                            },
+                            onPointerDown: (e) => e.stopPropagation(),
+                            style: { flex: 1, minWidth: 0 }
+                        })
+                        : React.createElement('div', {
+                            key: 'ts',
+                            style: { cursor: 'text', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+                            onDoubleClick: (e) => {
+                                e.stopPropagation();
+                                editingStartTitleRef.current = state.customName || "";
+                                setIsEditingTitle(true);
+                            },
+                            title: 'Double-click to edit title'
+                        }, state.customName || data.label)
+                ]),
                 HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
             ]),
             // Outputs Section

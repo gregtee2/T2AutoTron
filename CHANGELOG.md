@@ -5,6 +5,24 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0-beta.17] - 2025-12-12
+
+### Added
+- **Merged Control Panel**: Control Panel can be merged into the right-side Forecast panel (and popped back out); state persists across reloads.
+- **Editable node titles**: Sunrise/Sunset and Time of Day nodes support double-click title editing.
+- **PIN auth (LAN-friendly)**: Settings UI supports saving/remembering an App PIN; Socket.IO auto-auth with success/failure toasts; `authFetch()` helper adds `X-APP-PIN` automatically.
+
+### Changed
+- Default Socket.IO client URL now uses `window.location.origin` when `VITE_API_URL` is not set (better LAN defaults).
+- Sensitive REST endpoints now require "local or PIN" (settings, updates, device control); secrets returned by `/api/settings` are masked as `********`.
+- Electron hardened defaults: production uses `webSecurity: true` and IPC channels are allowlisted.
+- CSP no longer enables `unsafe-eval` in production.
+- Docs updated with the editable-title node header pattern.
+
+### Fixed
+- Editor pan/zoom stability: viewport restore now uses AreaPlugin APIs (avoids transform desync); additional pointer-capture tracking/release to prevent stuck interactions.
+- Backdrop resize reliability: redundant pointer-capture cleanup paths reduce stuck-drag scenarios.
+
 ## [2.1.0-beta.16] - 2025-12-11
 
 ### Added

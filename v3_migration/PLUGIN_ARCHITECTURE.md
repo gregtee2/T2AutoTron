@@ -252,6 +252,22 @@ Every plugin follows this pattern:
 })();
 ```
 
+## Common UI Patterns
+
+### Editable Node Titles
+
+Some nodes support an editable title in the node header (double-click to edit). Prefer these conventions:
+
+- If the node already has a “Name” field, reuse `properties.customName` and display `customName || data.label` in the header.
+- If the node needs a title separate from other naming fields, use `properties.customTitle`.
+
+Implementation checklist:
+
+- Swap the header title text to an `<input>` on `onDoubleClick`.
+- Add `onPointerDown={(e) => e.stopPropagation()}` on the `<input>` so editing doesn’t drag the node.
+- Commit on blur/Enter; cancel on Escape.
+- Include the chosen property in `serialize()` and `restore()` so it persists in saved graphs.
+
 ## Available Socket Types
 
 Access via `window.sockets`:

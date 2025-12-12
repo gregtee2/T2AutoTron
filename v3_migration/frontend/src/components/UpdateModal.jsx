@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './UpdateModal.css';
+import { authFetch } from '../auth/authClient';
 
 /**
  * UpdateModal - Shows when a new version is available
@@ -33,7 +34,7 @@ function UpdateModal({ updateInfo, onClose, onApplyUpdate }) {
     sessionStorage.setItem('autoLoadAfterUpdate', 'true');
     
     try {
-      const response = await fetch('/api/update/apply', {
+      const response = await authFetch('/api/update/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -47,7 +48,7 @@ function UpdateModal({ updateInfo, onClose, onApplyUpdate }) {
         // Try to reload - if server is down, keep trying
         setTimeout(() => {
           const tryReload = () => {
-            fetch('/api/health', { method: 'GET' })
+            authFetch('/api/health', { method: 'GET' })
               .then(() => window.location.reload())
               .catch(() => setTimeout(tryReload, 2000));
           };
@@ -61,7 +62,7 @@ function UpdateModal({ updateInfo, onClose, onApplyUpdate }) {
         setUpdateStatus('Server restarting... Reloading page...');
         setTimeout(() => {
           const tryReload = () => {
-            fetch('/api/health', { method: 'GET' })
+            authFetch('/api/health', { method: 'GET' })
               .then(() => window.location.reload())
               .catch(() => setTimeout(tryReload, 2000));
           };

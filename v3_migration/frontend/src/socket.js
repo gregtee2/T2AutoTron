@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 
-// Default to localhost:3000 if not specified in env
-const URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Default to the current origin so LAN access works (and Vite can proxy /socket.io to backend)
+const URL = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
 
 export const socket = io(URL, {
     autoConnect: false,

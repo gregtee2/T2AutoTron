@@ -1,8 +1,8 @@
 const logger = require('../../logging/logger');
 
 module.exports = (err, req, res, next) => {
-  // Log the error using logger.log with 'error' level
-  logger.log('error', err.stack, { stack: err.stack }, 'error:unhandled');
+  // Log the error using logger.log(message, level, ...)
+  logger.log(err.message || 'Unhandled error', 'error', true, 'error:unhandled', { stack: err.stack });
 
   // Send error response
   const isDevelopment = process.env.NODE_ENV !== 'production';

@@ -6,6 +6,7 @@ import ErrorBoundary from './ErrorBoundary';
 import { ToastContainer, ToastExposer, useToast } from './ui/Toast';
 import { LoadingOverlay } from './ui/LoadingOverlay';
 import UpdateModal from './components/UpdateModal';
+import { getStoredPin } from './auth/authClient';
 import './App.css';
 import './styles/performance-mode.css'; // Performance mode overrides
 import './test-sockets.js'; // Test socket patch
@@ -171,6 +172,7 @@ function App() {
   const [eventLogFilter, setEventLogFilter] = useState(() => localStorage.getItem('eventLogFilter') || 'all');
   const eventLogRef = useRef(null);
   const resizeRef = useRef(null);
+  const authStateRef = useRef({ authenticated: false, invalidPinNotified: false });
   const maxLogEntries = 100;
   const toast = useToast();
 
@@ -207,6 +209,10 @@ function App() {
       addEventLog('system', 'Socket connected to server');
       // Clear state tracking on reconnect to get fresh data
       lastKnownState.clear();
+
+      const pin = getStoredPin();
+      if (pin) socket.emit('authenticate', pin);
+
       // Request HA status when we connect
       socket.emit('request-ha-status');
     }
@@ -214,6 +220,7 @@ function App() {
     function onDisconnect() {
       setIsConnected(false);
       setHaStatus({ connected: false, wsConnected: false, deviceCount: 0 });
+      authStateRef.current.authenticated = false;
       // Debug: console.log('Socket disconnected');
       toast.warning('Disconnected from server');
       addEventLog('system', 'Socket disconnected from server');
@@ -222,6 +229,35 @@ function App() {
     function onHaConnectionStatus(data) {
       setHaStatus(data);
       // Debug: console.log('HA connection status:', data);
+    }
+
+    function onAuthSuccess() {
+      if (authStateRef.current.authenticated) return;
+      authStateRef.current.authenticated = true;
+      authStateRef.current.invalidPinNotified = false;
+      toast.success('Authenticated');
+    }
+
+    function onAuthFailed(data) {
+      authStateRef.current.authenticated = false;
+      const errText = (data?.error || '').toString();
+      if (errText.toLowerCase().includes('invalid pin')) {
+        if (!authStateRef.current.invalidPinNotified) {
+          authStateRef.current.invalidPinNotified = true;
+          toast.error('Stored PIN is invalid. Update it in Settings → Security.');
+        }
+        return;
+      }
+
+      const msg = errText ? `Authentication failed: ${errText}` : 'Authentication failed';
+      toast.error(msg);
+    }
+
+    function onPinChanged() {
+      if (!socket.connected) return;
+      authStateRef.current.invalidPinNotified = false;
+      const pin = getStoredPin();
+      if (pin) socket.emit('authenticate', pin);
     }
 
     // Listen for device state changes from backend (real-time updates from HA, Hue, Kasa, Shelly)
@@ -315,6 +351,8 @@ function App() {
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    socket.on('auth-success', onAuthSuccess);
+    socket.on('auth-failed', onAuthFailed);
     socket.on('ha-connection-status', onHaConnectionStatus);
     socket.on('device-state-update', onDeviceStateUpdate);
     socket.on('device_state_change', onDeviceStateChange);
@@ -323,11 +361,15 @@ function App() {
     socket.on('trigger_event', onTriggerEvent);
     socket.on('update-available', onUpdateAvailable);
 
+    window.addEventListener('t2-pin-changed', onPinChanged);
+
     connectSocket();
 
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
+      socket.off('auth-success', onAuthSuccess);
+      socket.off('auth-failed', onAuthFailed);
       socket.off('ha-connection-status', onHaConnectionStatus);
       socket.off('device-state-update', onDeviceStateUpdate);
       socket.off('device_state_change', onDeviceStateChange);
@@ -335,6 +377,7 @@ function App() {
       socket.off('scheduled_events', onScheduledEvents);
       socket.off('trigger_event', onTriggerEvent);
       socket.off('update-available', onUpdateAvailable);
+      window.removeEventListener('t2-pin-changed', onPinChanged);
       disconnectSocket();
     };
   }, []);

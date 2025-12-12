@@ -291,8 +291,11 @@
         const handleResizeStart = (e) => {
             e.stopPropagation();
             e.preventDefault();
-            
-            e.target.setPointerCapture(e.pointerId);
+
+            // Pointer-capture is required for reliable resizing, but if cleanup is missed
+            // (lost focus, browser/Electron quirks), it can leave the editor in a stuck state.
+            // So we add multiple redundant cleanup paths.
+            try { e.target.setPointerCapture(e.pointerId); } catch (err) {}
             
             const startX = e.clientX;
             const startY = e.clientY;
@@ -300,6 +303,21 @@
             const startHeight = dimensions.height;
             const pointerId = e.pointerId;
             const target = e.target;
+
+            let isResizing = true;
+
+            const cleanup = () => {
+                if (!isResizing) return;
+                isResizing = false;
+                try { target.releasePointerCapture(pointerId); } catch (err) {}
+                try { target.removeEventListener('pointermove', handlePointerMove); } catch (err) {}
+                try { target.removeEventListener('pointerup', handlePointerUp); } catch (err) {}
+                try { target.removeEventListener('pointercancel', handlePointerUp); } catch (err) {}
+                try { target.removeEventListener('lostpointercapture', handleLostPointerCapture); } catch (err) {}
+                try { window.removeEventListener('blur', handleWindowBlur); } catch (err) {}
+                try { document.removeEventListener('visibilitychange', handleVisibilityChange); } catch (err) {}
+                if (data.changeCallback) data.changeCallback();
+            };
 
             const getCanvasScale = () => {
                 let el = target;
@@ -339,21 +357,29 @@
 
             const handlePointerUp = (upEvent) => {
                 if (upEvent.pointerId !== pointerId) return;
-                upEvent.preventDefault();
-                upEvent.stopPropagation();
-                
-                target.releasePointerCapture(pointerId);
-                
-                target.removeEventListener('pointermove', handlePointerMove);
-                target.removeEventListener('pointerup', handlePointerUp);
-                target.removeEventListener('pointercancel', handlePointerUp);
-                
-                if (data.changeCallback) data.changeCallback();
+                try {
+                    upEvent.preventDefault();
+                    upEvent.stopPropagation();
+                } catch (err) {}
+                cleanup();
+            };
+
+            const handleLostPointerCapture = (capEvent) => {
+                if (capEvent.pointerId !== pointerId) return;
+                cleanup();
+            };
+
+            const handleWindowBlur = () => cleanup();
+            const handleVisibilityChange = () => {
+                if (document.hidden) cleanup();
             };
 
             target.addEventListener('pointermove', handlePointerMove);
             target.addEventListener('pointerup', handlePointerUp);
             target.addEventListener('pointercancel', handlePointerUp);
+            target.addEventListener('lostpointercapture', handleLostPointerCapture);
+            window.addEventListener('blur', handleWindowBlur);
+            document.addEventListener('visibilitychange', handleVisibilityChange);
         };
 
         return React.createElement('div', {

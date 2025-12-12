@@ -7,8 +7,9 @@ import { socket } from '../socket';
 import { getLoadingState } from '../registries/PluginLoader';
 import { onPluginProgress } from '../registries/PluginLoader';
 import { useToast } from './Toast';
+import { authFetch } from '../auth/authClient';
 
-export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedChanges }) {
+export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedChanges, isMerged = false, onToggleMerged }) {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -167,6 +168,7 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
     }, [position]);
 
     const handleMouseDown = (e) => {
+        if (isMerged) return;
         if (e.target.closest('.dock-header')) {
             setIsDragging(true);
             setDragOffset({
@@ -229,7 +231,11 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
         
         setCheckingUpdate(true);
         try {
-            const response = await fetch('/api/update/check?force=true');
+            const response = await authFetch('/api/update/check?force=true');
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || `HTTP ${response.status}`);
+            }
             const data = await response.json();
             
             if (data.hasUpdate) {
@@ -259,16 +265,31 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
     return (
         <div
             ref={dockRef}
-            className="dock-container"
+            className={`dock-container ${isMerged ? 'dock-merged' : ''}`}
             style={{
-                left: `${position.x}px`,
-                top: `${position.y}px`,
-                cursor: isDragging ? 'grabbing' : 'default'
+                ...(isMerged
+                    ? { cursor: 'default' }
+                    : {
+                        left: `${position.x}px`,
+                        top: `${position.y}px`,
+                        cursor: isDragging ? 'grabbing' : 'default'
+                    })
             }}
             onMouseDown={handleMouseDown}
         >
-            <div className="dock-header" style={{ cursor: 'grab' }}>
-                <span className="dock-title">⚙️ Control Panel</span>
+            <div className="dock-header" style={{ cursor: isMerged ? 'default' : 'grab' }}>
+                <div className="dock-header-row">
+                    <span className="dock-title">⚙️ Control Panel</span>
+                    <button
+                        type="button"
+                        className="dock-btn-small"
+                        onClick={(e) => { e.stopPropagation(); onToggleMerged?.(); }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        title={isMerged ? 'Pop Control Panel back out' : 'Merge Control Panel into the Forecast panel'}
+                    >
+                        {isMerged ? 'Pop out' : 'Merge'}
+                    </button>
+                </div>
                 <span className="dock-datetime">{formatDateTime()}</span>
             </div>
 

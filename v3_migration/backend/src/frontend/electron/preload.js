@@ -4,6 +4,17 @@ const { contextBridge, ipcRenderer } = require('electron');
 console.log("Preload script loaded");
 
 try {
+    const ALLOWED_SEND_CHANNELS = new Set(['log']);
+    const ALLOWED_RECEIVE_CHANNELS = new Set([
+        'server-ready',
+        'device-list-update',
+        'device-state-update',
+        'weather-update',
+        'forecast-update',
+        'editor-delete-key',
+        'log-message'
+    ]);
+
     contextBridge.exposeInMainWorld('api', {
         fetchSunTimes: async (coords) => {
             try {
@@ -34,8 +45,17 @@ try {
                 throw error;
             }
         },
-        send: (channel, data) => ipcRenderer.send(channel, data),
+        // Avoid exposing arbitrary IPC channels to the renderer.
+        send: (channel, data) => {
+            if (!ALLOWED_SEND_CHANNELS.has(channel)) {
+                throw new Error(`Blocked IPC send channel: ${channel}`);
+            }
+            ipcRenderer.send(channel, data);
+        },
         receive: (channel, func) => {
+            if (!ALLOWED_RECEIVE_CHANNELS.has(channel)) {
+                throw new Error(`Blocked IPC receive channel: ${channel}`);
+            }
             const subscription = (event, ...args) => func(...args);
             ipcRenderer.on(channel, subscription);
             return () => ipcRenderer.removeListener(channel, subscription);

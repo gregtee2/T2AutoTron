@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../../logging/logger');
+const requireLocalOrPin = require('../middleware/requireLocalOrPin');
 
 module.exports = (io, deviceService) => {
   router.get('/', async (req, res) => {
@@ -78,7 +79,9 @@ module.exports = (io, deviceService) => {
     }
   });
 
-  router.post('/', async (req, res) => {
+  // Device control is sensitive: restrict to localhost or valid PIN
+  // (GET /api/devices remains readable for UI convenience)
+  router.post('/', requireLocalOrPin, async (req, res) => {
     const { deviceId, state } = req.body;
     logger.log(
       `REST device control received: ${deviceId}`,

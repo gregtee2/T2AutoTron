@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { NodeEditor, ClassicPreset } from "rete";
 import { AreaPlugin, AreaExtensions } from "rete-area-plugin";
@@ -70,6 +71,24 @@ export function Editor() {
     const [areaInstance, setAreaInstance] = useState(null);
     const [engineInstance, setEngineInstance] = useState(null);
     const [selectorInstance, setSelectorInstance] = useState(null);
+
+    const [dockMergedIntoForecast, setDockMergedIntoForecast] = useState(() => {
+        try {
+            return localStorage.getItem('dockMergedIntoForecast') === 'true';
+        } catch {
+            return false;
+        }
+    });
+    const dockOverlaySlotRef = useRef(null);
+    const forecastDockSlotRef = useRef(null);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('dockMergedIntoForecast', String(dockMergedIntoForecast));
+        } catch {
+            // ignore (e.g., storage blocked)
+        }
+    }, [dockMergedIntoForecast]);
     const programmaticMoveRef = useRef(false);
     const lassoSelectedNodesRef = useRef(new Set());
     const processImmediateRef = useRef(null);  // For graph load operations
@@ -445,6 +464,22 @@ export function Editor() {
         document.addEventListener('visibilitychange', onVisibilityChange);
 
         const onPointerDown = (e) => {
+            // Ensure the editor container has focus so AreaPlugin pan/zoom handlers work reliably.
+            // (Matches the user workaround: clicking immediately after load often "unsticks" pan/zoom.)
+            try {
+                // Don't steal focus from text inputs / editable controls
+                const target = e.target;
+                const isEditable = target && (
+                    target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.isContentEditable
+                );
+                if (!isEditable) {
+                    container.tabIndex = -1;
+                    container.focus();
+                }
+            } catch (err) {}
+
             // Enable Lasso on Ctrl + Left Click
             if ((e.ctrlKey || e.metaKey) && e.button === 0) {
                 // Debug: debug(" Lasso start");
@@ -1026,6 +1061,36 @@ export function Editor() {
         let editorPromise = null;
         let resizeObserver = null;
 
+        // Track pointer captures so we can reliably release the *actual* captured IDs.
+        // Some machines end up with a stuck pointer capture that breaks pan/zoom until a full reload.
+        const capturedPointers = new Map(); // pointerId -> { el: EventTarget, pointerType: string }
+        const onGotPointerCapture = (e) => {
+            try {
+                if (typeof e.pointerId === 'number') {
+                    capturedPointers.set(e.pointerId, { el: e.target, pointerType: e.pointerType || 'mouse' });
+                }
+            } catch (err) {}
+        };
+        const onLostPointerCapture = (e) => {
+            try {
+                if (typeof e.pointerId === 'number') {
+                    capturedPointers.delete(e.pointerId);
+                }
+            } catch (err) {}
+        };
+        const onPointerEnd = (e) => {
+            try {
+                if (typeof e.pointerId === 'number') {
+                    capturedPointers.delete(e.pointerId);
+                }
+            } catch (err) {}
+        };
+
+        container.addEventListener('gotpointercapture', onGotPointerCapture, true);
+        container.addEventListener('lostpointercapture', onLostPointerCapture, true);
+        window.addEventListener('pointerup', onPointerEnd, true);
+        window.addEventListener('pointercancel', onPointerEnd, true);
+
         // Load plugins FIRST, then create editor
         editorPromise = loadPlugins().then(() => {
             debug(" External plugins loaded, now creating editor...");
@@ -1086,6 +1151,33 @@ export function Editor() {
                             // Focus container
                             container.tabIndex = -1;
                             container.focus();
+
+                            // Release any known captured pointers first (most reliable unstick)
+                            try {
+                                const captured = Array.from(capturedPointers.entries());
+                                capturedPointers.clear();
+                                captured.forEach(([pointerId, info]) => {
+                                    const el = info?.el;
+                                    const pointerType = info?.pointerType || 'mouse';
+                                    try {
+                                        // Nudge handlers that track pointer state
+                                        const cancelEvent = new PointerEvent('pointercancel', {
+                                            bubbles: true,
+                                            cancelable: true,
+                                            pointerId,
+                                            pointerType
+                                        });
+                                        container.dispatchEvent(cancelEvent);
+                                    } catch (e) {}
+
+                                    try { container.releasePointerCapture(pointerId); } catch (e) {}
+                                    try {
+                                        if (el && typeof el.releasePointerCapture === 'function') {
+                                            el.releasePointerCapture(pointerId);
+                                        }
+                                    } catch (e) {}
+                                });
+                            } catch (e) {}
                             
                             // Release pointer captures only on container and direct drag-related elements
                             // (Avoid querySelectorAll('*') which is very slow with many nodes)
@@ -1188,9 +1280,14 @@ export function Editor() {
         // Listen for graphLoadComplete event to do a final reset (outside promise for cleanup access)
         const onGraphLoadComplete = () => {
             debug(' graphLoadComplete event received - triggering view reset');
-            if (window.resetEditorView) {
-                window.resetEditorView();
-            }
+            const tryReset = () => {
+                if (window.resetEditorView) window.resetEditorView();
+            };
+            // Retry a few times because `resetEditorView` may not exist yet
+            tryReset();
+            setTimeout(tryReset, 100);
+            setTimeout(tryReset, 500);
+            setTimeout(tryReset, 1000);
         };
         window.addEventListener('graphLoadComplete', onGraphLoadComplete);
 
@@ -1199,6 +1296,10 @@ export function Editor() {
                 resizeObserver.disconnect();
             }
             window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
+            container.removeEventListener('gotpointercapture', onGotPointerCapture, true);
+            container.removeEventListener('lostpointercapture', onLostPointerCapture, true);
+            window.removeEventListener('pointerup', onPointerEnd, true);
+            window.removeEventListener('pointercancel', onPointerEnd, true);
             editorPromise.then((result) => result.destroy());
         };
     }, [createEditor]);
@@ -2075,10 +2176,14 @@ export function Editor() {
             // This prevents dense node clusters from rendering in the visible area
             // We'll zoom to fit all nodes after they're added
             if (areaInstance?.area) {
-                const transform = areaInstance.area.transform;
-                transform.k = 0.1;  // Zoom out to 10%
-                transform.x = 0;
-                transform.y = 0;
+                try {
+                    // IMPORTANT: Use AreaPlugin APIs; directly mutating `transform` can desync internal state
+                    // and intermittently break pan/zoom until the user interacts.
+                    areaInstance.area.zoom(0.1, 0, 0);
+                    areaInstance.area.translate(0, 0);
+                } catch (e) {
+                    // Non-fatal; load will still proceed
+                }
             }
             
             try {
@@ -2178,23 +2283,16 @@ export function Editor() {
                     
                     debug('[handleLoad] Restoring viewport:', { savedX, savedY, savedK });
                     debug('[handleLoad] Current transform before restore:', { ...areaInstance.area.transform });
-                    
-                    // Directly set the transform values (the area.transform object is mutable)
-                    const transform = areaInstance.area.transform;
-                    transform.k = savedK;
-                    transform.x = savedX;
-                    transform.y = savedY;
-                    
-                    // Force the area to update its visual representation
-                    // The area uses CSS transform on its container element
-                    const areaContainer = areaInstance.container?.querySelector('.rete-area');
-                    if (areaContainer) {
-                        areaContainer.style.transform = `translate(${savedX}px, ${savedY}px) scale(${savedK})`;
+
+                    // IMPORTANT: Use AreaPlugin APIs to restore viewport.
+                    // Directly mutating `area.transform` / setting CSS can desync internal state and freeze pan/zoom.
+                    try {
+                        areaInstance.area.zoom(savedK, 0, 0);
+                        areaInstance.area.translate(savedX, savedY);
+                    } catch (viewportErr) {
+                        console.warn('[handleLoad] Viewport restore failed:', viewportErr);
                     }
-                    
-                    // Also emit a transformed event to notify any listeners
-                    areaInstance.emit({ type: 'transformed', data: { transform } });
-                    
+
                     debug('[handleLoad] Transform after restore:', { ...areaInstance.area.transform });
                     
                     const container = areaInstance.container;
@@ -2212,13 +2310,14 @@ export function Editor() {
                         // ELECTRON FIX: Dispatch synthetic pointer events to reset area's drag state
                         // This fixes pan/zoom issues that occur after loading graphs in Electron
                         // Use the global reset function which is more comprehensive
-                        if (window.resetEditorView) {
-                            setTimeout(() => window.resetEditorView(), 100);
-                            // Run it again after a longer delay as a safety net
-                            setTimeout(() => window.resetEditorView(), 500);
-                            // One more for good measure at 1 second
-                            setTimeout(() => window.resetEditorView(), 1000);
-                        }
+                        const tryReset = () => {
+                            if (window.resetEditorView) window.resetEditorView();
+                        };
+                        // Schedule retries regardless of whether `resetEditorView` exists *right now*.
+                        // (Load timing can beat the editor init on some machines.)
+                        setTimeout(tryReset, 100);
+                        setTimeout(tryReset, 500);
+                        setTimeout(tryReset, 1000);
                     }
                     
                     // Release any stuck pointer captures on all nodes
@@ -2377,10 +2476,14 @@ export function Editor() {
             // PERF FIX: Zoom out before adding nodes to prevent UI freeze
             // This prevents dense node clusters from rendering in the visible area
             if (areaInstance?.area) {
-                const transform = areaInstance.area.transform;
-                transform.k = 0.1;  // Zoom out to 10%
-                transform.x = 0;
-                transform.y = 0;
+                try {
+                    // IMPORTANT: Use AreaPlugin APIs; directly mutating `transform` can desync internal state
+                    // and intermittently break pan/zoom until the user interacts.
+                    areaInstance.area.zoom(0.1, 0, 0);
+                    areaInstance.area.translate(0, 0);
+                } catch (e) {
+                    // Non-fatal; import will still proceed
+                }
             }
             
             try {
@@ -2494,9 +2597,11 @@ export function Editor() {
                 }
                 
                 // Final safety reset of editor view after all loading is complete
-                if (window.resetEditorView) {
-                    setTimeout(() => window.resetEditorView(), 100);
-                }
+                const tryReset = () => {
+                    if (window.resetEditorView) window.resetEditorView();
+                };
+                setTimeout(tryReset, 100);
+                setTimeout(tryReset, 500);
             }, 2000);  // 2 second delay to ensure all queued callbacks have fired
             
             // Restore console
@@ -2517,15 +2622,25 @@ export function Editor() {
     return (
         <div style={{ width: "100%", height: "100vh", position: "relative" }}>
             <div ref={ref} className="rete-editor" style={{ width: "100%", height: "100%", marginRight: "320px" }} />
-            <Dock
-                onSave={handleSave}
-                onLoad={handleLoad}
-                onClear={handleClear}
-                onExport={handleExport}
-                onImport={handleImport}
-                hasUnsavedChanges={hasUnsavedChanges}
-            />
-            <ForecastPanel />
+            <div ref={dockOverlaySlotRef} />
+            {(() => {
+                const target = dockMergedIntoForecast ? forecastDockSlotRef.current : dockOverlaySlotRef.current;
+                if (!target) return null;
+                return createPortal(
+                    <Dock
+                        onSave={handleSave}
+                        onLoad={handleLoad}
+                        onClear={handleClear}
+                        onExport={handleExport}
+                        onImport={handleImport}
+                        hasUnsavedChanges={hasUnsavedChanges}
+                        isMerged={dockMergedIntoForecast}
+                        onToggleMerged={() => setDockMergedIntoForecast(v => !v)}
+                    />,
+                    target
+                );
+            })()}
+            <ForecastPanel dockSlotRef={forecastDockSlotRef} />
             <FastContextMenu
                 visible={contextMenu.visible}
                 position={contextMenu.position}

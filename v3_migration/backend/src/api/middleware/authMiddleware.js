@@ -22,8 +22,14 @@ class AuthManager {
      * @returns {boolean}
      */
     verifyPin(pin) {
+        // Allow APP_PIN changes at runtime (Settings API updates process.env)
+        const currentPin = process.env.APP_PIN || this.correctPin || '1234';
+        if (currentPin !== this.correctPin) {
+            this.correctPin = currentPin;
+        }
+
         // Constant-time comparison to prevent timing attacks
-        const correctBuffer = Buffer.from(this.correctPin);
+        const correctBuffer = Buffer.from(currentPin);
         const providedBuffer = Buffer.from(pin || '');
 
         if (correctBuffer.length !== providedBuffer.length) {

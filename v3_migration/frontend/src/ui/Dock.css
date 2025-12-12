@@ -29,6 +29,19 @@
     gap: 4px;
 }
 
+.dock-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.dock-container.dock-merged {
+    position: relative;
+    width: 100%;
+    z-index: 0;
+}
+
 .dock-title {
     font-size: 14px;
 }

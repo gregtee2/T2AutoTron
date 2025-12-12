@@ -23,6 +23,8 @@ crashReporter.start({
 let mainWindow;
 let socket;
 
+const isDev = process.env.ELECTRON_DEV === 'true' || process.env.NODE_ENV !== 'production';
+
 // Throttle log messages to avoid overloading the renderer
 let lastLogTime = 0;
 const LOG_THROTTLE_MS = 0; // Disabled throttling - show all logs (was 100ms)
@@ -152,8 +154,9 @@ function createWindow() {
             contextIsolation: true,
             nodeIntegration: false,
             enableRemoteModule: false,
-            webSecurity: false, // Often needed for local dev with mixed content or CORS
-            devTools: true
+            // webSecurity=false is convenient for dev, but unsafe for production.
+            webSecurity: isDev ? false : true,
+            devTools: isDev
         },
         autoHideMenuBar: true
     });

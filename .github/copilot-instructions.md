@@ -1,5 +1,32 @@
 # T2AutoTron 2.1 - AI Coding Instructions
 
+## Recent Security Work (2025-12-12)
+
+This repo now has a lightweight, LAN-friendly security model for sensitive actions:
+
+- **PIN auth**
+    - Server PIN comes from `APP_PIN` (stored in `v3_migration/backend/.env`).
+    - Users can set it via **Settings → Security (This Device)**; the UI persists it to the server via `/api/settings` (no manual `.env` edits required).
+    - Frontend stores the PIN in `sessionStorage` by default, or `localStorage` when "Remember" is enabled.
+- **Sensitive REST endpoints are protected by "local OR PIN"**
+    - Middleware: `v3_migration/backend/src/api/middleware/requireLocalOrPin.js`
+    - Accepts `X-APP-PIN: <pin>` or `Authorization: Bearer <pin>`; loopback is always allowed.
+- **Socket.IO auth**
+    - Client emits `authenticate` after connect if a PIN is saved.
+    - Server validates and emits `auth-success` / `auth-failed`.
+- **Secrets masking**
+    - `/api/settings` masks secret values as `********` and saving `********` means "no change".
+
+Key files:
+- Frontend auth helper: `v3_migration/frontend/src/auth/authClient.js`
+- PIN UI: `v3_migration/frontend/src/ui/SettingsModal.jsx`
+- Authenticated fetch usage: `SettingsModal.jsx`, `ui/Dock.jsx`, `components/UpdateModal.jsx`
+- Socket auto-auth/toasts: `v3_migration/frontend/src/App.jsx`
+- Socket client URL defaults: `v3_migration/frontend/src/socket.js` (defaults to `window.location.origin` unless `VITE_API_URL` is set)
+- Settings API + `.env` write: `v3_migration/backend/src/server.js` (allowlists `APP_PIN`)
+
+Follow-ups are tracked in: `v3_migration/SECURITY_PUNCHLIST.md`.
+
 ## Architecture Overview
 
 T2AutoTron is a **visual node-based automation editor** for smart home control (Home Assistant, Philips Hue, Kasa, Shelly). Built with:
@@ -23,9 +50,11 @@ v3_migration/
 
 ## Environment Configuration
 
-Create `v3_migration/backend/.env` with:
+Create `v3_migration/backend/.env` with (the Settings UI can create/manage this file too):
 ```env
-HA_URL=http://homeassistant.local:8123
+APP_PIN=change_me
+
+HA_HOST=http://homeassistant.local:8123
 HA_TOKEN=your_long_lived_access_token
 OPENWEATHERMAP_API_KEY=your_api_key
 HUE_BRIDGE_IP=192.168.x.x
@@ -90,6 +119,19 @@ Plugins use IIFE pattern with `React.createElement()` (not JSX):
     });
 })();
 ```
+
+### Editable Node Titles (UI Pattern)
+
+Some nodes support an editable title in the node header (double-click to edit). Two common patterns exist:
+
+- **Use `properties.customName` when the node already has a “Name” field** (e.g. timer/scheduler nodes). The header can simply display `customName || data.label`.
+- **Use `properties.customTitle` when you want a title that is separate from other naming fields** (example: `HAGenericDeviceNode.js`).
+
+Implementation notes:
+- Render the title as text; on `onDoubleClick`, swap to an `<input>`.
+- On the `<input>`, use `onPointerDown={(e) => e.stopPropagation()}` so editing doesn’t drag the node.
+- Commit on blur/Enter; cancel on Escape (restore previous title).
+- Ensure the chosen property is included in `serialize()`/`restore()` so the title persists across save/load.
 
 ### Infrastructure Plugins (00_ prefix)
 Files prefixed with `00_` load first and provide shared utilities:
