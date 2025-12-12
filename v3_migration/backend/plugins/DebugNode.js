@@ -389,12 +389,21 @@
             ),
 
             // Current value display
-            React.createElement('div', { style: currentValueStyle },
+            React.createElement('div', { 
+                style: currentValueStyle,
+                onWheel: (e) => e.stopPropagation(),
+                onPointerDown: stopPropagation
+            },
                 formatValue(props.currentValue)
             ),
 
             // History
-            props.history.length > 0 && React.createElement('div', { style: historyContainerStyle, ref: historyRef },
+            props.history.length > 0 && React.createElement('div', { 
+                style: historyContainerStyle, 
+                ref: historyRef,
+                onWheel: (e) => e.stopPropagation(),
+                onPointerDown: stopPropagation
+            },
                 props.history.map((entry, i) => 
                     React.createElement('div', { key: i, style: historyEntryStyle },
                         React.createElement('span', { style: timeStyle }, entry.time),

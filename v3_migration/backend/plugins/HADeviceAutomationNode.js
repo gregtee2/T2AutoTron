@@ -62,7 +62,8 @@
                 debug: false,
                 lastEntityType: "unknown",
                 selectedFields: [],
-                lastOutputValues: {}
+                lastOutputValues: {},
+                lastInputDeviceId: null
             };
 
             // Input: accepts device state
@@ -82,6 +83,45 @@
 
             // Field selectors will be added dynamically
             this.fieldSelectorCount = 0;
+
+            // Listen for device state updates via Socket.IO
+            this.initializeSocketListener();
+        }
+
+        initializeSocketListener() {
+            if (window.socket) {
+                // Listen for ANY device state update - we'll check if it affects our input
+                this._onDeviceStateUpdate = (data) => {
+                    // If we're tracking a device and this update is for it, trigger refresh
+                    const deviceId = data.id ? data.id.replace("ha_", "") : data.entity_id;
+                    if (this.properties.lastInputDeviceId && deviceId === this.properties.lastInputDeviceId) {
+                        this.log("socket", `Received update for tracked device: ${deviceId}`, false);
+                        if (this.changeCallback) this.changeCallback();
+                    }
+                };
+                window.socket.on("device-state-update", this._onDeviceStateUpdate);
+                
+                // Listen for upstream device selection changes
+                // This is a custom event that HADeviceStateOutputNode emits when device changes
+                this._onUpstreamDeviceChange = (event) => {
+                    this.log("event", `Upstream device changed, clearing cache`, false);
+                    // Clear our cache so we don't show stale data
+                    this.properties.lastOutputValues = {};
+                    this.properties.lastInputDeviceId = null;
+                    if (this.changeCallback) this.changeCallback();
+                };
+                window.addEventListener('ha-device-selection-changed', this._onUpstreamDeviceChange);
+            }
+        }
+
+        // Cleanup listeners when node is removed
+        destroy() {
+            if (window.socket && this._onDeviceStateUpdate) {
+                window.socket.off("device-state-update", this._onDeviceStateUpdate);
+            }
+            if (this._onUpstreamDeviceChange) {
+                window.removeEventListener('ha-device-selection-changed', this._onUpstreamDeviceChange);
+            }
         }
 
         log(key, message, force = false) {
@@ -349,12 +389,13 @@
 
             if (!inputData) {
                 this.properties.status = "⚠️ No input data received";
-                // Return last values or null for each output
+                this.properties.lastInputDeviceId = null;
+                // Clear cached values when no input
+                this.properties.lastOutputValues = {};
+                // Return nulls for all outputs
                 this.dynamicOutputs.forEach(outputKey => {
-                    const field = outputKey.replace('out_', '');
-                    result[outputKey] = this.properties.lastOutputValues[field] || null;
+                    result[outputKey] = null;
                 });
-                if (this.changeCallback) this.changeCallback();
                 return result;
             }
 
@@ -370,26 +411,36 @@
 
             if (devices.length === 0) {
                 this.properties.status = "⚠️ No valid device data";
+                this.properties.lastInputDeviceId = null;
+                this.properties.lastOutputValues = {};
                 this.dynamicOutputs.forEach(outputKey => {
-                    const field = outputKey.replace('out_', '');
-                    result[outputKey] = this.properties.lastOutputValues[field] || null;
+                    result[outputKey] = null;
                 });
-                if (this.changeCallback) this.changeCallback();
                 return result;
             }
 
             const device = devices[0];
             const entityType = device.entity_type?.toLowerCase() || device.entityType?.toLowerCase() || (device.entity_id?.split('.')[0]) || "unknown";
+            
+            // Track the device we're receiving data from for socket updates
+            const deviceId = device.entity_id || device.light_id;
+            
+            // If device changed, clear old cached values first
+            if (deviceId !== this.properties.lastInputDeviceId) {
+                this.log("data", `Device changed from ${this.properties.lastInputDeviceId} to ${deviceId} - clearing cache`, false);
+                this.properties.lastOutputValues = {};
+                this.properties.lastInputDeviceId = deviceId;
+            }
 
             // Check if entity type changed
             if (entityType !== this.properties.lastEntityType && this.dynamicOutputs.length > 0) {
                 this.log("data", `Entity type changed from ${this.properties.lastEntityType} to ${entityType}`, false);
-                // Update available fields in dropdowns
-                this.updateFieldDropdowns(entityType);
+                // NOTE: Avoid mutating controls/outputs inside data(); keep this pure.
+                // Dropdown refresh is handled via user interaction and restore().
             }
             this.properties.lastEntityType = entityType;
 
-            // Get values for each selected field
+            // Get values for each selected field - compute fresh values
             const activeFields = this.properties.selectedFields.filter(f => f && f !== "Select Field");
 
             activeFields.forEach(field => {
@@ -400,8 +451,14 @@
                 this.log("data", `Field ${field} = ${JSON.stringify(value)}`, false);
             });
 
+            // Ensure all dynamic outputs have a value (null for any not computed above)
+            this.dynamicOutputs.forEach(outputKey => {
+                if (result[outputKey] === undefined) {
+                    result[outputKey] = null;
+                }
+            });
+
             this.updateStatus();
-            if (this.changeCallback) this.changeCallback();
             return result;
         }
 
@@ -512,14 +569,38 @@
         const [status, setStatus] = useState(data.properties.status);
         const [outputValues, setOutputValues] = useState({});
         const [, forceUpdate] = useState(0);
+        const lastValuesRef = React.useRef('{}');
+        const lastStatusRef = React.useRef('');
+
+        // Sync UI with data.properties (which gets updated in data() method)
+        useEffect(() => {
+            // Poll for value changes since data() is pure and can't call changeCallback
+            const interval = setInterval(() => {
+                const currentValues = data.properties.lastOutputValues || {};
+                const currentStatus = data.properties.status || '';
+                const currentValuesStr = JSON.stringify(currentValues);
+                
+                // Check if values changed using refs to avoid re-creating interval
+                if (currentValuesStr !== lastValuesRef.current || currentStatus !== lastStatusRef.current) {
+                    lastValuesRef.current = currentValuesStr;
+                    lastStatusRef.current = currentStatus;
+                    setOutputValues({ ...currentValues });
+                    setStatus(currentStatus);
+                }
+            }, 200); // Poll every 200ms for responsive updates
+
+            return () => clearInterval(interval);
+        }, [data]); // Only depend on data, not on state
 
         useEffect(() => {
+            const originalCallback = data.changeCallback;
             data.changeCallback = () => {
                 setStatus(data.properties.status);
                 setOutputValues({ ...data.properties.lastOutputValues });
                 forceUpdate(n => n + 1);
+                if (originalCallback) originalCallback();
             };
-            return () => { data.changeCallback = null; };
+            return () => { data.changeCallback = originalCallback; };
         }, [data]);
 
         const inputs = Object.entries(data.inputs);
@@ -552,18 +633,36 @@
                 ),
                 // Outputs
                 React.createElement('div', { key: 'outputs', className: 'outputs' },
-                    outputs.map(([key, output]) => React.createElement('div', { key: key, style: { display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginBottom: '4px' } }, [
-                        React.createElement('span', { 
-                            key: 'value', 
-                            style: { fontSize: '10px', color: '#a7ffeb', fontFamily: 'monospace' }
-                        }, outputValues[key.replace('out_', '')] !== undefined ? JSON.stringify(outputValues[key.replace('out_', '')]) : ''),
-                        React.createElement('span', { key: 'label', className: 'ha-socket-label' }, output.label),
-                        React.createElement(RefComponent, {
-                            key: 'socket',
-                            init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }),
-                            unmount: ref => emit({ type: "unmount", data: { element: ref } })
-                        })
-                    ]))
+                    outputs.map(([key, output]) => {
+                        const fieldName = key.replace('out_', '');
+                        const value = outputValues[fieldName];
+                        const displayValue = value !== undefined && value !== null ? 
+                            (typeof value === 'number' ? value.toFixed(3).replace(/\.?0+$/, '') : JSON.stringify(value)) : 
+                            '—';
+                        
+                        return React.createElement('div', { key: key, style: { display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginBottom: '6px' } }, [
+                            React.createElement('span', { key: 'label', className: 'ha-socket-label' }, output.label),
+                            React.createElement('span', { 
+                                key: 'value', 
+                                style: { 
+                                    fontSize: '14px', 
+                                    color: '#00f3ff', 
+                                    fontFamily: 'monospace',
+                                    fontWeight: '600',
+                                    backgroundColor: 'rgba(0, 243, 255, 0.1)',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    minWidth: '50px',
+                                    textAlign: 'right'
+                                }
+                            }, displayValue),
+                            React.createElement(RefComponent, {
+                                key: 'socket',
+                                init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }),
+                                unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                            })
+                        ]);
+                    })
                 )
             ]),
 

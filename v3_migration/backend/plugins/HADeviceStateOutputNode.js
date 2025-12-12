@@ -282,6 +282,8 @@
                 this.properties.selectedDeviceName = null;
                 this.properties.status = "Select a device";
                 this.lastValidOutput = null;
+                // Notify downstream nodes that device selection changed
+                window.dispatchEvent(new CustomEvent('ha-device-selection-changed', { detail: { nodeId: this.id, deviceId: null } }));
                 if (this.changeCallback) this.changeCallback();
                 return;
             }
@@ -309,6 +311,10 @@
             
             // Force output update
             this.lastValidOutput = null;
+            
+            // Notify downstream nodes that device selection changed
+            window.dispatchEvent(new CustomEvent('ha-device-selection-changed', { detail: { nodeId: this.id, deviceId: device.entity_id } }));
+            
             if (this.changeCallback) this.changeCallback();
         }
 

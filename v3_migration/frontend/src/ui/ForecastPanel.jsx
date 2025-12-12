@@ -176,15 +176,21 @@ export function ForecastPanel({ dockSlotRef }) {
     };
 
     const formatDate = (dateStr) => {
-        if (!dateStr) return '';
+        if (!dateStr) return { day: '', date: '' };
+        let date;
         if (typeof dateStr === 'string' && dateStr.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i)) {
-            return dateStr;
+            // Already formatted like "Mon, Dec 15" - parse it
+            const parts = dateStr.match(/(\w+),\s*(\w+)\s*(\d+)/);
+            if (parts) {
+                return { day: `${parts[1]}, ${parts[2]}`, date: parts[3] };
+            }
+            return { day: dateStr, date: '' };
         }
-        const date = new Date(parseInt(dateStr) || dateStr);
-        if (isNaN(date.getTime())) return dateStr;
+        date = new Date(parseInt(dateStr) || dateStr);
+        if (isNaN(date.getTime())) return { day: dateStr, date: '' };
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+        return { day: `${days[date.getDay()]}, ${months[date.getMonth()]}`, date: `${date.getDate()}` };
     };
 
     const renderForecast = () => {
@@ -195,13 +201,14 @@ export function ForecastPanel({ dockSlotRef }) {
         // If a day is selected, show the detail view
         if (selectedDay !== null) {
             const day = forecastData[selectedDay];
+            const detailDate = formatDate(day.date || day.day);
             return (
                 <div className="forecast-detail">
                     <div className="forecast-detail-header">
                         <button className="detail-back-btn" onClick={() => setSelectedDay(null)}>
                             ← Back
                         </button>
-                        <span className="detail-date">{formatDate(day.date || day.day)}</span>
+                        <span className="detail-date">{detailDate.day} {detailDate.date}</span>
                     </div>
                     <div className="detail-main">
                         <div className="detail-icon">{getWeatherIcon(day.conditions || day.condition)}</div>
@@ -253,17 +260,33 @@ export function ForecastPanel({ dockSlotRef }) {
         }
         
         // Show the 5-day overview
-        return forecastData.slice(0, 5).map((day, i) => (
-            <div key={i} className="forecast-card" onClick={() => setSelectedDay(i)}>
-                <div className="forecast-date">{formatDate(day.date || day.day)}</div>
-                <div className="forecast-icon">{getWeatherIcon(day.conditions || day.condition)}</div>
-                <div className="forecast-temps">
-                    <span className="temp-high">{day.high}°</span>
-                    <span className="temp-low">{day.low}°</span>
-                    <span className="precip">{day.precipitation || day.precip || '0%'}</span>
+        return forecastData.slice(0, 5).map((day, i) => {
+            const dateInfo = formatDate(day.date || day.day);
+            return (
+                <div key={i} className="forecast-card" onClick={() => setSelectedDay(i)}>
+                    <div className="forecast-row-top">
+                        <div className="forecast-date">
+                            <span className="date-day">{dateInfo.day}</span>
+                            <span className="date-num">{dateInfo.date}</span>
+                        </div>
+                        <div className="forecast-icon">{getWeatherIcon(day.conditions || day.condition)}</div>
+                    </div>
+                    <div className="forecast-row-bottom">
+                        <span className="temp-low">{day.low}°</span>
+                        <span className="temp-high">{day.high}°</span>
+                        <span className="precip-group">
+                            <svg className="precip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"></path>
+                                <path d="M16 14v4"></path>
+                                <path d="M8 14v4"></path>
+                                <path d="M12 16v4"></path>
+                            </svg>
+                            <span className="precip-value">{day.precipitation || day.precip || '0%'}</span>
+                        </span>
+                    </div>
                 </div>
-            </div>
-        ));
+            );
+        });
     };
 
     const handleResizeMouseDown = (e) => {
