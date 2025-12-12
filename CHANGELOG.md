@@ -5,6 +5,30 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0-beta.18] - 2025-01-14
+
+### Fixed
+- **HA Device Automation Node**: Now updates in real-time when upstream device state changes
+  - Added Socket.IO listener for `device-state-update` events
+  - Added 200ms UI polling for responsive updates (data() must remain pure)
+  - Cache now clears properly when upstream device selection changes
+  - Improved output value display styling (cyan text, monospace, highlighted)
+  
+- **HADeviceStateOutputNode**: Emits `ha-device-selection-changed` custom event when device selection changes, enabling downstream nodes to clear stale cached data
+
+- **Debug Node**: Scroll wheel now works properly within the node
+  - Added `onWheel` with `stopPropagation()` to current value and history sections
+  - Prevents canvas zoom when scrolling inside the Debug node
+
+### Changed
+- **Forecast Panel**: Updated layout to match v2.0 design
+  - Two-row card format (date + temps on top, icon + description on bottom)
+  - Amber date text (#ffaa00) matching v2.0 aesthetic
+  - Horizontal temperature display (low / high)
+  - Compact icons for better space efficiency
+
+---
+
 ## [2.1.0-beta.17] - 2025-12-12
 
 ### Added
