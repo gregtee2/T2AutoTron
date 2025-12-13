@@ -13,6 +13,7 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [checkingUpdate, setCheckingUpdate] = useState(false);
+    const [checkingPlugins, setCheckingPlugins] = useState(false);
     const toast = useToast();
     const [position, setPosition] = useState(() => {
         const saved = localStorage.getItem('dock-position');
@@ -261,6 +262,54 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
             setCheckingUpdate(false);
         }
     };
+    
+    // Check and apply plugin updates (hot update, no restart needed)
+    const handlePluginUpdate = async () => {
+        if (checkingPlugins) return;
+        
+        setCheckingPlugins(true);
+        try {
+            // First check for updates
+            const checkResponse = await authFetch('/api/update/plugins/check');
+            if (!checkResponse.ok) {
+                throw new Error(`HTTP ${checkResponse.status}`);
+            }
+            const checkData = await checkResponse.json();
+            
+            if (!checkData.hasUpdates) {
+                toast.success('🔌 Plugins are up to date!', 3000);
+                return;
+            }
+            
+            // Show what's available and ask to update
+            const updateCount = (checkData.newPlugins?.length || 0) + (checkData.modifiedPlugins?.length || 0);
+            toast.info(`🔌 ${updateCount} plugin update(s) available. Downloading...`, 3000);
+            
+            // Apply the updates
+            const updateResponse = await authFetch('/api/update/plugins', { method: 'POST' });
+            if (!updateResponse.ok) {
+                throw new Error(`HTTP ${updateResponse.status}`);
+            }
+            const updateData = await updateResponse.json();
+            
+            if (updateData.success && updateData.updated?.length > 0) {
+                toast.success(`✅ Updated ${updateData.updated.length} plugin(s). Refresh page to load them.`, {
+                    duration: 0,
+                    actionLabel: 'Refresh Now',
+                    action: () => window.location.reload()
+                });
+            } else if (updateData.updated?.length === 0) {
+                toast.info('No plugins needed updating', 3000);
+            } else {
+                toast.error('Plugin update failed: ' + (updateData.error || 'Unknown error'), 5000);
+            }
+        } catch (err) {
+            console.error('Failed to update plugins:', err);
+            toast.error('Failed to update plugins: ' + err.message, 5000);
+        } finally {
+            setCheckingPlugins(false);
+        }
+    };
 
     return (
         <div
@@ -393,9 +442,17 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
                         onClick={handleCheckForUpdates} 
                         disabled={checkingUpdate}
                         className="dock-btn dock-btn-update"
-                        title="Check for available updates"
+                        title="Check for available updates (full rebuild)"
                     >
                         {checkingUpdate ? '⏳ Checking...' : '🔄 Check for Updates'}
+                    </button>
+                    <button 
+                        onClick={handlePluginUpdate} 
+                        disabled={checkingPlugins}
+                        className="dock-btn dock-btn-plugins"
+                        title="Hot-update plugins without restart"
+                    >
+                        {checkingPlugins ? '⏳ Updating...' : '🔌 Update Plugins'}
                     </button>
                 </div>
             </div>

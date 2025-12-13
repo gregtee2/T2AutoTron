@@ -48,6 +48,35 @@ router.post('/apply', async (req, res) => {
 });
 
 /**
+ * POST /api/update/plugins
+ * Hot-update plugins only (no server restart needed)
+ * This pulls only the plugins folder from stable branch
+ */
+router.post('/plugins', async (req, res) => {
+    try {
+        const result = await updateService.updatePluginsOnly();
+        res.json(result);
+    } catch (err) {
+        console.error('[UpdateRoutes] Plugin update failed:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * GET /api/update/plugins/check
+ * Check if plugin updates are available
+ */
+router.get('/plugins/check', async (req, res) => {
+    try {
+        const result = await updateService.checkPluginUpdates();
+        res.json(result);
+    } catch (err) {
+        console.error('[UpdateRoutes] Plugin check failed:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
  * GET /api/update/version
  * Get current version info
  */

@@ -317,6 +317,154 @@ start "T2AutoTron Backend" /MIN cmd /k node src/server.js
 }
 
 /**
+ * Check if plugin updates are available
+ * Compares local plugins with remote stable branch
+ */
+async function checkPluginUpdates() {
+    try {
+        const pluginsDir = path.join(__dirname, '../../plugins');
+        
+        // Get list of local plugin files with their modification info
+        const localPlugins = {};
+        if (fs.existsSync(pluginsDir)) {
+            const files = fs.readdirSync(pluginsDir).filter(f => f.endsWith('.js'));
+            for (const file of files) {
+                const filePath = path.join(pluginsDir, file);
+                const stats = fs.statSync(filePath);
+                localPlugins[file] = {
+                    size: stats.size,
+                    mtime: stats.mtime.toISOString()
+                };
+            }
+        }
+        
+        // Fetch the plugin list from GitHub API (get tree of plugins folder)
+        const treeUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/v3_migration/backend/plugins?ref=${UPDATE_BRANCH}`;
+        
+        const remotePlugins = await new Promise((resolve, reject) => {
+            https.get(treeUrl, { 
+                headers: { 
+                    'User-Agent': 'T2AutoTron-UpdateChecker',
+                    'Accept': 'application/vnd.github.v3+json'
+                } 
+            }, (res) => {
+                if (res.statusCode !== 200) {
+                    reject(new Error(`GitHub API returned ${res.statusCode}`));
+                    return;
+                }
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    try {
+                        resolve(JSON.parse(data));
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }).on('error', reject);
+        });
+        
+        // Compare counts and sizes
+        const remoteFiles = remotePlugins.filter(f => f.name.endsWith('.js'));
+        const localCount = Object.keys(localPlugins).length;
+        const remoteCount = remoteFiles.length;
+        
+        // Check for new or modified plugins
+        const newPlugins = [];
+        const modifiedPlugins = [];
+        
+        for (const remote of remoteFiles) {
+            if (!localPlugins[remote.name]) {
+                newPlugins.push(remote.name);
+            } else if (localPlugins[remote.name].size !== remote.size) {
+                modifiedPlugins.push(remote.name);
+            }
+        }
+        
+        const hasUpdates = newPlugins.length > 0 || modifiedPlugins.length > 0;
+        
+        return {
+            success: true,
+            hasUpdates,
+            localCount,
+            remoteCount,
+            newPlugins,
+            modifiedPlugins,
+            message: hasUpdates 
+                ? `${newPlugins.length} new, ${modifiedPlugins.length} modified plugins available`
+                : 'Plugins are up to date'
+        };
+        
+    } catch (err) {
+        console.error('[UpdateService] Plugin check failed:', err.message);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Update plugins only (hot update, no restart needed)
+ * Downloads updated plugin files from stable branch
+ */
+async function updatePluginsOnly() {
+    try {
+        const pluginsDir = path.join(__dirname, '../../plugins');
+        
+        // Ensure plugins directory exists
+        if (!fs.existsSync(pluginsDir)) {
+            fs.mkdirSync(pluginsDir, { recursive: true });
+        }
+        
+        // First check what's available
+        const checkResult = await checkPluginUpdates();
+        if (!checkResult.success) {
+            return checkResult;
+        }
+        
+        const toUpdate = [...checkResult.newPlugins, ...checkResult.modifiedPlugins];
+        
+        if (toUpdate.length === 0) {
+            return { 
+                success: true, 
+                updated: [], 
+                message: 'Plugins are already up to date' 
+            };
+        }
+        
+        // Download each updated plugin
+        const updated = [];
+        const failed = [];
+        
+        for (const pluginName of toUpdate) {
+            try {
+                const content = await fetchGitHubFile(`v3_migration/backend/plugins/${pluginName}`);
+                if (content) {
+                    const pluginPath = path.join(pluginsDir, pluginName);
+                    fs.writeFileSync(pluginPath, content, 'utf8');
+                    updated.push(pluginName);
+                    console.log(`[UpdateService] Updated plugin: ${pluginName}`);
+                } else {
+                    failed.push({ name: pluginName, error: 'File not found' });
+                }
+            } catch (err) {
+                failed.push({ name: pluginName, error: err.message });
+                console.error(`[UpdateService] Failed to update ${pluginName}:`, err.message);
+            }
+        }
+        
+        return {
+            success: true,
+            updated,
+            failed,
+            message: `Updated ${updated.length} plugin(s)${failed.length > 0 ? `, ${failed.length} failed` : ''}. Refresh page to load new plugins.`
+        };
+        
+    } catch (err) {
+        console.error('[UpdateService] Plugin update failed:', err.message);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
  * Get current version info
  */
 function getVersionInfo() {
@@ -331,5 +479,7 @@ module.exports = {
     applyUpdate,
     getVersionInfo,
     getLocalVersion,
-    compareVersions
+    compareVersions,
+    checkPluginUpdates,
+    updatePluginsOnly
 };
