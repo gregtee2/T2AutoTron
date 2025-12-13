@@ -52,10 +52,16 @@ Follow-ups are tracked in: `v3_migration/SECURITY_PUNCHLIST.md`.
 
 ## Architecture Overview
 
-T2AutoTron is a **visual node-based automation editor** for smart home control (Home Assistant, Philips Hue, Kasa, Shelly). Built with:
+T2AutoTron is a **visual node-based automation editor** for smart home control. Built with:
 - **Frontend**: React + Vite + Rete.js v3 (visual node editor)
 - **Backend**: Node.js/Express + Socket.IO for real-time device communication
 - **Plugin System**: Runtime-loaded node plugins (no rebuild required)
+
+### Supported Devices
+- **Home Assistant** – All entities (lights, switches, sensors, media players, etc.)
+- **Philips Hue** – Direct bridge API (no HA required)
+- **TP-Link Kasa** – Direct local API (no HA required)
+- **Shelly** – Via Home Assistant integration (direct API planned)
 
 ### Key Directories
 ```

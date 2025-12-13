@@ -7,7 +7,10 @@ Welcome to T2 AutoTron, a visual node-based automation editor for smart home con
 Before you start, make sure you have:
 - **Node.js 18+** installed ([download](https://nodejs.org/))
 - A **Home Assistant** instance (optional but recommended)
-- Any smart devices you want to control (Philips Hue, TP-Link Kasa, Shelly, etc.)
+- Any smart devices you want to control:
+  - **Philips Hue** – Works with or without HA (direct bridge API)
+  - **TP-Link Kasa** – Works with or without HA (direct local API)
+  - **Shelly** – Requires Home Assistant integration
 
 ## 🚀 Quick Start
 
