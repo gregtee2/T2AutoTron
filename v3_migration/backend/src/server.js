@@ -1,11 +1,17 @@
 
-require('dotenv').config({ path: './.env' });
+// Detect Home Assistant add-on environment
+const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
+const ENV_PATH = IS_HA_ADDON ? '/data/.env' : './.env';
+
+require('dotenv').config({ path: ENV_PATH });
 
 // Debug mode - set VERBOSE_LOGGING=true in .env to enable detailed console output
 const DEBUG = process.env.VERBOSE_LOGGING === 'true';
 const debug = (...args) => DEBUG && console.log('[DEBUG]', ...args);
 
 debug('Starting server.js...');
+debug('Running as HA add-on:', IS_HA_ADDON);
+debug('ENV_PATH:', ENV_PATH);
 debug('OPENWEATHERMAP_API_KEY:', process.env.OPENWEATHERMAP_API_KEY ? 'Set' : 'Not set');
 debug('HA_TOKEN:', process.env.HA_TOKEN ? 'Loaded' : 'Not set');
 
@@ -375,10 +381,13 @@ const SECRET_SETTINGS = new Set([
   'TELEGRAM_BOT_TOKEN'
 ]);
 
+// Helper to get persistent env path (HA add-on uses /data/, standalone uses local .env)
+const getEnvPath = () => IS_HA_ADDON ? '/data/.env' : path.join(__dirname, '../.env');
+
 // GET current settings (masked secrets)
 app.get('/api/settings', requireLocalOrPin, async (req, res) => {
   try {
-    const envPath = path.join(__dirname, '../.env');
+    const envPath = getEnvPath();
     let envContent = '';
     try {
       envContent = await fs.readFile(envPath, 'utf-8');
@@ -433,7 +442,7 @@ app.post('/api/settings', requireLocalOrPin, express.json(), async (req, res) =>
       return res.status(400).json({ success: false, error: 'Invalid settings data' });
     }
     
-    const envPath = path.join(__dirname, '../.env');
+    const envPath = getEnvPath();
     
     // Create .env if it doesn't exist (first-time setup via UI)
     let envContent = '';
