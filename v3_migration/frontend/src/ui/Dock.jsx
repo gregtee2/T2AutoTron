@@ -33,6 +33,12 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
         shelly: { connected: false, deviceCount: 0 }
     });
     const [pluginStatus, setPluginStatus] = useState({ loaded: 0, failed: 0, total: 0 });
+    const [engineStatus, setEngineStatus] = useState({ 
+        running: false, 
+        nodeCount: 0, 
+        tickCount: 0,
+        registeredNodeTypes: 0
+    });
     let unsubscribePlugin;
     const dockRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -107,12 +113,22 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
         socket.on('device-counts', onDeviceCounts);
         socket.on('hue-connection-status', onHueStatus);
 
+        // Engine status handlers
+        const onEngineStatus = (data) => setEngineStatus(data);
+        const onEngineStarted = (data) => setEngineStatus(prev => ({ ...prev, ...data, running: true }));
+        const onEngineStopped = (data) => setEngineStatus(prev => ({ ...prev, ...data, running: false }));
+        
+        socket.on('engine-status', onEngineStatus);
+        socket.on('engine-started', onEngineStarted);
+        socket.on('engine-stopped', onEngineStopped);
+
         // Initial status
         setConnectionStatus(prev => ({ ...prev, backend: socket.connected }));
 
         // Request initial hue status if already connected
         if (socket.connected) {
             socket.emit('request-hue-status');
+            socket.emit('request-engine-status');
         }
 
         // Get initial plugin status
@@ -139,6 +155,9 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
             socket.off('ha-connection-status', onHaStatus);
             socket.off('device-counts', onDeviceCounts);
             socket.off('hue-connection-status', onHueStatus);
+            socket.off('engine-status', onEngineStatus);
+            socket.off('engine-started', onEngineStarted);
+            socket.off('engine-stopped', onEngineStopped);
             if (unsubscribePlugin) unsubscribePlugin();
         };
     }, []);
@@ -359,6 +378,13 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                         <button onClick={onLoadExample} className="dock-btn" title="Load a starter graph to see how things work">📚 Load Example</button>
                         <button onClick={handleImportClick} className="dock-btn">📂 Import File</button>
                         <button onClick={onClear} className="dock-btn">🗑️ Clear</button>
+                        <button 
+                            onClick={() => socket.emit(engineStatus.running ? 'stop-engine' : 'start-engine')}
+                            className={`dock-btn ${engineStatus.running ? 'dock-btn-active' : ''}`}
+                            title={engineStatus.running ? 'Stop backend engine' : 'Start backend engine (runs automations 24/7)'}
+                        >
+                            {engineStatus.running ? '⏹️ Stop Engine' : '▶️ Start Engine'}
+                        </button>
                         <input
                             ref={fileInputRef}
                             type="file"
@@ -418,6 +444,15 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                                 {pluginStatus.total > 0
                                     ? `${pluginStatus.loaded} / ${pluginStatus.total} loaded${pluginStatus.failed > 0 ? ` (${pluginStatus.failed} failed)` : ''}`
                                     : `${pluginStatus.loaded} loaded`}
+                            </span>
+                        </div>
+                        <div className={`dock-status-item ${engineStatus.running ? 'connected' : 'disconnected'}`}>
+                            <span className="dock-status-dot" style={{ background: engineStatus.running ? '#10b981' : '#6b7280' }}></span>
+                            <span className="dock-status-label">Engine</span>
+                            <span className="dock-status-value">
+                                {engineStatus.running 
+                                    ? `Running (${engineStatus.nodeCount} nodes)` 
+                                    : 'Stopped'}
                             </span>
                         </div>
                     </div>
