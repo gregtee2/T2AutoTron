@@ -50,6 +50,20 @@ class BackendNodeRegistry {
   }
 
   /**
+   * Create a new instance of a registered node
+   * @param {string} name - Node type name
+   * @returns {object|null} - New node instance or null if not found
+   */
+  create(name) {
+    const NodeClass = this.nodes.get(name);
+    if (!NodeClass) {
+      console.error(`[BackendNodeRegistry] Unknown node type: ${name}`);
+      return null;
+    }
+    return new NodeClass();
+  }
+
+  /**
    * Get count of registered nodes
    * @returns {number}
    */

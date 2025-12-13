@@ -25,7 +25,11 @@ async function loadBuiltinNodes() {
     
     for (const file of jsFiles) {
       try {
-        require(path.join(nodesDir, file));
+        const nodeModule = require(path.join(nodesDir, file));
+        // Call the register function if it exists
+        if (typeof nodeModule.register === 'function') {
+          nodeModule.register(registry);
+        }
         console.log(`[Engine] Loaded node module: ${file}`);
       } catch (error) {
         console.error(`[Engine] Failed to load ${file}: ${error.message}`);
