@@ -1,5 +1,28 @@
 # T2AutoTron 2.1 - AI Coding Instructions
 
+## Recent Crash Detection & Logging Work (2025-12-13)
+
+Added crash detection and log management to diagnose overnight Electron crashes:
+
+- **Crash Detection**
+    - Session marker file (`.running`) created on startup, removed on clean shutdown
+    - If marker exists on startup → previous session crashed
+    - Crash info logged to `crash_history.log` with uptime estimate
+- **Log Rotation**
+    - `main.log` now rotates at 10MB to prevent disk bloat
+    - Previous 213MB log was causing potential I/O issues
+- **Exception Logging**
+    - Uncaught exceptions logged with full stack trace
+    - Unhandled promise rejections captured
+
+Key files in `v3_migration/crashes/`:
+- `main.log` - Regular logs (10MB rotation)
+- `crash_history.log` - Only crash events (check after overnight crashes)
+- `last_session.json` - Info about most recent session
+- `.running` - Marker file (exists only while app is running)
+
+Implementation: `v3_migration/backend/src/frontend/electron/main.js`
+
 ## Recent Security Work (2025-12-12)
 
 This repo now has a lightweight, LAN-friendly security model for sensitive actions:

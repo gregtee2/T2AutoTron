@@ -39,6 +39,28 @@ const sendLogToRenderer = (message, fromRenderer = false) => {
     }
 };
 
+// Log rotation - rotate when file exceeds 10MB
+const LOG_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+let lastLogRotationCheck = 0;
+const LOG_ROTATION_CHECK_INTERVAL = 60000; // Check every 60 seconds
+
+async function rotateLogIfNeeded() {
+    const now = Date.now();
+    if (now - lastLogRotationCheck < LOG_ROTATION_CHECK_INTERVAL) return;
+    lastLogRotationCheck = now;
+    
+    const logPath = path.join(crashDir, 'main.log');
+    try {
+        const stats = await fsPromises.stat(logPath);
+        if (stats.size > LOG_MAX_SIZE) {
+            const oldPath = path.join(crashDir, 'main.log.old');
+            try { await fsPromises.unlink(oldPath); } catch (e) { /* ignore */ }
+            await fsPromises.rename(logPath, oldPath);
+            await fsPromises.writeFile(logPath, `${new Date().toISOString()} - INFO: Log rotated (previous file was ${Math.round(stats.size / 1024 / 1024)}MB)\n`);
+        }
+    } catch (e) { /* ignore - file may not exist yet */ }
+}
+
 // Override console.log and console.error to send logs to renderer and terminal
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
@@ -46,6 +68,7 @@ console.log = (...args) => {
     const message = args.join(' ');
     sendLogToRenderer(`Main: ${message}`, false);
     process.stdout.write(`${new Date().toISOString()} - Main: ${message}\n`);
+    rotateLogIfNeeded(); // Check rotation periodically
     fsPromises.appendFile(path.join(crashDir, 'main.log'), `${new Date().toISOString()} - INFO: ${message}\n`).catch(err => {
         process.stderr.write(`Failed to write to main.log: ${err.message}\n`);
     });
@@ -54,10 +77,85 @@ console.error = (...args) => {
     const message = args.join(' ');
     sendLogToRenderer(`Main: ERROR: ${message}`, false);
     process.stderr.write(`${new Date().toISOString()} - Main: ERROR: ${message}\n`);
+    rotateLogIfNeeded(); // Check rotation periodically
     fsPromises.appendFile(path.join(crashDir, 'main.log'), `${new Date().toISOString()} - ERROR: ${message}\n`).catch(err => {
         process.stderr.write(`Failed to write to main.log: ${err.message}\n`);
     });
 };
+
+// Crash detection - detect if previous session ended unexpectedly
+const crashMarkerPath = path.join(crashDir, '.running');
+const lastSessionPath = path.join(crashDir, 'last_session.json');
+
+function detectPreviousCrash() {
+    try {
+        if (fs.existsSync(crashMarkerPath)) {
+            // Previous session didn't shut down cleanly
+            let lastSession = { startTime: 'unknown', pid: 'unknown' };
+            try {
+                lastSession = JSON.parse(fs.readFileSync(lastSessionPath, 'utf8'));
+            } catch (e) { /* ignore */ }
+            
+            const crashTime = fs.statSync(crashMarkerPath).mtime;
+            const crashInfo = {
+                detected: new Date().toISOString(),
+                lastSessionStart: lastSession.startTime,
+                lastSessionPid: lastSession.pid,
+                markerTime: crashTime.toISOString(),
+                uptime: lastSession.startTime ? 
+                    Math.round((crashTime - new Date(lastSession.startTime)) / 1000 / 60) + ' minutes' : 'unknown'
+            };
+            
+            // Log crash detection
+            const crashLogEntry = `
+================================================================================
+CRASH DETECTED at ${crashInfo.detected}
+Previous session started: ${crashInfo.lastSessionStart}
+Previous session PID: ${crashInfo.lastSessionPid}
+Approximate uptime before crash: ${crashInfo.uptime}
+Marker file last modified: ${crashInfo.markerTime}
+================================================================================
+`;
+            fs.appendFileSync(path.join(crashDir, 'crash_history.log'), crashLogEntry);
+            console.log('⚠️ Previous session crashed! Check crash_history.log for details');
+            
+            // Clean up marker
+            fs.unlinkSync(crashMarkerPath);
+        }
+    } catch (e) {
+        console.error('Error checking for previous crash:', e.message);
+    }
+}
+
+function markSessionStart() {
+    try {
+        const sessionInfo = {
+            startTime: new Date().toISOString(),
+            pid: process.pid,
+            electronVersion: process.versions.electron,
+            nodeVersion: process.versions.node
+        };
+        fs.writeFileSync(lastSessionPath, JSON.stringify(sessionInfo, null, 2));
+        fs.writeFileSync(crashMarkerPath, sessionInfo.startTime);
+    } catch (e) {
+        console.error('Error marking session start:', e.message);
+    }
+}
+
+function markCleanShutdown() {
+    try {
+        if (fs.existsSync(crashMarkerPath)) {
+            fs.unlinkSync(crashMarkerPath);
+            console.log('Clean shutdown - removed crash marker');
+        }
+    } catch (e) {
+        console.error('Error removing crash marker:', e.message);
+    }
+}
+
+// Check for previous crash before logging startup
+detectPreviousCrash();
+markSessionStart();
 
 console.log('Starting main process...');
 
@@ -487,14 +585,37 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         socket?.disconnect();
+        markCleanShutdown(); // Mark clean shutdown before quitting
         app.quit();
     }
+});
+
+app.on('before-quit', () => {
+    markCleanShutdown(); // Also mark on before-quit for macOS
 });
 
 process.on('uncaughtException', (error) => {
     const errorMsg = `Main process uncaught exception: ${error.message}\nStack: ${error.stack}`;
     console.error(errorMsg);
-    fsPromises.appendFile(path.join(crashDir, 'main.log'), `${new Date().toISOString()} - ${errorMsg}\n`).catch(err => {
-        process.stderr.write(`Failed to write to main.log: ${err.message}\n`);
-    });
+    // Log to crash history as well
+    const crashEntry = `
+================================================================================
+UNCAUGHT EXCEPTION at ${new Date().toISOString()}
+Error: ${error.message}
+Stack: ${error.stack}
+================================================================================
+`;
+    fs.appendFileSync(path.join(crashDir, 'crash_history.log'), crashEntry);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    const errorMsg = `Unhandled Promise Rejection: ${reason}`;
+    console.error(errorMsg);
+    const crashEntry = `
+================================================================================
+UNHANDLED REJECTION at ${new Date().toISOString()}
+Reason: ${reason}
+================================================================================
+`;
+    fs.appendFileSync(path.join(crashDir, 'crash_history.log'), crashEntry);
 });
