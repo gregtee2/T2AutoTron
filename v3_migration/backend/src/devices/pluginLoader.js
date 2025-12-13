@@ -86,8 +86,11 @@ async function loadRoutes(app, io, deviceService) {
   const routesDir = path.join(__dirname, '../api/routes');
   const files = await fs.readdir(routesDir);
 
+  // Routes that are mounted elsewhere (not by pluginLoader)
+  const excludeRoutes = ['engineRoutes.js'];
+
   for (const file of files) {
-    if (file.endsWith('Routes.js')) {
+    if (file.endsWith('Routes.js') && !excludeRoutes.includes(file)) {
       try {
         const route = require(path.join(routesDir, file));
         const routeConfig = normalizeRoute(route, file);

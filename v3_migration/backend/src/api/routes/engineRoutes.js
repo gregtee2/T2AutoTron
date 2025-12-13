@@ -20,7 +20,8 @@ let registry = null;
 
 function getEngine() {
   if (!engine) {
-    const engineModule = require('../engine');
+    // Path is relative to src/api/routes/, engine is at src/engine/
+    const engineModule = require('../../engine');
     engine = engineModule.engine;
     registry = engineModule.registry;
   }

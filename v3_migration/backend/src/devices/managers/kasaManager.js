@@ -1,7 +1,17 @@
 const { Client: KasaClient } = require('tplink-smarthome-api');
 const logger = require('../../logging/logger');
 
-const kasaClient = new KasaClient();
+// Create Kasa client with error handling options
+const kasaClient = new KasaClient({
+  logLevel: 'error', // Only log errors from the library
+  timeout: 5000,     // 5 second timeout for device communication
+});
+
+// Handle any errors from the client itself
+kasaClient.on('error', (err) => {
+  logger.log(`Kasa client error: ${err.message}`, 'error', false, 'kasa:client-error');
+});
+
 const devices = new Map();
 const discoveredIds = new Set();
 
@@ -137,6 +147,14 @@ async function setupKasa(io, notificationEmitter) {
                     return;
                 }
                 discoveredIds.add(device.deviceId);
+                
+                // Attach error handler to device to prevent uncaught socket errors
+                if (device && typeof device.on === 'function') {
+                    device.on('error', (err) => {
+                        logger.log(`Device ${device.alias} socket error: ${err.message}`, 'warn', false, `kasa:device-error:${device.deviceId}`);
+                    });
+                }
+                
                 await logger.log(`🔍 Discovered: ${device.alias} (ID: ${device.deviceId}, Type: ${device.deviceType}, IP: ${device.host}, Model: ${device.model})`, 'info', false, `kasa:device:${device.deviceId}`);
                 addDevice(device);
                 await refreshDeviceStatus(device, io, notificationEmitter);
