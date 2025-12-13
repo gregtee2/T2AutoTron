@@ -780,9 +780,10 @@ async function startServer() {
     await initializeModules(deviceService);
     debug('Starting server on port...');
     const PORT = config.get('port');
-    server.listen(PORT, () => {
-      logger.log(`Server running on http://localhost:${PORT}`, 'info', false, 'server:start');
-      console.log(chalk.cyan(`✓ Server running on http://localhost:${PORT}`));
+    const HOST = process.env.HOST || '0.0.0.0';  // Bind to all interfaces for Docker/HA
+    server.listen(PORT, HOST, () => {
+      logger.log(`Server running on http://${HOST}:${PORT}`, 'info', false, 'server:start');
+      console.log(chalk.cyan(`✓ Server running on http://${HOST}:${PORT}`));
     });
   } catch (err) {
     console.error('Startup error:', err.message);
