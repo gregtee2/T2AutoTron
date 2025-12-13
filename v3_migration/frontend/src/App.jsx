@@ -9,7 +9,6 @@ import UpdateModal from './components/UpdateModal';
 import { getStoredPin } from './auth/authClient';
 import './App.css';
 import './styles/performance-mode.css'; // Performance mode overrides
-import './test-sockets.js'; // Test socket patch
 
 // Apply performance mode from localStorage on page load
 const applyPerformanceModeFromStorage = () => {

@@ -313,7 +313,7 @@
             
             if (ids.length === 0) return;
 
-            console.log(`[HueLightNode] Applying HSV to ${ids.length} lights:`, hsvInfo);
+            if (this.properties.debug) console.log(`[HueLightNode] Applying HSV to ${ids.length} lights:`, hsvInfo);
 
             await Promise.all(ids.map(async (id) => {
                 const rawId = id.replace('hue_', '');
@@ -332,7 +332,7 @@
                 };
 
                 try {
-                    console.log(`[HueLightNode] HSV PUT /api/lights/hue/${rawId}/state:`, JSON.stringify(payload));
+                    if (this.properties.debug) console.log(`[HueLightNode] HSV PUT /api/lights/hue/${rawId}/state:`, JSON.stringify(payload));
                     
                     const fetchFn = window.apiFetch || fetch;
                     const response = await fetchFn(`/api/lights/hue/${rawId}/state`, {
@@ -364,12 +364,12 @@
             const anyOn = this.properties.selectedDeviceIds.some(id => 
                 id && this.perDeviceState[id]?.on
             );
-            console.log(`[HueLightNode] Toggle All: anyOn=${anyOn}, will set to ${!anyOn}`);
+            if (this.properties.debug) console.log(`[HueLightNode] Toggle All: anyOn=${anyOn}, will set to ${!anyOn}`);
             await this.setDevicesState(!anyOn);
         }
 
         async onAllOff() {
-            console.log('[HueLightNode] All Off triggered');
+            if (this.properties.debug) console.log('[HueLightNode] All Off triggered');
             await this.setDevicesState(false);
         }
 
@@ -403,7 +403,7 @@
                 }
 
                 try {
-                    console.log(`[HueLightNode] PUT /api/lights/hue/${rawId}/state:`, JSON.stringify(payload));
+                    if (this.properties.debug) console.log(`[HueLightNode] PUT /api/lights/hue/${rawId}/state:`, JSON.stringify(payload));
                     
                     const fetchFn = window.apiFetch || fetch;
                     const response = await fetchFn(`/api/lights/hue/${rawId}/state`, {
@@ -413,7 +413,7 @@
                     });
 
                     const data = await response.json();
-                    console.log(`[HueLightNode] Response for ${rawId}:`, data);
+                    if (this.properties.debug) console.log(`[HueLightNode] Response for ${rawId}:`, data);
 
                     if (response.ok && data.success) {
                         this.perDeviceState[id] = { 
@@ -800,5 +800,5 @@
         component: HueLightNodeComponent
     });
 
-    console.log('[HueLightNode] Registered successfully');
+    if (window.EDITOR_DEBUG) console.log('[HueLightNode] Registered successfully');
 })();

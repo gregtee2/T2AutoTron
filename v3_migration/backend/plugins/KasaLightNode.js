@@ -368,7 +368,7 @@
             
             if (ids.length === 0) return;
 
-            console.log(`[KasaLightNode] Applying HSV to ${ids.length} lights:`, hsvInfo);
+            if (this.properties.debug) console.log(`[KasaLightNode] Applying HSV to ${ids.length} lights:`, hsvInfo);
 
             await Promise.all(ids.map(async (id) => {
                 const rawId = id.replace('kasa_', '');
@@ -392,7 +392,7 @@
                 };
 
                 try {
-                    console.log(`[KasaLightNode] HSV POST /api/lights/kasa/${rawId}/state:`, JSON.stringify(payload));
+                    if (this.properties.debug) console.log(`[KasaLightNode] HSV POST /api/lights/kasa/${rawId}/state:`, JSON.stringify(payload));
                     
                     const fetchFn = window.apiFetch || fetch;
                     const response = await fetchFn(`/api/lights/kasa/${rawId}/state`, {
@@ -426,12 +426,12 @@
             const anyOn = this.properties.selectedDeviceIds.some(id => 
                 id && this.perDeviceState[id]?.on
             );
-            console.log(`[KasaLightNode] Toggle All: anyOn=${anyOn}, will set to ${!anyOn}`);
+            if (this.properties.debug) console.log(`[KasaLightNode] Toggle All: anyOn=${anyOn}, will set to ${!anyOn}`);
             await this.setDevicesState(!anyOn);
         }
 
         async onAllOff() {
-            console.log('[KasaLightNode] All Off triggered');
+            if (this.properties.debug) console.log('[KasaLightNode] All Off triggered');
             await this.setDevicesState(false);
         }
 
@@ -477,7 +477,7 @@
                         ? `/api/lights/kasa/${rawId}/state`
                         : `/api/lights/kasa/${rawId}/${endpoint}`;
                     
-                    console.log(`[KasaLightNode] POST ${url}:`, JSON.stringify(payload));
+                    if (this.properties.debug) console.log(`[KasaLightNode] POST ${url}:`, JSON.stringify(payload));
                     
                     const response = await fetchFn(url, {
                         method: 'POST',
@@ -486,7 +486,7 @@
                     });
 
                     const data = await response.json();
-                    console.log(`[KasaLightNode] Response for ${rawId}:`, data);
+                    if (this.properties.debug) console.log(`[KasaLightNode] Response for ${rawId}:`, data);
 
                     if (response.ok && data.success) {
                         this.perDeviceState[id] = { 
@@ -864,5 +864,5 @@
         component: KasaLightNodeComponent
     });
 
-    console.log('[KasaLightNode] Registered successfully');
+    if (window.EDITOR_DEBUG) console.log('[KasaLightNode] Registered successfully');
 })();

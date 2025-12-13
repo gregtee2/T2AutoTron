@@ -35,3 +35,9 @@ temp_*
 # Test files with potential secrets
 test_ha_payload.js
 debug_ha_device.js
+
+# Log files and crash data
+v3_migration/crashes/*.log
+v3_migration/crashes/*.json
+v3_migration/crashes/.running
+*.log

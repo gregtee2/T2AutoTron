@@ -73,15 +73,11 @@ async function setupShelly(io, notificationEmitter, wrappedLog = () => { }) {
     }
 
     shellyDevices = await scanSubnet('192.168.1', wrappedLog);
-    if (shellyDevices.length === 0) {
-        await wrappedLog('No devices found, adding test device', 'warn', false, 'scan:noDevices');
-        shellyDevices = [{ ip: '192.168.1.100', mac: 'test1234', name: 'Test Shelly', state: { on: false, offline: false }, online: true }];
-    }
     await wrappedLog('Starting Shelly device discovery via subnet scan...', 'info');
 
-    // shellyDevices.length = 0;
-    // shellyDevices = await scanSubnet('192.168.1', wrappedLog);
-    console.log('Initial shellyDevices after scan:', JSON.stringify(shellyDevices, null, 2));
+    if (process.env.VERBOSE_LOGGING === 'true') {
+        console.log('Initial shellyDevices after scan:', JSON.stringify(shellyDevices, null, 2));
+    }
 
     if (shellyDevices.length === 0) {
         await wrappedLog('No Shelly devices found on initial scan', 'warn', false, 'scan:noDevices');
