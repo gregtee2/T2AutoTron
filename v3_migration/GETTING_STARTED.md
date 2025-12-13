@@ -2,7 +2,60 @@
 
 Welcome to T2 AutoTron, a visual node-based automation editor for smart home control. This guide will help you get up and running quickly.
 
-## 📋 Prerequisites
+## 📋 Choose Your Installation Method
+
+- **[Home Assistant Add-on](#-home-assistant-add-on-recommended)** - Easiest, runs inside HA
+- **[Standalone Installation](#-standalone-installation)** - Run on any PC/server
+
+---
+
+## 🏠 Home Assistant Add-on (Recommended)
+
+### Installation
+
+1. In Home Assistant, go to **Settings → Add-ons → Add-on Store**
+2. Click **⋮ (three dots)** → **Repositories**
+3. Add: `https://github.com/gregtee2/home-assistant-addons`
+4. Find **T2AutoTron** in the store and click **Install**
+5. After installation, click **Start**
+6. Click **Open Web UI** or find T2AutoTron in the sidebar
+
+### First-Time Setup
+
+Once T2AutoTron opens, click the **⚙️ Settings** button in the Control Panel (right side) to configure:
+
+#### 📍 Location Settings
+Set your location for sunrise/sunset and weather features:
+- **City**: Your city name (for display)
+- **Latitude/Longitude**: Your coordinates (for solar calculations)
+- **Timezone**: Your timezone (e.g., `America/New_York`)
+
+> **Tip:** Search "what is my latitude and longitude" in Google to find your coordinates.
+
+#### 🌤️ Weather Services (Optional)
+If you want weather-based automations:
+- **OpenWeatherMap API Key**: Get a free key at [openweathermap.org](https://openweathermap.org/api)
+- **Ambient Weather**: API key and Application key from [ambientweather.net](https://ambientweather.net/)
+
+#### 📱 Telegram Notifications (Optional)
+To receive automation notifications on your phone:
+- **Bot Token**: Create a bot via [@BotFather](https://t.me/botfather) on Telegram
+- **Chat ID**: Send a message to your bot, then visit `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
+
+#### 💡 Philips Hue Direct Control (Optional)
+Control Hue lights without going through HA (lower latency):
+- **Bridge IP**: Your Hue bridge IP address (find in Hue app)
+- **Username**: Press the Hue bridge button, then use the pairing process
+
+> **Note:** Home Assistant connection is automatic in the add-on - no token needed!
+
+After entering your settings, click **Save**. Settings persist across add-on restarts.
+
+---
+
+## 💻 Standalone Installation
+
+### Prerequisites
 
 Before you start, make sure you have:
 - **Node.js 18+** installed ([download](https://nodejs.org/))
