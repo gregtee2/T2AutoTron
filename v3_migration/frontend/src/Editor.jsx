@@ -20,6 +20,7 @@ import { ForecastPanel } from "./ui/ForecastPanel";
 import { FavoritesPanel } from "./ui/FavoritesPanel";
 import { FastContextMenu } from "./FastContextMenu";
 import { validateGraph, repairGraph } from "./utils/graphValidation";
+import { apiUrl } from "./utils/apiBase";
 
 // Custom Socket Component - adds data-socket-type and title for CSS styling
 const CustomSocket = React.memo(({ data, socketKey, side }) => {
@@ -2782,8 +2783,8 @@ export function Editor() {
         }
         
         try {
-            // Fetch the example graph from the API
-            const response = await fetch('/api/examples/starter');
+            // Fetch the example graph from the API (use apiUrl for HA ingress compatibility)
+            const response = await fetch(apiUrl('/api/examples/starter'));
             if (!response.ok) {
                 throw new Error(`Failed to fetch example: ${response.status}`);
             }
