@@ -1238,7 +1238,7 @@
 
     window.nodeRegistry.register('ColorGradientNode', {
         label: "Stepped Color Gradient",
-        category: "CC_Control_Nodes",
+        category: "Color",
         nodeClass: ColorGradientNode,
         factory: (cb) => new ColorGradientNode(cb),
         component: ColorGradientNodeComponent

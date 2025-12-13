@@ -372,7 +372,7 @@
 
     window.nodeRegistry.register('HSVControlNode', {
         label: "HSV Control",
-        category: "CC_Control_Nodes",
+        category: "Color",
         nodeClass: HSVControlNode,
         factory: (cb) => new HSVControlNode(cb),
         component: HSVControlNodeComponent

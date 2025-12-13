@@ -44,7 +44,7 @@
     // TOOLTIPS
     // -------------------------------------------------------------------------
     const tooltips = {
-        node: "Manual trigger button for testing automations.\n\nClick the button to toggle state.\n\nModes:\n• Latch: Click toggles ON/OFF\n• Pulse: Click sends brief ON signal",
+        node: "Manual toggle switch for testing automations.\n\nClick to toggle state ON/OFF.\n\nModes:\n• Latch (default): Click toggles ON/OFF\n• Pulse: Click sends brief ON signal",
         outputs: {
             state: "Current button state.\n\nLatch Mode: TRUE when on, FALSE when off\nPulse Mode: Brief TRUE pulse, then FALSE"
         },
@@ -58,7 +58,7 @@
     // -------------------------------------------------------------------------
     class PushbuttonNode extends ClassicPreset.Node {
         constructor(changeCallback) {
-            super("Pushbutton");
+            super("Toggle");
             this.width = 220;
             this.changeCallback = changeCallback;
 
@@ -282,7 +282,7 @@
     // REGISTRATION
     // -------------------------------------------------------------------------
     window.nodeRegistry.register('PushbuttonNode', {
-        label: "Pushbutton",
+        label: "Toggle",
         category: "Input",
         nodeClass: PushbuttonNode,
         factory: (cb) => new PushbuttonNode(cb),

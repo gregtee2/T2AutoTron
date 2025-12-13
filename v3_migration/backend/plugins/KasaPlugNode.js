@@ -419,7 +419,7 @@
 
     window.nodeRegistry.register('KasaPlugNode', {
         label: "Kasa Plug Control",
-        category: "Plugs",
+        category: "Direct Devices",
         nodeClass: KasaPlugNode,
         factory: (cb) => new KasaPlugNode(cb),
         component: KasaPlugNodeComponent

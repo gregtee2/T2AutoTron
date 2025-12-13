@@ -858,7 +858,7 @@
     // -------------------------------------------------------------------------
     window.nodeRegistry.register('KasaLightNode', {
         label: "Kasa Lights",
-        category: "Other",
+        category: "Direct Devices",
         nodeClass: KasaLightNode,
         factory: (cb) => new KasaLightNode(cb),
         component: KasaLightNodeComponent

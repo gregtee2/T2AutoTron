@@ -455,9 +455,12 @@ export function Editor() {
             });
 
             // Convert to FastContextMenu format with sorted categories
+            // Get category icons from theme if available
+            const categoryThemes = window.T2Controls?.THEME?.categories || {};
             const menuItems = Object.entries(grouped)
                 .map(([category, items]) => ({
                     label: category,
+                    icon: categoryThemes[category]?.icon || '',
                     subitems: items.sort((a, b) => a.label.localeCompare(b.label))
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label));

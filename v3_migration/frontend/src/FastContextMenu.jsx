@@ -226,6 +226,7 @@ export function FastContextMenu({
                             onMouseLeave={handleItemMouseLeave}
                             onClick={() => handleItemClick(item)}
                         >
+                            {item.icon && <span className="menu-icon">{item.icon}</span>}
                             <span className="menu-label">{item.label}</span>
                             {item.subitems && <span className="submenu-arrow">▶</span>}
                             

@@ -367,7 +367,7 @@
 
     window.nodeRegistry.register('AllInOneColorNode', {
         label: "All-in-One Color Control",
-        category: "CC_Control_Nodes",
+        category: "Color",
         nodeClass: AllInOneColorNode,
         factory: (cb) => new AllInOneColorNode(cb),
         component: AllInOneColorNodeComponent

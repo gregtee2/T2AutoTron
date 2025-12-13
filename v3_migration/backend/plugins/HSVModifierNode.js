@@ -484,7 +484,7 @@
 
     window.nodeRegistry.register('HSVModifierNode', {
         label: "HSV Modifier",
-        category: "CC_Control_Nodes",
+        category: "Color",
         nodeClass: HSVModifierNode,
         factory: (cb) => new HSVModifierNode(cb),
         component: HSVModifierNodeComponent

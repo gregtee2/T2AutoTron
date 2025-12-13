@@ -794,7 +794,7 @@
     // -------------------------------------------------------------------------
     window.nodeRegistry.register('HueLightNode', {
         label: "Hue Lights",
-        category: "Other",
+        category: "Direct Devices",
         nodeClass: HueLightNode,
         factory: (cb) => new HueLightNode(cb),
         component: HueLightNodeComponent

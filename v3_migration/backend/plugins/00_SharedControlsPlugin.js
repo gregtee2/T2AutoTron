@@ -101,14 +101,13 @@
     
     const DEFAULT_CATEGORY_THEMES = {
         'Home Assistant': { accent: '#4fc3f7', icon: '🏠' },      // Light blue
+        'Direct Devices': { accent: '#64b5f6', icon: '💡' },      // Blue - Hue, Kasa, etc.
         'Weather': { accent: '#ffb74d', icon: '🌤️' },             // Amber/orange
         'Logic': { accent: '#81c784', icon: '🔀' },               // Green
         'Timer/Event': { accent: '#ce93d8', icon: '⏱️' },         // Purple
         'Color': { accent: '#f48fb1', icon: '🎨' },               // Pink
         'Utility': { accent: '#90a4ae', icon: '🔧' },             // Gray-blue
-        'Inputs': { accent: '#aed581', icon: '📥' },              // Light green
-        'CC_Control_Nodes': { accent: '#64b5f6', icon: '🎛️' },    // Blue
-        'Other': { accent: '#b0bec5', icon: '📦' }                // Gray
+        'Inputs': { accent: '#aed581', icon: '📥' }               // Light green
     };
     
     // Load category overrides from localStorage
