@@ -226,8 +226,8 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 400px;
-  overflow-y: auto;
+  /* Removed max-height to allow natural growth when devices are added */
+  overflow-y: visible;
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 243, 255, 0.4) rgba(0, 20, 30, 0.3);
 }

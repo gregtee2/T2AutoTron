@@ -10,6 +10,7 @@
 .rete-editor {
   touch-action: none;
   user-select: none;
+  position: relative;  /* Required for selection box positioning */
 }
 
 /* Rete area container - ensure it can receive all pointer events */

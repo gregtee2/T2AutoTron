@@ -70,6 +70,9 @@
         constructor(changeCallback) {
             super("HA Generic Device");
             this.width = 420;
+            this.baseHeight = 280;  // Base height with no devices
+            this.deviceRowHeight = 85;  // Height per device row
+            this.height = this.baseHeight;  // Will be updated when devices are added
             this.changeCallback = changeCallback;
 
             this.properties = {
@@ -176,6 +179,9 @@
                 
                 if (id) this.fetchDeviceState(id);
             });
+            
+            // Update height based on restored devices
+            this.updateNodeHeight();
             this.fetchDevices();
         }
 
@@ -371,6 +377,11 @@
 
         updateStatus(text) { this.properties.status = text; this.triggerUpdate(); }
 
+        updateNodeHeight() {
+            const deviceCount = this.properties.selectedDeviceIds.length;
+            this.height = this.baseHeight + (deviceCount * this.deviceRowHeight);
+        }
+
         onAddDevice() {
             const index = this.properties.selectedDeviceIds.length;
             this.properties.selectedDeviceIds.push(null);
@@ -382,6 +393,7 @@
             this.addControl(`${base}power`, new PowerStatsControl({ power: null, energy: null }));
             this.addControl(`${base}state`, new DeviceStateControl(null, (id) => this.perDeviceState[id]));
             this.addOutput(`device_out_${index}`, new ClassicPreset.Output(sockets.lightInfo || new ClassicPreset.Socket('lightInfo'), `Device ${index + 1}`));
+            this.updateNodeHeight();
             this.triggerUpdate();
         }
 
@@ -397,6 +409,7 @@
             this.removeControl(`${base}power`);
             this.removeControl(`${base}state`);
             this.removeOutput(`device_out_${index}`);
+            this.updateNodeHeight();
             this.triggerUpdate();
         }
 
