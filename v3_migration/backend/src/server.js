@@ -698,6 +698,10 @@ app.use('/api/update', updateRoutes);
 const cameraRoutes = require('./api/cameras');
 app.use('/api/cameras', cameraRoutes);
 
+// Engine routes (backend automation engine)
+const engineRoutes = require('./api/routes/engineRoutes');
+app.use('/api/engine', engineRoutes);
+
 // Initialize DeviceService
 debug('Initializing DeviceService...');
 async function initializeDeviceService() {
@@ -796,6 +800,18 @@ async function initializeModules(deviceService) {
   }, 3 * 60 * 1000);
 
   io.on('connection', require('./api/socketHandlers')(deviceService));
+
+  // Initialize backend engine
+  debug('Initializing backend automation engine...');
+  try {
+    const { initEngineSocketHandlers, autoStartEngine } = require('./api/engineSocketHandlers');
+    initEngineSocketHandlers(io);
+    await autoStartEngine();
+    debug('Backend engine initialized');
+  } catch (error) {
+    console.error('[Engine] Initialization error:', error.message);
+    debug('Backend engine initialization failed:', error.message);
+  }
 }
 
 async function startServer() {
