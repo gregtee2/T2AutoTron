@@ -434,6 +434,8 @@ export function Editor() {
                 
                 grouped[category].push({
                     label: def.label,
+                    order: def.order,  // Include order for sorting
+                    description: def.description,  // Tooltip in context menu
                     handler: async (position) => {
                         let node;
                         const callback = () => {
@@ -462,7 +464,14 @@ export function Editor() {
                 .map(([category, items]) => ({
                     label: category,
                     icon: categoryThemes[category]?.icon || '',
-                    subitems: items.sort((a, b) => a.label.localeCompare(b.label))
+                    // Sort by order first (lower = first), then alphabetically
+                    subitems: items.sort((a, b) => {
+                        // Items with order come before items without
+                        const orderA = a.order ?? 999;
+                        const orderB = b.order ?? 999;
+                        if (orderA !== orderB) return orderA - orderB;
+                        return a.label.localeCompare(b.label);
+                    })
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label));
 

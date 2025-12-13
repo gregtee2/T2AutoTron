@@ -27,7 +27,7 @@
     // TOOLTIPS
     // -------------------------------------------------------------------------
     const tooltips = {
-        node: "Displays device state information visually.\n\nConnect to HADeviceStateOutput or HAGenericDevice to see device details.\n\nShows: name, type, on/off, brightness, color, power usage.",
+        node: "👁️ DEBUG DISPLAY - shows device state visually.\n\n🔗 Connect to any HA node's output to inspect data.\n\nShows: name, type, on/off, brightness, color, power.\n\n💡 Useful for debugging - see what values are flowing through your graph.",
         inputs: {
             device_state: "Device state object from an HA node.\n\nAccepts single device or array."
         },
@@ -261,6 +261,8 @@
     window.nodeRegistry.register('HADeviceStateDisplayNode', {
         label: "HA Device State Display",
         category: "Home Assistant",
+        order: 4,  // Debug/display node
+        description: "Debug display - shows device state visually",
         nodeClass: HADeviceStateDisplayNode,
         factory: (cb) => new HADeviceStateDisplayNode(cb),
         component: HADeviceStateDisplayNodeComponent

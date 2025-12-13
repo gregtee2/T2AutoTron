@@ -1048,6 +1048,8 @@
     window.nodeRegistry.register('HAGenericDeviceNode', {
         label: "HA Generic Device",
         category: "Home Assistant",
+        order: 1,  // Show first in menu - main device control node
+        description: "Control HA devices - connect trigger + optional color",
         nodeClass: HAGenericDeviceNode,
         factory: (cb) => new HAGenericDeviceNode(cb),
         component: HAGenericDeviceNodeComponent

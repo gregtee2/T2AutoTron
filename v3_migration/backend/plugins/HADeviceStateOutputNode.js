@@ -41,7 +41,7 @@
     // TOOLTIPS
     // -------------------------------------------------------------------------
     const tooltips = {
-        node: "Outputs the current state of a selected Home Assistant device.\n\nUse for: Reading sensor values, checking device status, monitoring state changes.\n\nNo trigger input needed - continuously outputs device state.",
+        node: "📤 OUTPUTS device state for use in automations.\n\n🔗 WORKFLOW: Connect output → HA Device Automation → extract fields like brightness, power, temperature.\n\n💡 Use when you need to READ device state (not control it).\n\nNo trigger needed - continuously monitors selected device.",
         outputs: {
             device_state: "Full device state object.\n\nIncludes: on/off, brightness, color, attributes, etc.\n\nConnect to Display or Automation nodes."
         },
@@ -642,6 +642,8 @@
     window.nodeRegistry.register('HADeviceStateOutputNode', {
         label: "HA Device State Output",
         category: "Home Assistant",
+        order: 2,  // Partner node for automation workflow
+        description: "Read device state → connect to Automation node",
         nodeClass: HADeviceStateOutputNode,
         factory: (cb) => new HADeviceStateOutputNode(cb),
         component: HADeviceStateOutputNodeComponent

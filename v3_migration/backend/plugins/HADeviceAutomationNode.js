@@ -33,7 +33,7 @@
     // TOOLTIPS
     // -------------------------------------------------------------------------
     const tooltips = {
-        node: "Extracts specific fields from device state for use in automations.\n\nAdd fields dynamically to output: brightness, color, power, temperature, etc.\n\nConnect to HADeviceStateOutput or HAGenericDevice.",
+        node: "🔧 EXTRACTS specific values from device state.\n\n🔗 WORKFLOW: HA Device State Output → THIS NODE → downstream automation.\n\n➕ Add fields: brightness, color_temp, power, humidity, temperature, etc.\n\n💡 Use with State Output node to read device values for logic/comparison.",
         inputs: {
             device_state: "Device state object from an HA node."
         },
@@ -707,6 +707,8 @@
     window.nodeRegistry.register('HADeviceAutomationNode', {
         label: "HA Device Automation",
         category: "Home Assistant",
+        order: 3,  // Works with State Output node
+        description: "Extract fields (brightness, temp, power) from State Output",
         nodeClass: HADeviceAutomationNode,
         factory: (cb) => new HADeviceAutomationNode(cb),
         component: HADeviceAutomationNodeComponent

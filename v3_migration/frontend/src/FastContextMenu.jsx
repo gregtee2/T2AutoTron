@@ -241,6 +241,7 @@ export function FastContextMenu({
                                         <div
                                             key={subitem.label || subIndex}
                                             className="fast-menu-item"
+                                            title={subitem.description || ''}
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleItemClick(subitem);
