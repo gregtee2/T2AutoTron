@@ -1,0 +1,117 @@
+/* FavoritesPanel.css - Left-side quick-add node favorites */
+
+.favorites-panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(10, 15, 25, 0.92);
+  border-right: 1px solid rgba(0, 243, 255, 0.35);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  /* Allow HelpIcon tooltips to extend beyond header without being clipped */
+  overflow: visible;
+}
+
+.favorites-panel.drop-active {
+  border-right-color: rgba(0, 243, 255, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(0, 243, 255, 0.35);
+}
+
+.favorites-header {
+  padding: 10px 10px;
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(0, 150, 200, 0.08));
+  border-bottom: 1px solid rgba(0, 243, 255, 0.25);
+  position: relative;
+  z-index: 2;
+}
+
+.favorites-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.favorites-title {
+  color: #00f3ff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.favorites-help-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 243, 255, 0.4);
+  background: rgba(0, 243, 255, 0.18);
+  color: #00f3ff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: help;
+}
+
+.favorites-list {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.favorites-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.favorites-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+}
+
+.favorites-divider-text {
+  color: rgba(0, 243, 255, 0.75);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+}
+
+.favorites-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(0, 243, 255, 0.16);
+}
+
+.favorites-empty {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 12px;
+  padding: 10px;
+}
+
+.favorites-item-btn {
+  width: 100%;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 243, 255, 0.22);
+  color: #c5cdd3;
+  padding: 8px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.favorites-item-btn:hover {
+  border-color: rgba(0, 243, 255, 0.45);
+  background: rgba(0, 243, 255, 0.06);
+}

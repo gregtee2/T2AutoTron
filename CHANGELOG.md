@@ -5,6 +5,27 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0-beta.19] - 2025-12-12
+
+### Added
+- **F Key Zoom Extents**: Press F to zoom and center the view to fit all nodes on the canvas
+- **Timeline Color Node - Timer Loop Modes**: New "On Complete" dropdown in Timer mode
+  - **Stop**: Timer stops at position 1 when complete (default, legacy behavior)
+  - **Loop**: Restarts from position 0, cycles indefinitely while trigger is true
+  - **Ping-Pong**: Reverses direction on complete (0→1→0→1...), great for breathing/pulsing effects
+- **Timeline Color Node - Reset Button**: Click to reset playhead to starting position
+- **Timeline Color Node - Output Step Interval**: Throttle HSV output updates to prevent overwhelming Home Assistant API (100ms - 5s)
+
+### Fixed
+- **Timeline Color Node**: Timer now stops when trigger becomes false or disconnected (previously kept running)
+- **Timeline Color Node**: Timer continues running when node is collapsed
+- **Timeline Color Node**: Cleaned up Colors section UI layout
+
+### In Progress
+- **Space+Drag Pan Mode**: Hold Space while dragging a node to pan the canvas (partially working, node position sync needs refinement)
+
+---
+
 ## [2.1.0-beta.18] - 2025-01-14
 
 ### Fixed

@@ -17,6 +17,7 @@ const debug = (...args) => EDITOR_DEBUG && console.debug('[Editor]', ...args);
 
 import { Dock } from "./ui/Dock";
 import { ForecastPanel } from "./ui/ForecastPanel";
+import { FavoritesPanel } from "./ui/FavoritesPanel";
 import { FastContextMenu } from "./FastContextMenu";
 import { validateGraph, repairGraph } from "./utils/graphValidation";
 
@@ -115,6 +116,195 @@ export function Editor() {
         items: [],
         nodeContext: null  // If right-clicking on a node
     });
+
+    const FAVORITES_WIDTH = 180;
+
+    const FAVORITES_STORAGE_KEY = 'favoriteNodes';
+    const [favoriteGroups, setFavoriteGroups] = useState(() => {
+        try {
+            const raw = localStorage.getItem(FAVORITES_STORAGE_KEY);
+            const parsed = raw ? JSON.parse(raw) : null;
+
+            const normalizeLabels = (arr) => {
+                const out = [];
+                for (const v of Array.isArray(arr) ? arr : []) {
+                    if (typeof v !== 'string') continue;
+                    const label = v.trim();
+                    if (!label) continue;
+                    if (!out.includes(label)) out.push(label);
+                }
+                return out;
+            };
+
+            // Legacy format: string[]
+            if (Array.isArray(parsed)) {
+                const labels = normalizeLabels(parsed);
+                return labels.length ? [{ category: 'Other', labels }] : [];
+            }
+
+            // New format: { version: 2, groups: [{category, labels}] }
+            const maybeGroups =
+                Array.isArray(parsed?.groups) ? parsed.groups :
+                Array.isArray(parsed?.favoriteGroups) ? parsed.favoriteGroups :
+                Array.isArray(parsed) ? parsed :
+                null;
+
+            if (!maybeGroups) return [];
+
+            const normalizedGroups = [];
+            for (const g of maybeGroups) {
+                const category = (g?.category || 'Other').toString().trim() || 'Other';
+                const labels = normalizeLabels(g?.labels);
+                if (labels.length === 0) continue;
+                normalizedGroups.push({ category, labels });
+            }
+
+            return normalizedGroups;
+        } catch {
+            return [];
+        }
+    });
+    const favoritesPanelRef = useRef(null);
+    const [favoritesDropActive, setFavoritesDropActive] = useState(false);
+    const favoritesDragRef = useRef(null);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify({ version: 2, groups: favoriteGroups }));
+        } catch {
+            // ignore
+        }
+    }, [favoriteGroups]);
+
+    const addFavoriteLabel = useCallback((label) => {
+        const normalized = (label || '').toString().trim();
+        if (!normalized) return;
+        const def = nodeRegistry.getByLabel(normalized);
+        const category = (def?.category || 'Other').toString().trim() || 'Other';
+
+        setFavoriteGroups(prev => {
+            // Already exists anywhere?
+            for (const g of prev) {
+                if (Array.isArray(g?.labels) && g.labels.includes(normalized)) return prev;
+            }
+
+            const next = prev.map(g => ({ category: g.category, labels: [...g.labels] }));
+            const idx = next.findIndex(g => g.category === category);
+            if (idx === -1) {
+                next.push({ category, labels: [normalized] });
+            } else {
+                next[idx].labels.push(normalized);
+            }
+            return next;
+        });
+    }, []);
+
+    const removeFavoriteLabel = useCallback((label) => {
+        const normalized = (label || '').toString().trim();
+        if (!normalized) return;
+        setFavoriteGroups(prev => {
+            const next = [];
+            for (const g of prev) {
+                const labels = (g?.labels || []).filter(l => l !== normalized);
+                if (labels.length === 0) continue;
+                next.push({ category: g.category, labels });
+            }
+            return next;
+        });
+    }, []);
+
+    const createNodeFromLabelAtCenter = useCallback(async (label) => {
+        const container = ref.current;
+        const editor = editorRef.current;
+        const area = areaRef.current;
+        if (!container || !editor || !area) return;
+
+        const rect = container.getBoundingClientRect();
+        const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+
+        // Prefer using the same handler objects as the context menu (same callback / update strategy behavior)
+        try {
+            const getMenuItems = window._t2GetMenuItems;
+            if (typeof getMenuItems === 'function') {
+                const items = getMenuItems();
+                for (const cat of items || []) {
+                    for (const sub of cat.subitems || []) {
+                        if (sub.label === label && typeof sub.handler === 'function') {
+                            await sub.handler(center);
+                            return;
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('[Favorites] Failed to create via context handlers:', err);
+        }
+
+        // Fallback: construct directly by label
+        const def = nodeRegistry.getByLabel(label);
+        if (!def) return;
+        const callback = () => {
+            try {
+                // Minimal: update the node visuals; engine processing is triggered elsewhere
+                // (Context-menu path is preferred and will be used in normal operation.)
+                // eslint-disable-next-line no-unused-expressions
+                processImmediateRef.current?.();
+            } catch {}
+        };
+
+        try {
+            const node = def.factory(callback);
+            await editor.addNode(node);
+            const transform = area.area.transform;
+            const editorX = (center.x - transform.x) / transform.k;
+            const editorY = (center.y - transform.y) / transform.k;
+            await area.translate(node.id, { x: editorX, y: editorY });
+        } catch (err) {
+            console.warn('[Favorites] Fallback create failed:', err);
+        }
+    }, []);
+
+    // Drag-to-favorite is implemented inside AreaPlugin pipes (nodetranslate/nodedragged)
+    // to avoid pointer-capture edge cases.
+
+    // If plugins change, drop favorites that no longer exist
+    useEffect(() => {
+        try {
+            const defs = nodeRegistry.getAll();
+            if (defs.length === 0) return;
+
+            const labelToCategory = new Map();
+            for (const def of defs) {
+                if (def?.label) labelToCategory.set(def.label, (def.category || 'Other').toString().trim() || 'Other');
+            }
+
+            setFavoriteGroups(prev => {
+                const order = [];
+                const byCategory = new Map();
+
+                const add = (category, label) => {
+                    if (!byCategory.has(category)) {
+                        byCategory.set(category, []);
+                        order.push(category);
+                    }
+                    const arr = byCategory.get(category);
+                    if (!arr.includes(label)) arr.push(label);
+                };
+
+                for (const g of prev) {
+                    for (const label of g?.labels || []) {
+                        const actualCategory = labelToCategory.get(label);
+                        if (!actualCategory) continue; // plugin missing
+                        add(actualCategory, label);
+                    }
+                }
+
+                return order.map(category => ({ category, labels: byCategory.get(category) })).filter(g => g.labels.length > 0);
+            });
+        } catch {
+            // ignore
+        }
+    }, [editorInstance]);
 
     const createEditor = useCallback(async (container) => {
         // Wait for container to have proper dimensions (fixes race condition in Electron)
@@ -421,6 +611,102 @@ export function Editor() {
 
         window.addEventListener('pointermove', onConnectionPanMove);
         window.addEventListener('keyup', onConnectionPanKeyUp);
+        // --------------------------------------
+
+        // --- Shift+Drag Pan While Dragging Node Implementation ---
+        // Allows users to hold Shift while dragging a node to pan the canvas
+        // This is useful for moving a node across large distances without zooming out
+        let isNodeDragging = false;
+        let isPanningWhileDragging = false;
+        let draggedNodeId = null;
+        
+        // Track spacebar state locally within createEditor scope
+        // This ensures we capture Space regardless of other event handling
+        let localSpaceKeyHeld = false;
+        let lastNodeDragPanPos = { x: 0, y: 0 };
+        // Track total pan offset during Space hold (in screen pixels)
+        let panAccumulatorScreen = { x: 0, y: 0 };
+        
+        const onLocalSpaceDown = (e) => {
+            if (e.code === 'Space') {
+                // Only activate pan mode if we're currently dragging a node
+                // This preserves normal Space behavior for text inputs, etc.
+                if (isNodeDragging && draggedNodeId) {
+                    localSpaceKeyHeld = true;
+                    // Reset pan accumulator when starting
+                    panAccumulatorScreen = { x: 0, y: 0 };
+                    // Prevent default to avoid scrolling only when panning
+                    e.preventDefault();
+                }
+            }
+        };
+        const onLocalSpaceUp = (e) => {
+            if (e.code === 'Space') {
+                localSpaceKeyHeld = false;
+                if (isPanningWhileDragging && draggedNodeId) {
+                    // When releasing Space, we need to update the node's world position
+                    // to account for the canvas movement during panning.
+                    // The node visually stayed in place (screen coords), but the canvas moved.
+                    // So we need to adjust the node's world position by the inverse of the pan.
+                    const nodeView = area.nodeViews.get(draggedNodeId);
+                    if (nodeView) {
+                        const transform = area.area.transform;
+                        // Convert accumulated screen pan to world coordinates
+                        const worldDx = panAccumulatorScreen.x / transform.k;
+                        const worldDy = panAccumulatorScreen.y / transform.k;
+                        // Move node in world coords to match where it visually is now
+                        const newPos = {
+                            x: nodeView.position.x - worldDx,
+                            y: nodeView.position.y - worldDy
+                        };
+                        programmaticMoveRef.current = true;
+                        area.translate(draggedNodeId, newPos).finally(() => {
+                            programmaticMoveRef.current = false;
+                        });
+                    }
+                    isPanningWhileDragging = false;
+                    container.style.cursor = '';
+                }
+            }
+        };
+        
+        // Use pointermove on container (capture phase) to pan while dragging with Space held
+        // When panning, we move the canvas. Node stays in place because nodetranslate is blocked.
+        const onNodeDragPanPointerMove = (e) => {
+            if (!isNodeDragging || !draggedNodeId) return;
+            
+            if (localSpaceKeyHeld) {
+                if (!isPanningWhileDragging) {
+                    // Start panning mode
+                    isPanningWhileDragging = true;
+                    lastNodeDragPanPos = { x: e.clientX, y: e.clientY };
+                    panAccumulatorScreen = { x: 0, y: 0 };
+                    container.style.cursor = 'grab';
+                } else {
+                    // Continue panning - just pan the canvas
+                    // The node translation is blocked in the nodetranslate handler
+                    const dx = e.clientX - lastNodeDragPanPos.x;
+                    const dy = e.clientY - lastNodeDragPanPos.y;
+                    
+                    if (dx !== 0 || dy !== 0) {
+                        const transform = area.area.transform;
+                        area.area.translate(transform.x + dx, transform.y + dy);
+                        // Accumulate the pan offset
+                        panAccumulatorScreen.x += dx;
+                        panAccumulatorScreen.y += dy;
+                        lastNodeDragPanPos = { x: e.clientX, y: e.clientY };
+                    }
+                }
+            } else if (isPanningWhileDragging) {
+                // Space was released, stop panning mode but continue normal drag
+                isPanningWhileDragging = false;
+                container.style.cursor = '';
+            }
+        };
+        
+        window.addEventListener('keydown', onLocalSpaceDown, true);
+        window.addEventListener('keyup', onLocalSpaceUp, true);
+        container.addEventListener('pointermove', onNodeDragPanPointerMove, true);
         // --------------------------------------
 
         // --- Lasso Selection Implementation ---
@@ -836,6 +1122,28 @@ export function Editor() {
             if (context.type === 'nodepicked') {
                 const nodeId = context.data.id;
                 const node = editor.getNode(nodeId);
+
+                // Track node dragging for Space+drag pan feature
+                isNodeDragging = true;
+                draggedNodeId = nodeId;
+                isPanningWhileDragging = false;
+
+                // Prep for drag-to-favorite: record what was picked.
+                // We'll only activate if it actually starts moving.
+                try {
+                    if (node && favoritesDragRef?.current !== undefined) {
+                        const startPos = area.nodeViews.get(nodeId)?.position || { x: 0, y: 0 };
+                        favoritesDragRef.current = {
+                            nodeId,
+                            label: node.label,
+                            startPos,
+                            active: false,
+                            over: false
+                        };
+                    }
+                } catch {
+                    // ignore
+                }
                 
                 // If this is a locked backdrop, prevent picking entirely
                 if (node) {
@@ -873,6 +1181,79 @@ export function Editor() {
                 
                 // Debug: debug(' Selection after pick:', Array.from(lassoSelectedNodes));
             }
+            return context;
+        });
+
+        // Drag-to-favorite: detect when a dragged node overlaps the Favorites panel,
+        // and finalize on nodedragged (drag end).
+        area.addPipe((context) => {
+            try {
+                if (programmaticMoveRef.current) return context;
+
+                const getIsOverFavorites = (nodeId) => {
+                    const favoritesRect = favoritesPanelRef.current?.getBoundingClientRect();
+                    if (!favoritesRect) return false;
+
+                    const view = area.nodeViews.get(nodeId);
+                    const el = view?.element;
+                    if (!el) return false;
+
+                    const nodeRect = el.getBoundingClientRect();
+                    const cx = nodeRect.left + nodeRect.width / 2;
+                    const cy = nodeRect.top + nodeRect.height / 2;
+                    return cx >= favoritesRect.left && cx <= favoritesRect.right && cy >= favoritesRect.top && cy <= favoritesRect.bottom;
+                };
+
+                if (context.type === 'nodetranslate') {
+                    const info = favoritesDragRef.current;
+                    if (!info) return context;
+                    const nodeId = context.data?.id;
+                    if (!nodeId || info.nodeId !== nodeId) return context;
+
+                    // Activate on first actual movement.
+                    if (!info.active) {
+                        info.active = true;
+                        // Best-effort: if startPos is missing, use previous.
+                        if (!info.startPos && context.data?.previous) info.startPos = context.data.previous;
+                    }
+
+                    const over = getIsOverFavorites(nodeId);
+                    if (over !== info.over) {
+                        info.over = over;
+                        setFavoritesDropActive(over);
+                    }
+
+                    return context;
+                }
+
+                if (context.type === 'nodedragged') {
+                    const info = favoritesDragRef.current;
+                    if (!info) return context;
+
+                    const nodeId = context.data?.id;
+                    if (!nodeId || info.nodeId !== nodeId) return context;
+
+                    const shouldAdd = info.active && getIsOverFavorites(nodeId);
+                    if (shouldAdd) {
+                        addFavoriteLabel(info.label);
+
+                        // Let the built-in drag finalize first, then snap back.
+                        const snapPos = info.startPos;
+                        if (snapPos) {
+                            setTimeout(() => {
+                                try { area.translate(nodeId, snapPos); } catch {}
+                            }, 0);
+                        }
+                    }
+
+                    favoritesDragRef.current = null;
+                    setFavoritesDropActive(false);
+                    return context;
+                }
+            } catch {
+                // ignore
+            }
+
             return context;
         });
 
@@ -916,6 +1297,19 @@ export function Editor() {
                 const deltaY = newPos.y - prevPos.y;
                 
                 if (deltaX === 0 && deltaY === 0) return context;
+                
+                // SPACE+DRAG PAN: Block node translation when panning
+                // The canvas moves but node stays in place (in world coords)
+                // This keeps node visually under cursor while panning
+                if (isPanningWhileDragging && draggedNodeId === nodeId) {
+                    return {
+                        ...context,
+                        data: {
+                            ...context.data,
+                            position: context.data.previous
+                        }
+                    };
+                }
                 
                 // Handle lasso-selected group movement
                 if (lassoSelectedNodes.size > 1 && lassoSelectedNodes.has(nodeId)) {
@@ -1001,6 +1395,14 @@ export function Editor() {
                 backdropDragState.isDragging = false;
                 backdropDragState.activeBackdropId = null;
                 
+                // Reset Space+drag pan state
+                isNodeDragging = false;
+                draggedNodeId = null;
+                if (isPanningWhileDragging) {
+                    isPanningWhileDragging = false;
+                    container.style.cursor = '';
+                }
+                
                 // Update captures after any node drag
                 updateBackdropCaptures();
             }
@@ -1031,10 +1433,13 @@ export function Editor() {
             destroy: () => {
                 container.removeEventListener('pointerdown', onPointerDown, { capture: true });
                 container.removeEventListener('click', onCanvasClick);
+                container.removeEventListener('pointermove', onNodeDragPanPointerMove, true);
                 window.removeEventListener('pointermove', onPointerMove);
                 window.removeEventListener('pointerup', onPointerUp);
                 window.removeEventListener('pointermove', onConnectionPanMove);
                 window.removeEventListener('keyup', onConnectionPanKeyUp);
+                window.removeEventListener('keydown', onLocalSpaceDown, true);
+                window.removeEventListener('keyup', onLocalSpaceUp, true);
                 window.removeEventListener('blur', onWindowBlur);
                 document.removeEventListener('visibilitychange', onVisibilityChange);
                 if (groupMovingTimeout) clearTimeout(groupMovingTimeout);
@@ -1320,6 +1725,23 @@ export function Editor() {
                 debug(' View reset shortcut triggered');
                 if (window.resetEditorView) {
                     window.resetEditorView();
+                }
+                return;
+            }
+            
+            // F key - Zoom extents (fit all nodes in view)
+            if (e.code === 'KeyF' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                const area = areaRef.current;
+                const editor = editorRef.current;
+                if (area && editor) {
+                    const allNodes = editor.getNodes();
+                    if (allNodes.length > 0) {
+                        debug(' Zoom extents triggered (F key)');
+                        AreaExtensions.zoomAt(area, allNodes, { scale: 0.9 }).catch(err => {
+                            console.warn('[F key] zoomAt failed:', err);
+                        });
+                    }
                 }
                 return;
             }
@@ -2620,8 +3042,17 @@ export function Editor() {
     };
 
     return (
-        <div style={{ width: "100%", height: "100vh", position: "relative" }}>
-            <div ref={ref} className="rete-editor" style={{ width: "100%", height: "100%", marginRight: "320px" }} />
+        <div style={{ width: "100%", height: "100%", position: "relative" }}>
+            <FavoritesPanel
+                width={FAVORITES_WIDTH}
+                panelRef={favoritesPanelRef}
+                dropActive={favoritesDropActive}
+                favoriteGroups={favoriteGroups}
+                onAddFavorite={addFavoriteLabel}
+                onRemoveFavorite={removeFavoriteLabel}
+                onCreateNode={createNodeFromLabelAtCenter}
+            />
+            <div ref={ref} className="rete-editor" style={{ width: "100%", height: "100%", marginRight: "320px", marginLeft: `${FAVORITES_WIDTH}px` }} />
             <div ref={dockOverlaySlotRef} />
             {(() => {
                 const target = dockMergedIntoForecast ? forecastDockSlotRef.current : dockOverlaySlotRef.current;

@@ -447,7 +447,7 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 
 ## Beta Release Status
 
-**Current Version: 2.1.0-beta.15 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.0-beta.18 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -479,7 +479,7 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 | 2 | Modularize server.js | ⏳ Not started | 4h (working fine as-is) |
 | 3 | Refactor plugins to T2Node | ⏳ Partial | Some use it, not all |
 
-### 🟢 RECENTLY ADDED (beta.12 - beta.15)
+### 🟢 RECENTLY ADDED (beta.12 - beta.18)
 
 | # | Feature | Notes |
 |---|---------|-------|
@@ -490,6 +490,8 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 | 5 | **Graph Auto-Restore** | Graph saved before update, auto-restored after reload |
 | 6 | **Sleep Prevention** | Electron app prevents Windows from suspending during sleep |
 | 7 | **Toast Notification System** | Full toast system with `window.T2Toast` for plugins |
+| 8 | **Favorites Panel** | Left-side panel: drag nodes to add; click to create; right-click to remove. Favorites grouped by context-menu category with dividers |
+| 9 | **Dock Merge into Forecast** | Control Panel can merge below 5-day Forecast or pop back out; persisted to `localStorage` |
 
 ### 🟢 RECENTLY FIXED
 
@@ -500,6 +502,7 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 | 3 | Reset performance | `resetEditorView()` uses `requestAnimationFrame` to avoid blocking (was 350ms+, now <16ms) |
 | 4 | DeviceStateControl CSS | No longer injects CSS on every render (major performance fix) |
 | 5 | Keyframe animations | Moved from dynamic injection to `node-styles.css` |
+| 6 | HA Device Automation outputs | `data()` now pure (no changeCallback inside), always returns all dynamic outputs; uses `??` to preserve `false`/`0` |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 
@@ -546,6 +549,20 @@ Additional local-API smart devices to support (no cloud required):
 
 ## Key UI Components
 
+### Favorites Panel (FavoritesPanel.jsx)
+Left-side panel for quick access to frequently-used nodes:
+- **Drag-to-Add**: Drag any node onto the panel to add it to Favorites (node snaps back after drop).
+- **Grouped by Category**: Dividers auto-generated per context-menu category (e.g., Home Assistant, Logic).
+- **Click to Create**: Click a favorite to drop a new instance at canvas center.
+- **Right-click to Remove**: Removes favorite from list.
+- **Tooltip**: `?` icon explains usage.
+- **Persistence**: Stored in `localStorage['favoriteNodes']` as `{ version: 2, groups: [{category, labels}] }`.
+
+Files:
+- `v3_migration/frontend/src/ui/FavoritesPanel.jsx`
+- `v3_migration/frontend/src/ui/FavoritesPanel.css`
+- State/logic in `v3_migration/frontend/src/Editor.jsx` (favoriteGroups, addFavoriteLabel, removeFavoriteLabel).
+
 ### Control Panel (Dock.jsx)
 The right-side docked panel containing:
 - **Graph Controls**: New, Save, Load, Undo, Run buttons
@@ -553,6 +570,7 @@ The right-side docked panel containing:
 - **Plugin Status**: Loaded/failed plugin count
 - **Camera Panel**: Collapsible IP camera viewer (CameraPanel.jsx)
 - **Settings Section**: Settings modal, Keyboard shortcuts, Check for Updates button
+- **Merge/Pop-out**: Can merge into Forecast panel (below 5-day cards) or float independently; state persisted to `localStorage`.
 
 ### Settings Modal (SettingsModal.jsx)
 Tabbed modal with:

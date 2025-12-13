@@ -1033,6 +1033,10 @@
                 // Timer mode
                 timerDurationValue: 1,
                 timerUnit: 'hours',
+                timerLoopMode: 'none',  // 'none', 'loop', 'ping-pong'
+                
+                // Output throttling - prevents overwhelming Home Assistant API
+                outputStepInterval: 1000,  // ms between output updates (default 1 second)
                 
                 // Color settings
                 colorMode: 'rainbow',
@@ -1061,6 +1065,7 @@
 
             // Timer state
             this.timerStart = null;
+            this.pingPongDirection = 1;  // 1 = forward, -1 = backward
 
             // Sockets - matching ColorGradientNode pattern
             this.addInput('value', new ClassicPreset.Input(numberSocket, 'Value'));
@@ -1070,6 +1075,10 @@
             this.addInput('endTime', new ClassicPreset.Input(stringSocket, 'End Time'));
             
             this.addOutput('hsvInfo', new ClassicPreset.Output(hsvInfoSocket, 'HSV Info'));
+            
+            // Throttling state
+            this.lastOutputTime = 0;
+            this.lastOutputHsv = null;
         }
 
 
@@ -1164,15 +1173,18 @@
                 } else if (this.properties.rangeMode === 'timer') {
                     if (trigger && !this.timerStart) {
                         this.timerStart = now.getTime();
+                        this.pingPongDirection = 1;  // Start forward
                     }
                     
                     // If no timer started, use position 0
                     if (!this.timerStart) {
                         position = 0;
                         this.properties.isInRange = false;
-                    } else if (trigger === false) {
-                        // Timer stopped - use position 0
+                    } else if (!trigger) {
+                        // Timer stopped - reset to position 0
+                        // Treats both false AND undefined (disconnected) as stop
                         this.timerStart = null;
+                        this.pingPongDirection = 1;
                         position = 0;
                         this.properties.isInRange = false;
                     } else {
@@ -1189,20 +1201,42 @@
 
                         const durationMs = timerDuration * unitMultiplier;
                         const elapsed = this.timerStart ? now.getTime() - this.timerStart : 0;
+                        const loopMode = this.properties.timerLoopMode || 'none';
 
                         if (elapsed >= durationMs) {
-                            position = 1;
+                            // Timer completed one cycle
                             this.properties.isInRange = true;
-                            if (trigger === true) {
+                            
+                            if (loopMode === 'loop') {
+                                // Loop mode: restart from beginning
                                 this.timerStart = now.getTime();
+                                position = 0;
+                            } else if (loopMode === 'ping-pong') {
+                                // Ping-pong mode: reverse direction and restart
+                                this.pingPongDirection *= -1;
+                                this.timerStart = now.getTime();
+                                position = this.pingPongDirection === 1 ? 0 : 1;
                             } else {
-                                this.timerStart = null;
+                                // No loop: stay at end position
+                                position = 1;
+                                // Only restart if trigger is still true (legacy behavior)
+                                if (trigger === true) {
+                                    this.timerStart = now.getTime();
+                                } else {
+                                    this.timerStart = null;
+                                }
                             }
                         } else if (this.properties.previewMode) {
                             position = clamp(this.properties.previewPosition || 0, 0, 1);
                             this.properties.isInRange = true;
                         } else {
-                            position = elapsed / durationMs;
+                            // Calculate position based on direction (for ping-pong)
+                            const rawPosition = elapsed / durationMs;
+                            if (this.pingPongDirection === 1) {
+                                position = rawPosition;  // Forward: 0 -> 1
+                            } else {
+                                position = 1 - rawPosition;  // Backward: 1 -> 0
+                            }
                             this.properties.isInRange = true;
                         }
                     }
@@ -1326,16 +1360,38 @@
 
             // Output structure matches All-in-One Color node
             // hue: 0-1, saturation: 0-1, brightness: 0-255
-            const output = {
-                hsvInfo: {
-                    hue: hsv.hue,
-                    saturation: finalSaturation,
-                    brightness: brightness,
-                    rgb: desaturatedRgb
-                }
+            const newHsv = {
+                hue: hsv.hue,
+                saturation: finalSaturation,
+                brightness: brightness,
+                rgb: desaturatedRgb
             };
-
-            return output;
+            
+            // Throttle output to prevent overwhelming downstream nodes/APIs
+            const stepInterval = this.properties.outputStepInterval || 1000;
+            const timeSinceLastOutput = currentMs - (this.lastOutputTime || 0);
+            
+            // Only send new output if:
+            // 1. Enough time has passed since last output, OR
+            // 2. Values have changed significantly (for responsiveness)
+            const hsvChanged = !this.lastOutputHsv || 
+                Math.abs(newHsv.hue - this.lastOutputHsv.hue) > 0.01 ||
+                Math.abs(newHsv.saturation - this.lastOutputHsv.saturation) > 0.01 ||
+                Math.abs(newHsv.brightness - this.lastOutputHsv.brightness) > 2;
+            
+            if (timeSinceLastOutput >= stepInterval || !this.lastOutputHsv) {
+                this.lastOutputTime = currentMs;
+                this.lastOutputHsv = { ...newHsv };
+                return { hsvInfo: newHsv };
+            } else if (hsvChanged && timeSinceLastOutput >= 100) {
+                // Allow faster updates if values changed significantly (min 100ms)
+                this.lastOutputTime = currentMs;
+                this.lastOutputHsv = { ...newHsv };
+                return { hsvInfo: newHsv };
+            } else {
+                // Return last output to avoid flooding
+                return { hsvInfo: this.lastOutputHsv || newHsv };
+            }
         }
 
         serialize() {
@@ -1353,6 +1409,8 @@
                 endTimePeriod: this.properties.endTimePeriod,
                 timerDurationValue: this.properties.timerDurationValue,
                 timerUnit: this.properties.timerUnit,
+                timerLoopMode: this.properties.timerLoopMode,
+                outputStepInterval: this.properties.outputStepInterval,
                 colorMode: this.properties.colorMode,
                 colorStops: this.properties.colorStops,
                 editorWidth: this.properties.editorWidth,
@@ -1394,6 +1452,8 @@
             if (data.endTimePeriod) this.properties.endTimePeriod = data.endTimePeriod;
             if (data.timerDurationValue !== undefined) this.properties.timerDurationValue = data.timerDurationValue;
             if (data.timerUnit) this.properties.timerUnit = data.timerUnit;
+            if (data.timerLoopMode) this.properties.timerLoopMode = data.timerLoopMode;
+            if (data.outputStepInterval !== undefined) this.properties.outputStepInterval = data.outputStepInterval;
             if (data.colorMode) this.properties.colorMode = data.colorMode;
             if (data.colorStops) this.properties.colorStops = data.colorStops;
             if (data.editorWidth) this.properties.editorWidth = data.editorWidth;
@@ -1438,6 +1498,8 @@
         const [endTimePeriod, setEndTimePeriod] = useState(data.properties.endTimePeriod);
         const [timerDuration, setTimerDuration] = useState(data.properties.timerDurationValue);
         const [timerUnit, setTimerUnit] = useState(data.properties.timerUnit);
+        const [timerLoopMode, setTimerLoopMode] = useState(data.properties.timerLoopMode || 'none');
+        const [outputStepInterval, setOutputStepInterval] = useState(data.properties.outputStepInterval || 1000);
         const [colorMode, setColorMode] = useState(data.properties.colorMode);
         const [colorStops, setColorStops] = useState(data.properties.colorStops);
         const [showColorEditor, setShowColorEditor] = useState(data.properties.showColorEditor);
@@ -1491,6 +1553,8 @@
             setEndTimePeriod(data.properties.endTimePeriod);
             setTimerDuration(data.properties.timerDurationValue);
             setTimerUnit(data.properties.timerUnit);
+            setTimerLoopMode(data.properties.timerLoopMode || 'none');
+            setOutputStepInterval(data.properties.outputStepInterval || 1000);
             setColorMode(data.properties.colorMode);
             setColorStops(data.properties.colorStops);
             setShowColorEditor(data.properties.showColorEditor || false);
@@ -1524,8 +1588,50 @@
         }, [data, syncFromProperties]);
 
         // Periodic update for runtime state
+        // Also keeps timer position updated even when node is collapsed or output disconnected
         useEffect(() => {
             const interval = setInterval(() => {
+                // If in Timer mode and timer is running, calculate position locally
+                // This ensures timer runs even when collapsed or output disconnected
+                if (data.properties.rangeMode === 'timer' && data.timerStart) {
+                    const now = Date.now();
+                    let unitMultiplier;
+                    switch (data.properties.timerUnit) {
+                        case 'hours': unitMultiplier = 3600000; break;
+                        case 'minutes': unitMultiplier = 60000; break;
+                        default: unitMultiplier = 1000; break;
+                    }
+                    const duration = data.properties.timerDurationValue || 1;
+                    const durationMs = duration * unitMultiplier;
+                    const elapsed = now - data.timerStart;
+                    const loopMode = data.properties.timerLoopMode || 'none';
+                    
+                    let calcPosition;
+                    if (elapsed >= durationMs) {
+                        // Cycle complete - handle loop modes
+                        if (loopMode === 'loop') {
+                            data.timerStart = now;
+                            data.pingPongDirection = 1;
+                            calcPosition = 0;
+                        } else if (loopMode === 'ping-pong') {
+                            data.pingPongDirection = (data.pingPongDirection || 1) * -1;
+                            data.timerStart = now;
+                            calcPosition = data.pingPongDirection === 1 ? 0 : 1;
+                        } else {
+                            calcPosition = 1;
+                        }
+                    } else {
+                        const rawPosition = elapsed / durationMs;
+                        if ((data.pingPongDirection || 1) === 1) {
+                            calcPosition = rawPosition;
+                        } else {
+                            calcPosition = 1 - rawPosition;
+                        }
+                    }
+                    data.properties.position = Math.max(0, Math.min(1, calcPosition));
+                    data.properties.isInRange = true;
+                }
+                
                 setPosition(data.properties.position || 0);
                 setIsInRange(data.properties.isInRange || false);
                 setOutputHue(data.properties.outputHue || 0);
@@ -1534,7 +1640,7 @@
                 setOutputRgb(data.properties.outputRgb || { r: 128, g: 128, b: 128 });
                 setInputStartTime(data.inputStartTime || null);
                 setInputEndTime(data.inputEndTime || null);
-            }, 500);
+            }, 50);  // Fast update for smooth playhead animation
             return () => clearInterval(interval);
         }, [data]);
 
@@ -1570,6 +1676,19 @@
             data.properties.rangeMode = mode;
             data.timerStart = null;
             setRangeMode(mode);
+            triggerUpdate();
+        }, [data, triggerUpdate]);
+
+        // Reset playhead to starting position
+        const handleReset = useCallback(() => {
+            data.timerStart = null;
+            data.pingPongDirection = 1;
+            data.properties.position = 0;
+            data.properties.isInRange = false;
+            data.properties.previewPosition = 0;
+            setPosition(0);
+            setIsInRange(false);
+            setPreviewPositionState(0);
             triggerUpdate();
         }, [data, triggerUpdate]);
 
@@ -1914,15 +2033,32 @@
             !collapsed && el('div', { key: 'collapsible-content' }, [
                 // Controls section - using cgn-controls class
                 el('div', { key: 'controls', className: 'cgn-controls', onPointerDown: stopPropagation }, [
-                    // Range Mode selector
+                    // Range Mode selector with Reset button
                     el('div', { key: 'rangeSection', className: 'cgn-section' }, [
-                        el('div', { key: 'modeRow', className: 'cgn-section-header' }, 'Range Mode'),
+                        el('div', { key: 'modeHeader', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+                            el('div', { key: 'modeLabel', className: 'cgn-section-header', style: { marginBottom: 0 } }, 'Range Mode'),
+                            el('button', {
+                                key: 'reset',
+                                onClick: handleReset,
+                                onPointerDown: stopPropagation,
+                                title: 'Reset playhead to start position',
+                                style: {
+                                    background: '#444',
+                                    border: '1px solid #666',
+                                    borderRadius: '3px',
+                                    color: '#fff',
+                                    fontSize: '9px',
+                                    padding: '2px 6px',
+                                    cursor: 'pointer'
+                                }
+                            }, '⟲ Reset')
+                        ]),
                         el('select', {
                             key: 'select',
                             value: rangeMode,
                             onChange: handleRangeModeChange,
                             onPointerDown: stopPropagation,
-                            style: { ...selectStyle, width: '100%', marginBottom: '8px' }
+                            style: { ...selectStyle, width: '100%', marginBottom: '8px', marginTop: '4px' }
                         }, [
                             el('option', { key: 'numerical', value: 'numerical' }, 'Numerical'),
                             el('option', { key: 'time', value: 'time' }, 'Time of Day'),
@@ -2120,14 +2256,56 @@
                             el('option', { key: 'min', value: 'minutes' }, 'Minutes'),
                             el('option', { key: 'hr', value: 'hours' }, 'Hours')
                         ])
+                    ]),
+                    // Loop mode selector
+                    el('div', { key: 'loopRow', style: sliderRowStyle }, [
+                        el('span', { key: 'label', style: sliderLabelStyle }, 'On Complete:'),
+                        el('select', {
+                            key: 'select',
+                            value: timerLoopMode,
+                            onChange: (e) => {
+                                setTimerLoopMode(e.target.value);
+                                data.properties.timerLoopMode = e.target.value;
+                                triggerUpdate();
+                            },
+                            onPointerDown: stopPropagation,
+                            style: selectStyle
+                        }, [
+                            el('option', { key: 'none', value: 'none' }, 'Stop'),
+                            el('option', { key: 'loop', value: 'loop' }, 'Loop'),
+                            el('option', { key: 'pingpong', value: 'ping-pong' }, 'Ping-Pong')
+                        ])
                     ])
+                ]),
+                
+                // Output step interval (throttling) - applies to all modes
+                el('div', { key: 'stepRow', style: sliderRowStyle }, [
+                    el('span', { key: 'label', style: sliderLabelStyle }, `Step: ${outputStepInterval >= 1000 ? (outputStepInterval / 1000) + 's' : outputStepInterval + 'ms'}`),
+                    el('input', {
+                        key: 'slider',
+                        type: 'range',
+                        min: 100,
+                        max: 5000,
+                        step: 100,
+                        value: outputStepInterval,
+                        onChange: (e) => {
+                            const val = parseInt(e.target.value, 10);
+                            setOutputStepInterval(val);
+                            data.properties.outputStepInterval = val;
+                            triggerUpdate();
+                        },
+                        onPointerDown: stopPropagation,
+                        className: 'cgn-slider',
+                        style: { flex: 1, ...getSliderStyle(outputStepInterval, 100, 5000) }
+                    })
                 ])
             ]),
 
-            // Color Mode
+            // Color Mode - cleaner layout
             el('div', { key: 'colorSection', style: sectionStyle, onPointerDown: stopPropagation }, [
-                el('div', { key: 'colorRow', style: rowStyle }, [
-                    el('span', { key: 'label', style: labelStyle }, 'Colors:'),
+                // Colors row with dropdown
+                el('div', { key: 'colorRow', style: sliderRowStyle }, [
+                    el('span', { key: 'label', style: sliderLabelStyle }, 'Colors:'),
                     el('select', {
                         key: 'mode',
                         value: colorMode,
@@ -2137,9 +2315,12 @@
                     }, [
                         el('option', { key: 'rainbow', value: 'rainbow' }, 'Rainbow'),
                         el('option', { key: 'custom', value: 'custom' }, 'Custom')
-                    ]),
-                    
-                    colorMode === 'custom' && el('button', {
+                    ])
+                ]),
+                
+                // Edit Colors button on its own row (only when Custom mode)
+                colorMode === 'custom' && el('div', { key: 'editRow', style: { ...sliderRowStyle, justifyContent: 'flex-end' } }, [
+                    el('button', {
                         key: 'editColors',
                         onClick: (e) => {
                             e.stopPropagation();
@@ -2147,8 +2328,16 @@
                             setShowColorEditor(!showColorEditor);
                         },
                         onPointerDown: stopPropagation,
-                        style: { ...selectStyle, background: showColorEditor ? '#446' : '#333' }
-                    }, showColorEditor ? 'Hide' : 'Edit')
+                        style: {
+                            background: showColorEditor ? '#553333' : '#335533',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            padding: '4px 12px',
+                            cursor: 'pointer'
+                        }
+                    }, showColorEditor ? '▲ Hide Colors' : '▼ Edit Colors')
                 ]),
 
                 colorMode === 'custom' && showColorEditor && el(ColorStopEditor, {
