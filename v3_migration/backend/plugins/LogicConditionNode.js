@@ -106,7 +106,8 @@
             // Skip API calls during graph loading
             if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
-                const response = await fetch('/api/lights/ha/', { 
+                const fetchFn = window.apiFetch || fetch;
+                const response = await fetchFn('/api/lights/ha/', { 
                     headers: { 'Authorization': `Bearer ${this.properties.haToken}` } 
                 });
                 const data = await response.json();
@@ -139,7 +140,8 @@
             // Skip API calls during graph loading
             if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
-                const res = await fetch(`/api/lights/ha/${id}/state`, { 
+                const fetchFn = window.apiFetch || fetch;
+                const res = await fetchFn(`/api/lights/ha/${id}/state`, { 
                     headers: { 'Authorization': `Bearer ${this.properties.haToken}` } 
                 });
                 const data = await res.json();

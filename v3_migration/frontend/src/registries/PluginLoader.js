@@ -5,7 +5,7 @@ import { RefComponent } from 'rete-react-plugin';
 import * as luxon from 'luxon';
 import sockets from '../sockets';
 import { socket } from '../socket';
-import { apiUrl } from '../utils/apiBase';
+import { apiUrl, getApiBase } from '../utils/apiBase';
 
 // Expose dependencies globally for plugins
 // This allows "Caveman-Simple" plugins to just use window.Rete, window.React, etc.
@@ -16,6 +16,16 @@ window.luxon = luxon;
 window.nodeRegistry = nodeRegistry;
 window.sockets = sockets;
 window.socket = socket;
+
+// Expose API helpers for plugins to use (required for HA ingress compatibility)
+window.apiUrl = apiUrl;
+window.getApiBase = getApiBase;
+
+// Helper function for plugins to make API calls that work through HA ingress
+window.apiFetch = async function(path, options = {}) {
+    const url = apiUrl(path);
+    return fetch(url, options);
+};
 
 // Plugin loading state for UI feedback
 let loadingState = {

@@ -411,7 +411,8 @@
             const fetchGlobalLocationAndSunTimes = async () => {
                 try {
                     // Always fetch global settings - they override node settings
-                    const response = await fetch('/api/settings');
+                    const fetchFn = window.apiFetch || fetch;
+                    const response = await fetchFn('/api/settings');
                     if (response.ok) {
                         const result = await response.json();
                         const settings = result.settings || {};

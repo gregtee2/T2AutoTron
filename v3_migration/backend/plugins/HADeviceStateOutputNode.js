@@ -175,7 +175,8 @@
 
             try {
                 this.log("fetch", "Fetching devices...", false);
-                const response = await fetch('/api/lights/ha/', {
+                const fetchFn = window.apiFetch || fetch;
+                const response = await fetchFn('/api/lights/ha/', {
                     headers: { 'Authorization': `Bearer ${this.properties.haToken}` }
                 });
                 const data = await response.json();
@@ -323,7 +324,8 @@
             
             try {
                 this.log("fetchDeviceState", `Fetching state for ${deviceId}`, false);
-                const response = await fetch(`/api/lights/ha/ha_${deviceId}/state`, {
+                const fetchFn = window.apiFetch || fetch;
+                const response = await fetchFn(`/api/lights/ha/ha_${deviceId}/state`, {
                     headers: { 'Authorization': `Bearer ${this.properties.haToken}`, 'Content-Type': 'application/json' }
                 });
                 

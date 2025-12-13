@@ -146,7 +146,8 @@
             // Skip API calls during graph loading
             if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
-                const response = await fetch('/api/lights/kasa');
+                const fetchFn = window.apiFetch || fetch;
+                const response = await fetchFn('/api/lights/kasa');
                 const data = await response.json();
                 if (data.success && Array.isArray(data.lights)) {
                     this.plugs = data.lights.filter(d => d.type === 'plug');
@@ -212,9 +213,10 @@
             if (typeof window !== 'undefined' && window.graphLoading) return;
             const cleanId = id.replace('kasa_', '');
             try {
-                const resState = await fetch(`/api/lights/kasa/${cleanId}/state`);
+                const fetchFn = window.apiFetch || fetch;
+                const resState = await fetchFn(`/api/lights/kasa/${cleanId}/state`);
                 const dataState = await resState.json();
-                const resEnergy = await fetch(`/api/lights/kasa/${cleanId}/energy`);
+                const resEnergy = await fetchFn(`/api/lights/kasa/${cleanId}/energy`);
                 const dataEnergy = await resEnergy.json();
                 if (dataState.success) {
                     const newState = { ...this.perPlugState[id], on: dataState.state.on, state: dataState.state.on ? "on" : "off", energyUsage: dataEnergy.success ? dataEnergy.energyData : null };
@@ -241,7 +243,8 @@
                 const cleanId = id.replace('kasa_', '');
                 const action = turnOn ? 'on' : 'off';
                 try {
-                    await fetch(`/api/lights/kasa/${cleanId}/${action}`, { method: "POST" });
+                    const fetchFn = window.apiFetch || fetch;
+                    await fetchFn(`/api/lights/kasa/${cleanId}/${action}`, { method: "POST" });
                     this.perPlugState[id] = { ...this.perPlugState[id], on: turnOn, state: turnOn ? "on" : "off" };
                     this.updatePlugControls(id, this.perPlugState[id]);
                 } catch (e) { console.error(`Set state failed for ${id}`, e); }
@@ -267,7 +270,8 @@
                 const cleanId = id.replace('kasa_', '');
                 const action = newOn ? 'on' : 'off';
                 try {
-                    await fetch(`/api/lights/kasa/${cleanId}/${action}`, { method: "POST" });
+                    const fetchFn = window.apiFetch || fetch;
+                    await fetchFn(`/api/lights/kasa/${cleanId}/${action}`, { method: "POST" });
                     this.perPlugState[id] = { ...this.perPlugState[id], on: newOn, state: newOn ? "on" : "off" };
                     this.updatePlugControls(id, this.perPlugState[id]);
                 } catch (e) { console.error(`Toggle failed for ${id}`, e); }

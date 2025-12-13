@@ -139,7 +139,8 @@
         async fetchDevices() {
             this.updateStatus("Fetching Hue lights...");
             try {
-                const response = await fetch('/api/lights/hue');
+                const fetchFn = window.apiFetch || fetch;
+                const response = await fetchFn('/api/lights/hue');
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
@@ -251,7 +252,8 @@
 
         async fetchDeviceState(rawId) {
             try {
-                const response = await fetch(`/api/lights/hue/${rawId}`);
+                const fetchFn = window.apiFetch || fetch;
+                const response = await fetchFn(`/api/lights/hue/${rawId}`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.light) {
@@ -332,7 +334,8 @@
                 try {
                     console.log(`[HueLightNode] HSV PUT /api/lights/hue/${rawId}/state:`, JSON.stringify(payload));
                     
-                    const response = await fetch(`/api/lights/hue/${rawId}/state`, {
+                    const fetchFn = window.apiFetch || fetch;
+                    const response = await fetchFn(`/api/lights/hue/${rawId}/state`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -402,7 +405,8 @@
                 try {
                     console.log(`[HueLightNode] PUT /api/lights/hue/${rawId}/state:`, JSON.stringify(payload));
                     
-                    const response = await fetch(`/api/lights/hue/${rawId}/state`, {
+                    const fetchFn = window.apiFetch || fetch;
+                    const response = await fetchFn(`/api/lights/hue/${rawId}/state`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)

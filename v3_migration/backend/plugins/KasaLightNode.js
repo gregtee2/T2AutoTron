@@ -179,7 +179,8 @@
         async fetchDevices() {
             this.updateStatus("Fetching Kasa lights...");
             try {
-                const response = await fetch('/api/lights/kasa');
+                const fetchFn = window.apiFetch || fetch;
+                const response = await fetchFn('/api/lights/kasa');
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
@@ -304,7 +305,8 @@
 
         async fetchDeviceState(rawId) {
             try {
-                const response = await fetch(`/api/lights/kasa/${rawId}/state`);
+                const fetchFn = window.apiFetch || fetch;
+                const response = await fetchFn(`/api/lights/kasa/${rawId}/state`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.state) {
@@ -392,7 +394,8 @@
                 try {
                     console.log(`[KasaLightNode] HSV POST /api/lights/kasa/${rawId}/state:`, JSON.stringify(payload));
                     
-                    const response = await fetch(`/api/lights/kasa/${rawId}/state`, {
+                    const fetchFn = window.apiFetch || fetch;
+                    const response = await fetchFn(`/api/lights/kasa/${rawId}/state`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -469,13 +472,14 @@
                 }
 
                 try {
+                    const fetchFn = window.apiFetch || fetch;
                     const url = turnOn && hsvInfo 
                         ? `/api/lights/kasa/${rawId}/state`
                         : `/api/lights/kasa/${rawId}/${endpoint}`;
                     
                     console.log(`[KasaLightNode] POST ${url}:`, JSON.stringify(payload));
                     
-                    const response = await fetch(url, {
+                    const response = await fetchFn(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)

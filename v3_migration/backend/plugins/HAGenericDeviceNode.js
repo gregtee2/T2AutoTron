@@ -328,7 +328,8 @@
             if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
                 // Use unified /api/devices to get ALL devices (HA, Kasa, Hue, Shelly, etc.)
-                const response = await fetch('/api/devices', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
+                const fetchFn = window.apiFetch || fetch;
+                const response = await fetchFn('/api/devices', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                 const data = await response.json();
                 if (data.success && data.devices) {
                     // Combine all device sources into a single flat list
@@ -488,7 +489,8 @@
             try {
                 const apiInfo = this.getDeviceApiInfo(id);
                 if (!apiInfo) return;
-                const res = await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
+                const fetchFn = window.apiFetch || fetch;
+                const res = await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                 const data = await res.json();
                 if (data.success && data.state) {
                     this.perDeviceState[id] = data.state;
@@ -573,16 +575,17 @@
                     }
                 }
                 try {
+                    const fetchFn = window.apiFetch || fetch;
                     // For Kasa devices, use POST to /on or /off endpoint
                     if (isKasa) {
                         const action = turnOn ? 'on' : 'off';
-                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
+                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
                             method: "POST", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
                         });
                     } else {
-                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
                             method: "PUT", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
@@ -620,16 +623,17 @@
                 const payload = { on: turnOn, state: turnOn ? "on" : "off" };
                 if (turnOn && transitionMs) payload.transition = transitionMs;
                 try {
+                    const fetchFn = window.apiFetch || fetch;
                     if (isKasa) {
                         // Kasa uses POST to /on or /off endpoint
                         const action = turnOn ? 'on' : 'off';
-                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
+                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
                             method: "POST", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
                         });
                     } else {
-                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
                             method: "PUT", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
@@ -665,14 +669,15 @@
                 const payload = { on: newOn, state: newOn ? "on" : "off" };
                 if (newOn && transitionMs) payload.transition = transitionMs;
                 try {
+                    const fetchFn = window.apiFetch || fetch;
                     if (isKasa) {
                         // Kasa uses POST to /on, /off, or /toggle endpoint
-                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/toggle`, { 
+                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/toggle`, { 
                             method: "POST", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }
                         });
                     } else {
-                        await fetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
                             method: "PUT", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
