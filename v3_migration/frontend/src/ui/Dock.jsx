@@ -9,7 +9,7 @@ import { onPluginProgress } from '../registries/PluginLoader';
 import { useToast } from './Toast';
 import { authFetch } from '../auth/authClient';
 
-export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedChanges, isMerged = false, onToggleMerged }) {
+export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImport, hasUnsavedChanges, isMerged = false, onToggleMerged }) {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -356,6 +356,7 @@ export function Dock({ onSave, onLoad, onClear, onExport, onImport, hasUnsavedCh
                             💾 Save {hasUnsavedChanges && '*'}
                         </button>
                         <button onClick={onLoad} className="dock-btn">↻ Load Last</button>
+                        <button onClick={onLoadExample} className="dock-btn" title="Load a starter graph to see how things work">📚 Load Example</button>
                         <button onClick={handleImportClick} className="dock-btn">📂 Import File</button>
                         <button onClick={onClear} className="dock-btn">🗑️ Clear</button>
                         <input

@@ -1,5 +1,63 @@
 # T2AutoTron 2.1 - AI Coding Instructions
 
+## Recent Context Menu & UX Polish (2025-12-13)
+
+Major cleanup of the plugin context menu system and UX improvements:
+
+### Category Reorganization
+- **Renamed**: `CC_Control_Nodes` → `Color` (clearer purpose)
+- **Renamed**: `Other` + `Plugs` → `Direct Devices` (Kasa/Hue direct control)
+- **Deleted POC nodes**: `SplineHueCurveNode.js`, `TestPluginNode.js`
+- **Renamed**: `PushbuttonNode` → `Toggle` (latch mode is default behavior)
+
+### Context Menu Icons
+Added emoji icons to category headers in the context menu:
+- Icons defined in `00_SharedControlsPlugin.js` as `THEME.categories`
+- Looked up in `Editor.jsx` via `window.T2Controls?.THEME?.categories`
+- Displayed in `FastContextMenu.jsx` with `.menu-icon` CSS class
+
+**Category → Icon mapping:**
+```javascript
+'Home Assistant': { icon: '🏠' },
+'Logic': { icon: '🔀' },
+'Timer/Event': { icon: '⏱️' },
+'Color': { icon: '🎨' },
+'Utility': { icon: '🔧' },
+'Inputs': { icon: '📥' },
+'Direct Devices': { icon: '💡' }
+```
+
+### Dynamic Node Height Fix
+`HAGenericDeviceNode` wasn't expanding when devices were added:
+- Removed `max-height: 400px` constraint from `node-styles.css`
+- Added dynamic height calculation: `this.height = BASE_HEIGHT + (deviceCount * HEIGHT_PER_DEVICE)`
+- `updateHeight()` called in `onAddDevice`, `onRemoveDevice`, `restore`
+
+### Lasso Selection Offset Fix
+Selection box was offset after Favorites panel was added:
+- Added `position: relative` to `.rete-editor` in `App.css`
+
+### Starter Example Graph (IN PROGRESS)
+Adding a pre-built example graph for first-time users:
+- **API endpoint**: `GET /api/examples/starter` in `server.js`
+- **Graph file**: `backend/examples/starter_graph.json`
+- **UI button**: "📚 Load Example" in Dock.jsx
+- **Handler**: `handleLoadExample` in Editor.jsx
+- **Status**: Endpoint returning 500 error - needs debugging
+
+**Files modified this session:**
+- `v3_migration/backend/plugins/00_SharedControlsPlugin.js` - Category themes with icons
+- `v3_migration/backend/plugins/*.js` - 8 plugins updated with new categories
+- `v3_migration/frontend/src/Editor.jsx` - Icon lookup, handleLoadExample
+- `v3_migration/frontend/src/FastContextMenu.jsx` - Icon display
+- `v3_migration/frontend/src/FastContextMenu.css` - .menu-icon styling
+- `v3_migration/frontend/src/styles/node-styles.css` - Removed max-height
+- `v3_migration/frontend/src/App.css` - Added position: relative
+- `v3_migration/frontend/src/ui/Dock.jsx` - Load Example button
+- `v3_migration/backend/src/server.js` - /api/examples/starter endpoint
+
+---
+
 ## Recent Crash Detection & Logging Work (2025-12-13)
 
 Added crash detection and log management to diagnose overnight Electron crashes:
@@ -196,7 +254,9 @@ Sockets are styled via CSS using `data-socket-type` attribute set by `CustomSock
 - `frontend/src/ui/SettingsModal.jsx` → Socket Colors settings panel
 
 ### Node Categories
-`"Home Assistant"`, `"Logic"`, `"Timer/Event"`, `"CC_Control_Nodes"`, `"Color"`, `"Utility"`, `"Inputs"`, `"Other"`
+`"Home Assistant"`, `"Logic"`, `"Timer/Event"`, `"Color"`, `"Utility"`, `"Inputs"`, `"Direct Devices"`
+
+**Note**: `CC_Control_Nodes` and `Other` are deprecated - use `Color` or `Direct Devices` instead.
 
 ### AutoTronBuffer (Inter-Node Communication)
 Nodes can share values via `window.AutoTronBuffer` - a global key-value store for cross-node communication:
@@ -421,6 +481,7 @@ cd v3_migration/frontend && npm run build
 - `POST /api/lights/{type}` → Control device (type: ha, kasa, hue, shelly)
 - `GET /api/weather` → Current weather data
 - `POST /api/settings/test` → Test API connection (ha, weather, hue, telegram)
+- `GET /api/examples/starter` → Fetch starter example graph for new users
 
 ## Real-time Communication
 
@@ -476,7 +537,7 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 
 ## Beta Release Status
 
-**Current Version: 2.1.0-beta.18 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.7 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -521,6 +582,10 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 | 7 | **Toast Notification System** | Full toast system with `window.T2Toast` for plugins |
 | 8 | **Favorites Panel** | Left-side panel: drag nodes to add; click to create; right-click to remove. Favorites grouped by context-menu category with dividers |
 | 9 | **Dock Merge into Forecast** | Control Panel can merge below 5-day Forecast or pop back out; persisted to `localStorage` |
+| 10 | **Context Menu Icons** | Category headers now show emoji icons (🏠 Home Assistant, 🔀 Logic, etc.) |
+| 11 | **Category Reorganization** | Cleaner categories: CC_Control_Nodes → Color, Other/Plugs → Direct Devices |
+| 12 | **Dynamic Node Height** | HAGenericDeviceNode now expands when devices are added |
+| 13 | **Lasso Selection Fix** | Selection box offset corrected after Favorites panel addition |
 
 ### 🟢 RECENTLY FIXED
 
@@ -594,7 +659,7 @@ Files:
 
 ### Control Panel (Dock.jsx)
 The right-side docked panel containing:
-- **Graph Controls**: New, Save, Load, Undo, Run buttons
+- **Graph Controls**: New, Save, Load, Load Example, Undo, Run buttons
 - **Connection Status**: HA, Hue, Socket.IO indicators
 - **Plugin Status**: Loaded/failed plugin count
 - **Camera Panel**: Collapsible IP camera viewer (CameraPanel.jsx)

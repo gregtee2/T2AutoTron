@@ -2766,6 +2766,45 @@ export function Editor() {
             alert('Failed to load graph');
         }
     };
+
+    const handleLoadExample = async () => {
+        if (!editorInstance || !areaInstance || !engineInstance) {
+            console.error('[handleLoadExample] Missing instances');
+            return;
+        }
+        
+        // Confirm if there are existing nodes
+        const existingNodes = editorInstance.getNodes();
+        if (existingNodes.length > 0) {
+            if (!confirm('This will replace your current graph with the starter example. Continue?')) {
+                return;
+            }
+        }
+        
+        try {
+            // Fetch the example graph from the API
+            const response = await fetch('/api/examples/starter');
+            if (!response.ok) {
+                throw new Error(`Failed to fetch example: ${response.status}`);
+            }
+            const data = await response.json();
+            if (!data.success || !data.graph) {
+                throw new Error('Invalid example graph response');
+            }
+            
+            // Store in localStorage and trigger normal load
+            localStorage.setItem('saved-graph', JSON.stringify(data.graph));
+            debug('[handleLoadExample] Example graph loaded, triggering handleLoad...');
+            await handleLoad();
+            
+            if (window.T2Toast) {
+                window.T2Toast.success('Starter example loaded! Select devices from the dropdowns.');
+            }
+        } catch (err) {
+            console.error('[handleLoadExample] Failed:', err);
+            alert('Failed to load example graph: ' + err.message);
+        }
+    };
     
     // Listen for autoLoadGraph event (triggered after update)
     useEffect(() => {
@@ -3064,6 +3103,7 @@ export function Editor() {
                     <Dock
                         onSave={handleSave}
                         onLoad={handleLoad}
+                        onLoadExample={handleLoadExample}
                         onClear={handleClear}
                         onExport={handleExport}
                         onImport={handleImport}

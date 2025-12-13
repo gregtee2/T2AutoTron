@@ -296,6 +296,26 @@ app.get('/api/config', async (req, res) => {
   }
 });
 
+// ============================================================================
+// EXAMPLE GRAPH API - Serve starter graph for new users
+// ============================================================================
+app.get('/api/examples/starter', async (req, res) => {
+  try {
+    const examplePath = path.join(__dirname, '..', 'examples', 'starter_graph.json');
+    try {
+      await fs.access(examplePath);
+    } catch {
+      return res.status(404).json({ success: false, error: 'Starter graph not found' });
+    }
+    const graphData = await fs.readFile(examplePath, 'utf8');
+    res.json({ success: true, graph: JSON.parse(graphData) });
+    logger.log('Served starter example graph', 'info', false, 'examples:load');
+  } catch (error) {
+    logger.log(`Failed to load starter graph: ${error.message}`, 'error', false, 'examples:load');
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // New endpoint to fetch sunrise/sunset
 app.get('/api/sun/times', async (req, res) => {
   try {

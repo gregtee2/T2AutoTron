@@ -1,0 +1,340 @@
+{
+  "nodes": [
+    {
+      "id": "848d33b49cee5fdf",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 536.0667492090284,
+        "y": 222.33601228212865
+      },
+      "data": {
+        "id": "848d33b49cee5fdf",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            null,
+            null
+          ],
+          "selectedDeviceNames": [
+            null,
+            null
+          ],
+          "status": "Loaded 815 devices",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Switch",
+          "triggerMode": "Follow",
+          "autoRefreshInterval": 30000,
+          "customTitle": ""
+        }
+      }
+    },
+    {
+      "id": "0e93092cd5501b77",
+      "label": "Toggle",
+      "position": {
+        "x": -448.32545765553004,
+        "y": 69.84635096018303
+      },
+      "data": {
+        "id": "0e93092cd5501b77",
+        "label": "Toggle",
+        "properties": {
+          "state": false,
+          "pulseMode": false,
+          "lastCommand": false
+        }
+      }
+    },
+    {
+      "id": "0713246e53a4ee75",
+      "label": "Time of Day",
+      "position": {
+        "x": -651.8847152816322,
+        "y": 247.82158485720458
+      },
+      "data": {
+        "id": "0713246e53a4ee75",
+        "label": "Time of Day",
+        "properties": {
+          "customName": "",
+          "start_hour": 8,
+          "start_minute": 0,
+          "start_ampm": "AM",
+          "start_enabled": true,
+          "stop_hour": 6,
+          "stop_minute": 0,
+          "stop_ampm": "PM",
+          "stop_enabled": true,
+          "cycle_hour": 4,
+          "cycle_minute": 45,
+          "cycle_ampm": "AM",
+          "cycle_duration": 10,
+          "cycle_enabled": false,
+          "timezone": "America/Los_Angeles",
+          "next_on_date": "2025-12-14T16:00:00.000Z",
+          "next_off_date": "2025-12-14T02:00:00.000Z",
+          "next_cycle_date": null,
+          "currentState": false,
+          "status": "Initializing...",
+          "debug": false,
+          "pulseMode": true
+        }
+      }
+    },
+    {
+      "id": "b9bac7c798f5e5af",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": -127.99139768468149,
+        "y": 451.3724916942365
+      },
+      "data": {
+        "id": "b9bac7c798f5e5af",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 185,
+          "green": 128,
+          "blue": 70,
+          "hueShift": 30,
+          "saturation": 62,
+          "brightness": 185,
+          "colorTemp": 2620,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "color"
+        }
+      }
+    },
+    {
+      "id": "2c51c3912260877b",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 551.6483775819662,
+        "y": 1604.9312538871902
+      },
+      "data": {
+        "id": "2c51c3912260877b",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            null
+          ],
+          "selectedDeviceNames": [
+            null
+          ],
+          "status": "Loaded 815 devices",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "autoRefreshInterval": 30000,
+          "customTitle": ""
+        }
+      }
+    },
+    {
+      "id": "79155af894a58f1b",
+      "label": "Toggle",
+      "position": {
+        "x": -466.650247126239,
+        "y": 1497.6501496901067
+      },
+      "data": {
+        "id": "79155af894a58f1b",
+        "label": "Toggle",
+        "properties": {
+          "state": false,
+          "pulseMode": false,
+          "lastCommand": false
+        }
+      }
+    },
+    {
+      "id": "e6306828b028f7fc",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": -226.0484367777201,
+        "y": 1754.7250499497918
+      },
+      "data": {
+        "id": "e6306828b028f7fc",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 185,
+          "green": 128,
+          "blue": 70,
+          "hueShift": 30,
+          "saturation": 62,
+          "brightness": 185,
+          "colorTemp": 2620,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "color"
+        }
+      }
+    },
+    {
+      "id": "ac31acc28970cb04",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 571.7602590849086,
+        "y": 2746.7475631513125
+      },
+      "data": {
+        "id": "ac31acc28970cb04",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            null
+          ],
+          "selectedDeviceNames": [
+            null
+          ],
+          "status": "Loaded 815 devices",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Plug",
+          "triggerMode": "Follow",
+          "autoRefreshInterval": 30000,
+          "customTitle": ""
+        }
+      }
+    },
+    {
+      "id": "518956445942dce8",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": -401.0003312346403,
+        "y": 3101.267314315153
+      },
+      "data": {
+        "id": "518956445942dce8",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 185,
+          "green": 128,
+          "blue": 70,
+          "hueShift": 30,
+          "saturation": 62,
+          "brightness": 185,
+          "colorTemp": 2620,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "color"
+        }
+      }
+    },
+    {
+      "id": "f21989a069dd56ca",
+      "label": "Sunrise/Sunset Trigger",
+      "position": {
+        "x": -1014.7219230886805,
+        "y": 2732.9449114713884
+      },
+      "data": {
+        "id": "f21989a069dd56ca",
+        "label": "Sunrise/Sunset Trigger",
+        "properties": {
+          "customName": "",
+          "on_offset_hours": 0,
+          "on_offset_minutes": 30,
+          "on_offset_direction": "Before",
+          "on_enabled": true,
+          "fixed_on_hour": 6,
+          "fixed_on_minute": 0,
+          "fixed_on_ampm": "PM",
+          "fixed_on_enabled": false,
+          "off_offset_hours": 0,
+          "off_offset_minutes": 0,
+          "off_offset_direction": "Before",
+          "off_enabled": true,
+          "fixed_stop_hour": 10,
+          "fixed_stop_minute": 30,
+          "fixed_stop_ampm": "PM",
+          "fixed_stop_enabled": true,
+          "latitude": 34.0537,
+          "longitude": -118.2428,
+          "city": "Los Angeles, California, United States",
+          "timezone": "America/Los_Angeles",
+          "haToken": "",
+          "sunrise_time": "2025-12-13T14:48:43.000Z",
+          "sunset_time": "2025-12-14T00:46:05.000Z",
+          "next_on_date": "2025-12-14T00:16:05.000Z",
+          "next_off_date": "2025-12-14T06:30:00.000Z",
+          "currentState": false,
+          "status": "Los Angeles, California, United States - Updated",
+          "debug": false,
+          "pulseMode": true
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "8708229bb00da2b9",
+      "source": "0713246e53a4ee75",
+      "target": "848d33b49cee5fdf",
+      "sourceOutput": "state",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "45ab25bfff2d4f0b",
+      "source": "b9bac7c798f5e5af",
+      "target": "848d33b49cee5fdf",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "b424f9db2d316652",
+      "source": "e6306828b028f7fc",
+      "target": "2c51c3912260877b",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "fd26f220751974b9",
+      "source": "79155af894a58f1b",
+      "target": "2c51c3912260877b",
+      "sourceOutput": "state",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "1b3a9efc77a6d3c0",
+      "source": "518956445942dce8",
+      "target": "ac31acc28970cb04",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "4c37f7729b993425",
+      "source": "f21989a069dd56ca",
+      "target": "ac31acc28970cb04",
+      "sourceOutput": "state",
+      "targetInput": "trigger"
+    }
+  ],
+  "viewport": {
+    "x": 464.7446464538573,
+    "y": 42.659997069834716,
+    "k": 0.20680507279613572
+  }
+}
