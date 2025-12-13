@@ -25,12 +25,15 @@ Welcome to T2 AutoTron, a visual node-based automation editor for smart home con
 Once T2AutoTron opens, click the **⚙️ Settings** button in the Control Panel (right side) to configure:
 
 #### 📍 Location Settings
-Set your location for sunrise/sunset and weather features:
-- **City**: Your city name (for display)
-- **Latitude/Longitude**: Your coordinates (for solar calculations)
-- **Timezone**: Your timezone (e.g., `America/New_York`)
+Your location is used for sunrise/sunset calculations and weather features.
 
-> **Tip:** Search "what is my latitude and longitude" in Google to find your coordinates.
+**For Home Assistant Add-on Users:** 
+Location is **auto-filled** from your Home Assistant configuration! You'll see a green confirmation message in Settings. No action needed.
+
+**For Standalone Users:**
+1. **Enter your city name** in the City field
+2. **Click the 🔍 Search button** - coordinates and timezone auto-fill
+3. That's it!
 
 #### 🌤️ Weather Services (Optional)
 If you want weather-based automations:

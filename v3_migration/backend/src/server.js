@@ -291,14 +291,17 @@ app.get('/api/config', async (req, res) => {
     const config = await response.json();
     res.json({
       success: true,
+      isAddon: IS_HA_ADDON,
       timezone: config.time_zone,
       latitude: config.latitude,
-      longitude: config.longitude
+      longitude: config.longitude,
+      locationName: config.location_name || 'Home',
+      elevation: config.elevation
     });
     logger.log('Fetched HA config', 'info', false, 'config:fetch');
   } catch (error) {
     logger.log(`Failed to fetch HA config: ${error.message}`, 'error', false, 'config:fetch');
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error.message, isAddon: IS_HA_ADDON });
   }
 });
 

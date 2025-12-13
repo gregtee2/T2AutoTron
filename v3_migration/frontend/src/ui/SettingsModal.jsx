@@ -204,6 +204,10 @@ export function SettingsModal({ isOpen, onClose }) {
     // City search state for Location settings
     const [searchingCity, setSearchingCity] = useState(false);
     const [citySearchError, setCitySearchError] = useState(null);
+    
+    // HA Add-on mode detection
+    const [isAddon, setIsAddon] = useState(false);
+    const [haConfigLoaded, setHaConfigLoaded] = useState(false);
 
     // Fetch current settings on mount
     useEffect(() => {
@@ -224,7 +228,40 @@ export function SettingsModal({ isOpen, onClose }) {
             const response = await authFetch('/api/settings');
             if (!response.ok) throw new Error('Failed to fetch settings');
             const data = await response.json();
-            setSettings(data.settings || {});
+            const loadedSettings = data.settings || {};
+            setSettings(loadedSettings);
+            
+            // Try to fetch HA config for location auto-fill (works best in add-on mode)
+            try {
+                const configRes = await authFetch('/api/config');
+                if (configRes.ok) {
+                    const configData = await configRes.json();
+                    if (configData.success) {
+                        setIsAddon(configData.isAddon || false);
+                        setHaConfigLoaded(true);
+                        
+                        // Auto-fill location fields if they're empty
+                        const needsCity = !loadedSettings.LOCATION_CITY;
+                        const needsLat = !loadedSettings.LOCATION_LATITUDE;
+                        const needsLon = !loadedSettings.LOCATION_LONGITUDE;
+                        const needsTz = !loadedSettings.LOCATION_TIMEZONE;
+                        
+                        if (needsCity || needsLat || needsLon || needsTz) {
+                            setSettings(prev => ({
+                                ...prev,
+                                ...(needsCity && configData.locationName ? { LOCATION_CITY: configData.locationName } : {}),
+                                ...(needsLat && configData.latitude ? { LOCATION_LATITUDE: String(configData.latitude) } : {}),
+                                ...(needsLon && configData.longitude ? { LOCATION_LONGITUDE: String(configData.longitude) } : {}),
+                                ...(needsTz && configData.timezone ? { LOCATION_TIMEZONE: configData.timezone } : {})
+                            }));
+                            console.log('[Settings] Auto-filled location from Home Assistant config');
+                        }
+                    }
+                }
+            } catch (configErr) {
+                // HA config fetch failed - that's OK, user can enter manually
+                console.log('[Settings] Could not fetch HA config for location auto-fill:', configErr.message);
+            }
         } catch (err) {
             setError('Failed to load settings: ' + err.message);
         } finally {
@@ -1480,6 +1517,20 @@ export function SettingsModal({ isOpen, onClose }) {
                                             {/* Special handling for Location category - City Search */}
                                             {category.category === 'Location' && (
                                                 <div className="settings-location-search">
+                                                    {/* Show auto-filled notice for add-on users */}
+                                                    {haConfigLoaded && isAddon && (
+                                                        <div style={{ 
+                                                            background: 'rgba(76, 175, 80, 0.15)', 
+                                                            border: '1px solid rgba(76, 175, 80, 0.4)',
+                                                            borderRadius: '6px',
+                                                            padding: '8px 12px',
+                                                            marginBottom: '12px',
+                                                            fontSize: '0.85rem',
+                                                            color: '#81c784'
+                                                        }}>
+                                                            ✅ Location auto-filled from Home Assistant configuration
+                                                        </div>
+                                                    )}
                                                     <p style={{ fontSize: '0.85rem', color: '#aaa', margin: '0 0 10px 0' }}>
                                                         📍 Enter your city name and click "Search" to auto-fill coordinates.
                                                     </p>

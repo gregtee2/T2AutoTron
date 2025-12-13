@@ -537,7 +537,7 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 
 ## Beta Release Status
 
-**Current Version: 2.1.7 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.12 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
