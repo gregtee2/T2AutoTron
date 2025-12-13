@@ -579,6 +579,7 @@
             // Header
             React.createElement('div', { key: 'header', className: 'ha-node-header' }, [
                 React.createElement('div', { key: 'title', className: 'ha-node-title' }, 'HA Device State Output'),
+                HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 }),
                 React.createElement('div', { key: 'status', className: 'ha-node-status' }, status)
             ]),
 
