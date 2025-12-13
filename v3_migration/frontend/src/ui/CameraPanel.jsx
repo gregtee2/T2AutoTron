@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { apiFetch } from '../auth/authClient';
 
 /**
  * CameraPanel - Dock panel for viewing IP camera feeds
@@ -61,7 +62,7 @@ export function CameraPanel({ isExpanded, onToggle }) {
     const fetchCameras = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/cameras');
+            const response = await apiFetch('/api/cameras');
             if (response.ok) {
                 const data = await response.json();
                 setCameras(data.cameras || []);
@@ -84,7 +85,7 @@ export function CameraPanel({ isExpanded, onToggle }) {
         setError(null);
         
         try {
-            const response = await fetch('/api/cameras/discover', {
+            const response = await apiFetch('/api/cameras/discover', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({})
@@ -123,7 +124,7 @@ export function CameraPanel({ isExpanded, onToggle }) {
 
     const saveCredentials = async () => {
         try {
-            await fetch('/api/cameras/credentials', {
+            await apiFetch('/api/cameras/credentials', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(credentials)
@@ -139,7 +140,7 @@ export function CameraPanel({ isExpanded, onToggle }) {
 
     const addCamera = async (ip, name, creds) => {
         try {
-            await fetch('/api/cameras', {
+            await apiFetch('/api/cameras', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -178,7 +179,7 @@ export function CameraPanel({ isExpanded, onToggle }) {
     const updateCamera = async () => {
         if (!editCamera) return;
         try {
-            await fetch('/api/cameras', {
+            await apiFetch('/api/cameras', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

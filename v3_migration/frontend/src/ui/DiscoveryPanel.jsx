@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { apiFetch } from '../auth/authClient';
 
 /**
  * DiscoveryPanel - Network Device Discovery UI Component
@@ -34,7 +35,7 @@ export function DiscoveryPanel() {
         setError(null);
         
         try {
-            const response = await fetch('/api/discovery/scan', {
+            const response = await apiFetch('/api/discovery/scan', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ timeout: scanTimeout })

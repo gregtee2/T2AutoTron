@@ -68,12 +68,26 @@ export const setStoredPin = (pin, { remember } = {}) => {
   window.dispatchEvent(new CustomEvent('t2-pin-changed', { detail: { hasPin: true } }));
 };
 
+import { apiUrl } from '../utils/apiBase';
+
+// Re-export apiUrl for convenience
+export { apiUrl };
+
+// Simple fetch wrapper that handles ingress base path (no auth)
+export const apiFetch = async (input, init = {}) => {
+  const url = typeof input === 'string' ? apiUrl(input) : input;
+  return fetch(url, init);
+};
+
 export const authFetch = async (input, init = {}) => {
   const pin = getStoredPin();
-  if (!pin) return fetch(input, init);
+  // Wrap URL with apiUrl for HA ingress compatibility
+  const url = typeof input === 'string' ? apiUrl(input) : input;
+  
+  if (!pin) return fetch(url, init);
 
   const headers = new Headers(init.headers || (typeof input !== 'string' ? input.headers : undefined) || undefined);
   headers.set('X-APP-PIN', pin);
 
-  return fetch(input, { ...init, headers });
+  return fetch(url, { ...init, headers });
 };

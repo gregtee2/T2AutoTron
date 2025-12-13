@@ -5,6 +5,7 @@ import { RefComponent } from 'rete-react-plugin';
 import * as luxon from 'luxon';
 import sockets from '../sockets';
 import { socket } from '../socket';
+import { apiUrl } from '../utils/apiBase';
 
 // Expose dependencies globally for plugins
 // This allows "Caveman-Simple" plugins to just use window.Rete, window.React, etc.
@@ -50,7 +51,7 @@ export async function loadPlugins() {
     updateProgress({ isLoading: true, progress: 0, status: 'Fetching plugin list...', error: null, failedPlugins: [] });
     
     try {
-        const response = await fetch('/api/plugins');
+        const response = await fetch(apiUrl('/api/plugins'));
         if (!response.ok) throw new Error('Failed to fetch plugin list');
         
         const plugins = await response.json();
@@ -64,7 +65,8 @@ export async function loadPlugins() {
             updateProgress({ status: `Loading ${pluginName}...` });
             
             try {
-                await loadScript(pluginUrl);
+                // Use apiUrl to handle HA ingress base path
+                await loadScript(apiUrl(pluginUrl));
                 loaded++;
                 updateProgress({ 
                     loadedCount: loaded, 
