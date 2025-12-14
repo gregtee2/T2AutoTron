@@ -238,6 +238,53 @@ app.get('/api/plugins', async (req, res) => {
   }
 });
 
+// Serve index.html with correct base URL for HA ingress
+// This must come BEFORE express.static to intercept the root path
+app.get('/', async (req, res) => {
+  try {
+    const indexPath = path.join(__dirname, '../frontend/index.html');
+    let html = await fs.readFile(indexPath, 'utf8');
+    
+    // Check if this is an HA ingress request
+    // HA Ingress sets X-Ingress-Path header with the full path
+    let ingressPath = req.headers['x-ingress-path'];
+    
+    // Fallback: Check X-Forwarded-Prefix (some HA versions use this)
+    if (!ingressPath) {
+      ingressPath = req.headers['x-forwarded-prefix'];
+    }
+    
+    // Fallback: Check if we're in addon mode and extract from Referer
+    if (!ingressPath && IS_HA_ADDON) {
+      const referer = req.headers['referer'] || '';
+      const match = referer.match(/\/api\/hassio_ingress\/[^/]+/);
+      if (match) {
+        ingressPath = match[0] + '/';
+      }
+    }
+    
+    // Log headers in addon mode for debugging (first request only)
+    if (IS_HA_ADDON && !app._ingressLogged) {
+      console.log('[Ingress Debug] Request headers:', JSON.stringify(req.headers, null, 2));
+      app._ingressLogged = true;
+    }
+    
+    if (ingressPath) {
+      // Ensure path ends with /
+      if (!ingressPath.endsWith('/')) ingressPath += '/';
+      // Inject base tag for HA ingress - ensures all relative paths work
+      const baseTag = `<base href="${ingressPath}">`;
+      html = html.replace('<head>', `<head>\n    ${baseTag}`);
+      console.log(`[Ingress] Serving index.html with base: ${ingressPath}`);
+    }
+    
+    res.type('html').send(html);
+  } catch (error) {
+    console.error('Error serving index.html:', error);
+    res.status(500).send('Error loading application');
+  }
+});
+
 // Serve static files
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use('/custom_nodes', express.static(path.join(__dirname, '../frontend/custom_nodes')));
