@@ -63,6 +63,74 @@
         }
     };
 
+    // =========================================================================
+    // GLOBAL API REQUEST QUEUE - Prevents ERR_INSUFFICIENT_RESOURCES
+    // All API calls from all HAGenericDeviceNode instances go through this queue
+    // =========================================================================
+    const API_QUEUE = {
+        queue: [],
+        processing: false,
+        activeRequests: 0,
+        MAX_CONCURRENT: 2,  // Max simultaneous API requests (browser safe limit)
+        DELAY_BETWEEN: 100, // ms between requests
+        
+        // Add a request to the queue
+        async enqueue(requestFn, priority = 0) {
+            return new Promise((resolve, reject) => {
+                this.queue.push({ requestFn, resolve, reject, priority });
+                // Sort by priority (higher first)
+                this.queue.sort((a, b) => b.priority - a.priority);
+                this.processQueue();
+            });
+        },
+        
+        // Process queued requests
+        async processQueue() {
+            if (this.processing) return;
+            this.processing = true;
+            
+            while (this.queue.length > 0) {
+                // Wait if too many active requests
+                while (this.activeRequests >= this.MAX_CONCURRENT) {
+                    await new Promise(r => setTimeout(r, 50));
+                }
+                
+                const item = this.queue.shift();
+                if (!item) break;
+                
+                this.activeRequests++;
+                
+                // Execute the request
+                try {
+                    const result = await item.requestFn();
+                    item.resolve(result);
+                } catch (e) {
+                    item.reject(e);
+                }
+                
+                this.activeRequests--;
+                
+                // Small delay between requests
+                if (this.queue.length > 0) {
+                    await new Promise(r => setTimeout(r, this.DELAY_BETWEEN));
+                }
+            }
+            
+            this.processing = false;
+        }
+    };
+    
+    // Expose globally for debugging
+    window.T2_API_QUEUE = API_QUEUE;
+    
+    // Queued fetch wrapper - all HA API calls should use this
+    async function queuedFetch(url, options = {}) {
+        return API_QUEUE.enqueue(async () => {
+            const fetchFn = window.apiFetch || fetch;
+            return fetchFn(url, options);
+        });
+    }
+    
     // Global debounce for fetchDevices to prevent API flood when multiple nodes load
     let globalFetchDebounceTimer = null;
     let globalFetchPromise = null;
@@ -80,8 +148,7 @@
             globalFetchDebounceTimer = setTimeout(async () => {
                 globalFetchPromise = (async () => {
                     try {
-                        const fetchFn = window.apiFetch || fetch;
-                        const res = await fetchFn('/api/devices');
+                        const res = await queuedFetch('/api/devices');
                         const data = await res.json();
                         return data.devices || [];
                     } catch (e) {
@@ -411,8 +478,7 @@
             if (typeof window !== 'undefined' && window.graphLoading) return;
             try {
                 // Use unified /api/devices to get ALL devices (HA, Kasa, Hue, Shelly, etc.)
-                const fetchFn = window.apiFetch || fetch;
-                const response = await fetchFn('/api/devices', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
+                const response = await queuedFetch('/api/devices', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                 const data = await response.json();
                 if (data.success && data.devices) {
                     // Combine all device sources into a single flat list
@@ -579,8 +645,7 @@
             try {
                 const apiInfo = this.getDeviceApiInfo(id);
                 if (!apiInfo) return;
-                const fetchFn = window.apiFetch || fetch;
-                const res = await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
+                const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                 const data = await res.json();
                 if (data.success && data.state) {
                     this.perDeviceState[id] = data.state;
@@ -668,17 +733,16 @@
                     }
                 }
                 try {
-                    const fetchFn = window.apiFetch || fetch;
                     // For Kasa devices, use POST to /on or /off endpoint
                     if (isKasa) {
                         const action = turnOn ? 'on' : 'off';
-                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
+                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
                             method: "POST", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
                         });
                     } else {
-                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
                             method: "PUT", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
@@ -724,17 +788,16 @@
                 const payload = { on: turnOn, state: turnOn ? "on" : "off" };
                 if (turnOn && transitionMs) payload.transition = transitionMs;
                 try {
-                    const fetchFn = window.apiFetch || fetch;
                     if (isKasa) {
                         // Kasa uses POST to /on or /off endpoint
                         const action = turnOn ? 'on' : 'off';
-                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
+                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
                             method: "POST", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
                         });
                     } else {
-                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
                             method: "PUT", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
@@ -778,15 +841,14 @@
                 const payload = { on: newOn, state: newOn ? "on" : "off" };
                 if (newOn && transitionMs) payload.transition = transitionMs;
                 try {
-                    const fetchFn = window.apiFetch || fetch;
                     if (isKasa) {
                         // Kasa uses POST to /on, /off, or /toggle endpoint
-                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/toggle`, { 
+                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/toggle`, { 
                             method: "POST", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }
                         });
                     } else {
-                        await fetchFn(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
                             method: "PUT", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
