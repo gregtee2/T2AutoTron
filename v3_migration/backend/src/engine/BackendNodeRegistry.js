@@ -83,13 +83,15 @@ class BackendNodeRegistry {
     const labelMappings = {
       // Color nodes
       'Timeline Color': 'SplineTimelineColorNode',
-      'All-in-One Color Control': 'SplineTimelineColorNode',
+      'All-in-One Color Control': 'AllInOneColorNode',
+      'All-in-One Color': 'AllInOneColorNode',
       'HSV to RGB': 'HSVToRGBNode',
       'RGB to HSV': 'RGBToHSVNode',
       'Color Mixer': 'ColorMixerNode',
-      'Color Gradient': 'ColorMixerNode',  // Similar functionality
-      'HSV Control': null,  // Frontend-only node
-      'HSV Modifier': null,  // Frontend-only node
+      'Color Gradient': 'ColorGradientNode',
+      'Stepped Color Gradient': 'ColorGradientNode',
+      'HSV Control': null,  // Frontend-only node (visual color picker)
+      'HSV Modifier': 'HSVModifierNode',
       'Spline Curve': null,  // Frontend-only visualization
       
       // Time nodes
@@ -99,8 +101,9 @@ class BackendNodeRegistry {
       'Current Time': 'TimeOfDayNode',
       'Sunrise/Sunset Trigger': 'SunriseSunsetNode',
       'Sunrise/Sunset': 'SunriseSunsetNode',
-      'Day of Week': 'TimeOfDayNode',  // Use TimeOfDay for now
-      'Date Comparison': 'TimeOfDayNode',
+      'Day of Week': 'DayOfWeekComparisonNode',
+      'Day of Week Comparison': 'DayOfWeekComparisonNode',
+      'Date Comparison': 'DateComparisonNode',
       
       // Weather nodes
       'Weather Logic': 'WeatherLogicNode',
@@ -112,15 +115,16 @@ class BackendNodeRegistry {
       'NOT': 'NOTNode',
       'XOR': 'XORNode',
       'Compare': 'CompareNode',
-      'Comparison': 'CompareNode',
+      'Comparison': 'ComparisonNode',
       'Switch': 'SwitchNode',
       'AND Gate': 'ANDGateNode',
       'OR Gate': 'ORGateNode',
       'NOT Gate': 'NOTGateNode',
       'XOR Gate': 'XORGateNode',
-      'Logic Condition': 'CompareNode',
-      'Logic Operations': 'ANDNode',
-      'Conditional Switch': 'SwitchNode',
+      'Logic Condition': 'LogicConditionNode',
+      'Logic Operations': 'LogicOperationsNode',
+      'Conditional Switch': 'ConditionalSwitchNode',
+      'Conditional Integer Output': 'ConditionalIntegerOutputNode',
       'State Machine': 'StateMachineNode',
       'Hysteresis': 'HysteresisNode',
       
@@ -145,7 +149,7 @@ class BackendNodeRegistry {
       // Utility nodes
       'Delay': 'DelayNode',
       'Trigger': 'TriggerNode',
-      'Toggle': 'TriggerNode',
+      'Toggle': 'Toggle',
       'Inject': 'InjectNode',
       'Counter': 'CounterNode',
       'Random': 'RandomNode',
@@ -156,15 +160,15 @@ class BackendNodeRegistry {
       'Combine': 'CombineNode',
       'Watchdog': 'CounterNode',  // Use Counter as fallback
       
+      // Buffer/wireless connection nodes - MUST run on backend
+      'Sender': 'SenderNode',
+      'Receiver': 'ReceiverNode',
+      
       // Nodes that don't run on backend (UI-only)
       'Debug': null,
       'Display': null,
       'Backdrop': null,
-      'Receiver': null,
-      'Sender': null,
-      'Integer Selector': null,  // UI-only input control
-      'Conditional Integer Output': null,  // UI-only
-      'All-in-One Color': null  // Complex UI control
+      'Integer Selector': null  // UI-only input control
     };
 
     const nodeName = labelMappings[label];

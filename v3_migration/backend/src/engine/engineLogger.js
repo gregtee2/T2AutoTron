@@ -41,13 +41,23 @@ function rotateIfNeeded() {
 }
 
 function initLogger() {
+  console.log('[engineLogger] initLogger() called');
+  console.log('[engineLogger] LOG_DIR:', LOG_DIR);
+  console.log('[engineLogger] LOG_FILE:', LOG_FILE);
+  
   ensureLogDir();
   rotateIfNeeded();
   
   sessionStart = new Date().toISOString();
   
   // Open in append mode
-  logStream = fs.createWriteStream(LOG_FILE, { flags: 'a' });
+  try {
+    logStream = fs.createWriteStream(LOG_FILE, { flags: 'a' });
+    console.log('[engineLogger] Stream created successfully');
+  } catch (err) {
+    console.error('[engineLogger] Failed to create stream:', err);
+    return;
+  }
   
   // Write session header
   const header = `
@@ -56,6 +66,7 @@ ENGINE DEBUG SESSION STARTED: ${sessionStart}
 ================================================================================
 `;
   logStream.write(header);
+  console.log('[engineLogger] Header written');
 }
 
 function log(category, message, data = null) {

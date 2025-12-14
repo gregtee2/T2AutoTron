@@ -59,7 +59,7 @@
                 cycle_hour: 4, cycle_minute: 45, cycle_ampm: "AM", cycle_duration: 10, cycle_enabled: false,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
                 next_on_date: null, next_off_date: null, next_cycle_date: null,
-                currentState: false, status: "Initializing...", debug: false, pulseMode: true
+                currentState: false, status: "Initializing...", debug: false, pulseMode: false
             };
         }
 

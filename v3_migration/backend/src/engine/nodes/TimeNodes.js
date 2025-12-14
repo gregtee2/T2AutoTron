@@ -56,7 +56,7 @@ class TimeOfDayNode {
       endTime: null,
       // State
       mode: 'state',
-      pulseMode: true
+      pulseMode: false
     };
     this.lastState = null;
   }
