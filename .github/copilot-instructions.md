@@ -1,5 +1,52 @@
 # T2AutoTron 2.1 - AI Coding Instructions
 
+## Recent Add-on CORS & Device Control Fixes (2025-12-14)
+
+Fixed issues specific to the **Home Assistant Add-on** environment (Docker/ingress):
+
+### Problem
+- HA devices not populating in HAGenericDeviceNode
+- 400 errors on PUT requests to `/api/lights/ha/.../state`
+- 404 errors on Kasa device API calls
+- Local Electron version worked fine, only add-on was broken
+
+### Root Causes & Fixes
+
+1. **CORS Configuration** (`src/config/cors.js`):
+   - Added `IS_HA_ADDON` detection via `process.env.SUPERVISOR_TOKEN`
+   - In add-on mode, allow ALL origins (HA ingress handles security)
+   - Added `X-Ingress-Path` to allowed headers
+
+2. **Socket.IO CORS** (`src/server.js`):
+   - Added `IS_HA_ADDON` detection with startup log
+   - Allow all origins in add-on mode: `origin: IS_HA_ADDON ? true : [...]`
+   - Added `PUT` and `DELETE` to allowed methods
+
+3. **Kasa Routes Fix** (`src/devices/pluginLoader.js`):
+   - Fixed `kasaRoutes` legacyParams: was `[null]`, now `null`
+   - This passes `(io, deviceService)` correctly instead of `(null)`
+
+4. **Empty Body Detection** (`src/api/routes/haRoutes.js`):
+   - Added diagnostic logging for empty request bodies
+   - Returns clear error message if body parsing fails
+
+### Key Detection Code
+```javascript
+// Backend detection
+const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
+
+// Frontend detection  
+const IS_HA_ADDON = window.location.pathname.includes('/api/hassio/ingress/');
+```
+
+### Files Modified
+- `v3_migration/backend/src/server.js` - CORS origin handling
+- `v3_migration/backend/src/config/cors.js` - Add-on mode detection
+- `v3_migration/backend/src/devices/pluginLoader.js` - kasaRoutes fix
+- `v3_migration/backend/src/api/routes/haRoutes.js` - Empty body logging
+
+---
+
 ## Recent Context Menu & UX Polish (2025-12-13)
 
 Major cleanup of the plugin context menu system and UX improvements:
@@ -711,7 +758,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.13 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.55 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -720,7 +767,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 1 | Debug console logging | ✅ Done | All logs gated by `VERBOSE_LOGGING` env var (backend) or `EDITOR_DEBUG`/`SOCKET_DEBUG` flags (frontend) |
 | 2 | Clean build artifacts | ✅ Done | Only 1-2 files in assets/ |
 | 3 | Fix hardcoded HA URL | ✅ Done | Uses `process.env.HA_HOST` with fallback |
-| 4 | Package.json metadata | ✅ Done | v2.1.0-beta.15, proper author/homepage/keywords |
+| 4 | Package.json metadata | ✅ Done | v2.1.55, proper author/homepage/keywords |
 | 5 | Error boundaries | ✅ Done | `ErrorBoundary.jsx` wraps App |
 | 6 | Secure token storage | ✅ Done | Uses sessionStorage (falls back to localStorage) |
 
@@ -742,8 +789,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 1 | Add test coverage | ⏳ Not started | 8-12h |
 | 2 | Modularize server.js | ⏳ Not started | 4h (working fine as-is) |
 | 3 | Refactor plugins to T2Node | ⏳ Partial | Some use it, not all |
+| 4 | Event Log App filter | 🔴 Broken | App events not showing - needs investigation |
 
-### 🟢 RECENTLY ADDED (beta.12 - beta.18)
+### 🟢 RECENTLY ADDED (beta.12 - 2.1.55)
 
 | # | Feature | Notes |
 |---|---------|-------|
@@ -761,6 +809,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 12 | **Dynamic Node Height** | HAGenericDeviceNode now expands when devices are added |
 | 13 | **Lasso Selection Fix** | Selection box offset corrected after Favorites panel addition |
 | 14 | **Backend Engine** | Server-side automation engine for 24/7 execution (27 node types, REST API, Socket.IO) |
+| 15 | **Add-on CORS Fix** | v2.1.55 - Fixed 400/404 errors in HA add-on by allowing all origins in ingress mode |
 
 ### 🟢 RECENTLY FIXED
 
@@ -772,6 +821,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 4 | DeviceStateControl CSS | No longer injects CSS on every render (major performance fix) |
 | 5 | Keyframe animations | Moved from dynamic injection to `node-styles.css` |
 | 6 | HA Device Automation outputs | `data()` now pure (no changeCallback inside), always returns all dynamic outputs; uses `??` to preserve `false`/`0` |
+| 7 | Add-on CORS/Ingress | v2.1.55 - Allow all origins when `SUPERVISOR_TOKEN` present, fixed Kasa route params |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 
