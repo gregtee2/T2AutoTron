@@ -1,9 +1,11 @@
 {
-  "nodes": [
-    {
-      "id": "test",
-      "label": "Test"
-    }
-  ],
-  "connections": []
+  "nodes": [],
+  "connections": [],
+  "viewport": {
+    "x": 268.7570576141798,
+    "y": 297.6967956434337,
+    "k": 0.0672362520186526
+  },
+  "autoSaved": true,
+  "timestamp": 1765681568138
 }

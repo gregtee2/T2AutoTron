@@ -42,9 +42,26 @@ function initEngineSocketHandlers(socketIO) {
     // Client requests to start engine
     socket.on('start-engine', async () => {
       try {
+        const path = require('path');
+        const fs = require('fs').promises;
+        
         // Load nodes if needed
         if (registry.size === 0) {
           await engineModule.loadBuiltinNodes();
+        }
+        
+        // Load last active graph if engine has no nodes
+        if (engine.nodes.size === 0) {
+          const savedGraphsDir = process.env.GRAPH_SAVE_PATH || path.join(__dirname, '..', '..', '..', 'Saved_Graphs');
+          const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
+          
+          try {
+            await fs.access(lastActivePath);
+            await engine.loadGraph(lastActivePath);
+            console.log(`[Engine] Loaded graph with ${engine.nodes.size} nodes`);
+          } catch (err) {
+            console.log('[Engine] No last active graph to load');
+          }
         }
         
         engine.start();
