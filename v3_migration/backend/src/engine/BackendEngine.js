@@ -343,11 +343,15 @@ class BackendEngine {
     
     await this.loadGraphData(graphData);
     
-    if (wasRunning) {
+    // Only restart if there are nodes to process
+    if (wasRunning && this.nodes.size > 0) {
       this.start();
+      console.log('[BackendEngine] Hot-reloaded graph and restarted');
+    } else if (wasRunning) {
+      console.log('[BackendEngine] Hot-reload: graph is empty, staying stopped');
+    } else {
+      console.log('[BackendEngine] Hot-reloaded graph (engine was not running)');
     }
-    
-    console.log('[BackendEngine] Hot-reloaded graph');
   }
 
   /**

@@ -337,12 +337,20 @@ router.post('/save-active', async (req, res) => {
     
     console.log(`[Engine API] Saved last active graph (${graphData.nodes?.length || 0} nodes)`);
     
-    // Also load into engine if it's running
+    // Also hot-reload into engine if it's running
     try {
       const { engine } = getEngine();
       if (engine && engine.running) {
-        await engine.loadGraph(lastActivePath);
-        console.log('[Engine API] Graph reloaded into engine');
+        // Use hotReload with parsed data instead of loadGraph with file path
+        // This avoids race conditions and handles empty graphs gracefully
+        if (graphData.nodes && graphData.nodes.length > 0) {
+          await engine.hotReload(graphData);
+          console.log('[Engine API] Graph hot-reloaded into engine');
+        } else {
+          // Graph was cleared - stop the engine gracefully
+          engine.stop();
+          console.log('[Engine API] Graph cleared - engine stopped');
+        }
       }
     } catch (err) {
       // Don't fail the save if engine reload fails
