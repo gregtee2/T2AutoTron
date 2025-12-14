@@ -430,7 +430,7 @@
             this.addControl("refresh", new ButtonControl("🔄 Refresh", () => this.fetchDevices()));
             this.addControl("trigger_btn", new ButtonControl("🔄 Manual Trigger", () => this.onTrigger()));
             this.addControl("transition", new NumberControl("Transition (ms)", 1000, (v) => this.properties.transitionTime = v, { min: 0, max: 10000 }));
-            this.addControl("debug", new SwitchControl("Debug Logs", true, (v) => this.properties.debug = v));
+            this.addControl("debug", new SwitchControl("Debug Logs", false, (v) => this.properties.debug = v));
         }
 
         initializeSocketIO() {
