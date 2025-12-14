@@ -291,3 +291,133 @@
     opacity: 0.7;
     cursor: wait;
 }
+
+/* Server Graphs Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.server-graphs-modal {
+    background: rgba(10, 15, 25, 0.98);
+    border: 1px solid #00f3ff;
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(0, 243, 255, 0.4);
+    width: 400px;
+    max-width: 90vw;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(0, 150, 200, 0.1));
+    padding: 15px 20px;
+    border-bottom: 1px solid #00f3ff;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #00f3ff;
+    font-size: 16px;
+    font-weight: 600;
+    text-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: #00f3ff;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.modal-close:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 15px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.loading-message,
+.empty-message {
+    text-align: center;
+    color: #8892a0;
+    padding: 30px;
+}
+
+.empty-message p {
+    margin: 0 0 10px;
+}
+
+.graphs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.graph-item {
+    background: rgba(0, 50, 80, 0.3);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 8px;
+    padding: 12px 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.graph-item:hover {
+    background: rgba(0, 100, 150, 0.4);
+    border-color: #00f3ff;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+}
+
+.graph-name {
+    color: #00f3ff;
+    font-weight: 500;
+}
+
+.graph-date {
+    color: #8892a0;
+    font-size: 12px;
+}

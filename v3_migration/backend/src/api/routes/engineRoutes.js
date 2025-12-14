@@ -371,4 +371,113 @@ router.post('/save-active', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/engine/graphs
+ * List all saved graph files on the server
+ */
+router.get('/graphs', async (req, res) => {
+  try {
+    const fs = require('fs').promises;
+    const savedGraphsDir = getGraphsDir();
+    
+    let files = [];
+    try {
+      const entries = await fs.readdir(savedGraphsDir, { withFileTypes: true });
+      files = entries
+        .filter(entry => entry.isFile() && entry.name.endsWith('.json') && !entry.name.startsWith('.'))
+        .map(entry => entry.name);
+    } catch (err) {
+      // Directory might not exist yet
+      console.log('[Engine API] Graphs directory not found:', savedGraphsDir);
+    }
+    
+    // Get file stats for sorting by date
+    const graphsWithStats = await Promise.all(
+      files.map(async (name) => {
+        try {
+          const filePath = path.join(savedGraphsDir, name);
+          const stats = await fs.stat(filePath);
+          return {
+            name,
+            path: filePath,
+            modified: stats.mtime,
+            size: stats.size
+          };
+        } catch {
+          return { name, path: path.join(savedGraphsDir, name), modified: new Date(0), size: 0 };
+        }
+      })
+    );
+    
+    // Sort by modification date, newest first
+    graphsWithStats.sort((a, b) => b.modified - a.modified);
+    
+    res.json({
+      success: true,
+      directory: savedGraphsDir,
+      graphs: graphsWithStats.map(g => ({
+        name: g.name,
+        displayName: g.name.replace('.json', ''),
+        modified: g.modified.toISOString(),
+        size: g.size
+      }))
+    });
+  } catch (error) {
+    console.error('[Engine API] Error listing graphs:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/engine/graphs/:name
+ * Get a specific saved graph by name
+ */
+router.get('/graphs/:name', async (req, res) => {
+  try {
+    const fs = require('fs').promises;
+    const savedGraphsDir = getGraphsDir();
+    
+    let graphName = req.params.name;
+    if (!graphName.endsWith('.json')) {
+      graphName += '.json';
+    }
+    
+    const graphPath = path.join(savedGraphsDir, graphName);
+    
+    // Security: ensure the resolved path is within the graphs directory
+    const resolvedPath = path.resolve(graphPath);
+    const resolvedDir = path.resolve(savedGraphsDir);
+    if (!resolvedPath.startsWith(resolvedDir)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied'
+      });
+    }
+    
+    const content = await fs.readFile(graphPath, 'utf8');
+    const graph = JSON.parse(content);
+    
+    res.json({
+      success: true,
+      name: graphName,
+      graph
+    });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return res.status(404).json({
+        success: false,
+        error: 'Graph not found'
+      });
+    }
+    console.error('[Engine API] Error loading graph:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

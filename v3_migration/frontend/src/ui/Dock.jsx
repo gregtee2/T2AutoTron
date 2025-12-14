@@ -15,6 +15,9 @@ const IS_HA_ADDON = window.location.pathname.includes('/api/hassio/ingress/');
 export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImport, hasUnsavedChanges, isMerged = false, onToggleMerged }) {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
+    const [serverGraphsOpen, setServerGraphsOpen] = useState(false);
+    const [serverGraphs, setServerGraphs] = useState([]);
+    const [loadingGraphs, setLoadingGraphs] = useState(false);
     const [checkingUpdate, setCheckingUpdate] = useState(false);
     const [checkingPlugins, setCheckingPlugins] = useState(false);
     const toast = useToast();
@@ -245,6 +248,48 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
         // Reset input value to allow selecting the same file again
         e.target.value = '';
     };
+
+    // Open server graphs modal and fetch list
+    const handleOpenServerGraphs = async () => {
+        setServerGraphsOpen(true);
+        setLoadingGraphs(true);
+        try {
+            const response = await authFetch('/api/engine/graphs');
+            if (response.ok) {
+                const data = await response.json();
+                setServerGraphs(data.graphs || []);
+            } else {
+                toast.error('Failed to load graphs list');
+                setServerGraphs([]);
+            }
+        } catch (err) {
+            console.error('Failed to fetch server graphs:', err);
+            toast.error('Failed to connect to server');
+            setServerGraphs([]);
+        } finally {
+            setLoadingGraphs(false);
+        }
+    };
+
+    // Load a specific graph from server
+    const handleLoadServerGraph = async (graphName) => {
+        try {
+            const response = await authFetch(`/api/engine/graphs/${encodeURIComponent(graphName)}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.graph) {
+                    onImport(data.graph);
+                    setServerGraphsOpen(false);
+                    toast.success(`Loaded: ${graphName.replace('.json', '')}`);
+                }
+            } else {
+                toast.error('Failed to load graph');
+            }
+        } catch (err) {
+            console.error('Failed to load graph:', err);
+            toast.error('Failed to load graph');
+        }
+    };
     
     // Check for updates on demand
     const handleCheckForUpdates = async () => {
@@ -382,6 +427,7 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                             💾 Save {hasUnsavedChanges && '*'}
                         </button>
                         <button onClick={onLoad} className="dock-btn">↻ Load Last</button>
+                        <button onClick={handleOpenServerGraphs} className="dock-btn" title="Load a saved graph from the server">📁 Saved Graphs</button>
                         <button onClick={onLoadExample} className="dock-btn" title="Load a starter graph to see how things work">📚 Load Example</button>
                         <button onClick={handleImportClick} className="dock-btn">📂 Import File</button>
                         <button onClick={onClear} className="dock-btn">🗑️ Clear</button>
@@ -523,6 +569,45 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                 isOpen={shortcutsOpen}
                 onClose={() => setShortcutsOpen(false)}
             />
+
+            {/* Server Graphs Modal */}
+            {serverGraphsOpen && (
+                <div className="modal-overlay" onClick={() => setServerGraphsOpen(false)}>
+                    <div className="modal server-graphs-modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>📁 Saved Graphs</h2>
+                            <button className="modal-close" onClick={() => setServerGraphsOpen(false)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            {loadingGraphs ? (
+                                <div className="loading-message">Loading graphs...</div>
+                            ) : serverGraphs.length === 0 ? (
+                                <div className="empty-message">
+                                    <p>No saved graphs found.</p>
+                                    <p style={{ fontSize: '0.9em', opacity: 0.7 }}>
+                                        Create a graph and click "Save" to save it to the server.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="graphs-list">
+                                    {serverGraphs.map((graph, index) => (
+                                        <div 
+                                            key={index}
+                                            className="graph-item"
+                                            onClick={() => handleLoadServerGraph(graph.name)}
+                                        >
+                                            <span className="graph-name">{graph.displayName}</span>
+                                            <span className="graph-date">
+                                                {new Date(graph.modified).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
