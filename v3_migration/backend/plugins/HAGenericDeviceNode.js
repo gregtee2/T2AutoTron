@@ -708,8 +708,8 @@
 
         async fetchDeviceState(id) {
             if (!id) return;
-            // Skip API calls during graph loading
-            if (typeof window !== 'undefined' && window.graphLoading) return;
+            // Note: We DO fetch device state during graph loading - this is a READ operation
+            // that shows current device state without changing anything
             try {
                 const apiInfo = this.getDeviceApiInfo(id);
                 if (!apiInfo) return;
