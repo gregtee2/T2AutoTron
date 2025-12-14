@@ -3156,7 +3156,7 @@ export function Editor() {
             
             // Delay clearing graphLoading to let any queued setTimeout callbacks see it's still loading
             // This prevents API flood from callbacks queued during import
-            setTimeout(() => {
+            setTimeout(async () => {
                 window.graphLoading = false;
                 debug('[handleImport] Graph loading complete - API calls now enabled');
                 // Emit event so nodes can refresh their data now that loading is complete
@@ -3167,6 +3167,29 @@ export function Editor() {
                 if (processImmediateRef.current) {
                     debug('[handleImport] Running processImmediate to sync node states');
                     processImmediateRef.current();
+                }
+                
+                // IMPORTANT: Save imported graph to localStorage and server for persistence
+                // This ensures the imported graph is available for auto-load on refresh
+                try {
+                    const jsonString = JSON.stringify(graphData, null, 2);
+                    // Save to localStorage
+                    if (jsonString.length < 2000000) {
+                        localStorage.removeItem('saved-graph');
+                        localStorage.setItem('saved-graph', jsonString);
+                        debug('[handleImport] Graph saved to localStorage');
+                    }
+                    // Save to server for HA add-on persistence
+                    const response = await fetch(apiUrl('/api/engine/save-active'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: jsonString
+                    });
+                    if (response.ok) {
+                        debug('[handleImport] Graph saved to server as last active');
+                    }
+                } catch (saveErr) {
+                    console.warn('[handleImport] Failed to save imported graph:', saveErr);
                 }
                 
                 // Final safety reset of editor view after all loading is complete
