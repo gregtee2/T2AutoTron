@@ -188,6 +188,7 @@ function setupEngineEventListeners() {
 /**
  * Auto-start engine with last active graph
  * Call this during server startup
+ * Engine ALWAYS starts - users can stop it manually if needed
  */
 async function autoStartEngine() {
   try {
@@ -208,18 +209,23 @@ async function autoStartEngine() {
     const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
     console.log(`[Engine] Looking for last active graph at: ${lastActivePath}`);
     
+    let graphLoaded = false;
     try {
       await fs.access(lastActivePath);
       const success = await engine.loadGraph(lastActivePath);
-      
+      graphLoaded = success;
       if (success) {
-        engine.start();
-        console.log(`[Engine] Auto-started with ${engine.nodes.size} nodes`);
+        console.log(`[Engine] Loaded last active graph with ${engine.nodes.size} nodes`);
       }
     } catch (err) {
-      // No last active graph - that's fine
-      console.log('[Engine] No last active graph found, engine in standby');
+      // No last active graph - that's fine, engine will run empty
+      console.log('[Engine] No last active graph found');
     }
+    
+    // Always start the engine - users can stop it manually if needed
+    engine.start();
+    console.log(`[Engine] Auto-started ${graphLoaded ? `with ${engine.nodes.size} nodes` : '(no graph loaded)'}`);
+    
   } catch (error) {
     console.error('[Engine] Auto-start error:', error.message);
   }
