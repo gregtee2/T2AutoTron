@@ -104,7 +104,7 @@
 
     /**
      * Get the correct API endpoint and clean ID for a device based on prefix
-     * @param {string} id - Device ID with prefix (ha_, kasa_, hue_, shelly_)
+     * @param {string} id - Device ID with prefix (ha_, kasa_, hue_)
      * @returns {object|null} - { endpoint, cleanId } or null if invalid
      */
     function getDeviceApiInfo(id) {
@@ -115,8 +115,6 @@
             return { endpoint: '/api/lights/kasa', cleanId: id.replace('kasa_', '') };
         } else if (id.startsWith('hue_')) {
             return { endpoint: '/api/lights/hue', cleanId: id.replace('hue_', '') };
-        } else if (id.startsWith('shelly_')) {
-            return { endpoint: '/api/lights/shelly', cleanId: id.replace('shelly_', '') };
         }
         // Default to HA endpoint for unrecognized prefixes
         return { endpoint: '/api/lights/ha', cleanId: id };

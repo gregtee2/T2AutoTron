@@ -66,7 +66,7 @@ Before you start, make sure you have:
 - Any smart devices you want to control:
   - **Philips Hue** – Works with or without HA (direct bridge API)
   - **TP-Link Kasa** – Works with or without HA (direct local API)
-  - **Shelly** – Requires Home Assistant integration
+  - **Other devices** – Via Home Assistant integration
 
 ## 🚀 Quick Start
 

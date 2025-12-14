@@ -32,8 +32,7 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
         backend: socket.connected,
         ha: { connected: false, wsConnected: false, deviceCount: 0 },
         hue: { connected: false, deviceCount: 0 },
-        kasa: { connected: false, deviceCount: 0 },
-        shelly: { connected: false, deviceCount: 0 }
+        kasa: { connected: false, deviceCount: 0 }
     });
     const [pluginStatus, setPluginStatus] = useState({ loaded: 0, failed: 0, total: 0 });
     const [engineStatus, setEngineStatus] = useState({ 
@@ -95,7 +94,6 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
         const onDeviceCounts = (data) => {
             if (data.hue) setConnectionStatus(prev => ({ ...prev, hue: data.hue }));
             if (data.kasa) setConnectionStatus(prev => ({ ...prev, kasa: data.kasa }));
-            if (data.shelly) setConnectionStatus(prev => ({ ...prev, shelly: data.shelly }));
         };
 
         // Listen for hue connection status

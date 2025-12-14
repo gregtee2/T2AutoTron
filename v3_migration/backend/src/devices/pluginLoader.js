@@ -67,17 +67,6 @@ function normalizeManager(manager, file) {
       shutdown: async () => { }
     };
   }
-  if (fileName === 'shellyManager') {
-    return {
-      name: 'Shelly',
-      type: 'light',
-      prefix: 'shellyplus1-',
-      initialize: async (io, notificationEmitter, log) => await manager.setupShelly(io, notificationEmitter, log),
-      controlDevice: async (deviceId, state) => await manager.controlShellyDevice(deviceId, state),
-      getDevices: () => manager.getShellyDevices ? manager.getShellyDevices() : [],
-      shutdown: async () => { }
-    };
-  }
   throw new Error(`Manager ${fileName} does not conform to plugin interface`);
 }
 
@@ -117,7 +106,6 @@ function normalizeRoute(route, file) {
     haRoutes: { type: 'light', prefix: 'ha', legacyParams: null },
     hueRoutes: { type: 'light', prefix: 'hue', legacyParams: [null, require('./managers/hueManager').hueLights, null] },
     kasaRoutes: { type: 'light', prefix: 'kasa', legacyParams: [null] },
-    shellyRoutes: { type: 'light', prefix: 'shelly', legacyParams: [null] },
     deviceRoutes: { type: '', prefix: 'devices', legacyParams: null }, // Mounts at /api/devices
     discoveryRoutes: { type: '', prefix: 'discovery', legacyParams: null }, // Mounts at /api/discovery
     nodeRoutes: { type: 'node', prefix: 'nodes', legacyParams: null }

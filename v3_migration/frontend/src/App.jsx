@@ -276,7 +276,7 @@ function App() {
       if (pin) socket.emit('authenticate', pin);
     }
 
-    // Listen for device state changes from backend (real-time updates from HA, Hue, Kasa, Shelly)
+    // Listen for device state changes from backend (real-time updates from HA, Hue, Kasa)
     function onDeviceStateUpdate(data) {
       const { id, state, on, name, vendor } = data;
       if (!id) return;
@@ -307,7 +307,6 @@ function App() {
         if (id.startsWith('ha_')) source = 'HA';
         else if (id.startsWith('hue_')) source = 'Hue';
         else if (id.startsWith('kasa_')) source = 'Kasa';
-        else if (id.startsWith('shelly_')) source = 'Shelly';
       }
       
       if (pending && (Date.now() - pending.timestamp) < 5000) {
