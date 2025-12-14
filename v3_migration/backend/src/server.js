@@ -45,11 +45,19 @@ debug('Weather imports:', {
 
 const app = express();
 const server = http.createServer(app);
+
+// Detect if running in HA add-on mode
+const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
+if (IS_HA_ADDON) {
+  console.log('[Server] Running in Home Assistant Add-on mode');
+}
+
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:3000', 'http://localhost:8080', 'file://', 'http://localhost:5173'],
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    // Allow all origins in add-on mode since ingress uses dynamic paths
+    origin: IS_HA_ADDON ? true : ['http://localhost:3000', 'http://localhost:8080', 'file://', 'http://localhost:5173'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-APP-PIN', 'X-Ingress-Path'],
     credentials: true
   },
   maxHttpBufferSize: 1e8,

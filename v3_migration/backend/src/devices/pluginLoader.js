@@ -105,7 +105,7 @@ function normalizeRoute(route, file) {
   const routeMap = {
     haRoutes: { type: 'light', prefix: 'ha', legacyParams: null },
     hueRoutes: { type: 'light', prefix: 'hue', legacyParams: [null, require('./managers/hueManager').hueLights, null] },
-    kasaRoutes: { type: 'light', prefix: 'kasa', legacyParams: [null] },
+    kasaRoutes: { type: 'light', prefix: 'kasa', legacyParams: null }, // Use standard (io, deviceService) params
     deviceRoutes: { type: '', prefix: 'devices', legacyParams: null }, // Mounts at /api/devices
     discoveryRoutes: { type: '', prefix: 'discovery', legacyParams: null }, // Mounts at /api/discovery
     nodeRoutes: { type: 'node', prefix: 'nodes', legacyParams: null }

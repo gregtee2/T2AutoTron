@@ -100,7 +100,16 @@ module.exports = function (io) {
   router.put('/:id/state', async (req, res) => {
     const { id } = req.params;
     const body = req.body;
-    logWithTimestamp(`Updating state of HA device ${id}: ${JSON.stringify(body)} (type: ${typeof body.on || typeof body.state})`, 'info');
+    
+    // Debug: Log incoming request details
+    logWithTimestamp(`PUT /${id}/state - Body: ${JSON.stringify(body)}, Content-Type: ${req.headers['content-type']}`, 'info');
+    
+    // Check if body is empty (common issue with body parsing)
+    if (!body || Object.keys(body).length === 0) {
+      logWithTimestamp(`Empty body received for HA device ${id}. Headers: ${JSON.stringify(req.headers)}`, 'error');
+      return res.status(400).json({ success: false, error: 'Empty request body. Ensure Content-Type is application/json.' });
+    }
+    
     const { error } = stateSchema.validate(body);
     if (error) {
       logWithTimestamp(`Validation error for HA device ${id}: ${error.details[0].message}`, 'error');

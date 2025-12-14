@@ -1,8 +1,15 @@
 const cors = require('cors');
+
+// Detect if running in HA add-on mode
+const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
+
 module.exports = cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, curl, or same-origin requests from HA ingress)
     if (!origin) return callback(null, true);
+    
+    // In add-on mode, allow all origins (ingress handles security)
+    if (IS_HA_ADDON) return callback(null, true);
     
     // Allow all localhost and homeassistant origins
     const allowed = [
@@ -23,6 +30,6 @@ module.exports = cors({
     callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-APP-PIN'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-APP-PIN', 'X-Ingress-Path'],
   credentials: true,
 });
