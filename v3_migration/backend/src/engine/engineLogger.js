@@ -9,7 +9,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Log to crashes folder alongside other logs
-const LOG_DIR = path.join(__dirname, '..', '..', '..', '..', 'crashes');
+// Path: backend/src/engine -> backend/src -> backend -> crashes (which is in v3_migration/)
+const LOG_DIR = path.join(__dirname, '..', '..', '..', 'crashes');
 const LOG_FILE = path.join(LOG_DIR, 'engine_debug.log');
 const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB max
 

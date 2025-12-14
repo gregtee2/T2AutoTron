@@ -150,6 +150,8 @@ class BackendEngine {
 
   /**
    * Perform topological sort for execution order
+   * Sender nodes are prioritized to run first so buffers are populated
+   * before Receiver nodes read them.
    * @returns {string[]} - Node IDs in execution order
    */
   topologicalSort() {
@@ -186,7 +188,30 @@ class BackendEngine {
       visit(nodeId);
     }
 
-    return result;
+    // Post-process: Move Sender nodes to the front, Receiver nodes toward end
+    // This ensures buffers are populated before they're read
+    const senders = [];
+    const receivers = [];
+    const others = [];
+    
+    for (const nodeId of result) {
+      const node = this.nodes.get(nodeId);
+      if (!node) {
+        others.push(nodeId);
+        continue;
+      }
+      const nodeType = node.type || node.constructor?.name || '';
+      if (nodeType === 'SenderNode' || nodeType.includes('Sender')) {
+        senders.push(nodeId);
+      } else if (nodeType === 'ReceiverNode' || nodeType.includes('Receiver')) {
+        receivers.push(nodeId);
+      } else {
+        others.push(nodeId);
+      }
+    }
+    
+    // Order: Senders first, then other nodes (in topo order), then Receivers last
+    return [...senders, ...others, ...receivers];
   }
 
   /**
@@ -269,6 +294,14 @@ class BackendEngine {
     for (const conn of this.connections) {
       engineLogger.log('CONNECTION', `${conn.source}.${conn.sourceOutput} → ${conn.target}.${conn.targetInput}`);
     }
+    
+    // Log execution order
+    const executionOrder = this.topologicalSort();
+    engineLogger.log('EXEC-ORDER', 'Node execution order:', executionOrder.map((id, i) => {
+      const node = this.nodes.get(id);
+      const type = node?.type || node?.constructor?.name || '?';
+      return `${i + 1}. ${type} (${id})`;
+    }));
     
     // Call tick immediately, then on interval
     this.tick();

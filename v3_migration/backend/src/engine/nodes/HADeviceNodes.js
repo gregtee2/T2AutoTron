@@ -462,7 +462,7 @@ class HAGenericDeviceNode {
 
     // Handle trigger changes based on mode
     if (trigger !== this.lastTrigger) {
-      engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, 'processing');
+      engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, 'CHANGE DETECTED');
       const wasTriggered = this.lastTrigger;
       this.lastTrigger = trigger;
       
@@ -470,25 +470,35 @@ class HAGenericDeviceNode {
       
       for (const entityId of entityIds) {
         let shouldTurnOn = false;
+        let reason = '';
         
         switch (mode) {
           case 'Follow':
             // Follow trigger state
             shouldTurnOn = !!trigger;
+            reason = `Follow mode: trigger=${trigger} → shouldTurnOn=${shouldTurnOn}`;
             break;
           case 'Toggle':
             // Toggle on rising edge only
             if (trigger && !wasTriggered) {
               this.deviceStates[entityId] = !this.deviceStates[entityId];
               shouldTurnOn = this.deviceStates[entityId];
+              reason = `Toggle mode: rising edge → ${shouldTurnOn ? 'ON' : 'OFF'}`;
+              engineLogger.log('HA-DECISION', reason, { entityId });
               await this.controlDevice(entityId, shouldTurnOn, hsv);
+            } else {
+              reason = `Toggle mode: no rising edge (trigger=${trigger}, was=${wasTriggered})`;
+              engineLogger.log('HA-DECISION', reason, { entityId });
             }
             continue;  // Skip normal control
           case 'On':
             // Only turn on, never off
             if (trigger) {
               shouldTurnOn = true;
+              reason = 'On mode: trigger is true → turning ON';
             } else {
+              reason = 'On mode: trigger is false → ignoring';
+              engineLogger.log('HA-DECISION', reason, { entityId });
               continue;  // Don't do anything on false
             }
             break;
@@ -496,14 +506,26 @@ class HAGenericDeviceNode {
             // Only turn off, never on
             if (trigger) {
               shouldTurnOn = false;
+              reason = 'Off mode: trigger is true → turning OFF';
             } else {
+              reason = 'Off mode: trigger is false → ignoring';
+              engineLogger.log('HA-DECISION', reason, { entityId });
               continue;  // Don't do anything on false
             }
             break;
         }
         
+        engineLogger.log('HA-DECISION', reason, { entityId, shouldTurnOn });
         await this.controlDevice(entityId, shouldTurnOn, shouldTurnOn ? hsv : null);
         this.deviceStates[entityId] = shouldTurnOn;
+      }
+    } else {
+      // No trigger change - log this for debugging
+      if (this.tickCount % 50 === 0) {  // Only log every 50 ticks to avoid spam
+        engineLogger.log('HA-NO-CHANGE', `trigger=${trigger} (unchanged)`, { 
+          tick: this.tickCount, 
+          entities: entityIds 
+        });
       }
     }
 
