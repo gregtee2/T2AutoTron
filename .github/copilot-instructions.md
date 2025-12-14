@@ -531,7 +531,92 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 ## Key Documentation
 - `v3_migration/PLUGIN_ARCHITECTURE.md` - Full plugin system guide
 - `v3_migration/frontend/RETE_NODE_GUIDE.md` - Rete.js node patterns
+- `v3_migration/backend/src/engine/BACKEND_ENGINE_PLAN.md` - Backend engine architecture
 - `README.md` - Feature overview and API reference
+
+---
+
+## Backend Engine (Server-Side Automation) - 2025-12-13
+
+**Branch**: `feature/backend-engine` (9 commits, ready to merge after testing)
+
+The backend engine enables **24/7 automation execution** on the server, independent of browser/Electron frontend. This is critical for Home Assistant add-on deployment where automations must run continuously.
+
+### Architecture Overview
+```
+backend/src/engine/
+├── BackendEngine.js      # Main engine - 100ms tick loop, graph processing
+├── BackendNodeRegistry.js # Node type registry with create() factory
+├── index.js              # Exports engine singleton + registry
+└── nodes/                # Backend node implementations
+    ├── TimeNodes.js      # CurrentTime, TimeRange, DayOfWeek, SunPosition
+    ├── LogicNodes.js     # AND, OR, NOT, Compare, Switch, Threshold, Latch, Toggle
+    ├── DelayNode.js      # Delay, Debounce, Retriggerable modes
+    ├── HADeviceNodes.js  # HALight, HASwitch, HASensor, HAClimate, HAMediaPlayer
+    ├── HueLightNodes.js  # HueLight, HueGroup (direct bridge API)
+    ├── KasaLightNodes.js # KasaLight, KasaPlug (direct local API)
+    └── ColorNodes.js     # SplineTimelineColor, HSVToRGB, RGBToHSV, ColorMixer
+```
+
+### API Endpoints
+All at `/api/engine/*`:
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/status` | GET | Engine state: running, tickCount, nodeCount, uptime |
+| `/start` | POST | Start the engine tick loop |
+| `/stop` | POST | Stop the engine |
+| `/load` | POST | Load a graph JSON into the engine |
+| `/nodes` | GET | List all nodes with current output values |
+| `/outputs` | GET | Get outputs for specific node by ID |
+| `/tick` | POST | Execute single manual tick (for debugging) |
+
+### Socket.IO Events
+- `engine-status` - Emitted every 5 seconds when running (running, tickCount, nodeCount)
+- `request-engine-status` - Client can request immediate status update
+
+### Frontend Integration
+- **Dock.jsx**: Engine status indicator (green=running, gray=stopped) + Start/Stop toggle button
+- Socket listener for `engine-status` updates state automatically
+- CSS class `.dock-btn-active` for running state styling
+
+### Graph Format
+Engine accepts the same graph JSON format as frontend save/load:
+```javascript
+{
+  nodes: [
+    { id: "node_1", name: "CurrentTimeNode", position: [x, y], properties: {...} },
+    { id: "node_2", name: "HALightNode", position: [x, y], properties: { deviceId: "ha_light.living_room" } }
+  ],
+  connections: [
+    { source: "node_1", sourceOutput: "hour", target: "node_2", targetInput: "brightness" }
+  ]
+}
+```
+
+### Key Implementation Notes
+1. **Node Registration**: Backend nodes use `BackendNodeRegistry.register(name, nodeClass)`
+2. **Device Managers**: Engine nodes access existing managers via `require('../../devices/managers/...')`
+3. **Lazy Loading**: `engineRoutes.js` uses lazy `require()` to avoid circular dependencies
+4. **Path Note**: Routes are at `src/api/routes/`, engine at `src/engine/` - use `../../engine` not `../engine`
+
+### Current Status (as of 2025-12-13)
+- ✅ All 5 phases complete (Core, Devices, Colors, API, UI)
+- ✅ 27 node types registered
+- ✅ All 71 tests pass
+- 🔴 **Issue**: Server crashes on startup with exit code 1 (Kasa TCP errors from offline devices)
+- 🔧 **Fix applied**: Added error handlers to `kasaManager.js`, needs testing
+
+### Testing the Engine
+```bash
+# Start server
+cd v3_migration/backend && npm start
+
+# Test API (PowerShell)
+Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
+
+# Expected response when working:
+{ "running": false, "tickCount": 0, "nodeCount": 0, "uptime": 0 }
+```
 
 ---
 
@@ -586,6 +671,7 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 | 11 | **Category Reorganization** | Cleaner categories: CC_Control_Nodes → Color, Other/Plugs → Direct Devices |
 | 12 | **Dynamic Node Height** | HAGenericDeviceNode now expands when devices are added |
 | 13 | **Lasso Selection Fix** | Selection box offset corrected after Favorites panel addition |
+| 14 | **Backend Engine** | Server-side automation engine for 24/7 execution (27 node types, REST API, Socket.IO) |
 
 ### 🟢 RECENTLY FIXED
 
