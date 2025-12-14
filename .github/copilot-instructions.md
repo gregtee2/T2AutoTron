@@ -538,11 +538,71 @@ Graphs are saved to `v3_migration/Saved_Graphs/` as JSON files containing node p
 
 ## Backend Engine (Server-Side Automation) - 2025-12-13
 
-**Branch**: `feature/backend-engine` (9 commits, ready to merge after testing)
+**Branch**: `feature/backend-engine` (10 commits, ready to merge after testing)
 
-The backend engine enables **24/7 automation execution** on the server, independent of browser/Electron frontend. This is critical for Home Assistant add-on deployment where automations must run continuously.
+### 🎯 WHY: The Core Problem
 
-### Architecture Overview
+T2AutoTron currently runs automations **in the browser** using Rete.js DataflowEngine. This works great for:
+- Desktop Electron app (always open)
+- Development/testing
+
+But it **completely breaks** for the Home Assistant Add-on use case:
+- User opens HA dashboard → automations run
+- User closes browser tab → **all automations stop**
+- User's lights, schedules, and color timelines stop working
+
+**This is unacceptable for production home automation.** Users expect automations to run 24/7.
+
+### 🏗️ The Solution: Backend Engine
+
+Move automation execution from browser → server. The backend engine:
+1. **Runs continuously** on the Node.js server (inside Docker for HA add-on)
+2. **Processes the same graph format** as the frontend editor
+3. **Uses existing device managers** (HA, Hue, Kasa) for device control
+4. **Frontend becomes optional** - just for editing, not execution
+
+### 📊 Architecture Change
+
+**Before (Browser-Dependent):**
+```
+[Browser/Electron] ←→ [Rete.js Engine] ←→ [Socket.IO] ←→ [Server] ←→ [Devices]
+       ↑ REQUIRED for automation to run
+```
+
+**After (Server-Independent):**
+```
+[Browser/Electron] ←→ [Editor UI Only] ←→ [Socket.IO] ←→ [Server + Backend Engine] ←→ [Devices]
+       ↑ Optional - only needed for editing              ↑ Runs 24/7 independently
+```
+
+### 🔌 How It Fits Together
+
+1. **User edits graph** in browser using Rete.js editor (unchanged)
+2. **User saves graph** → saved to `Saved_Graphs/` as JSON
+3. **Graph is loaded into backend engine** via `/api/engine/load`
+4. **Engine runs in 100ms tick loop** on server, processing nodes and controlling devices
+5. **User can close browser** → automations keep running
+6. **User reopens browser** → sees live engine status, can edit graph
+
+### 🐳 Home Assistant Add-on Flow
+
+```
+HA Add-on Container (Docker)
+├── Node.js Server (port 3000)
+│   ├── Backend Engine ← Runs automations 24/7
+│   ├── REST API ← Graph management, device control
+│   ├── Socket.IO ← Real-time updates to frontend
+│   └── Device Managers ← HA, Hue, Kasa, Shelly
+└── Frontend (served as static files)
+    └── Rete.js Editor ← User opens in HA iframe/panel
+```
+
+When user installs the add-on:
+1. Container starts → server starts → engine loads last graph → automations run
+2. User never needs to open the UI for automations to work
+3. UI is only for creating/editing automation graphs
+
+### 📁 File Structure
 ```
 backend/src/engine/
 ├── BackendEngine.js      # Main engine - 100ms tick loop, graph processing
