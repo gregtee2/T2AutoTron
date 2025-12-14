@@ -2578,13 +2578,20 @@ export function Editor() {
         if (!editorInstance || !areaInstance || !engineInstance) return;
         if (hasAutoLoadedFromServer.current) return;
         
-        // Don't auto-load if there's already localStorage data or post-update flag
-        const hasLocalGraph = localStorage.getItem('saved-graph');
-        const isPostUpdate = sessionStorage.getItem('autoLoadAfterUpdate') === 'true';
+        // Detect if running inside Home Assistant ingress (iframe)
+        const isInIframe = window.self !== window.top;
+        const isHAIngress = isInIframe || window.location.pathname.includes('/api/hassio');
         
-        if (hasLocalGraph || isPostUpdate) {
-            debug('[ServerAutoLoad] Skipping - has local graph or post-update');
-            return;
+        // For HA ingress: ALWAYS try to load from server (authoritative source)
+        // For desktop/Electron: skip if localStorage has data
+        if (!isHAIngress) {
+            const hasLocalGraph = localStorage.getItem('saved-graph');
+            const isPostUpdate = sessionStorage.getItem('autoLoadAfterUpdate') === 'true';
+            
+            if (hasLocalGraph || isPostUpdate) {
+                debug('[ServerAutoLoad] Skipping - desktop mode with local graph');
+                return;
+            }
         }
         
         hasAutoLoadedFromServer.current = true;
