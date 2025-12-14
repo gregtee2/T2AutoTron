@@ -115,6 +115,35 @@ T2AutoTron is a **visual node-based automation editor** for smart home control. 
 - **Backend**: Node.js/Express + Socket.IO for real-time device communication
 - **Plugin System**: Runtime-loaded node plugins (no rebuild required)
 
+### Deployment Modes
+
+T2AutoTron runs in two different environments with important behavioral differences:
+
+| Feature | Desktop/Electron | Home Assistant Add-on |
+|---------|-----------------|----------------------|
+| **Environment** | Windows/Mac/Linux desktop app | Docker container in HA |
+| **Detection** | `!process.env.SUPERVISOR_TOKEN` | `process.env.SUPERVISOR_TOKEN` exists |
+| **Frontend Detection** | URL doesn't contain ingress path | URL contains `/api/hassio/ingress/` |
+| **Updates** | Git-based (`git pull` from stable) | HA Supervisor manages updates |
+| **Update Toast** | Shows "Update Available" with apply option | Hidden - shows "Update via HA" button |
+| **Config Path** | `./env` (relative) | `/data/.env` (Docker volume) |
+| **Data Persistence** | Local filesystem | `/data/` volume mount |
+
+**⚠️ CRITICAL**: Never implement git-based update features that assume the add-on has a `.git` folder or can run `npm install`. The Docker container is built from a Dockerfile and has no git history.
+
+**Key Detection Code:**
+```javascript
+// Backend (server.js)
+const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
+
+// Frontend (Dock.jsx)  
+const IS_HA_ADDON = window.location.pathname.includes('/api/hassio/ingress/');
+```
+
+**Files with environment-specific behavior:**
+- `backend/src/server.js` - Skips update checks when `IS_HA_ADDON`
+- `frontend/src/ui/Dock.jsx` - Shows different update button for add-on users
+
 ### Supported Devices
 - **Home Assistant** – All entities (lights, switches, sensors, media players, etc.)
 - **Philips Hue** – Direct bridge API (no HA required)
