@@ -53,25 +53,50 @@ class SenderNode {
     this.id = id;
     this.type = SenderNode.type;
     this.properties = {
-      bufferName: properties.bufferName || '[Trigger] Unnamed',
+      bufferName: properties.bufferName || 'Default',
+      registeredName: null,
       ...properties
     };
-    this.inputs = ['value'];
-    this.outputs = ['passthrough'];
+    this.inputs = ['in'];  // Match frontend input name
+    this.outputs = [];      // No outputs (frontend returns {})
   }
   
-  process(inputs) {
-    const value = inputs.value;
-    const bufferName = this.properties.bufferName;
+  data(inputs) {
+    // Frontend uses 'in' as input name
+    const inputData = inputs.in?.[0];
     
-    if (bufferName && value !== undefined) {
-      AutoTronBuffer.set(bufferName, value);
+    // Auto-detect type and prefix (matching frontend logic)
+    let prefix = "[Unknown]";
+    if (typeof inputData === "boolean") prefix = "[Trigger]";
+    else if (typeof inputData === "number") prefix = "[Number]";
+    else if (typeof inputData === "string") prefix = "[String]";
+    else if (typeof inputData === "object" && inputData) {
+      if ('hue' in inputData && 'saturation' in inputData) prefix = "[HSV]";
+      else if (Array.isArray(inputData)) prefix = "[Array]";
+      else prefix = "[Object]";
     }
     
-    // Pass through the value
-    return {
-      passthrough: value
-    };
+    // Clean existing prefix from buffer name
+    let baseName = (this.properties.bufferName || 'Default').replace(/^\[.+\]/, "");
+    const finalName = `${prefix}${baseName}`;
+    
+    // Update Buffer
+    if (inputData !== undefined) {
+      // Cleanup old name if it changed
+      if (this.properties.registeredName && this.properties.registeredName !== finalName) {
+        AutoTronBuffer.delete(this.properties.registeredName);
+      }
+      
+      AutoTronBuffer.set(finalName, inputData);
+      this.properties.registeredName = finalName;
+    }
+    
+    return {};
+  }
+  
+  // Keep process() as alias for backwards compatibility
+  process(inputs) {
+    return this.data(inputs);
   }
   
   restore(state) {
@@ -93,19 +118,34 @@ class ReceiverNode {
     this.type = ReceiverNode.type;
     this.properties = {
       bufferName: properties.bufferName || '',
+      selectedBuffer: properties.selectedBuffer || '',  // Frontend uses this name
+      lastValue: null,
       ...properties
     };
     this.inputs = [];
-    this.outputs = ['value'];
+    this.outputs = ['out', 'change'];  // Match frontend output names
   }
   
-  process(inputs) {
-    const bufferName = this.properties.bufferName;
+  data(inputs) {
+    // Support both property names (bufferName for backend, selectedBuffer for frontend)
+    const bufferName = this.properties.selectedBuffer || this.properties.bufferName;
     const value = bufferName ? AutoTronBuffer.get(bufferName) : undefined;
     
+    // Track changes
+    const hasChanged = JSON.stringify(value) !== JSON.stringify(this.properties.lastValue);
+    if (hasChanged) {
+      this.properties.lastValue = value;
+    }
+    
     return {
-      value: value
+      out: value,      // Match frontend output name
+      change: hasChanged
     };
+  }
+  
+  // Keep process() as alias for backwards compatibility
+  process(inputs) {
+    return this.data(inputs);
   }
   
   restore(state) {

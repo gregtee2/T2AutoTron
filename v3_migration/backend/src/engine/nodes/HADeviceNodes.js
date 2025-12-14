@@ -424,8 +424,24 @@ class HAGenericDeviceNode {
       return { is_on: false };
     }
 
-    // Skip first tick if trigger is undefined (buffer not yet populated)
+    // Track ticks for warmup period - don't control devices until engine stabilizes
+    if (this.tickCount === undefined) {
+      this.tickCount = 0;
+    }
+    this.tickCount++;
+    
+    // Skip first 3 ticks to let buffers populate
     // This prevents turning off devices when engine starts
+    if (this.tickCount <= 3) {
+      console.log(`[HAGenericDeviceNode] Warmup tick ${this.tickCount}, skipping device control`);
+      // Initialize lastTrigger to current value without taking action
+      if (trigger !== undefined) {
+        this.lastTrigger = trigger;
+      }
+      return { is_on: !!trigger || !!this.lastTrigger };
+    }
+
+    // Skip if trigger is still undefined (no connection)
     if (trigger === undefined) {
       return { is_on: !!this.lastTrigger };
     }
