@@ -1,288 +1,44 @@
 {
   "nodes": [
     {
-      "id": "7785232f8eca4299",
-      "label": "Receiver",
-      "position": {
-        "x": 1691.755177641558,
-        "y": 352.7002761293204
-      },
-      "data": {
-        "id": "7785232f8eca4299",
-        "label": "Receiver",
-        "properties": {
-          "selectedBuffer": "[Trigger]On",
-          "lastValue": false,
-          "lastTriggerSource": "On"
-        }
-      }
-    },
-    {
-      "id": "789f39e94b82b2af",
+      "id": "406b8f56e34aeccc",
       "label": "HA Generic Device",
       "position": {
-        "x": 2169.169217493303,
-        "y": 392.70422281256066
+        "x": 494.5,
+        "y": -33
       },
       "data": {
-        "id": "789f39e94b82b2af",
+        "id": "406b8f56e34aeccc",
         "label": "HA Generic Device",
         "properties": {
           "selectedDeviceIds": [
-            "ha_light.downstairs_fire_extinguisher"
+            "ha_light.bar_undermount_strip",
+            null
           ],
           "selectedDeviceNames": [
-            "Downstairs Fire Extinguisher (ha_light.downstairs_fire_extinguisher)"
+            "Bar Undermount Strip (ha_light.bar_undermount_strip)",
+            null
           ],
-          "status": "Turned Off",
+          "status": "Loaded 815 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
           "haToken": "",
           "transitionTime": 1000,
-          "filterType": "Light",
+          "filterType": "Switch",
           "triggerMode": "Follow",
           "autoRefreshInterval": 30000,
           "customTitle": ""
         }
       }
-    },
-    {
-      "id": "5143ed7d57a3aa52",
-      "label": "Timeline Color",
-      "position": {
-        "x": 480.21128268760606,
-        "y": 681.0680248477361
-      },
-      "data": {
-        "id": "5143ed7d57a3aa52",
-        "label": "Timeline Color",
-        "properties": {
-          "points": [
-            {
-              "x": 0,
-              "y": 0,
-              "id": "p0"
-            },
-            {
-              "x": 1,
-              "y": 1,
-              "id": "p1"
-            }
-          ],
-          "saturationPoints": [
-            {
-              "x": 0,
-              "y": 1,
-              "id": "p0"
-            },
-            {
-              "x": 1,
-              "y": 1,
-              "id": "p1"
-            }
-          ],
-          "interpolation": "catmull-rom",
-          "editMode": "brightness",
-          "collapsed": false,
-          "rangeMode": "timer",
-          "startValue": 0,
-          "endValue": 100,
-          "startTimeHours": 8,
-          "startTimeMinutes": 35,
-          "startTimePeriod": "AM",
-          "endTimeHours": 6,
-          "endTimeMinutes": 0,
-          "endTimePeriod": "PM",
-          "timerDurationValue": 1,
-          "timerUnit": "minutes",
-          "timerLoopMode": "ping-pong",
-          "outputStepInterval": 4000,
-          "colorMode": "rainbow",
-          "colorStops": [
-            {
-              "position": 0,
-              "rgb": {
-                "r": 255,
-                "g": 100,
-                "b": 0
-              }
-            },
-            {
-              "position": 1,
-              "rgb": {
-                "r": 0,
-                "g": 100,
-                "b": 255
-              }
-            }
-          ],
-          "editorWidth": 360,
-          "editorHeight": 180,
-          "showColorEditor": false,
-          "previewMode": false,
-          "previewPosition": 0,
-          "position": 0,
-          "isInRange": false,
-          "outputHue": 0,
-          "outputSaturation": 0.891304347826087,
-          "outputBrightness": 0,
-          "outputRgb": {
-            "r": 0,
-            "g": 0,
-            "b": 0
-          }
-        }
-      }
-    },
-    {
-      "id": "4a60ea0d4b337d8a",
-      "label": "Sender",
-      "position": {
-        "x": 456.71895018552016,
-        "y": 365.1057268038656
-      },
-      "data": {
-        "id": "4a60ea0d4b337d8a",
-        "label": "Sender",
-        "properties": {
-          "bufferName": "On",
-          "lastValue": false,
-          "registeredName": "[Trigger]On",
-          "finalName": "[Trigger]On"
-        }
-      }
-    },
-    {
-      "id": "9261967e45540228",
-      "label": "Time of Day",
-      "position": {
-        "x": -41.518642077429604,
-        "y": 490.30837609978806
-      },
-      "data": {
-        "id": "9261967e45540228",
-        "label": "Time of Day",
-        "properties": {
-          "customName": "",
-          "start_hour": 9,
-          "start_minute": 7,
-          "start_ampm": "AM",
-          "start_enabled": true,
-          "stop_hour": 9,
-          "stop_minute": 8,
-          "stop_ampm": "AM",
-          "stop_enabled": true,
-          "cycle_hour": 4,
-          "cycle_minute": 45,
-          "cycle_ampm": "AM",
-          "cycle_duration": 10,
-          "cycle_enabled": false,
-          "timezone": "America/Los_Angeles",
-          "next_on_date": "2025-12-14T17:07:00.000Z",
-          "next_off_date": "2025-12-14T17:08:00.000Z",
-          "next_cycle_date": null,
-          "currentState": false,
-          "status": "Initializing...",
-          "debug": false,
-          "pulseMode": false
-        }
-      }
-    },
-    {
-      "id": "e454d092f09174a7",
-      "label": "Sender",
-      "position": {
-        "x": 938.4546941487117,
-        "y": 690.19353587839
-      },
-      "data": {
-        "id": "e454d092f09174a7",
-        "label": "Sender",
-        "properties": {
-          "bufferName": "Color",
-          "lastValue": {
-            "hue": 0,
-            "saturation": 0.891304347826087,
-            "brightness": 0,
-            "rgb": {
-              "r": 0,
-              "g": 0,
-              "b": 0
-            }
-          },
-          "registeredName": "[HSV]Color",
-          "finalName": "[HSV]Color"
-        }
-      }
-    },
-    {
-      "id": "c626ff15ea45b9d2",
-      "label": "Receiver",
-      "position": {
-        "x": 1725.3478832366181,
-        "y": 657.8577045040013
-      },
-      "data": {
-        "id": "c626ff15ea45b9d2",
-        "label": "Receiver",
-        "properties": {
-          "selectedBuffer": "[HSV]Color",
-          "lastValue": {
-            "hue": 0,
-            "saturation": 0.891304347826087,
-            "brightness": 0,
-            "rgb": {
-              "r": 0,
-              "g": 0,
-              "b": 0
-            }
-          },
-          "lastTriggerSource": "Color"
-        }
-      }
     }
   ],
-  "connections": [
-    {
-      "id": "3f377aaadaf90c13",
-      "source": "5143ed7d57a3aa52",
-      "target": "e454d092f09174a7",
-      "sourceOutput": "hsvInfo",
-      "targetInput": "in"
-    },
-    {
-      "id": "536e94a4c18309de",
-      "source": "9261967e45540228",
-      "target": "5143ed7d57a3aa52",
-      "sourceOutput": "state",
-      "targetInput": "trigger"
-    },
-    {
-      "id": "64e521f0f096ec86",
-      "source": "9261967e45540228",
-      "target": "4a60ea0d4b337d8a",
-      "sourceOutput": "state",
-      "targetInput": "in"
-    },
-    {
-      "id": "b11c20a17d0ec1ed",
-      "source": "7785232f8eca4299",
-      "target": "789f39e94b82b2af",
-      "sourceOutput": "out",
-      "targetInput": "trigger"
-    },
-    {
-      "id": "e56453d17e9fcd0e",
-      "source": "c626ff15ea45b9d2",
-      "target": "789f39e94b82b2af",
-      "sourceOutput": "out",
-      "targetInput": "hsv_info"
-    }
-  ],
+  "connections": [],
   "viewport": {
-    "x": 174.33456192016575,
-    "y": -750.2426944732669,
-    "k": 1.110364647283013
-  }
+    "x": 0,
+    "y": 0,
+    "k": 1
+  },
+  "autoSaved": true,
+  "timestamp": 1765744907289
 }

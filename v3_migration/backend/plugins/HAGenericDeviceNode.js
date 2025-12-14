@@ -74,21 +74,26 @@
         MAX_CONCURRENT: 2,  // Max simultaneous API requests (browser safe limit)
         DELAY_BETWEEN: 100, // ms between requests
         
-        // Add a request to the queue
+        // Add a request to the queue and process
         async enqueue(requestFn, priority = 0) {
             return new Promise((resolve, reject) => {
                 this.queue.push({ requestFn, resolve, reject, priority });
                 // Sort by priority (higher first)
                 this.queue.sort((a, b) => b.priority - a.priority);
-                this.processQueue();
+                // Start processing (don't await - let it run in background)
+                this._startProcessing();
             });
         },
         
-        // Process queued requests
-        async processQueue() {
+        // Start processing if not already running
+        _startProcessing() {
             if (this.processing) return;
             this.processing = true;
-            
+            this._processNext();
+        },
+        
+        // Process next item in queue
+        async _processNext() {
             while (this.queue.length > 0) {
                 // Wait if too many active requests
                 while (this.activeRequests >= this.MAX_CONCURRENT) {
@@ -150,7 +155,30 @@
                     try {
                         const res = await queuedFetch('/api/devices');
                         const data = await res.json();
-                        return data.devices || [];
+                        
+                        if (!data.success || !data.devices) {
+                            return [];
+                        }
+                        
+                        // Flatten the device groups into a single array
+                        const allDevices = [];
+                        for (const [prefix, devices] of Object.entries(data.devices)) {
+                            if (Array.isArray(devices)) {
+                                devices.forEach(d => {
+                                    // Preserve original type, only extract from ID if missing
+                                    let deviceType = d.type;
+                                    if (!deviceType && d.id?.includes('.')) {
+                                        deviceType = d.id.split('.')[0].replace(/^(ha_|kasa_|hue_)/, '');
+                                    }
+                                    allDevices.push({
+                                        ...d,
+                                        type: deviceType || 'unknown',
+                                        source: prefix.replace('_', '')
+                                    });
+                                });
+                            }
+                        }
+                        return allDevices;
                     } catch (e) {
                         console.error('[HAGenericDeviceNode] Failed to fetch devices:', e);
                         return [];
@@ -480,20 +508,22 @@
                 // Use unified /api/devices to get ALL devices (HA, Kasa, Hue, Shelly, etc.)
                 const response = await queuedFetch('/api/devices', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                 const data = await response.json();
+                
                 if (data.success && data.devices) {
                     // Combine all device sources into a single flat list
                     const allDevices = [];
                     for (const [prefix, devices] of Object.entries(data.devices)) {
                         if (Array.isArray(devices)) {
                             devices.forEach(d => {
-                                // Normalize device type for filtering
-                                let deviceType = d.type || 'unknown';
-                                // Handle HA device types (ha_light.xxx -> light)
-                                if (d.id?.startsWith('ha_') && d.id.includes('.')) {
-                                    deviceType = d.id.split('.')[0].replace(/^ha_/, '');
+                                // Preserve original type from the API (bulb, plug, light, switch, etc.)
+                                // Only extract from ID if type is missing
+                                let deviceType = d.type;
+                                if (!deviceType && d.id?.includes('.')) {
+                                    // Extract type from HA entity ID: ha_light.living_room -> light
+                                    deviceType = d.id.split('.')[0].replace(/^(ha_|kasa_|hue_)/, '');
                                 }
-                                // Kasa plugs (wall switches) should show as 'plug' type
-                                // Kasa bulbs show as 'bulb' type
+                                deviceType = deviceType || 'unknown';
+                                
                                 allDevices.push({
                                     ...d,
                                     type: deviceType,
@@ -505,15 +535,29 @@
                     this.devices = allDevices.sort((a, b) =>
                         HAGenericDeviceNode.compareNames(a.name || a.id, b.name || b.id)
                     );
+                    
+                    if (this.properties.debug) {
+                        // Log device type breakdown for debugging
+                        const typeCounts = this.devices.reduce((acc, d) => {
+                            acc[d.type] = (acc[d.type] || 0) + 1;
+                            return acc;
+                        }, {});
+                        console.log('[HAGenericDeviceNode] Loaded devices:', {
+                            total: this.devices.length,
+                            byType: typeCounts
+                        });
+                    }
+                    
                     this.normalizeSelectedDeviceNames();
                     this.updateStatus(`Loaded ${this.devices.length} devices`);
                     this.updateDeviceSelectorOptions();
                     this.triggerUpdate();
                 } else {
+                    console.warn('[HAGenericDeviceNode] Failed to load devices - success:', data.success);
                     this.updateStatus("Failed to load devices");
                 }
             } catch (e) {
-                console.error("Fetch devices error:", e);
+                console.error("[HAGenericDeviceNode] Fetch devices error:", e);
                 this.updateStatus("Connection failed");
             }
         }
@@ -565,6 +609,7 @@
                 return !isAuxiliaryEntity(name);
             });
             
+            // Count how many devices share the same name (for disambiguation)
             const nameCounts = filteredDevices.reduce((acc, device) => {
                 const key = (device.name || device.id || "").trim();
                 acc[key] = (acc[key] || 0) + 1;
@@ -574,7 +619,17 @@
             return filteredDevices
                 .map(device => {
                     const baseName = (device.name || device.id || "").trim();
-                    const displayName = nameCounts[baseName] > 1 ? `${baseName} (${device.id})` : baseName;
+                    let displayName = baseName;
+                    
+                    // Only add disambiguation for duplicate names
+                    if (nameCounts[baseName] > 1) {
+                        // Use source type (ha/kasa/hue) for cleaner disambiguation
+                        const source = device.source || (device.id?.startsWith('ha_') ? 'HA' : 
+                                        device.id?.startsWith('kasa_') ? 'Kasa' : 
+                                        device.id?.startsWith('hue_') ? 'Hue' : '');
+                        displayName = source ? `${baseName} (${source})` : `${baseName} [${device.type || 'unknown'}]`;
+                    }
+                    
                     return { device, displayName };
                 })
                 .sort((a, b) => HAGenericDeviceNode.compareNames(a.displayName, b.displayName));
@@ -582,21 +637,39 @@
 
         getDeviceOptions() {
             let list = this.getAllDevicesWithUniqueNames();
+            
             if (this.properties.filterType !== "All") {
                 const filterType = this.properties.filterType.toLowerCase();
                 list = list.filter(item => {
-                    const deviceType = item.device.type?.toLowerCase() || '';
-                    // "Switch" filter matches 'switch' (HA switches), 'plug' (Kasa wall switches), and 'light' (dimmable switches/lights)
-                    if (filterType === 'switch') {
-                        return deviceType === 'switch' || deviceType === 'plug' || deviceType === 'light';
-                    }
-                    // "Light" filter also matches lights (same devices, different filter name)
+                    const deviceType = (item.device.type || '').toLowerCase();
+                    
+                    // Normalize device types for filtering:
+                    // - "light" filter: HA lights, Kasa bulbs, Hue lights
+                    // - "switch" filter: HA switches only (on/off, no dimming)
+                    // - "plug" filter: Kasa plugs/smart outlets
+                    
                     if (filterType === 'light') {
-                        return deviceType === 'light' || deviceType === 'plug';
+                        return deviceType === 'light' || deviceType === 'bulb';
                     }
+                    if (filterType === 'switch') {
+                        return deviceType === 'switch';
+                    }
+                    if (filterType === 'plug') {
+                        return deviceType === 'plug';
+                    }
+                    // Direct match for other types (sensor, fan, cover, etc.)
                     return deviceType === filterType;
                 });
             }
+            
+            if (this.properties.debug) {
+                console.log('[HAGenericDeviceNode] getDeviceOptions:', {
+                    filter: this.properties.filterType,
+                    totalDevices: this.devices?.length || 0,
+                    filteredCount: list.length
+                });
+            }
+            
             return list.map(item => item.displayName);
         }
 

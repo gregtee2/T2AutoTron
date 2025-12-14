@@ -70,8 +70,8 @@ export function DropdownControlComponent({ data }) {
                     fontSize: "12px"
                 }}
             >
-                {options.map((v) => (
-                    <option key={v} value={v} style={{ background: "#0a0f14", color: "#00f3ff" }}>
+                {options.map((v, i) => (
+                    <option key={`${i}-${v}`} value={v} style={{ background: "#0a0f14", color: "#00f3ff" }}>
                         {v}
                     </option>
                 ))}
