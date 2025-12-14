@@ -5,6 +5,27 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0-beta.20] - 2025-06-13
+
+### Added
+- **Backend Engine**: Server-side automation engine for 24/7 execution
+  - Automations run on the server, not in the browser - no need to keep UI open
+  - 27 registered node types: Time, Logic, Color, Delay, HA devices, Hue, Kasa
+  - 100ms tick loop (10Hz) with stable, tested performance
+  - REST API: `/api/engine/status`, `/start`, `/stop`, `/load`, `/nodes`, `/outputs`, `/tick`
+  - Socket.IO `engine-status` event for real-time UI updates
+  - Loads same graph format as frontend - no conversion needed
+  - 40+ label-to-name mappings for frontend graph compatibility
+  - UI-only nodes (Debug, Display, Backdrop) automatically skipped
+  - Critical for Home Assistant Add-on use case (container runs 24/7)
+
+### Fixed
+- **Backend Engine Routes**: Fixed require paths for engine module (3 locations)
+- **Saved Graphs Path**: Fixed path resolution for loading graphs by name
+- **Kasa TCP Errors**: Added error handlers to prevent offline device crashes
+
+---
+
 ## [2.1.0-beta.19] - 2025-12-12
 
 ### Added
