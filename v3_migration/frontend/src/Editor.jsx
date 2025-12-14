@@ -2323,8 +2323,7 @@ export function Editor() {
 
             // Also save to server as "last active" for HA add-on persistence
             try {
-                const API_URL = import.meta.env.VITE_API_URL || '';
-                const response = await fetch(`${API_URL}/api/engine/save-active`, {
+                const response = await fetch(apiUrl('/api/engine/save-active'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: jsonString
@@ -2503,8 +2502,7 @@ export function Editor() {
                         
                         // Also save to server as "last active" for HA add-on persistence
                         try {
-                            const API_URL = import.meta.env.VITE_API_URL || '';
-                            await fetch(`${API_URL}/api/engine/save-active`, {
+                            await fetch(apiUrl('/api/engine/save-active'), {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: jsonString
@@ -2594,8 +2592,7 @@ export function Editor() {
         const loadFromServer = async () => {
             try {
                 debug('[ServerAutoLoad] Fetching last active graph from server...');
-                const API_URL = import.meta.env.VITE_API_URL || '';
-                const response = await fetch(`${API_URL}/api/engine/last-active`);
+                const response = await fetch(apiUrl('/api/engine/last-active'));
                 const data = await response.json();
                 
                 if (data.success && data.graph) {
