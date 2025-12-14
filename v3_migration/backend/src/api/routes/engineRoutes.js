@@ -338,14 +338,15 @@ router.post('/save-active', async (req, res) => {
     console.log(`[Engine API] Saved last active graph (${graphData.nodes?.length || 0} nodes)`);
     
     // Also load into engine if it's running
-    const { engine } = getEngine();
-    if (engine) {
-      try {
+    try {
+      const { engine } = getEngine();
+      if (engine && engine.running) {
         await engine.loadGraph(lastActivePath);
         console.log('[Engine API] Graph reloaded into engine');
-      } catch (err) {
-        console.warn('[Engine API] Could not reload into engine:', err.message);
       }
+    } catch (err) {
+      // Don't fail the save if engine reload fails
+      console.warn('[Engine API] Could not reload into engine:', err.message);
     }
     
     res.json({

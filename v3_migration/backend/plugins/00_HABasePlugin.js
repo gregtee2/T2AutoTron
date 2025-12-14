@@ -110,7 +110,7 @@
     function getDeviceApiInfo(id) {
         if (!id) return null;
         if (id.startsWith('ha_')) {
-            return { endpoint: '/api/lights/ha', cleanId: id };
+            return { endpoint: '/api/lights/ha', cleanId: id.replace('ha_', '') };
         } else if (id.startsWith('kasa_')) {
             return { endpoint: '/api/lights/kasa', cleanId: id.replace('kasa_', '') };
         } else if (id.startsWith('hue_')) {
