@@ -56,7 +56,7 @@ router.get('/status', (req, res) => {
 router.post('/start', async (req, res) => {
   try {
     const { engine, registry } = getEngine();
-    const engineModule = require('../engine');
+    const engineModule = require('../../engine');
     
     // Load builtin nodes if not already loaded
     if (registry.size === 0) {
@@ -128,7 +128,7 @@ router.post('/stop', (req, res) => {
 router.post('/load', express.json(), async (req, res) => {
   try {
     const { engine, registry } = getEngine();
-    const engineModule = require('../engine');
+    const engineModule = require('../../engine');
     
     // Load builtin nodes if not already loaded
     if (registry.size === 0) {
@@ -139,7 +139,10 @@ router.post('/load', express.json(), async (req, res) => {
     
     // If graphName provided, resolve to full path
     if (req.body.graphName && !graphPath) {
-      const savedGraphsDir = path.join(__dirname, '..', '..', '..', 'Saved_Graphs');
+      // Path from src/api/routes/ to v3_migration/Saved_Graphs/
+      // __dirname = backend/src/api/routes
+      // We need to go up 4 levels (routes -> api -> src -> backend -> v3_migration) then into Saved_Graphs
+      const savedGraphsDir = path.join(__dirname, '..', '..', '..', '..', 'Saved_Graphs');
       graphPath = path.join(savedGraphsDir, req.body.graphName);
       
       // Add .json extension if missing
@@ -155,6 +158,7 @@ router.post('/load', express.json(), async (req, res) => {
       });
     }
     
+    console.log(`[Engine API] Loading graph from: ${graphPath}`);
     const success = await engine.loadGraph(graphPath);
     
     if (success) {
@@ -166,7 +170,7 @@ router.post('/load', express.json(), async (req, res) => {
     } else {
       res.status(400).json({
         success: false,
-        error: 'Failed to load graph'
+        error: `Failed to load graph from ${graphPath}`
       });
     }
   } catch (error) {
@@ -184,7 +188,7 @@ router.post('/load', express.json(), async (req, res) => {
 router.get('/nodes', async (req, res) => {
   try {
     const { registry } = getEngine();
-    const engineModule = require('../engine');
+    const engineModule = require('../../engine');
     
     // Load builtin nodes if not already loaded
     if (registry.size === 0) {

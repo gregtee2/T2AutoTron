@@ -70,6 +70,61 @@ class BackendNodeRegistry {
   get size() {
     return this.nodes.size;
   }
+
+  /**
+   * Get a node class by label (display name)
+   * Used as fallback when node type name isn't available in saved graph
+   * @param {string} label - Display label (e.g., 'Timeline Color')
+   * @returns {object|undefined} - { name, NodeClass } or undefined
+   */
+  getByLabel(label) {
+    // Build a label-to-name mapping based on common patterns
+    const labelMappings = {
+      // Color nodes
+      'Timeline Color': 'SplineTimelineColorNode',
+      'HSV to RGB': 'HSVToRGBNode',
+      'RGB to HSV': 'RGBToHSVNode',
+      'Color Mixer': 'ColorMixerNode',
+      // Time nodes
+      'Time of Day': 'TimeOfDayNode',
+      'Time Range': 'TimeRangeNode',
+      'Current Time': 'TimeOfDayNode',
+      // Logic nodes
+      'AND': 'ANDNode',
+      'OR': 'ORNode',
+      'NOT': 'NOTNode',
+      'XOR': 'XORNode',
+      'Compare': 'CompareNode',
+      'Switch': 'SwitchNode',
+      'AND Gate': 'ANDGateNode',
+      'OR Gate': 'ORGateNode',
+      'NOT Gate': 'NOTGateNode',
+      'XOR Gate': 'XORGateNode',
+      // HA nodes
+      'HA Device State': 'HADeviceStateNode',
+      'HA Device State Output': 'HADeviceStateOutputNode',
+      'HA Service Call': 'HAServiceCallNode',
+      'HA Light Control': 'HALightControlNode',
+      'HA Device Automation': 'HADeviceAutomationNode',
+      'Device State': 'HADeviceStateNode',
+      'HA Generic Device': 'HADeviceAutomationNode',
+      // Device nodes
+      'Hue Light': 'HueLightNode',
+      'Kasa Light': 'KasaLightNode',
+      'Kasa Plug': 'KasaPlugNode',
+      // Other
+      'Delay': 'DelayNode',
+      'Trigger': 'TriggerNode',
+      'Inject': 'InjectNode',
+      'Debug': null  // Debug nodes don't run on backend
+    };
+
+    const nodeName = labelMappings[label];
+    if (nodeName && this.nodes.has(nodeName)) {
+      return { name: nodeName, NodeClass: this.nodes.get(nodeName) };
+    }
+    return undefined;
+  }
 }
 
 module.exports = new BackendNodeRegistry();

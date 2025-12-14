@@ -29,6 +29,7 @@ class BackendEngine {
    */
   async loadGraph(graphPath) {
     try {
+      console.log(`[BackendEngine] Attempting to load: ${graphPath}`);
       const graphJson = await fs.readFile(graphPath, 'utf8');
       const graph = JSON.parse(graphJson);
       this.graphPath = graphPath;
@@ -41,6 +42,7 @@ class BackendEngine {
       return true;
     } catch (error) {
       console.error(`[BackendEngine] Failed to load graph: ${error.message}`);
+      console.error(`[BackendEngine] Stack: ${error.stack}`);
       return false;
     }
   }
@@ -61,8 +63,21 @@ class BackendEngine {
 
     // Instantiate nodes from registry
     for (const nodeData of nodesData) {
-      const nodeType = nodeData.name || nodeData.type;
-      const NodeClass = registry.get(nodeType);
+      // Try multiple ways to find the node type
+      let nodeType = nodeData.name || nodeData.type;
+      let NodeClass = nodeType ? registry.get(nodeType) : null;
+      
+      // Fallback: try to find by label (display name)
+      if (!NodeClass && nodeData.label) {
+        const byLabel = registry.getByLabel(nodeData.label);
+        if (byLabel) {
+          nodeType = byLabel.name;
+          NodeClass = byLabel.NodeClass;
+          if (this.debug) {
+            console.log(`[BackendEngine] Resolved "${nodeData.label}" → ${nodeType}`);
+          }
+        }
+      }
       
       if (NodeClass) {
         try {
@@ -70,11 +85,12 @@ class BackendEngine {
           node.id = nodeData.id;
           node.label = nodeData.label || nodeType;
           
-          // Restore saved properties
-          if (nodeData.data && typeof node.restore === 'function') {
-            node.restore(nodeData.data);
-          } else if (nodeData.properties) {
-            node.properties = { ...node.properties, ...nodeData.properties };
+          // Restore saved properties - check multiple locations
+          const props = nodeData.data?.properties || nodeData.properties || nodeData.data;
+          if (props && typeof node.restore === 'function') {
+            node.restore({ properties: props });
+          } else if (props) {
+            node.properties = { ...node.properties, ...props };
           }
           
           this.nodes.set(nodeData.id, node);
@@ -86,9 +102,8 @@ class BackendEngine {
           console.error(`[BackendEngine] Failed to instantiate ${nodeType}: ${error.message}`);
         }
       } else {
-        if (this.debug) {
-          console.log(`[BackendEngine] Skipping unregistered node type: ${nodeType}`);
-        }
+        // Only warn, don't fail - frontend nodes like Debug won't run on backend
+        console.log(`[BackendEngine] Skipping unregistered node type: ${nodeData.label || nodeType || 'unknown'}`);
       }
     }
 
