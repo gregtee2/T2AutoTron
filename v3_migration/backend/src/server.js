@@ -3,6 +3,9 @@
 const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
 const ENV_PATH = IS_HA_ADDON ? '/data/.env' : './.env';
 
+// ALWAYS log this so we can diagnose addon detection issues
+console.log(`[Startup] IS_HA_ADDON=${IS_HA_ADDON}, SUPERVISOR_TOKEN=${process.env.SUPERVISOR_TOKEN ? 'present' : 'missing'}`);
+
 require('dotenv').config({ path: ENV_PATH });
 
 // Debug mode - set VERBOSE_LOGGING=true in .env to enable detailed console output
