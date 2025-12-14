@@ -1428,7 +1428,6 @@
             "c50730db0a8fc75b",
             "3f6956273b66f32c",
             "a096aaaa5d139111",
-            "1a3bb2fd48d99245",
             "a3d528fc57e1ff4d",
             "d5004b3611dddf0f",
             "ce37567d8626a0db",
@@ -1436,7 +1435,8 @@
             "6dbc9bbdcd1943e0",
             "7b0803eadc605db8",
             "d7f72f4c35755d5d",
-            "24035c8839725684"
+            "24035c8839725684",
+            "45aa6cddd5de1e17"
           ],
           "locked": true
         }
@@ -1924,8 +1924,8 @@
       "id": "642f583dff788b72",
       "label": "Kasa Plug Control",
       "position": {
-        "x": 9144.83312796818,
-        "y": 3736.39135437519
+        "x": 10780.137098172154,
+        "y": 4610.66743816845
       },
       "data": {
         "id": "642f583dff788b72",
@@ -1947,8 +1947,8 @@
       "id": "09acc1353342ccb0",
       "label": "HA Generic Device",
       "position": {
-        "x": 9114.697159736985,
-        "y": 4332.756549928787
+        "x": 11175.71040867301,
+        "y": 4844.8866853844065
       },
       "data": {
         "id": "09acc1353342ccb0",
@@ -1977,8 +1977,8 @@
       "id": "638e3dd2992d1984",
       "label": "Receiver",
       "position": {
-        "x": 9226.681729592925,
-        "y": 3419.1940271057724
+        "x": 10463.352045010333,
+        "y": 3704.57948450979
       },
       "data": {
         "id": "638e3dd2992d1984",
@@ -1994,8 +1994,8 @@
       "id": "f9e613cfd22bb224",
       "label": "HA Generic Device",
       "position": {
-        "x": 10482.489065066608,
-        "y": 3414.328193977499
+        "x": 12049.844116841052,
+        "y": 3590.9953818942718
       },
       "data": {
         "id": "f9e613cfd22bb224",
@@ -2091,15 +2091,14 @@
         "properties": {
           "bufferName": "Office Colors",
           "lastValue": {
-            "hue": 0.14925373134328357,
-            "saturation": 0.38505747126436785,
-            "brightness": 95,
+            "hue": 0.4361111111111111,
+            "saturation": 0.35502958579881655,
+            "brightness": 80,
             "rgb": {
-              "r": 174,
-              "g": 167,
-              "b": 107
-            },
-            "directMode": true
+              "r": 34,
+              "g": 53,
+              "b": 46
+            }
           },
           "registeredName": "[HSV]Office Colors",
           "finalName": "[HSV]Office Colors"
@@ -2127,8 +2126,8 @@
       "id": "d75099b0931e7056",
       "label": "Receiver",
       "position": {
-        "x": 10087.967978980125,
-        "y": 3403.526541696576
+        "x": 11658.816280516923,
+        "y": 3606.0350863348863
       },
       "data": {
         "id": "d75099b0931e7056",
@@ -2136,15 +2135,14 @@
         "properties": {
           "selectedBuffer": "[HSV]Office Colors",
           "lastValue": {
-            "hue": 0.14925373134328357,
-            "saturation": 0.38505747126436785,
-            "brightness": 95,
+            "hue": 0.4361111111111111,
+            "saturation": 0.35502958579881655,
+            "brightness": 80,
             "rgb": {
-              "r": 174,
-              "g": 167,
-              "b": 107
-            },
-            "directMode": true
+              "r": 34,
+              "g": 53,
+              "b": 46
+            }
           },
           "lastTriggerSource": "Office Colors"
         }
@@ -2321,13 +2319,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Temps",
           "lastValue": {
-            "hue": 0.31471135940409684,
-            "saturation": 0.8063063063063063,
-            "brightness": 138,
+            "hue": 0.29904761904761906,
+            "saturation": 0.813953488372093,
+            "brightness": 142,
             "rgb": {
-              "r": 34,
+              "r": 42,
               "g": 120,
-              "b": 23
+              "b": 22
             }
           },
           "lastTriggerSource": "Temps"
@@ -2514,8 +2512,8 @@
       "id": "b697f1460c4c6614",
       "label": "Receiver",
       "position": {
-        "x": 9600.168624631116,
-        "y": 3403.0934043998814
+        "x": 11013.506127965298,
+        "y": 3548.051097049541
       },
       "data": {
         "id": "b697f1460c4c6614",
@@ -2531,8 +2529,8 @@
       "id": "d5686fc3e43513d6",
       "label": "AND Gate",
       "position": {
-        "x": 11086.396605441114,
-        "y": 3414.7509367721286
+        "x": 11405.93364696503,
+        "y": 4450.18700466897
       },
       "data": {
         "id": "d5686fc3e43513d6",
@@ -2857,7 +2855,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "58ecf22bb536bfe4",
+            "id": "f10d3e818732765e",
             "control": null,
             "showControl": true
           },
@@ -2866,7 +2864,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "f0e5573a923f692d",
+            "id": "df2271f42b8a9f2c",
             "control": null,
             "showControl": true
           },
@@ -2875,7 +2873,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "e59399c2497c0a3a",
+            "id": "c4531df0c785d500",
             "control": null,
             "showControl": true
           },
@@ -2884,7 +2882,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "148e6a9c137a70c6",
+            "id": "e94ffa53d6af99d9",
             "control": null,
             "showControl": true
           },
@@ -2893,7 +2891,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "839d2c54f91450e0",
+            "id": "1baba1bebf58741e",
             "control": null,
             "showControl": true
           }
@@ -2905,7 +2903,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "17c208eff9f14e1e"
+            "id": "dab3d582aca25415"
           }
         },
         "controls": {},
@@ -3001,166 +2999,6 @@
         },
         "inputStartTime": "4:16 PM",
         "inputEndTime": "10:30 PM"
-      }
-    },
-    {
-      "id": "1a3bb2fd48d99245",
-      "label": "Stepped Color Gradient",
-      "position": {
-        "x": 2604.601425535907,
-        "y": -3623.492766446305
-      },
-      "data": {
-        "inputs": {
-          "value": {
-            "socket": {
-              "name": "number"
-            },
-            "label": "Value",
-            "id": "84dd5fb4c19f16dd",
-            "control": null,
-            "showControl": true
-          },
-          "trigger": {
-            "socket": {
-              "name": "boolean"
-            },
-            "label": "Trigger",
-            "id": "a7be22ddef99ec56",
-            "control": null,
-            "showControl": true
-          },
-          "timerDuration": {
-            "socket": {
-              "name": "number"
-            },
-            "label": "Timer Duration",
-            "id": "f981a4297b0eeabf",
-            "control": null,
-            "showControl": true
-          },
-          "startTime": {
-            "socket": {
-              "name": "string"
-            },
-            "label": "Start Time",
-            "id": "71ff709464162d83",
-            "control": null,
-            "showControl": true
-          },
-          "endTime": {
-            "socket": {
-              "name": "string"
-            },
-            "label": "End Time",
-            "id": "5e4fc0445aa865a4",
-            "control": null,
-            "showControl": true
-          }
-        },
-        "outputs": {
-          "hsvInfo": {
-            "socket": {
-              "name": "hsv_info"
-            },
-            "label": "HSV Info",
-            "multipleConnections": true,
-            "id": "4d6292f17fbbc1cf"
-          }
-        },
-        "controls": {},
-        "label": "Stepped Color Gradient",
-        "id": "1a3bb2fd48d99245",
-        "width": 460,
-        "height": 680,
-        "properties": {
-          "colorMode": "custom",
-          "predefinedWedge": "warm-to-cool",
-          "directMode": true,
-          "colorBias": 0.66,
-          "fromColor": {
-            "r": 13,
-            "g": 232,
-            "b": 248
-          },
-          "toColor": {
-            "r": 255,
-            "g": 134,
-            "b": 36
-          },
-          "fromBrightness": 185,
-          "toBrightness": 50,
-          "startHue": 0,
-          "startSaturation": 0,
-          "startBrightness": 100,
-          "endHue": 38,
-          "endSaturation": 80,
-          "endBrightness": 48,
-          "rangeMode": "time",
-          "startValue": 20,
-          "endValue": 30,
-          "startTimeHours": 10,
-          "startTimeMinutes": 0,
-          "startTimePeriod": "AM",
-          "endTimeHours": 2,
-          "endTimeMinutes": 0,
-          "endTimePeriod": "PM",
-          "timerDurationValue": 1,
-          "timerUnit": "hours",
-          "timeSteps": 60,
-          "useBrightnessOverride": false,
-          "brightnessOverride": 254,
-          "debug": false
-        },
-        "colorMode": "custom",
-        "predefinedWedge": "warm-to-cool",
-        "directMode": true,
-        "colorBias": 0.66,
-        "fromColor": {
-          "r": 13,
-          "g": 232,
-          "b": 248
-        },
-        "toColor": {
-          "r": 255,
-          "g": 134,
-          "b": 36
-        },
-        "fromBrightness": 185,
-        "toBrightness": 50,
-        "startHue": 0,
-        "startSaturation": 0,
-        "startBrightness": 100,
-        "endHue": 38,
-        "endSaturation": 80,
-        "endBrightness": 48,
-        "rangeMode": "time",
-        "startValue": 20,
-        "endValue": 30,
-        "startTimeHours": 10,
-        "startTimeMinutes": 0,
-        "startTimePeriod": "AM",
-        "endTimeHours": 2,
-        "endTimeMinutes": 0,
-        "endTimePeriod": "PM",
-        "timerDurationValue": 1,
-        "timerUnit": "hours",
-        "timeSteps": 60,
-        "useBrightnessOverride": false,
-        "brightnessOverride": 254,
-        "debug": false,
-        "timerStart": null,
-        "currentStep": 0,
-        "lastTimeStep": 27,
-        "position": 0.45,
-        "isInRange": true,
-        "lastColor": {
-          "r": 174,
-          "g": 167,
-          "b": 107
-        },
-        "inputStartTime": "8:00 AM",
-        "inputEndTime": "10:00 PM"
       }
     },
     {
@@ -3303,7 +3141,7 @@
               "name": "any"
             },
             "label": "Input 1",
-            "id": "6277e91098a4cfb5",
+            "id": "3695159bf0f5303c",
             "control": null,
             "showControl": true
           },
@@ -3312,7 +3150,7 @@
               "name": "any"
             },
             "label": "Input 2",
-            "id": "e992757658d3f686",
+            "id": "86241e9ce76e4dc0",
             "control": null,
             "showControl": true
           }
@@ -3324,7 +3162,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "4f3ac64b979cab4c"
+            "id": "ed7c617f88cd1d2a"
           }
         },
         "controls": {},
@@ -3352,7 +3190,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "332f5bc8c7d2dbf1",
+            "id": "53fc4ff8a87b9c40",
             "control": null,
             "showControl": true
           }
@@ -3364,7 +3202,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "2f31a4fdd5c44b25"
+            "id": "4242b77cbc96aa88"
           }
         },
         "controls": {},
@@ -3378,8 +3216,8 @@
           "enabled": true,
           "history": [
             {
-              "time": "2:21:08 PM",
-              "timestamp": 1765750868547,
+              "time": "1:51:44 PM",
+              "timestamp": 1765749104641,
               "value": false,
               "type": "boolean"
             }
@@ -3403,7 +3241,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "b6e6fccfc426b806",
+            "id": "b93728e1ae50cc79",
             "control": null,
             "showControl": true
           }
@@ -3415,7 +3253,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "e9fd08e5704a344e"
+            "id": "7ad65f589bbd0215"
           }
         },
         "controls": {},
@@ -3429,8 +3267,8 @@
           "enabled": true,
           "history": [
             {
-              "time": "2:21:08 PM",
-              "timestamp": 1765750868547,
+              "time": "1:51:44 PM",
+              "timestamp": 1765749104642,
               "value": false,
               "type": "boolean"
             }
@@ -3518,7 +3356,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "0cbe62846d24f40a",
+            "id": "1f03ac3b69e9d7ec",
             "control": null,
             "showControl": true
           }
@@ -3530,7 +3368,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "be543147c252b6c7"
+            "id": "cc8470477ab790e1"
           }
         },
         "controls": {},
@@ -3544,8 +3382,8 @@
           "enabled": true,
           "history": [
             {
-              "time": "2:21:08 PM",
-              "timestamp": 1765750868548,
+              "time": "1:51:44 PM",
+              "timestamp": 1765749104643,
               "value": false,
               "type": "boolean"
             }
@@ -3921,8 +3759,8 @@
       "id": "c4018a258f9c8fbd",
       "label": "All-in-One Color Control",
       "position": {
-        "x": 8659.77062348236,
-        "y": 3408.1062768240176
+        "x": 10009.689136282315,
+        "y": 4019.6465426897694
       },
       "data": {
         "id": "c4018a258f9c8fbd",
@@ -3962,7 +3800,7 @@
             "value"
           ],
           "lastOutputValues": {
-            "value": 71.96
+            "value": 73.57
           },
           "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
         }
@@ -3981,7 +3819,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
           "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Sunshine terrace  Feels like: 71.96",
+          "status": "✅ Sunshine terrace  Feels like: 73.57",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -4072,15 +3910,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.5876470588235293,
+          "position": 0.6113235294117646,
           "isInRange": true,
-          "outputHue": 0.31471135940409684,
-          "outputSaturation": 0.8063063063063063,
-          "outputBrightness": 138,
+          "outputHue": 0.29904761904761906,
+          "outputSaturation": 0.813953488372093,
+          "outputBrightness": 142,
           "outputRgb": {
-            "r": 34,
+            "r": 42,
             "g": 120,
-            "b": 23
+            "b": 22
           }
         }
       }
@@ -4098,13 +3936,13 @@
         "properties": {
           "bufferName": "Temps",
           "lastValue": {
-            "hue": 0.31471135940409684,
-            "saturation": 0.8063063063063063,
-            "brightness": 138,
+            "hue": 0.29904761904761906,
+            "saturation": 0.813953488372093,
+            "brightness": 142,
             "rgb": {
-              "r": 34,
+              "r": 42,
               "g": 120,
-              "b": 23
+              "b": 22
             }
           },
           "registeredName": "[HSV]Temps",
@@ -4151,8 +3989,8 @@
       "id": "a157051d1861b8b1",
       "label": "Debug",
       "position": {
-        "x": 11050.924498113458,
-        "y": 3879.3336721186156
+        "x": 11695.04951349024,
+        "y": 4859.48386129906
       },
       "data": {
         "inputs": {
@@ -4161,7 +3999,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "f47062bed9dc7ba4",
+            "id": "7d83dc44c52c6e5d",
             "control": null,
             "showControl": true
           }
@@ -4173,7 +4011,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "f36ba3b3cee38d90"
+            "id": "e16b9f33c9b21537"
           }
         },
         "controls": {},
@@ -4187,8 +4025,8 @@
           "enabled": true,
           "history": [
             {
-              "time": "2:21:08 PM",
-              "timestamp": 1765750868548,
+              "time": "1:51:44 PM",
+              "timestamp": 1765749104644,
               "value": false,
               "type": "boolean"
             }
@@ -4203,8 +4041,8 @@
       "id": "c095e7b26b0c147e",
       "label": "HA Generic Device",
       "position": {
-        "x": 11634.663915630987,
-        "y": 3466.3207837710142
+        "x": 12051.417281998758,
+        "y": 4734.700594455536
       },
       "data": {
         "id": "c095e7b26b0c147e",
@@ -4232,743 +4070,829 @@
           "customTitle": ""
         }
       }
+    },
+    {
+      "id": "45aa6cddd5de1e17",
+      "label": "Timeline Color",
+      "position": {
+        "x": 2628.791567109096,
+        "y": -3609.389033210552
+      },
+      "data": {
+        "id": "45aa6cddd5de1e17",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0.3382164759344298,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 0.28524611948666445,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "time",
+          "startValue": 0,
+          "endValue": 100,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "timerLoopMode": "none",
+          "outputStepInterval": 1000,
+          "colorMode": "custom",
+          "colorStops": [
+            {
+              "position": 0,
+              "rgb": {
+                "r": 0,
+                "g": 204,
+                "b": 255
+              }
+            },
+            {
+              "position": 1,
+              "rgb": {
+                "r": 255,
+                "g": 123,
+                "b": 0
+              }
+            }
+          ],
+          "editorWidth": 360,
+          "editorHeight": 180,
+          "showColorEditor": true,
+          "previewMode": false,
+          "previewPosition": 0,
+          "position": 0.42601589285714286,
+          "isInRange": true,
+          "outputHue": 0.4361111111111111,
+          "outputSaturation": 0.35502958579881655,
+          "outputBrightness": 80,
+          "outputRgb": {
+            "r": 34,
+            "g": 53,
+            "b": 46
+          }
+        }
+      }
     }
   ],
   "connections": [
     {
-      "id": "41841858b08c6582",
+      "id": "7cd7ff86a1a9c217",
       "source": "18c61864ae674e4a",
       "target": "8d4af06d6181b1c6",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "08440399311b299f",
+      "id": "a938440c7cb46f98",
       "source": "cb4c3820c4b47079",
       "target": "d384f545fa2b7f45",
       "sourceOutput": "state",
       "targetInput": "in0"
     },
     {
-      "id": "533a6edea52fc15e",
+      "id": "b1ec1e4870fcdbcd",
       "source": "b774e53e008efd8a",
       "target": "c01e165c7bfe62a5",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "92ad45bbdcfd5820",
+      "id": "a76bdafaf6d1f930",
       "source": "b774e53e008efd8a",
       "target": "5b0cc8a4356c0f1a",
       "sourceOutput": "state",
       "targetInput": "in0"
     },
     {
-      "id": "f15837ffde095d7c",
+      "id": "582e06c186e788cc",
       "source": "be6f5545a201a498",
       "target": "5b0cc8a4356c0f1a",
       "sourceOutput": "state",
       "targetInput": "in1"
     },
     {
-      "id": "8f1754fcbd9858c7",
+      "id": "190981f5ac7733c1",
       "source": "5b0cc8a4356c0f1a",
       "target": "079087acd1131ba1",
       "sourceOutput": "result",
       "targetInput": "in"
     },
     {
-      "id": "9fba15768e764fbd",
+      "id": "bdd080114d55119b",
       "source": "8480926f954c2743",
       "target": "ccf1a34014c85926",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "b54b923d81c4f515",
+      "id": "2a2d2d73e581e74c",
       "source": "d384f545fa2b7f45",
       "target": "d34623b94b64ad5c",
       "sourceOutput": "result",
       "targetInput": "in"
     },
     {
-      "id": "8ab427091e1738cc",
+      "id": "34d153c00887a11d",
       "source": "3809449d3be5a2d5",
       "target": "0cab81e8c5c154ff",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "7fd3311f5caaf597",
+      "id": "009764a1395841b4",
       "source": "90d3eea48e12005f",
       "target": "6ff49671565a0255",
       "sourceOutput": "out",
       "targetInput": "a"
     },
     {
-      "id": "43a75ed3b05557f7",
+      "id": "c0da03bc7ab5a1fd",
       "source": "f4dd2d2e6355d1c9",
       "target": "6ff49671565a0255",
       "sourceOutput": "value",
       "targetInput": "b"
     },
     {
-      "id": "843538ca7b63614b",
+      "id": "a97e596dc9a0af3c",
       "source": "6ff49671565a0255",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "168fb1d88bc0135a",
+      "id": "744b166ee47f3c82",
       "source": "13d7d35bcd11958e",
       "target": "32214cb284b6c445",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "d3d264cd699b82e7",
+      "id": "871b3d6c82452f76",
       "source": "8b0054e3d5a4b49f",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "f4bc4bdf07f0df00",
+      "id": "7bd0f2e3ef35804a",
       "source": "1556397fa0448d51",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "hsv_out",
       "targetInput": "data_3"
     },
     {
-      "id": "21843a58ec936d59",
+      "id": "6543fea5e1cb74c8",
       "source": "757c6f3bd4fd74dd",
       "target": "7326e8f64d174170",
       "sourceOutput": "solar",
       "targetInput": "input"
     },
     {
-      "id": "b0a37931fde35275",
+      "id": "f03b02a9dd8f6295",
       "source": "757c6f3bd4fd74dd",
       "target": "50f4fa1dafd492f9",
       "sourceOutput": "solar",
       "targetInput": "in0"
     },
     {
-      "id": "b45a58aa4a20a91b",
+      "id": "06b31f50f5daad3c",
       "source": "bb5e204a7266087a",
       "target": "c602674304198387",
       "sourceOutput": "state",
       "targetInput": "trigger"
     },
     {
-      "id": "840b120991f19557",
+      "id": "ea346f835398ac68",
       "source": "d6bb910c707b1dd5",
       "target": "e0ea6f0875da65de",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "f4ff7d95d7a3f0cd",
+      "id": "a4d2126776ebb909",
       "source": "9e2a30f7a17e5bd5",
       "target": "2f7d4a81e11769d4",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "988db4f4c7cc2d18",
+      "id": "746897adb86cfc8f",
       "source": "8fa96b2599a3efbf",
       "target": "74640383197a8ca7",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "04ed705c4f1287f0",
+      "id": "2cb2cd9755d19361",
       "source": "620d9422ac54e63e",
       "target": "2c3e63e9a7123804",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "89f89cbb6a3e2232",
+      "id": "8f5a6b93b4343353",
       "source": "620d9422ac54e63e",
       "target": "57db63745a724bc3",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "44b7460dc8920cdc",
+      "id": "e5278c40aa68c184",
       "source": "57db63745a724bc3",
       "target": "8be42cfaab24b585",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "91c1646375b62264",
+      "id": "1e974eaf88548bc1",
       "source": "9289bd97b1d582f5",
       "target": "46fa426389043256",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "3eb396e22451ab8e",
+      "id": "1aee6aa01701a4ac",
       "source": "9ccb7efe133cf25a",
       "target": "74640383197a8ca7",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "23aa0824445b05e7",
+      "id": "6c6e115cbbafe501",
       "source": "9e2a30f7a17e5bd5",
       "target": "ceb925173a2931a7",
       "sourceOutput": "out",
       "targetInput": "input"
     },
     {
-      "id": "53eb0e57238a80e1",
+      "id": "82b769b3c69f4373",
       "source": "8fa96b2599a3efbf",
       "target": "b8140146b61cbe8b",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "15a394847c69fd2c",
+      "id": "eaecd6bae875180e",
       "source": "638e3dd2992d1984",
       "target": "642f583dff788b72",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "ba52af7dd4d9e0f5",
+      "id": "21c7f3de6cf27ac8",
       "source": "80cb637e8dec510c",
       "target": "e2f1b055323b6048",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "cc824b52ffe0c528",
+      "id": "220a6bbfcc515c78",
       "source": "80cb637e8dec510c",
       "target": "105adc7b3db42147",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "35e3a025b9e67618",
+      "id": "d3d4d765ac5ded3a",
       "source": "8fa96b2599a3efbf",
       "target": "0f7a5498635fd32f",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "4c89182eb0887d10",
+      "id": "d18779c97e6c08ae",
       "source": "620d9422ac54e63e",
       "target": "f92212978a300d5a",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "bba618152f1b8199",
+      "id": "89324b9e0f8a927c",
       "source": "f92212978a300d5a",
       "target": "dd6bece03850fcd1",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "2dca68860eafafd9",
+      "id": "0373679a1f094e6f",
       "source": "c6a03d9be3047a22",
       "target": "0f7a5498635fd32f",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "77fed9f2cecc70a2",
+      "id": "9802db960525f101",
       "source": "bb5e204a7266087a",
       "target": "fa3dd8e92a6fb03f",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "b58d8e3cd737859b",
+      "id": "d22feb9f83c8fd3b",
       "source": "9e2a30f7a17e5bd5",
       "target": "e88b0238fe4d8b6b",
       "sourceOutput": "out",
       "targetInput": "input"
     },
     {
-      "id": "7287d63147374605",
+      "id": "1782fb3e2523abeb",
       "source": "4e242756c2612585",
       "target": "5b71b0de41e3a529",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "5bdb9fceaa2d56eb",
+      "id": "181fd8d292be7cad",
       "source": "56ee4fd527651afc",
       "target": "e318b65067c3608e",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "eccb015e5e25defc",
+      "id": "068906ec529f32e2",
       "source": "bf71124258f2c9f4",
       "target": "af5d78eb391594ce",
       "sourceOutput": "isInRange",
       "targetInput": "a"
     },
     {
-      "id": "c6005b35dcc8e469",
+      "id": "771de342429d1711",
       "source": "c50730db0a8fc75b",
       "target": "af5d78eb391594ce",
       "sourceOutput": "value",
       "targetInput": "b"
     },
     {
-      "id": "85ad33f4438b1e69",
+      "id": "6ce1066404c608bd",
       "source": "af5d78eb391594ce",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "167fd3423a64695b",
+      "id": "a0372a16c97cd89e",
       "source": "af5d78eb391594ce",
       "target": "56ee4fd527651afc",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "efc0d6fd4435871c",
+      "id": "86ab210114d8f75a",
       "source": "3f6956273b66f32c",
       "target": "56ee4fd527651afc",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "467d5f15a6dbb5ba",
+      "id": "4a9a9a1cb2510d6f",
       "source": "a096aaaa5d139111",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "1543aa28482691db",
+      "id": "a7c57000b690fce2",
       "source": "50ff70ef0f2acc96",
       "target": "6ac17d4ab201b32b",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "f719064dd7a32fe8",
+      "id": "0c6c91ccdb5c12c5",
       "source": "e82bee10d637f7bd",
       "target": "39309e0384e43956",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "6cb11d119b425f11",
+      "id": "09800d61e62f190c",
       "source": "043a50dbfccdcd71",
       "target": "6b63b8e9fb86837c",
       "sourceOutput": "out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "97e4051f6f6231de",
+      "id": "2ad9c6add2f0e199",
       "source": "6b63b8e9fb86837c",
       "target": "39309e0384e43956",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "f8b1f202031359bd",
+      "id": "66574a7b54945045",
       "source": "8fa96b2599a3efbf",
       "target": "01446a4eb12772bd",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "eba8af900079ce37",
+      "id": "68a2cad61bfa8917",
       "source": "8fa96b2599a3efbf",
       "target": "9a4908a524f7808a",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "72081209e94a0c98",
+      "id": "6e359330fad1ece9",
       "source": "8fa96b2599a3efbf",
       "target": "d08ef8707ab0fba4",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "a719234a2762e19d",
+      "id": "f9aab2a74c24bea0",
       "source": "d384f545fa2b7f45",
       "target": "e9c2d08063453f26",
       "sourceOutput": "result",
       "targetInput": "input"
     },
     {
-      "id": "0995fd77dbe0a23f",
+      "id": "0600b0b339d7f106",
       "source": "e82bee10d637f7bd",
       "target": "23c01481261e42d1",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "1ca7f610454f8682",
+      "id": "ad61e3f40a8ed685",
       "source": "6602e66d9ef41f54",
       "target": "f65af4c70a7f6f40",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "bbd86c756d97c7aa",
+      "id": "93afc7f644e450e9",
       "source": "6602e66d9ef41f54",
       "target": "c1c9a5b0ed01c3b7",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "523679e2fdc794f9",
+      "id": "7d90ebea9407d549",
       "source": "ccbfbe4498e0188d",
       "target": "48772a09399ce435",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "4ca54094a0467d0e",
+      "id": "00ea921b624161dd",
       "source": "63057be1d1af8894",
       "target": "48772a09399ce435",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "43d7a5a22580dc5e",
+      "id": "a27406bd6938370c",
       "source": "2769561f4d1141e5",
       "target": "23c01481261e42d1",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "ea693d2f9cd06a00",
+      "id": "5dd22e42265252f3",
       "source": "83837d8f043f49cf",
       "target": "2769561f4d1141e5",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "d36640b01e22d2ff",
+      "id": "06256418d7be0309",
       "source": "83837d8f043f49cf",
       "target": "2769561f4d1141e5",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "85aa8783c8e9997a",
-      "source": "1a3bb2fd48d99245",
-      "target": "04169d0d9714a784",
-      "sourceOutput": "hsvInfo",
-      "targetInput": "in"
-    },
-    {
-      "id": "d59cdea96b7c578d",
-      "source": "a3d528fc57e1ff4d",
-      "target": "1a3bb2fd48d99245",
-      "sourceOutput": "startTime",
-      "targetInput": "startTime"
-    },
-    {
-      "id": "b1af636cdd9ea53a",
-      "source": "a3d528fc57e1ff4d",
-      "target": "1a3bb2fd48d99245",
-      "sourceOutput": "endTime",
-      "targetInput": "endTime"
-    },
-    {
-      "id": "ca217ff9f0afe4e9",
+      "id": "bf584ac4701f72fd",
       "source": "6b63b8e9fb86837c",
       "target": "12a91469cc39f498",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "6a12ef3b8a5e8a31",
+      "id": "46dd6f54693b80c1",
       "source": "d75099b0931e7056",
       "target": "f9e613cfd22bb224",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "58f19050a8d2cf08",
+      "id": "6c52492bcd24e92c",
       "source": "12a91469cc39f498",
       "target": "0c96213adb3281f4",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "70054e42cd9c977d",
+      "id": "579edc34f4d72460",
       "source": "4e9efb3c40202f3d",
       "target": "444d3a77af409b04",
       "sourceOutput": "output",
       "targetInput": "in"
     },
     {
-      "id": "a1c7fece398574da",
+      "id": "b7e72cbcf4b22788",
       "source": "4e9efb3c40202f3d",
       "target": "1c6a806bccd7eae4",
       "sourceOutput": "output",
       "targetInput": "input"
     },
     {
-      "id": "f5be013881400b48",
+      "id": "e8f830a0280b6ad7",
       "source": "b774e53e008efd8a",
       "target": "4e9efb3c40202f3d",
       "sourceOutput": "state",
       "targetInput": "in2"
     },
     {
-      "id": "e3dc93f9f00183d8",
+      "id": "bcb6e675eb2233ba",
       "source": "720bd29f88ec7e96",
       "target": "4e9efb3c40202f3d",
       "sourceOutput": "state",
       "targetInput": "in1"
     },
     {
-      "id": "e97d730428b86041",
+      "id": "34de1f236b9aba78",
       "source": "50f4fa1dafd492f9",
       "target": "d384f545fa2b7f45",
       "sourceOutput": "result",
       "targetInput": "in1"
     },
     {
-      "id": "f63a3c41db3ac7eb",
+      "id": "1aa5436e9c1114b3",
       "source": "537324f4d766e02b",
       "target": "15d23e2dcb5c4e04",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "20fb08419a069008",
+      "id": "6409102b12b88181",
       "source": "8fa96b2599a3efbf",
       "target": "46fa426389043256",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "d1b1a33291fd13a5",
+      "id": "9686313ebb49388e",
       "source": "2b4775bb8684586e",
       "target": "315ccd48fd131de3",
       "sourceOutput": "device_state",
       "targetInput": "device_state"
     },
     {
-      "id": "de3f376ebb2da311",
+      "id": "156ceb65a4a913ad",
       "source": "315ccd48fd131de3",
       "target": "18cb43271d9376b5",
       "sourceOutput": "out_battery",
       "targetInput": "device_state"
     },
     {
-      "id": "e50ec0cb0b2d223e",
+      "id": "aa0b0752f6db250d",
       "source": "e82bee10d637f7bd",
       "target": "0c96213adb3281f4",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "3e262261b29b5bf3",
+      "id": "f6b252bfe7fb2740",
       "source": "18c61864ae674e4a",
       "target": "02289ed0e7497993",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "24c50af4565c7c04",
+      "id": "7ef85686b837df88",
       "source": "22ab7427bbcd0c0f",
       "target": "f655421d76358d81",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "760f973c6daecfa7",
+      "id": "3c08d71b01e234f5",
       "source": "22ab7427bbcd0c0f",
       "target": "f655421d76358d81",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "fb1ae2a497340cbb",
+      "id": "4281d26d75dcdb58",
       "source": "f655421d76358d81",
       "target": "f65af4c70a7f6f40",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "8c20ef6d24e42087",
+      "id": "596547fe6470cee7",
       "source": "22ab7427bbcd0c0f",
       "target": "7bd022dda6f9f5b4",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "b17b0a6dbbb6adaf",
+      "id": "2c4db6f76ba5550f",
       "source": "22ab7427bbcd0c0f",
       "target": "7bd022dda6f9f5b4",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "981b2a36d6192026",
+      "id": "fdc9c4ee290aa13d",
       "source": "7bd022dda6f9f5b4",
       "target": "c1c9a5b0ed01c3b7",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "9cbc60c88658ac42",
+      "id": "58897498ef71c54d",
       "source": "d5004b3611dddf0f",
       "target": "56ee4fd527651afc",
       "sourceOutput": "hsvInfo",
       "targetInput": "data_2"
     },
     {
-      "id": "fdfae587e57b59c7",
+      "id": "2b8bb9310e543563",
       "source": "ce37567d8626a0db",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "hsvInfo",
       "targetInput": "data_2"
     },
     {
-      "id": "8b4ced5a376c6c5a",
+      "id": "ab5f4abb4b2acb3e",
       "source": "6dbc9bbdcd1943e0",
       "target": "e4a99a5458a16357",
       "sourceOutput": "device_state",
       "targetInput": "device_state"
     },
     {
-      "id": "2aa4001c9336521e",
+      "id": "968bcc925202505b",
       "source": "e4a99a5458a16357",
       "target": "7b0803eadc605db8",
       "sourceOutput": "out_value",
       "targetInput": "value"
     },
     {
-      "id": "2335ae54fe54db4a",
+      "id": "49559f1f76b22918",
       "source": "7b0803eadc605db8",
       "target": "d7f72f4c35755d5d",
       "sourceOutput": "hsvInfo",
       "targetInput": "in"
     },
     {
-      "id": "e650cf50b2acdf2c",
+      "id": "b9e09e29b54afca0",
       "source": "a3d39e49f47f28f7",
       "target": "15bedae98acf174c",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "3f29452f904f0341",
+      "id": "e2d181c9d49a0a00",
       "source": "537324f4d766e02b",
       "target": "e5129f50942c3bf8",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "3074d438249a9cd8",
+      "id": "2a61d14a427d4bee",
       "source": "24035c8839725684",
       "target": "ce37567d8626a0db",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "5e1ddc40d492e091",
+      "id": "770a2efb7a14b517",
       "source": "24035c8839725684",
       "target": "d5004b3611dddf0f",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "8ce3c19aa6575ba0",
+      "id": "d2c3fafb258550a1",
       "source": "3fb3a20b014821a8",
       "target": "228368262223f1db",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "12effcf731b8b855",
+      "id": "648f45090362f5e5",
       "source": "cb87122766b2be7d",
       "target": "771f2954e396349a",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "436428e4e30af250",
+      "id": "5637c4dc5d4f8e50",
       "source": "9e2a30f7a17e5bd5",
       "target": "771f2954e396349a",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "eb824f9e4304fbb2",
+      "id": "89413f3eb6ee163a",
       "source": "9e2a30f7a17e5bd5",
       "target": "228368262223f1db",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "a6d2e8b9b1fd60d2",
+      "id": "0bc3ae123bf6c40b",
       "source": "d5686fc3e43513d6",
       "target": "a157051d1861b8b1",
       "sourceOutput": "result",
       "targetInput": "input"
     },
     {
-      "id": "57c7388eae498615",
+      "id": "1b6c67ac8e867954",
       "source": "638e3dd2992d1984",
       "target": "d5686fc3e43513d6",
       "sourceOutput": "out",
       "targetInput": "in0"
     },
     {
-      "id": "45bcc5c0db8268ad",
+      "id": "f04a46ccc53a40a4",
       "source": "638e3dd2992d1984",
       "target": "09acc1353342ccb0",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "55b5185932ad9cf0",
+      "id": "e39480e4feff495d",
       "source": "b697f1460c4c6614",
       "target": "d5686fc3e43513d6",
       "sourceOutput": "out",
       "targetInput": "in1"
     },
     {
-      "id": "da05706c6ea6bf9f",
+      "id": "06fb199ca7cfa4bf",
       "source": "638e3dd2992d1984",
       "target": "f9e613cfd22bb224",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "f32cc831d60926cb",
+      "id": "5a8d0cd47e99f9d7",
       "source": "c4018a258f9c8fbd",
       "target": "c095e7b26b0c147e",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "e6b6b1ed6d1e605c",
+      "id": "6202df04ee540213",
       "source": "d5686fc3e43513d6",
       "target": "c095e7b26b0c147e",
       "sourceOutput": "result",
       "targetInput": "trigger"
+    },
+    {
+      "id": "08f066153c822e23",
+      "source": "a3d528fc57e1ff4d",
+      "target": "45aa6cddd5de1e17",
+      "sourceOutput": "startTime",
+      "targetInput": "startTime"
+    },
+    {
+      "id": "0e13fa3b8a5a930c",
+      "source": "a3d528fc57e1ff4d",
+      "target": "45aa6cddd5de1e17",
+      "sourceOutput": "endTime",
+      "targetInput": "endTime"
+    },
+    {
+      "id": "f3be1dbb6561ff5e",
+      "source": "45aa6cddd5de1e17",
+      "target": "04169d0d9714a784",
+      "sourceOutput": "hsvInfo",
+      "targetInput": "in"
     }
   ],
   "viewport": {
-    "x": -1671.959794943177,
-    "y": -442.87398222548836,
-    "k": 0.22075406565237665
-  },
-  "autoSaved": true,
-  "timestamp": 1765751421902
+    "x": -1040.3183314849412,
+    "y": 2412.4230682264415,
+    "k": 0.6457181004304579
+  }
 }

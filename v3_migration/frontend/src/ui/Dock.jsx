@@ -20,6 +20,7 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
     const [loadingGraphs, setLoadingGraphs] = useState(false);
     const [checkingUpdate, setCheckingUpdate] = useState(false);
     const [checkingPlugins, setCheckingPlugins] = useState(false);
+    const [appVersion, setAppVersion] = useState(null);
     const toast = useToast();
     const [position, setPosition] = useState(() => {
         const saved = localStorage.getItem('dock-position');
@@ -47,6 +48,22 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
     let unsubscribePlugin;
     const dockRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    // Fetch version on mount
+    useEffect(() => {
+        const fetchVersion = async () => {
+            try {
+                const response = await fetch('/api/version');
+                if (response.ok) {
+                    const data = await response.json();
+                    setAppVersion(data.version);
+                }
+            } catch (err) {
+                // Silently fail - version display is non-critical
+            }
+        };
+        fetchVersion();
+    }, []);
 
     // Listen for "?" key to open shortcuts modal
     useEffect(() => {
@@ -556,6 +573,11 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                         {checkingPlugins ? '⏳ Updating...' : '🔌 Update Plugins'}
                     </button>
                 </div>
+                {appVersion && (
+                    <div className="dock-version" title="T2AutoTron version">
+                        v{appVersion}
+                    </div>
+                )}
             </div>
 
             {/* Settings Modal */}

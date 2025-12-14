@@ -8,6 +8,15 @@
 const registry = require('../BackendNodeRegistry');
 const engineLogger = require('../engineLogger');
 
+// Lazy-load engine to avoid circular dependency
+let _engine = null;
+function getEngine() {
+  if (!_engine) {
+    _engine = require('../BackendEngine');
+  }
+  return _engine;
+}
+
 // Use native fetch (Node 18+) or node-fetch
 const fetch = globalThis.fetch || require('node-fetch');
 
@@ -362,6 +371,13 @@ class HAGenericDeviceNode {
   }
 
   async controlDevice(entityId, turnOn, hsv = null) {
+    // Check if frontend is active - if so, skip device commands to avoid conflict
+    const engine = getEngine();
+    if (engine && engine.shouldSkipDeviceCommands()) {
+      engineLogger.log('HA-DEVICE-SKIP', `Frontend active, skipping command for ${entityId}`, { turnOn });
+      return { success: true, skipped: true };
+    }
+
     const config = getHAConfig();
     if (!config.token || !entityId) {
       console.error('[HAGenericDeviceNode] No token or entityId');

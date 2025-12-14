@@ -70,6 +70,17 @@ io.on('error', (error) => {
 // Update service for checking updates
 const updateService = require('./services/updateService');
 
+// Backend engine for server-side automation
+let backendEngine = null;
+try {
+  backendEngine = require('./engine/BackendEngine');
+} catch (err) {
+  console.log('[Server] Backend engine not available:', err.message);
+}
+
+// Track active frontend editors (for engine coordination)
+const activeEditors = new Set();
+
 // === PERIODIC UPDATE CHECK (every 5 minutes) ===
 // Skip update checks in HA add-on - updates come from HA Supervisor, not git
 let lastNotifiedVersion = null;
@@ -198,6 +209,55 @@ io.on('connection', (socket) => {
   socket.on('disconnect', (reason) => {
     logger.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`, 'warn', false, 'socket:disconnect');
     debug(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`);
+    
+    // Remove from active editors and update engine
+    if (activeEditors.has(socket.id)) {
+      activeEditors.delete(socket.id);
+      debug(`[Editor] Editor disconnected: ${socket.id}, active editors: ${activeEditors.size}`);
+      
+      // If no more editors, tell engine to resume device control
+      if (activeEditors.size === 0 && backendEngine) {
+        backendEngine.setFrontendActive(false);
+      }
+    }
+  });
+
+  // === EDITOR ACTIVE/INACTIVE (for engine coordination) ===
+  // Frontend emits this when editor becomes active
+  socket.on('editor-active', () => {
+    activeEditors.add(socket.id);
+    debug(`[Editor] Editor active: ${socket.id}, total active: ${activeEditors.size}`);
+    
+    // Tell engine to pause device commands while frontend is active
+    if (backendEngine) {
+      backendEngine.setFrontendActive(true);
+    }
+    
+    // Acknowledge
+    socket.emit('editor-active-ack', { activeEditors: activeEditors.size });
+  });
+
+  // Frontend emits this when user explicitly wants engine to take over
+  socket.on('editor-inactive', () => {
+    activeEditors.delete(socket.id);
+    debug(`[Editor] Editor inactive: ${socket.id}, remaining active: ${activeEditors.size}`);
+    
+    // If no more active editors, resume engine device control
+    if (activeEditors.size === 0 && backendEngine) {
+      backendEngine.setFrontendActive(false);
+    }
+    
+    socket.emit('editor-inactive-ack', { activeEditors: activeEditors.size });
+  });
+});
+
+// Simple version endpoint - returns app version from package.json
+app.get('/api/version', (req, res) => {
+  const packageJson = require('../../package.json');
+  res.json({ 
+    version: packageJson.version,
+    name: packageJson.name,
+    isAddon: IS_HA_ADDON
   });
 });
 

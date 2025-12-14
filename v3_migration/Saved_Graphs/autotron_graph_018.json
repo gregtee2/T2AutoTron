@@ -2295,7 +2295,7 @@
           "selectedDeviceNames": [
             "Bar Lamp (ha)"
           ],
-          "status": "Loaded 815 devices",
+          "status": "Control applied to 1 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -4968,7 +4968,5 @@
     "x": -1671.959794943177,
     "y": -442.87398222548836,
     "k": 0.22075406565237665
-  },
-  "autoSaved": true,
-  "timestamp": 1765751421902
+  }
 }

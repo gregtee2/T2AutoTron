@@ -212,6 +212,9 @@ function App() {
       const pin = getStoredPin();
       if (pin) socket.emit('authenticate', pin);
 
+      // Tell backend that frontend editor is active (pauses engine device commands)
+      socket.emit('editor-active');
+
       // Request HA status when we connect
       socket.emit('request-ha-status');
     }
@@ -386,9 +389,21 @@ function App() {
 
     window.addEventListener('t2-pin-changed', onPinChanged);
 
+    // Signal editor is closing when page unloads (so engine can resume)
+    const onBeforeUnload = () => {
+      if (socket.connected) {
+        socket.emit('editor-inactive');
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+
     connectSocket();
 
     return () => {
+      // Tell backend editor is closing before disconnecting
+      if (socket.connected) {
+        socket.emit('editor-inactive');
+      }
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('reconnect', onReconnect);
@@ -404,6 +419,7 @@ function App() {
       socket.off('trigger_event', onTriggerEvent);
       socket.off('update-available', onUpdateAvailable);
       window.removeEventListener('t2-pin-changed', onPinChanged);
+      window.removeEventListener('beforeunload', onBeforeUnload);
       disconnectSocket();
     };
   }, []);

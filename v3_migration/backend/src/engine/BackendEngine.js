@@ -22,6 +22,39 @@ class BackendEngine {
     this.tickCount = 0;
     this.graphPath = null;
     this.debug = process.env.ENGINE_DEBUG === 'true' || process.env.VERBOSE_LOGGING === 'true';
+    
+    // Frontend priority: when frontend is active, engine skips device commands
+    // This prevents the engine and UI from fighting over device control
+    this.frontendActive = false;
+    this.frontendLastSeen = null;
+  }
+
+  /**
+   * Set frontend active status (called when editor connects/disconnects)
+   * @param {boolean} active - Whether frontend editor is active
+   */
+  setFrontendActive(active) {
+    const wasActive = this.frontendActive;
+    this.frontendActive = active;
+    this.frontendLastSeen = active ? Date.now() : this.frontendLastSeen;
+    
+    if (wasActive !== active) {
+      const status = active ? 'PAUSING device commands (frontend active)' : 'RESUMING device commands (frontend disconnected)';
+      console.log(`[BackendEngine] ${status}`);
+      engineLogger.logEngineEvent(active ? 'FRONTEND-ACTIVE' : 'FRONTEND-INACTIVE', { 
+        wasActive, 
+        isActive: active,
+        frontendLastSeen: this.frontendLastSeen 
+      });
+    }
+  }
+
+  /**
+   * Check if device commands should be skipped (frontend is controlling)
+   * @returns {boolean}
+   */
+  shouldSkipDeviceCommands() {
+    return this.frontendActive;
   }
 
   /**
@@ -367,7 +400,9 @@ class BackendEngine {
       tickRate: this.tickRate,
       lastTickTime: this.lastTickTime,
       graphPath: this.graphPath,
-      registeredNodeTypes: registry.list()
+      registeredNodeTypes: registry.list(),
+      frontendActive: this.frontendActive,
+      frontendLastSeen: this.frontendLastSeen
     };
   }
 }
