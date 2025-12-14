@@ -14,6 +14,9 @@ kasaClient.on('error', (err) => {
 
 const devices = new Map();
 const discoveredIds = new Set();
+// Track offline devices with backoff - don't poll them as often
+const offlineDevices = new Map(); // deviceId -> { failCount, lastAttempt }
+const MAX_BACKOFF_MINUTES = 5; // Max time between retries for offline devices
 
 function addDevice(device) {
     try {
@@ -22,6 +25,8 @@ function addDevice(device) {
             return;
         }
         devices.set(device.deviceId, device);
+        // Clear offline status when device is added/rediscovered
+        offlineDevices.delete(device.deviceId);
         logger.log(`Added device: ${device.alias} (ID: ${device.deviceId}, Type: ${device.deviceType})`, 'info', false, `kasa:device:${device.deviceId}`);
     } catch (err) {
         logger.log(`Error adding device ${device?.alias || 'unknown'}: ${err.message}`, 'error', false, 'kasa:error');
@@ -30,23 +35,60 @@ function addDevice(device) {
 
 function getDevices() {
     const deviceList = Array.from(devices.values());
-    logger.log(`Returning ${deviceList.length} Kasa devices (Bulbs: ${deviceList.filter(d => d.deviceType === 'bulb').length}, Plugs: ${deviceList.filter(d => d.deviceType === 'plug').length})`, 'info', false, 'kasa:devices');
+    // Only log this occasionally to reduce log spam
+    // logger.log(`Returning ${deviceList.length} Kasa devices`, 'info', false, 'kasa:devices');
     return deviceList;
 }
 
 function getDeviceById(id) {
     const device = devices.get(id);
-    logger.log('info', `Fetching device by ID ${id}: ${device ? 'Found' : 'Not found'}`, null, `kasa:device:${id}`);
+    // Only log when device not found (reduce noise)
+    if (!device) {
+        logger.log('warn', `Device not found by ID ${id}`, null, `kasa:device:${id}`);
+    }
     return device;
+}
+
+// Check if we should skip polling an offline device (backoff logic)
+function shouldSkipOfflineDevice(deviceId) {
+    const offlineInfo = offlineDevices.get(deviceId);
+    if (!offlineInfo) return false;
+    
+    const backoffMs = Math.min(offlineInfo.failCount * 30000, MAX_BACKOFF_MINUTES * 60000); // 30s per fail, max 5 min
+    const timeSinceLastAttempt = Date.now() - offlineInfo.lastAttempt;
+    return timeSinceLastAttempt < backoffMs;
+}
+
+// Mark device as offline with backoff
+function markDeviceOffline(deviceId) {
+    const existing = offlineDevices.get(deviceId) || { failCount: 0 };
+    offlineDevices.set(deviceId, {
+        failCount: existing.failCount + 1,
+        lastAttempt: Date.now()
+    });
+}
+
+// Mark device as online (clear backoff)
+function markDeviceOnline(deviceId) {
+    offlineDevices.delete(deviceId);
 }
 
 async function refreshDeviceStatus(device, io, notificationEmitter) {
     try {
         if (!device || typeof device.getSysInfo !== 'function') {
-            await logger.log(`Skipping invalid device in refresh`, 'warn', false, 'kasa:warn');
+            return; // Silently skip invalid devices
+        }
+        
+        // Skip polling for devices in backoff period
+        if (shouldSkipOfflineDevice(device.deviceId)) {
             return;
         }
+        
         const sysInfo = await device.getSysInfo();
+        
+        // Device responded - mark as online
+        markDeviceOnline(device.deviceId);
+        
         let state = { on: sysInfo.relay_state === 1 };
         if (device.deviceType === 'bulb') {
             const lightState = await device.lighting.getLightState();
@@ -67,12 +109,10 @@ async function refreshDeviceStatus(device, io, notificationEmitter) {
                     current: energyUsage.current_ma / 1000,
                     total: energyUsage.total_wh / 1000
                 };
-                await logger.log('info', `Fetched energy for ${device.alias}: ${JSON.stringify(energy)}`, null, `kasa:energy:${device.deviceId}`);
+                // Reduce log noise - only log energy in verbose mode
             } catch (err) {
-                await logger.log('error', `Error fetching energy for ${device.alias}: ${err.message}`, null, `kasa:energy:error:${device.deviceId}`);
+                // Silently ignore energy fetch errors for devices that may not support it
             }
-        } else if (device.deviceType === 'plug') {
-            await logger.log('warn', `Device ${device.alias} does not support energy metering`, null, `kasa:energy:unsupported:${device.deviceId}`);
         }
         
         // Check if state actually changed before notifying
@@ -83,8 +123,8 @@ async function refreshDeviceStatus(device, io, notificationEmitter) {
         
         device.state = state;
         device.energy = energy;
-        await logger.log('info', `🔄 Refreshed: ${device.alias} - State: ${JSON.stringify(state)}, Energy: ${JSON.stringify(energy)}`, null, `kasa:refresh:${device.deviceId}`);
-        if (io && notificationEmitter) {
+        // Only log state changes, not every refresh
+        if (stateChanged && io) {
             const stateToEmit = {
                 id: `kasa_${device.deviceId}`,
                 name: device.alias,
@@ -95,15 +135,19 @@ async function refreshDeviceStatus(device, io, notificationEmitter) {
                 ...(state.saturation !== 0 && { saturation: state.saturation }),
                 ...(energy && { energyUsage: energy })
             };
-            // Always emit socket update for UI
             io.emit('device-state-update', stateToEmit);
-            // Only notify Telegram on actual state changes
-            if (stateChanged) {
+            if (notificationEmitter) {
                 notificationEmitter.emit('notify', `🔄 Kasa Update: ${device.alias} is ${state.on ? 'ON' : 'OFF'}${state.brightness ? `, Brightness: ${state.brightness}` : ''}${energy ? `, Power: ${energy.power.toFixed(2)} W` : ''}`);
             }
         }
     } catch (err) {
-        await logger.log(`Refresh error for ${device?.alias || 'unknown'}: ${err.message}`, 'error', false, `kasa:error:${device?.deviceId || 'unknown'}`);
+        // Mark device as offline with backoff
+        markDeviceOffline(device.deviceId);
+        // Only log error once per backoff period (first failure)
+        const offlineInfo = offlineDevices.get(device.deviceId);
+        if (offlineInfo && offlineInfo.failCount === 1) {
+            await logger.log(`Device offline: ${device?.alias || 'unknown'} (will retry with backoff)`, 'warn', false, `kasa:offline:${device?.deviceId || 'unknown'}`);
+        }
     }
 }
 
@@ -172,15 +216,26 @@ async function setupKasa(io, notificationEmitter) {
                 });
                 await logger.log(`Emitted device-list-update with ${kasaDevices.length} devices`, 'info', false, 'kasa:devices');
             })
-            .on('device-online', (device) => logger.log(`🟢 Device online: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host})`, 'info', false, `kasa:online:${device.deviceId}`))
-            .on('device-offline', (device) => logger.log(`🔴 Device offline: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host})`, 'warn', false, `kasa:offline:${device.deviceId}`))
+            .on('device-offline', (device) => {
+                markDeviceOffline(device.deviceId);
+                logger.log(`🔴 Device offline: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host})`, 'warn', false, `kasa:offline:${device.deviceId}`);
+            })
+            .on('device-online', (device) => {
+                markDeviceOnline(device.deviceId);
+                logger.log(`🟢 Device online: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host})`, 'info', false, `kasa:online:${device.deviceId}`);
+            })
             .on('error', (err) => logger.log(`Discovery error: ${err.message}`, 'error', false, 'kasa:error'));
-        const baseInterval = parseInt(process.env.KASA_POLLING_INTERVAL, 10) || 5000;
+        
+        const baseInterval = parseInt(process.env.KASA_POLLING_INTERVAL, 10) || 10000; // Increased default to 10s
+        let pollCount = 0;
         setInterval(async () => {
+            pollCount++;
             const deviceList = getDevices();
-            const activeDevices = deviceList.filter(d => d.state?.on).length;
-            const interval = baseInterval + (activeDevices * 1000);
-            await logger.log(`🔄 Polling Kasa devices (interval: ${interval}ms, Total: ${deviceList.length}, Bulbs: ${deviceList.filter(d => d.deviceType === 'bulb').length}, Plugs: ${deviceList.filter(d => d.deviceType === 'plug').length})`, 'info', false, 'kasa:poll');
+            const onlineCount = deviceList.length - offlineDevices.size;
+            // Only log every 12th poll (once per minute at 5s interval, or every 2min at 10s)
+            if (pollCount % 12 === 1) {
+                await logger.log(`🔄 Kasa poll: ${onlineCount}/${deviceList.length} online, ${offlineDevices.size} in backoff`, 'info', false, 'kasa:poll');
+            }
             await Promise.all(deviceList.map(device => refreshDeviceStatus(device, io, notificationEmitter)));
         }, baseInterval);
         const initialDevices = getDevices();
