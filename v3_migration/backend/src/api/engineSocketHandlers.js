@@ -185,8 +185,11 @@ async function autoStartEngine() {
     // Try to load last active graph
     const path = require('path');
     const fs = require('fs').promises;
-    const savedGraphsDir = path.join(__dirname, '..', '..', '..', 'Saved_Graphs');
+    
+    // Use GRAPH_SAVE_PATH env var in Docker, or fall back to local path
+    const savedGraphsDir = process.env.GRAPH_SAVE_PATH || path.join(__dirname, '..', '..', '..', 'Saved_Graphs');
     const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
+    console.log(`[Engine] Looking for last active graph at: ${lastActivePath}`);
     
     try {
       await fs.access(lastActivePath);

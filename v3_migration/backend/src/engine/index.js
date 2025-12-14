@@ -45,8 +45,10 @@ async function loadBuiltinNodes() {
 
 // Auto-load last active graph on startup
 async function autoStart() {
-  const savedGraphsDir = path.join(__dirname, '..', '..', '..', 'Saved_Graphs');
+  // Use GRAPH_SAVE_PATH env var in Docker, or fall back to local path
+  const savedGraphsDir = process.env.GRAPH_SAVE_PATH || path.join(__dirname, '..', '..', '..', 'Saved_Graphs');
   const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
+  console.log(`[Engine] autoStart: Looking for graph at ${lastActivePath}`);
   
   try {
     // Check if there's a last active graph

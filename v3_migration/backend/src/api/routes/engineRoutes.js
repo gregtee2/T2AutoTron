@@ -14,6 +14,15 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 
+// Get the graphs directory - uses GRAPH_SAVE_PATH env var in Docker, or falls back to local path
+function getGraphsDir() {
+  if (process.env.GRAPH_SAVE_PATH) {
+    return process.env.GRAPH_SAVE_PATH;
+  }
+  // Fallback for local development: backend/src/api/routes -> v3_migration/Saved_Graphs
+  return path.join(__dirname, '..', '..', '..', '..', 'Saved_Graphs');
+}
+
 // Lazy-load engine to avoid circular dependencies
 let engine = null;
 let registry = null;
@@ -65,7 +74,7 @@ router.post('/start', async (req, res) => {
     
     // Load last active graph if no graph is loaded
     if (engine.nodes.size === 0) {
-      const savedGraphsDir = path.join(__dirname, '..', '..', '..', 'Saved_Graphs');
+      const savedGraphsDir = getGraphsDir();
       const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
       
       try {
@@ -139,10 +148,7 @@ router.post('/load', express.json(), async (req, res) => {
     
     // If graphName provided, resolve to full path
     if (req.body.graphName && !graphPath) {
-      // Path from src/api/routes/ to v3_migration/Saved_Graphs/
-      // __dirname = backend/src/api/routes
-      // We need to go up 4 levels (routes -> api -> src -> backend -> v3_migration) then into Saved_Graphs
-      const savedGraphsDir = path.join(__dirname, '..', '..', '..', '..', 'Saved_Graphs');
+      const savedGraphsDir = getGraphsDir();
       graphPath = path.join(savedGraphsDir, req.body.graphName);
       
       // Add .json extension if missing
@@ -271,7 +277,7 @@ router.get('/last-active', async (req, res) => {
   console.log('[Engine API] GET /last-active called');
   try {
     const fs = require('fs').promises;
-    const savedGraphsDir = path.join(__dirname, '..', '..', '..', '..', 'Saved_Graphs');
+    const savedGraphsDir = getGraphsDir();
     const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
     console.log('[Engine API] Looking for:', lastActivePath);
     
@@ -311,7 +317,7 @@ router.post('/save-active', async (req, res) => {
   console.log('[Engine API] POST /save-active called');
   try {
     const fs = require('fs').promises;
-    const savedGraphsDir = path.join(__dirname, '..', '..', '..', '..', 'Saved_Graphs');
+    const savedGraphsDir = getGraphsDir();
     const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
     console.log('[Engine API] Saving to:', lastActivePath);
     
