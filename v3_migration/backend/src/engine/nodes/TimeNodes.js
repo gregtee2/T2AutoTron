@@ -8,16 +8,55 @@
 const registry = require('../BackendNodeRegistry');
 
 /**
+ * Convert frontend time format (hour, minute, ampm) to 24h minutes
+ */
+function timeToMinutes(hour, minute, ampm) {
+  let h = parseInt(hour) || 0;
+  const m = parseInt(minute) || 0;
+  
+  // Handle AM/PM conversion
+  if (ampm === 'PM' && h !== 12) {
+    h += 12;
+  } else if (ampm === 'AM' && h === 12) {
+    h = 0;
+  }
+  
+  return h * 60 + m;
+}
+
+/**
+ * Parse time string "HH:MM" to minutes
+ */
+function parseTimeString(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return 0;
+  const [h, m] = timeStr.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+/**
  * TimeOfDayNode - Outputs true when current time is within a specified range
+ * 
+ * Frontend saves: start_hour, start_minute, start_ampm, stop_hour, stop_minute, stop_ampm
+ * Also supports: startTime, endTime in "HH:MM" format
  */
 class TimeOfDayNode {
   constructor() {
     this.id = null;
     this.label = 'Time of Day';
     this.properties = {
-      startTime: '08:00',
-      endTime: '18:00',
-      mode: 'state'  // 'state' (continuous) or 'pulse' (trigger once)
+      // Frontend format
+      start_hour: 8,
+      start_minute: 0,
+      start_ampm: 'AM',
+      stop_hour: 6,
+      stop_minute: 0,
+      stop_ampm: 'PM',
+      // Alternative format
+      startTime: null,
+      endTime: null,
+      // State
+      mode: 'state',
+      pulseMode: true
     };
     this.lastState = null;
   }
@@ -32,10 +71,30 @@ class TimeOfDayNode {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     
-    const [startH, startM] = this.properties.startTime.split(':').map(Number);
-    const [endH, endM] = this.properties.endTime.split(':').map(Number);
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
+    // Get start/end times - support both formats
+    let startMinutes, endMinutes;
+    
+    if (this.properties.start_hour !== undefined) {
+      // Frontend format: hour, minute, ampm
+      startMinutes = timeToMinutes(
+        this.properties.start_hour,
+        this.properties.start_minute,
+        this.properties.start_ampm
+      );
+      endMinutes = timeToMinutes(
+        this.properties.stop_hour,
+        this.properties.stop_minute,
+        this.properties.stop_ampm
+      );
+    } else if (this.properties.startTime) {
+      // Simple format: "HH:MM"
+      startMinutes = parseTimeString(this.properties.startTime);
+      endMinutes = parseTimeString(this.properties.endTime);
+    } else {
+      // Defaults
+      startMinutes = 8 * 60;  // 8:00 AM
+      endMinutes = 18 * 60;   // 6:00 PM
+    }
     
     let inRange;
     if (startMinutes <= endMinutes) {
@@ -47,13 +106,14 @@ class TimeOfDayNode {
     }
 
     // Handle pulse mode - only trigger on state change
-    if (this.properties.mode === 'pulse') {
+    if (this.properties.pulseMode || this.properties.mode === 'pulse') {
       const trigger = inRange && this.lastState !== true;
       this.lastState = inRange;
-      return { active: trigger };
+      return { state: trigger, active: trigger };
     }
 
-    return { active: inRange };
+    this.lastState = inRange;
+    return { state: inRange, active: inRange };
   }
 }
 

@@ -21,6 +21,44 @@ function getHAConfig() {
 }
 
 /**
+ * Extract entity ID from device ID (strips ha_ prefix if present)
+ */
+function normalizeEntityId(deviceId) {
+  if (!deviceId) return null;
+  // Remove ha_ prefix if present
+  return deviceId.startsWith('ha_') ? deviceId.slice(3) : deviceId;
+}
+
+/**
+ * Get all entity IDs from properties (supports multiple formats)
+ */
+function getEntityIds(properties) {
+  const ids = [];
+  
+  // Format 1: selectedDeviceIds array (HAGenericDeviceNode)
+  if (Array.isArray(properties.selectedDeviceIds)) {
+    properties.selectedDeviceIds.forEach(id => {
+      const normalized = normalizeEntityId(id);
+      if (normalized) ids.push(normalized);
+    });
+  }
+  
+  // Format 2: deviceId single value
+  if (properties.deviceId) {
+    const normalized = normalizeEntityId(properties.deviceId);
+    if (normalized) ids.push(normalized);
+  }
+  
+  // Format 3: entityId single value
+  if (properties.entityId) {
+    const normalized = normalizeEntityId(properties.entityId);
+    if (normalized) ids.push(normalized);
+  }
+  
+  return ids;
+}
+
+/**
  * HADeviceStateNode - Monitors a Home Assistant entity and outputs its state
  */
 class HADeviceStateNode {
@@ -297,16 +335,172 @@ class HALightControlNode {
   }
 }
 
+/**
+ * HAGenericDeviceNode - Controls multiple HA devices
+ * This matches the frontend HAGenericDeviceNode which uses selectedDeviceIds array
+ */
+class HAGenericDeviceNode {
+  constructor() {
+    this.id = null;
+    this.label = 'HA Generic Device';
+    this.properties = {
+      selectedDeviceIds: [],
+      selectedDeviceNames: [],
+      transitionTime: 1000,
+      triggerMode: 'Follow'  // Follow, Toggle, On, Off
+    };
+    this.lastTrigger = null;
+    this.lastHsv = null;
+    this.deviceStates = {};  // Track on/off state per device for Toggle mode
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+
+  async controlDevice(entityId, turnOn, hsv = null) {
+    const config = getHAConfig();
+    if (!config.token || !entityId) {
+      console.error('[HAGenericDeviceNode] No token or entityId');
+      return { success: false };
+    }
+
+    // Determine domain from entity_id
+    const domain = entityId.split('.')[0] || 'light';
+    const service = turnOn ? 'turn_on' : 'turn_off';
+    const url = `${config.host}/api/services/${domain}/${service}`;
+    
+    const payload = {
+      entity_id: entityId
+    };
+
+    // Add transition time for lights
+    if (domain === 'light') {
+      payload.transition = (this.properties.transitionTime || 1000) / 1000;
+      
+      // Add color info if turning on with HSV
+      if (turnOn && hsv) {
+        payload.hs_color = [
+          Math.round((hsv.hue <= 1 ? hsv.hue : hsv.hue / 360) * 360),
+          Math.round((hsv.saturation <= 1 ? hsv.saturation : hsv.saturation / 100) * 100)
+        ];
+        payload.brightness = Math.round(
+          hsv.brightness <= 1 ? hsv.brightness * 255 :
+          hsv.brightness <= 255 ? hsv.brightness : 255
+        );
+      }
+    }
+
+    try {
+      console.log(`[HAGenericDeviceNode] Calling ${domain}.${service} for ${entityId}`);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        console.error(`[HAGenericDeviceNode] HTTP ${response.status} for ${entityId}`);
+      }
+      return { success: response.ok };
+    } catch (error) {
+      console.error(`[HAGenericDeviceNode] Error controlling ${entityId}:`, error.message);
+      return { success: false };
+    }
+  }
+
+  async data(inputs) {
+    const trigger = inputs.trigger?.[0];
+    const hsv = inputs.hsv_info?.[0];
+    
+    const entityIds = getEntityIds(this.properties);
+    
+    if (entityIds.length === 0) {
+      return { is_on: false };
+    }
+
+    // Handle trigger changes based on mode
+    if (trigger !== undefined && trigger !== this.lastTrigger) {
+      const wasTriggered = this.lastTrigger;
+      this.lastTrigger = trigger;
+      
+      const mode = this.properties.triggerMode || 'Follow';
+      
+      for (const entityId of entityIds) {
+        let shouldTurnOn = false;
+        
+        switch (mode) {
+          case 'Follow':
+            // Follow trigger state
+            shouldTurnOn = !!trigger;
+            break;
+          case 'Toggle':
+            // Toggle on rising edge only
+            if (trigger && !wasTriggered) {
+              this.deviceStates[entityId] = !this.deviceStates[entityId];
+              shouldTurnOn = this.deviceStates[entityId];
+              await this.controlDevice(entityId, shouldTurnOn, hsv);
+            }
+            continue;  // Skip normal control
+          case 'On':
+            // Only turn on, never off
+            if (trigger) {
+              shouldTurnOn = true;
+            } else {
+              continue;  // Don't do anything on false
+            }
+            break;
+          case 'Off':
+            // Only turn off, never on
+            if (trigger) {
+              shouldTurnOn = false;
+            } else {
+              continue;  // Don't do anything on false
+            }
+            break;
+        }
+        
+        await this.controlDevice(entityId, shouldTurnOn, shouldTurnOn ? hsv : null);
+        this.deviceStates[entityId] = shouldTurnOn;
+      }
+    }
+
+    // Handle HSV changes while on (for Follow mode)
+    if (this.lastTrigger && hsv && this.properties.triggerMode !== 'Toggle') {
+      const hsvChanged = !this.lastHsv ||
+        Math.abs((hsv.hue || 0) - (this.lastHsv.hue || 0)) > 0.01 ||
+        Math.abs((hsv.saturation || 0) - (this.lastHsv.saturation || 0)) > 0.01 ||
+        Math.abs((hsv.brightness || 0) - (this.lastHsv.brightness || 0)) > 1;
+
+      if (hsvChanged) {
+        this.lastHsv = { ...hsv };
+        for (const entityId of entityIds) {
+          await this.controlDevice(entityId, true, hsv);
+        }
+      }
+    }
+
+    return { is_on: !!this.lastTrigger };
+  }
+}
+
 // Register nodes
 registry.register('HADeviceStateNode', HADeviceStateNode);
 registry.register('HADeviceStateOutputNode', HADeviceStateNode);  // Alias
 registry.register('HAServiceCallNode', HAServiceCallNode);
 registry.register('HALightControlNode', HALightControlNode);
-registry.register('HADeviceAutomationNode', HALightControlNode);  // Simplified alias
+registry.register('HAGenericDeviceNode', HAGenericDeviceNode);
+registry.register('HADeviceAutomationNode', HAGenericDeviceNode);  // Use full implementation
 
 module.exports = { 
   HADeviceStateNode, 
   HAServiceCallNode, 
   HALightControlNode,
+  HAGenericDeviceNode,
   getHAConfig
 };

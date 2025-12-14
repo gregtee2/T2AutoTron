@@ -1,309 +1,84 @@
 {
   "nodes": [
     {
-      "id": "01b36eb21745a622",
-      "label": "Timeline Color",
+      "id": "981ee9c1686c04da",
+      "label": "HA Generic Device",
       "position": {
-        "x": 199.77320615991977,
-        "y": -41.85642590702277
+        "x": 438.1851836781442,
+        "y": 196.48148148148147
       },
       "data": {
-        "id": "01b36eb21745a622",
-        "label": "Timeline Color",
+        "id": "981ee9c1686c04da",
+        "label": "HA Generic Device",
         "properties": {
-          "points": [
-            {
-              "x": 0,
-              "y": 0.7921470884992139,
-              "id": "p0"
-            },
-            {
-              "x": 1,
-              "y": 1,
-              "id": "p1"
-            }
+          "selectedDeviceIds": [
+            "ha_switch.dads_shark"
           ],
-          "saturationPoints": [
-            {
-              "x": 0,
-              "y": 1,
-              "id": "p0"
-            },
-            {
-              "x": 1,
-              "y": 1,
-              "id": "p1"
-            }
+          "selectedDeviceNames": [
+            "Dads Shark"
           ],
-          "interpolation": "catmull-rom",
-          "editMode": "brightness",
-          "collapsed": false,
-          "rangeMode": "numerical",
-          "startValue": 0,
-          "endValue": 100,
-          "startTimeHours": 8,
-          "startTimeMinutes": 0,
-          "startTimePeriod": "AM",
-          "endTimeHours": 6,
-          "endTimeMinutes": 0,
-          "endTimePeriod": "PM",
-          "timerDurationValue": 1,
-          "timerUnit": "hours",
-          "colorMode": "rainbow",
-          "colorStops": [
-            {
-              "position": 0,
-              "rgb": {
-                "r": 255,
-                "g": 100,
-                "b": 0
-              }
-            },
-            {
-              "position": 1,
-              "rgb": {
-                "r": 0,
-                "g": 100,
-                "b": 255
-              }
-            }
-          ],
-          "editorWidth": 360,
-          "editorHeight": 180,
-          "showColorEditor": false,
-          "previewMode": true,
-          "previewPosition": 0.3130679430321268,
-          "position": 0.3130679430321268,
-          "isInRange": true,
-          "outputHue": 0.3130081300813008,
-          "outputSaturation": 0.891304347826087,
-          "outputBrightness": 216,
-          "outputRgb": {
-            "r": 42,
-            "g": 195,
-            "b": 21
-          }
+          "status": "Toggled 1 device(s)",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Switch",
+          "triggerMode": "Follow",
+          "autoRefreshInterval": 30000,
+          "customTitle": ""
         }
       }
     },
     {
-      "id": "aa09704f929aebd7",
-      "label": "Debug",
+      "id": "ea34495a93b90081",
+      "label": "Time of Day",
       "position": {
-        "x": 1146.463431415404,
-        "y": 63.38573644025568
+        "x": -87.7992144727396,
+        "y": 4.414392976186065
       },
       "data": {
-        "inputs": {
-          "input": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Input",
-            "id": "738dad53b6c408d5",
-            "control": null,
-            "showControl": true
-          }
-        },
-        "outputs": {
-          "output": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Output",
-            "multipleConnections": true,
-            "id": "82ba045f004efec1"
-          }
-        },
-        "controls": {},
-        "label": "Debug",
-        "id": "aa09704f929aebd7",
-        "width": 260,
+        "id": "ea34495a93b90081",
+        "label": "Time of Day",
         "properties": {
-          "name": "",
-          "toConsole": true,
-          "maxHistory": 10,
-          "enabled": true,
-          "history": [
-            {
-              "time": "7:27:58 PM",
-              "timestamp": 1765510078223,
-              "value": {
-                "hue": 0.3130081300813008,
-                "saturation": 0.891304347826087,
-                "brightness": 216,
-                "rgb": {
-                  "r": 42,
-                  "g": 195,
-                  "b": 21
-                }
-              },
-              "type": "object"
-            },
-            {
-              "time": "7:27:58 PM",
-              "timestamp": 1765510078189,
-              "value": {
-                "hue": 0.3130081300813008,
-                "saturation": 0.891304347826087,
-                "brightness": 216,
-                "rgb": {
-                  "r": 42,
-                  "g": 195,
-                  "b": 21
-                }
-              },
-              "type": "object"
-            },
-            {
-              "time": "7:27:58 PM",
-              "timestamp": 1765510078151,
-              "value": {
-                "hue": 0.3130081300813008,
-                "saturation": 0.891304347826087,
-                "brightness": 216,
-                "rgb": {
-                  "r": 42,
-                  "g": 195,
-                  "b": 21
-                }
-              },
-              "type": "object"
-            },
-            {
-              "time": "7:27:58 PM",
-              "timestamp": 1765510078114,
-              "value": {
-                "hue": 0.3130081300813008,
-                "saturation": 0.891304347826087,
-                "brightness": 216,
-                "rgb": {
-                  "r": 42,
-                  "g": 195,
-                  "b": 21
-                }
-              },
-              "type": "object"
-            },
-            {
-              "time": "7:27:58 PM",
-              "timestamp": 1765510078081,
-              "value": {
-                "hue": 0.3130081300813008,
-                "saturation": 0.891304347826087,
-                "brightness": 216,
-                "rgb": {
-                  "r": 42,
-                  "g": 195,
-                  "b": 21
-                }
-              },
-              "type": "object"
-            },
-            {
-              "time": "7:27:58 PM",
-              "timestamp": 1765510078047,
-              "value": {
-                "hue": 0.3130081300813008,
-                "saturation": 0.891304347826087,
-                "brightness": 216,
-                "rgb": {
-                  "r": 42,
-                  "g": 195,
-                  "b": 21
-                }
-              },
-              "type": "object"
-            },
-            {
-              "time": "7:27:58 PM",
-              "timestamp": 1765510078014,
-              "value": {
-                "hue": 0.3130081300813008,
-                "saturation": 0.891304347826087,
-                "brightness": 216,
-                "rgb": {
-                  "r": 42,
-                  "g": 195,
-                  "b": 21
-                }
-              },
-              "type": "object"
-            },
-            {
-              "time": "7:27:57 PM",
-              "timestamp": 1765510077981,
-              "value": {
-                "hue": 0.3130081300813008,
-                "saturation": 0.891304347826087,
-                "brightness": 216,
-                "rgb": {
-                  "r": 42,
-                  "g": 195,
-                  "b": 21
-                }
-              },
-              "type": "object"
-            },
-            {
-              "time": "7:27:57 PM",
-              "timestamp": 1765510077948,
-              "value": {
-                "hue": 0.3130081300813008,
-                "saturation": 0.891304347826087,
-                "brightness": 216,
-                "rgb": {
-                  "r": 42,
-                  "g": 195,
-                  "b": 21
-                }
-              },
-              "type": "object"
-            },
-            {
-              "time": "7:27:57 PM",
-              "timestamp": 1765510077914,
-              "value": {
-                "hue": 0.3130081300813008,
-                "saturation": 0.891304347826087,
-                "brightness": 216,
-                "rgb": {
-                  "r": 42,
-                  "g": 195,
-                  "b": 21
-                }
-              },
-              "type": "object"
-            }
-          ],
-          "currentValue": {
-            "hue": 0.3130081300813008,
-            "saturation": 0.891304347826087,
-            "brightness": 216,
-            "rgb": {
-              "r": 42,
-              "g": 195,
-              "b": 21
-            }
-          },
-          "messageCount": 897
-        },
-        "selected": false
+          "customName": "",
+          "start_hour": 5,
+          "start_minute": 17,
+          "start_ampm": "PM",
+          "start_enabled": true,
+          "stop_hour": 6,
+          "stop_minute": 0,
+          "stop_ampm": "PM",
+          "stop_enabled": true,
+          "cycle_hour": 4,
+          "cycle_minute": 45,
+          "cycle_ampm": "AM",
+          "cycle_duration": 10,
+          "cycle_enabled": false,
+          "timezone": "America/Los_Angeles",
+          "next_on_date": "2025-12-14T01:17:00.000Z",
+          "next_off_date": "2025-12-14T02:00:00.000Z",
+          "next_cycle_date": null,
+          "currentState": false,
+          "status": "Initializing...",
+          "debug": false,
+          "pulseMode": true
+        }
       }
     }
   ],
   "connections": [
     {
-      "id": "4c849facc2d7ad1b",
-      "source": "01b36eb21745a622",
-      "target": "aa09704f929aebd7",
-      "sourceOutput": "hsvInfo",
-      "targetInput": "input"
+      "id": "b5a8688b1fd36d79",
+      "source": "ea34495a93b90081",
+      "target": "981ee9c1686c04da",
+      "sourceOutput": "state",
+      "targetInput": "trigger"
     }
   ],
   "viewport": {
-    "x": 327.2489082336426,
-    "y": 139.32086181640622,
-    "k": 0.6239445717393904
+    "x": 248.17190246582035,
+    "y": 81.06555919647217,
+    "k": 0.9230123457539872
   }
 }
