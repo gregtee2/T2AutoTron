@@ -1,49 +1,19 @@
 {
   "nodes": [
     {
-      "id": "981ee9c1686c04da",
-      "label": "HA Generic Device",
-      "position": {
-        "x": 559.70124541095,
-        "y": 207.65537221553257
-      },
-      "data": {
-        "id": "981ee9c1686c04da",
-        "label": "HA Generic Device",
-        "properties": {
-          "selectedDeviceIds": [
-            "ha_switch.dads_shark"
-          ],
-          "selectedDeviceNames": [
-            "Dads Shark"
-          ],
-          "status": "Loaded 799 devices",
-          "haConnected": true,
-          "haWsConnected": true,
-          "debug": false,
-          "haToken": "",
-          "transitionTime": 1000,
-          "filterType": "Switch",
-          "triggerMode": "Follow",
-          "autoRefreshInterval": 30000,
-          "customTitle": ""
-        }
-      }
-    },
-    {
-      "id": "ea34495a93b90081",
+      "id": "3ac62d3d90294216",
       "label": "Time of Day",
       "position": {
-        "x": -87.7992144727396,
-        "y": 4.414392976186065
+        "x": -170.81283214942826,
+        "y": -31.568783220808488
       },
       "data": {
-        "id": "ea34495a93b90081",
+        "id": "3ac62d3d90294216",
         "label": "Time of Day",
         "properties": {
           "customName": "",
           "start_hour": 5,
-          "start_minute": 39,
+          "start_minute": 51,
           "start_ampm": "PM",
           "start_enabled": true,
           "stop_hour": 6,
@@ -56,7 +26,7 @@
           "cycle_duration": 10,
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
-          "next_on_date": "2025-12-14T01:39:00.000Z",
+          "next_on_date": "2025-12-14T01:51:00.000Z",
           "next_off_date": "2025-12-14T02:00:00.000Z",
           "next_cycle_date": null,
           "currentState": false,
@@ -65,20 +35,50 @@
           "pulseMode": false
         }
       }
+    },
+    {
+      "id": "d439d0be32092291",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 495.1787471056814,
+        "y": 264.62745438783315
+      },
+      "data": {
+        "id": "d439d0be32092291",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_switch.dads_shark"
+          ],
+          "selectedDeviceNames": [
+            "Dads Shark"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Switch",
+          "triggerMode": "Follow",
+          "autoRefreshInterval": 30000,
+          "customTitle": ""
+        }
+      }
     }
   ],
   "connections": [
     {
-      "id": "312a67178a0d4d2b",
-      "source": "ea34495a93b90081",
-      "target": "981ee9c1686c04da",
+      "id": "cc044667b951ec50",
+      "source": "3ac62d3d90294216",
+      "target": "d439d0be32092291",
       "sourceOutput": "state",
       "targetInput": "trigger"
     }
   ],
   "viewport": {
-    "x": 269.86398257457506,
-    "y": -41.0192490257877,
-    "k": 0.8971700967391976
+    "x": 154.34785156249998,
+    "y": 66.0719581604004,
+    "k": 0.7703019404190007
   }
 }

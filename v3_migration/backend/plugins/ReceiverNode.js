@@ -110,7 +110,7 @@
             if (!window.AutoTronBuffer) return;
 
             const updateList = () => {
-                const buffers = Object.keys(window.AutoTronBuffer.data).sort();
+                const buffers = Object.keys(window.AutoTronBuffer.data || {}).sort();
                 setAvailableBuffers(buffers);
             };
 

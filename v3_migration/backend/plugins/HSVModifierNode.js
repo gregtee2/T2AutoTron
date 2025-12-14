@@ -213,7 +213,7 @@
         useEffect(() => {
             if (!window.AutoTronBuffer) return;
             const updateList = () => {
-                setAvailableBuffers(Object.keys(window.AutoTronBuffer.data).sort());
+                setAvailableBuffers(Object.keys(window.AutoTronBuffer.data || {}).sort());
             };
             updateList();
             const unsubscribe = window.AutoTronBuffer.subscribe((key) => {
