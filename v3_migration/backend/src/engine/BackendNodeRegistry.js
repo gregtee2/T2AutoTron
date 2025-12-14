@@ -83,19 +83,28 @@ class BackendNodeRegistry {
     const labelMappings = {
       // Color nodes
       'Timeline Color': 'SplineTimelineColorNode',
-      'All-in-One Color Control': 'SplineTimelineColorNode',  // Similar functionality
+      'All-in-One Color Control': 'SplineTimelineColorNode',
       'HSV to RGB': 'HSVToRGBNode',
       'RGB to HSV': 'RGBToHSVNode',
       'Color Mixer': 'ColorMixerNode',
+      'Color Gradient': 'ColorMixerNode',  // Similar functionality
       'HSV Control': null,  // Frontend-only node
       'HSV Modifier': null,  // Frontend-only node
+      'Spline Curve': null,  // Frontend-only visualization
       
       // Time nodes
       'Time of Day': 'TimeOfDayNode',
       'Time Range': 'TimeRangeNode',
       'Time Range (Continuous)': 'TimeRangeNode',
       'Current Time': 'TimeOfDayNode',
-      'Sunrise/Sunset Trigger': 'TimeOfDayNode',  // Use TimeOfDay for now
+      'Sunrise/Sunset Trigger': 'SunriseSunsetNode',
+      'Sunrise/Sunset': 'SunriseSunsetNode',
+      'Day of Week': 'TimeOfDayNode',  // Use TimeOfDay for now
+      'Date Comparison': 'TimeOfDayNode',
+      
+      // Weather nodes
+      'Weather Logic': 'WeatherLogicNode',
+      'Weather': 'WeatherLogicNode',
       
       // Logic nodes
       'AND': 'ANDNode',
@@ -112,6 +121,8 @@ class BackendNodeRegistry {
       'Logic Condition': 'CompareNode',
       'Logic Operations': 'ANDNode',
       'Conditional Switch': 'SwitchNode',
+      'State Machine': 'StateMachineNode',
+      'Hysteresis': 'HysteresisNode',
       
       // HA nodes
       'HA Device State': 'HADeviceStateNode',
@@ -134,15 +145,26 @@ class BackendNodeRegistry {
       // Utility nodes
       'Delay': 'DelayNode',
       'Trigger': 'TriggerNode',
-      'Toggle': 'TriggerNode',  // Toggle acts as a trigger
+      'Toggle': 'TriggerNode',
       'Inject': 'InjectNode',
+      'Counter': 'CounterNode',
+      'Random': 'RandomNode',
+      'Switch Router': 'SwitchRouterNode',
+      'Change': 'ChangeNode',
+      'Filter': 'FilterNode',
+      'Smooth': 'SmoothNode',
+      'Combine': 'CombineNode',
+      'Watchdog': 'CounterNode',  // Use Counter as fallback
       
       // Nodes that don't run on backend (UI-only)
       'Debug': null,
       'Display': null,
       'Backdrop': null,
       'Receiver': null,
-      'Sender': null
+      'Sender': null,
+      'Integer Selector': null,  // UI-only input control
+      'Conditional Integer Output': null,  // UI-only
+      'All-in-One Color': null  // Complex UI control
     };
 
     const nodeName = labelMappings[label];
