@@ -6,6 +6,7 @@
  */
 
 const registry = require('../BackendNodeRegistry');
+const engineLogger = require('../engineLogger');
 
 // Use native fetch (Node 18+) or node-fetch
 const fetch = globalThis.fetch || require('node-fetch');
@@ -394,7 +395,9 @@ class HAGenericDeviceNode {
     }
 
     try {
-      console.log(`[HAGenericDeviceNode] Calling ${domain}.${service} for ${entityId}`);
+      // Log the device command
+      engineLogger.logDeviceCommand(entityId, `${domain}.${service}`, payload);
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -405,11 +408,13 @@ class HAGenericDeviceNode {
       });
 
       if (!response.ok) {
-        console.error(`[HAGenericDeviceNode] HTTP ${response.status} for ${entityId}`);
+        engineLogger.log('HA-DEVICE-ERROR', `HTTP ${response.status}`, { entityId, service });
+      } else {
+        engineLogger.log('HA-DEVICE-SUCCESS', `${entityId} ${service}`, { payload });
       }
       return { success: response.ok };
     } catch (error) {
-      console.error(`[HAGenericDeviceNode] Error controlling ${entityId}:`, error.message);
+      engineLogger.log('HA-DEVICE-ERROR', `${entityId}: ${error.message}`);
       return { success: false };
     }
   }
@@ -419,7 +424,6 @@ class HAGenericDeviceNode {
     const hsv = inputs.hsv_info?.[0];
     
     const entityIds = getEntityIds(this.properties);
-    const DEBUG = process.env.ENGINE_DEBUG === 'true';
     
     if (entityIds.length === 0) {
       return { is_on: false };
@@ -431,14 +435,18 @@ class HAGenericDeviceNode {
     }
     this.tickCount++;
     
-    if (DEBUG) {
-      console.log(`[HAGenericDevice] Tick ${this.tickCount} | trigger=${trigger} | lastTrigger=${this.lastTrigger} | entities=${entityIds.join(',')}`);
-    }
+    // Log every tick for debugging
+    engineLogger.log('HA-DEVICE-TICK', `tick=${this.tickCount}`, { 
+      trigger, 
+      lastTrigger: this.lastTrigger, 
+      entities: entityIds,
+      mode: this.properties.triggerMode || 'Follow'
+    });
     
     // Skip first 3 ticks to let buffers populate
     // This prevents turning off devices when engine starts
     if (this.tickCount <= 3) {
-      console.log(`[HAGenericDevice] WARMUP tick ${this.tickCount}/3 - trigger=${trigger}, lastTrigger=${this.lastTrigger}`);
+      engineLogger.logWarmup(this.id || 'HAGenericDevice', this.tickCount, trigger, this.lastTrigger);
       // Initialize lastTrigger to current value without taking action
       if (trigger !== undefined) {
         this.lastTrigger = trigger;
@@ -448,13 +456,13 @@ class HAGenericDeviceNode {
 
     // Skip if trigger is still undefined (no connection)
     if (trigger === undefined) {
-      if (DEBUG) console.log(`[HAGenericDevice] trigger undefined, returning lastTrigger=${this.lastTrigger}`);
+      engineLogger.log('HA-DEVICE', 'trigger undefined, skipping', { lastTrigger: this.lastTrigger });
       return { is_on: !!this.lastTrigger };
     }
 
     // Handle trigger changes based on mode
     if (trigger !== this.lastTrigger) {
-      console.log(`[HAGenericDevice] TRIGGER CHANGE: ${this.lastTrigger} → ${trigger} (tick ${this.tickCount})`);
+      engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, 'processing');
       const wasTriggered = this.lastTrigger;
       this.lastTrigger = trigger;
       

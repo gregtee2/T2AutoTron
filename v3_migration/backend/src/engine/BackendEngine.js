@@ -8,6 +8,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const registry = require('./BackendNodeRegistry');
+const engineLogger = require('./engineLogger');
 
 class BackendEngine {
   constructor() {
@@ -254,18 +255,26 @@ class BackendEngine {
     this.tickCount = 0;
     
     // Log all nodes being executed
-    console.log(`[BackendEngine] Starting with ${this.nodes.size} nodes:`);
+    engineLogger.logEngineEvent('START', { nodeCount: this.nodes.size, connections: this.connections.length });
+    
+    const nodeList = [];
     for (const [nodeId, node] of this.nodes) {
       const nodeType = node.constructor?.name || node.type || 'Unknown';
-      console.log(`  - ${nodeId}: ${nodeType} (${node.label || 'no label'})`);
+      const label = node.label || node.properties?.customTitle || 'no label';
+      nodeList.push({ id: nodeId, type: nodeType, label });
+      engineLogger.log('NODE-INIT', `${nodeType}`, { id: nodeId, label, properties: node.properties });
     }
-    console.log(`[BackendEngine] Connections: ${this.connections.length}`);
+    
+    // Log connections
+    for (const conn of this.connections) {
+      engineLogger.log('CONNECTION', `${conn.source}.${conn.sourceOutput} → ${conn.target}.${conn.targetInput}`);
+    }
     
     // Call tick immediately, then on interval
     this.tick();
     this.tickInterval = setInterval(() => this.tick(), this.tickRate);
     
-    console.log(`[BackendEngine] Started (tick rate: ${this.tickRate}ms)`);
+    engineLogger.logEngineEvent('RUNNING', { tickRate: this.tickRate });
   }
 
   /**
@@ -284,6 +293,7 @@ class BackendEngine {
       this.tickInterval = null;
     }
     
+    engineLogger.logEngineEvent('STOP', { tickCount: this.tickCount });
     console.log(`[BackendEngine] Stopped after ${this.tickCount} ticks`);
   }
 
