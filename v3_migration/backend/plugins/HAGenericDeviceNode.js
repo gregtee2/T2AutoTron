@@ -318,13 +318,16 @@
         restore(state) {
             if (state.properties) Object.assign(this.properties, state.properties);
             
+            // Force debug OFF on restore (old saves may have debug: true)
+            this.properties.debug = false;
+            
             // Skip trigger processing on first data() call after restore
             this.skipInitialTrigger = true;
             
             if (this.controls.filter) this.controls.filter.value = this.properties.filterType;
             if (this.controls.trigger_mode) this.controls.trigger_mode.value = this.properties.triggerMode || "Toggle";
             if (this.controls.transition) this.controls.transition.value = this.properties.transitionTime;
-            if (this.controls.debug) this.controls.debug.value = this.properties.debug;
+            if (this.controls.debug) this.controls.debug.value = false;
 
             this.properties.selectedDeviceIds.forEach((id, index) => {
                 const base = `device_${index}_`;
@@ -471,22 +474,9 @@
                     // and set lastTriggerValue/hadConnection from the actual inputs
                     this.triggerUpdate();
                     
-                    // After the engine has processed, queue device sync (not immediate)
-                    // Use a delay to ensure data() has been called with new values
-                    setTimeout(() => {
-                        const mode = this.properties.triggerMode || "Follow";
-                        if (mode === "Follow" && this.hadConnection) {
-                            if (this.properties.debug) {
-                                console.log(`[HAGenericDeviceNode] graphLoadComplete: Queuing sync for trigger=${this.lastTriggerValue}`);
-                            }
-                            // Queue instead of immediate call to prevent API flood
-                            let hsvInput = null;
-                            if (this.lastHsvInfo) {
-                                try { hsvInput = JSON.parse(this.lastHsvInfo); } catch (e) {}
-                            }
-                            queueDeviceSync(this, this.lastTriggerValue, hsvInput);
-                        }
-                    }, 500);
+                    // DO NOT sync devices on graph load - this was causing devices to turn on
+                    // The device state should only change when the user explicitly triggers
+                    // or when input values actually change AFTER the graph is loaded
                 };
                 
                 window.socket.on("device-state-update", this._onDeviceStateUpdate);
