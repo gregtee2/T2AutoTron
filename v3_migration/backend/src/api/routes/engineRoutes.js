@@ -268,14 +268,17 @@ router.post('/tick', async (req, res) => {
  * Returns the last active graph JSON for frontend auto-load
  */
 router.get('/last-active', async (req, res) => {
+  console.log('[Engine API] GET /last-active called');
   try {
     const fs = require('fs').promises;
     const savedGraphsDir = path.join(__dirname, '..', '..', '..', '..', 'Saved_Graphs');
     const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
+    console.log('[Engine API] Looking for:', lastActivePath);
     
     try {
       const content = await fs.readFile(lastActivePath, 'utf-8');
       const graphData = JSON.parse(content);
+      console.log('[Engine API] Found last active graph with', graphData.nodes?.length || 0, 'nodes');
       
       res.json({
         success: true,
@@ -284,6 +287,7 @@ router.get('/last-active', async (req, res) => {
       });
     } catch (err) {
       // No last active graph exists
+      console.log('[Engine API] No last active graph found');
       res.json({
         success: false,
         error: 'No last active graph found',
@@ -291,6 +295,7 @@ router.get('/last-active', async (req, res) => {
       });
     }
   } catch (error) {
+    console.error('[Engine API] Error in last-active:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -303,16 +308,19 @@ router.get('/last-active', async (req, res) => {
  * Save the current graph as the last active graph (for auto-load on reconnect)
  */
 router.post('/save-active', async (req, res) => {
+  console.log('[Engine API] POST /save-active called');
   try {
     const fs = require('fs').promises;
     const savedGraphsDir = path.join(__dirname, '..', '..', '..', '..', 'Saved_Graphs');
     const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
+    console.log('[Engine API] Saving to:', lastActivePath);
     
     // Ensure directory exists
     await fs.mkdir(savedGraphsDir, { recursive: true });
     
     const graphData = req.body;
     if (!graphData || !graphData.nodes) {
+      console.log('[Engine API] Invalid graph data received:', typeof graphData);
       return res.status(400).json({
         success: false,
         error: 'Invalid graph data - must contain nodes array'
@@ -340,6 +348,7 @@ router.post('/save-active', async (req, res) => {
       nodeCount: graphData.nodes?.length || 0
     });
   } catch (error) {
+    console.error('[Engine API] Error in save-active:', error);
     res.status(500).json({
       success: false,
       error: error.message

@@ -4,8 +4,8 @@
       "id": "981ee9c1686c04da",
       "label": "HA Generic Device",
       "position": {
-        "x": 438.1851836781442,
-        "y": 196.48148148148147
+        "x": 559.70124541095,
+        "y": 207.65537221553257
       },
       "data": {
         "id": "981ee9c1686c04da",
@@ -17,7 +17,7 @@
           "selectedDeviceNames": [
             "Dads Shark"
           ],
-          "status": "Toggled 1 device(s)",
+          "status": "Loaded 799 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -43,7 +43,7 @@
         "properties": {
           "customName": "",
           "start_hour": 5,
-          "start_minute": 17,
+          "start_minute": 39,
           "start_ampm": "PM",
           "start_enabled": true,
           "stop_hour": 6,
@@ -56,20 +56,20 @@
           "cycle_duration": 10,
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
-          "next_on_date": "2025-12-14T01:17:00.000Z",
+          "next_on_date": "2025-12-14T01:39:00.000Z",
           "next_off_date": "2025-12-14T02:00:00.000Z",
           "next_cycle_date": null,
           "currentState": false,
           "status": "Initializing...",
           "debug": false,
-          "pulseMode": true
+          "pulseMode": false
         }
       }
     }
   ],
   "connections": [
     {
-      "id": "b5a8688b1fd36d79",
+      "id": "312a67178a0d4d2b",
       "source": "ea34495a93b90081",
       "target": "981ee9c1686c04da",
       "sourceOutput": "state",
@@ -77,8 +77,8 @@
     }
   ],
   "viewport": {
-    "x": 248.17190246582035,
-    "y": 81.06555919647217,
-    "k": 0.9230123457539872
+    "x": 269.86398257457506,
+    "y": -41.0192490257877,
+    "k": 0.8971700967391976
   }
 }

@@ -1,0 +1,9 @@
+{
+  "nodes": [
+    {
+      "id": "test",
+      "label": "Test"
+    }
+  ],
+  "connections": []
+}
