@@ -7,6 +7,9 @@ const router = express.Router();
 const updateService = require('../services/updateService');
 const requireLocalOrPin = require('./middleware/requireLocalOrPin');
 
+// Detect if running as HA add-on
+const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
+
 // Updates are a high-risk operation: restrict to localhost or valid PIN
 router.use(requireLocalOrPin);
 
@@ -18,10 +21,11 @@ router.get('/check', async (req, res) => {
     try {
         const forceCheck = req.query.force === 'true';
         const updateInfo = await updateService.checkForUpdates(forceCheck);
-        res.json(updateInfo);
+        // Add isAddon flag so frontend knows not to show update prompts
+        res.json({ ...updateInfo, isAddon: IS_HA_ADDON });
     } catch (err) {
         console.error('[UpdateRoutes] Check failed:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err.message, isAddon: IS_HA_ADDON });
     }
 });
 

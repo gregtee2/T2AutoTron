@@ -346,6 +346,11 @@ function App() {
 
     // Listen for update available notifications
     function onUpdateAvailable(data) {
+      // Don't show update prompts in HA add-on - updates come from HA Supervisor
+      if (data.isAddon || window.location.pathname.includes('/api/hassio/ingress/')) {
+        console.log('[Update] Ignoring update notification in HA add-on environment');
+        return;
+      }
       // Don't show if we just applied an update (prevents double-update issue)
       if (sessionStorage.getItem('justUpdated') === 'true') {
         sessionStorage.removeItem('justUpdated');

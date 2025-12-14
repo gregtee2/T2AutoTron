@@ -261,6 +261,12 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
             }
             const data = await response.json();
             
+            // Don't show update prompts in HA add-on
+            if (data.isAddon) {
+                toast.info('📦 Add-on updates are available through Home Assistant → Settings → Add-ons → T2AutoTron', { duration: 6000 });
+                return;
+            }
+            
             if (data.hasUpdate) {
                 // Show update modal via App.jsx by emitting socket event
                 // or using a callback - for now we'll show toast with action
