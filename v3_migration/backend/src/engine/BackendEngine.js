@@ -20,7 +20,7 @@ class BackendEngine {
     this.lastTickTime = null;
     this.tickCount = 0;
     this.graphPath = null;
-    this.debug = process.env.VERBOSE_LOGGING === 'true';
+    this.debug = process.env.ENGINE_DEBUG === 'true' || process.env.VERBOSE_LOGGING === 'true';
   }
 
   /**
@@ -253,11 +253,19 @@ class BackendEngine {
     this.running = true;
     this.tickCount = 0;
     
+    // Log all nodes being executed
+    console.log(`[BackendEngine] Starting with ${this.nodes.size} nodes:`);
+    for (const [nodeId, node] of this.nodes) {
+      const nodeType = node.constructor?.name || node.type || 'Unknown';
+      console.log(`  - ${nodeId}: ${nodeType} (${node.label || 'no label'})`);
+    }
+    console.log(`[BackendEngine] Connections: ${this.connections.length}`);
+    
     // Call tick immediately, then on interval
     this.tick();
     this.tickInterval = setInterval(() => this.tick(), this.tickRate);
     
-    console.log(`[BackendEngine] Started (${this.nodes.size} nodes, ${this.tickRate}ms tick rate)`);
+    console.log(`[BackendEngine] Started (tick rate: ${this.tickRate}ms)`);
   }
 
   /**

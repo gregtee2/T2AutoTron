@@ -419,6 +419,7 @@ class HAGenericDeviceNode {
     const hsv = inputs.hsv_info?.[0];
     
     const entityIds = getEntityIds(this.properties);
+    const DEBUG = process.env.ENGINE_DEBUG === 'true';
     
     if (entityIds.length === 0) {
       return { is_on: false };
@@ -430,10 +431,14 @@ class HAGenericDeviceNode {
     }
     this.tickCount++;
     
+    if (DEBUG) {
+      console.log(`[HAGenericDevice] Tick ${this.tickCount} | trigger=${trigger} | lastTrigger=${this.lastTrigger} | entities=${entityIds.join(',')}`);
+    }
+    
     // Skip first 3 ticks to let buffers populate
     // This prevents turning off devices when engine starts
     if (this.tickCount <= 3) {
-      console.log(`[HAGenericDeviceNode] Warmup tick ${this.tickCount}, skipping device control`);
+      console.log(`[HAGenericDevice] WARMUP tick ${this.tickCount}/3 - trigger=${trigger}, lastTrigger=${this.lastTrigger}`);
       // Initialize lastTrigger to current value without taking action
       if (trigger !== undefined) {
         this.lastTrigger = trigger;
@@ -443,11 +448,13 @@ class HAGenericDeviceNode {
 
     // Skip if trigger is still undefined (no connection)
     if (trigger === undefined) {
+      if (DEBUG) console.log(`[HAGenericDevice] trigger undefined, returning lastTrigger=${this.lastTrigger}`);
       return { is_on: !!this.lastTrigger };
     }
 
     // Handle trigger changes based on mode
     if (trigger !== this.lastTrigger) {
+      console.log(`[HAGenericDevice] TRIGGER CHANGE: ${this.lastTrigger} → ${trigger} (tick ${this.tickCount})`);
       const wasTriggered = this.lastTrigger;
       this.lastTrigger = trigger;
       

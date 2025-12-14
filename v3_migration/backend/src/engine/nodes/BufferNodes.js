@@ -62,8 +62,13 @@ class SenderNode {
   }
   
   data(inputs) {
+    const DEBUG = process.env.ENGINE_DEBUG === 'true';
     // Frontend uses 'in' as input name
     const inputData = inputs.in?.[0];
+    
+    if (DEBUG) {
+      console.log(`[SenderNode] Buffer: ${this.properties.bufferName} | inputData=${JSON.stringify(inputData)}`);
+    }
     
     // Auto-detect type and prefix (matching frontend logic)
     let prefix = "[Unknown]";
@@ -87,6 +92,9 @@ class SenderNode {
         AutoTronBuffer.delete(this.properties.registeredName);
       }
       
+      if (DEBUG) {
+        console.log(`[SenderNode] Setting buffer '${finalName}' = ${JSON.stringify(inputData)}`);
+      }
       AutoTronBuffer.set(finalName, inputData);
       this.properties.registeredName = finalName;
     }
@@ -127,14 +135,22 @@ class ReceiverNode {
   }
   
   data(inputs) {
+    const DEBUG = process.env.ENGINE_DEBUG === 'true';
     // Support both property names (bufferName for backend, selectedBuffer for frontend)
     const bufferName = this.properties.selectedBuffer || this.properties.bufferName;
     const value = bufferName ? AutoTronBuffer.get(bufferName) : undefined;
+    
+    if (DEBUG) {
+      console.log(`[ReceiverNode] Buffer: '${bufferName}' | value=${JSON.stringify(value)}`);
+    }
     
     // Track changes
     const hasChanged = JSON.stringify(value) !== JSON.stringify(this.properties.lastValue);
     if (hasChanged) {
       this.properties.lastValue = value;
+      if (DEBUG) {
+        console.log(`[ReceiverNode] Value CHANGED for '${bufferName}': ${JSON.stringify(value)}`);
+      }
     }
     
     return {
