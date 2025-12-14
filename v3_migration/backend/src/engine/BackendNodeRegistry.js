@@ -130,8 +130,8 @@ class BackendNodeRegistry {
       'HA Device State Display': 'HADeviceStateNode',
       'HA Service Call': 'HAServiceCallNode',
       'HA Light Control': 'HALightControlNode',
-      'HA Device Automation': 'HADeviceAutomationNode',
-      'HA Generic Device': 'HADeviceAutomationNode',
+      'HA Device Automation': 'HAGenericDeviceNode',
+      'HA Generic Device': 'HAGenericDeviceNode',
       'Device State': 'HADeviceStateNode',
       
       // Device nodes
