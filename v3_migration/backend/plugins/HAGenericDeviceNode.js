@@ -63,6 +63,72 @@
         }
     };
 
+    // Global debounce for fetchDevices to prevent API flood when multiple nodes load
+    let globalFetchDebounceTimer = null;
+    let globalFetchPromise = null;
+    let pendingDeviceSyncs = [];
+    let deviceSyncInProgress = false;
+    
+    // Shared function to fetch devices with debounce (all nodes share one call)
+    async function fetchDevicesDebounced() {
+        if (globalFetchPromise) return globalFetchPromise;
+        
+        // Clear any pending timer
+        if (globalFetchDebounceTimer) clearTimeout(globalFetchDebounceTimer);
+        
+        return new Promise((resolve) => {
+            globalFetchDebounceTimer = setTimeout(async () => {
+                globalFetchPromise = (async () => {
+                    try {
+                        const fetchFn = window.apiFetch || fetch;
+                        const res = await fetchFn('/api/devices');
+                        const data = await res.json();
+                        return data.devices || [];
+                    } catch (e) {
+                        console.error('[HAGenericDeviceNode] Failed to fetch devices:', e);
+                        return [];
+                    } finally {
+                        // Clear promise after a delay to allow cache reuse
+                        setTimeout(() => { globalFetchPromise = null; }, 5000);
+                    }
+                })();
+                resolve(globalFetchPromise);
+            }, 200); // 200ms debounce
+        });
+    }
+    
+    // Queue device sync operations to prevent API flood
+    function queueDeviceSync(node, turnOn, hsvInput) {
+        pendingDeviceSyncs.push({ node, turnOn, hsvInput });
+        processDeviceSyncQueue();
+    }
+    
+    async function processDeviceSyncQueue() {
+        if (deviceSyncInProgress || pendingDeviceSyncs.length === 0) return;
+        deviceSyncInProgress = true;
+        
+        // Process one at a time with small delay between
+        while (pendingDeviceSyncs.length > 0) {
+            const { node, turnOn, hsvInput } = pendingDeviceSyncs.shift();
+            try {
+                if (turnOn !== undefined) {
+                    await node.setDevicesState(turnOn);
+                }
+                if (hsvInput) {
+                    await node.applyHSVInput(hsvInput);
+                }
+            } catch (e) {
+                console.error('[HAGenericDeviceNode] Sync failed:', e);
+            }
+            // Small delay between nodes to prevent API flood
+            if (pendingDeviceSyncs.length > 0) {
+                await new Promise(r => setTimeout(r, 100));
+            }
+        }
+        
+        deviceSyncInProgress = false;
+    }
+
     // -------------------------------------------------------------------------
     // NODE CLASS
     // -------------------------------------------------------------------------
@@ -293,11 +359,15 @@
                 
                 // Listen for graph load complete event to refresh devices and sync state
                 this._onGraphLoadComplete = async () => {
-                    await this.fetchDevices();
-                    // Fetch state for each selected device
-                    await Promise.all(
-                        this.properties.selectedDeviceIds.filter(Boolean).map(id => this.fetchDeviceState(id))
-                    );
+                    // Use debounced fetch to prevent API flood when multiple nodes load
+                    const devices = await fetchDevicesDebounced();
+                    if (devices.length > 0) {
+                        this.devices = devices;
+                        this.updateDeviceSelectorOptions();
+                    }
+                    
+                    // Skip individual device state fetches during load - use cached data
+                    // This prevents N*M API calls (N nodes × M devices)
                     
                     // Reset the skip flag so next data() call records the trigger state
                     this.skipInitialTrigger = true;
@@ -306,22 +376,20 @@
                     // and set lastTriggerValue/hadConnection from the actual inputs
                     this.triggerUpdate();
                     
-                    // After the engine has processed, sync device state to match trigger input
+                    // After the engine has processed, queue device sync (not immediate)
                     // Use a delay to ensure data() has been called with new values
-                    setTimeout(async () => {
+                    setTimeout(() => {
                         const mode = this.properties.triggerMode || "Follow";
                         if (mode === "Follow" && this.hadConnection) {
                             if (this.properties.debug) {
-                                console.log(`[HAGenericDeviceNode] graphLoadComplete: Syncing devices to trigger=${this.lastTriggerValue}`);
+                                console.log(`[HAGenericDeviceNode] graphLoadComplete: Queuing sync for trigger=${this.lastTriggerValue}`);
                             }
-                            await this.setDevicesState(this.lastTriggerValue);
-                        }
-                        // Also apply HSV if connected
-                        if (this.lastHsvInfo) {
-                            try {
-                                const hsvInput = JSON.parse(this.lastHsvInfo);
-                                await this.applyHSVInput(hsvInput);
-                            } catch (e) {}
+                            // Queue instead of immediate call to prevent API flood
+                            let hsvInput = null;
+                            if (this.lastHsvInfo) {
+                                try { hsvInput = JSON.parse(this.lastHsvInfo); } catch (e) {}
+                            }
+                            queueDeviceSync(this, this.lastTriggerValue, hsvInput);
                         }
                     }, 500);
                 };
@@ -536,9 +604,12 @@
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
                 ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'color'));
             }
-            await Promise.all(ids.map(async (id) => {
+            
+            // Process devices sequentially to prevent API flood
+            for (let i = 0; i < ids.length; i++) {
+                const id = ids[i];
                 const apiInfo = this.getDeviceApiInfo(id);
-                if (!apiInfo) return;
+                if (!apiInfo) continue;
                 
                 const device = this.devices.find(d => d.id === id);
                 const deviceType = device?.type || (id.includes('.') ? id.split('.')[0].replace(/^ha_/, '') : 'light');
@@ -553,7 +624,7 @@
                 
                 // If device is off, don't apply HSV (and don't turn it on!)
                 if (!isCurrentlyOn) {
-                    return; // Skip this device - it's off, HSV shouldn't turn it on
+                    continue; // Skip this device - it's off, HSV shouldn't turn it on
                 }
                 
                 // Device is on, apply color/brightness changes but keep it on
@@ -617,7 +688,12 @@
                     this.perDeviceState[id] = { ...current, on: turnOn, state: turnOn ? "on" : "off", ...(hs_color ? { hs_color } : {}), ...(color_temp_kelvin ? { color_temp_kelvin } : {}), ...(brightness !== null ? { brightness } : {}) };
                     this.updateDeviceControls(id, this.perDeviceState[id]);
                 } catch (e) { console.error(`Control apply failed for ${id}`, e); }
-            }));
+                
+                // Small delay between requests
+                if (i < ids.length - 1) {
+                    await new Promise(r => setTimeout(r, 50));
+                }
+            }
             this.triggerUpdate();
             setTimeout(() => this.updateStatus(`Control applied to ${ids.length} devices`), 600);
         }
@@ -637,9 +713,12 @@
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
                 ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off'));
             }
-            await Promise.all(ids.map(async (id) => {
+            
+            // Process devices sequentially to prevent API flood (ERR_INSUFFICIENT_RESOURCES)
+            for (let i = 0; i < ids.length; i++) {
+                const id = ids[i];
                 const apiInfo = this.getDeviceApiInfo(id);
-                if (!apiInfo) return;
+                if (!apiInfo) continue;
                 const isKasa = id.startsWith('kasa_');
                 
                 const payload = { on: turnOn, state: turnOn ? "on" : "off" };
@@ -664,7 +743,12 @@
                     this.perDeviceState[id] = { ...this.perDeviceState[id], on: turnOn, state: payload.state };
                     this.updateDeviceControls(id, this.perDeviceState[id]);
                 } catch (e) { console.error(`Set state failed for ${id}`, e); }
-            }));
+                
+                // Small delay between requests to prevent API flood
+                if (i < ids.length - 1) {
+                    await new Promise(r => setTimeout(r, 50));
+                }
+            }
             this.triggerUpdate();
             setTimeout(() => this.updateStatus(turnOn ? "Turned On" : "Turned Off"), 600);
         }
@@ -681,9 +765,12 @@
             }
             
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
-            await Promise.all(ids.map(async (id) => {
+            
+            // Process devices sequentially to prevent API flood
+            for (let i = 0; i < ids.length; i++) {
+                const id = ids[i];
                 const apiInfo = this.getDeviceApiInfo(id);
-                if (!apiInfo) return;
+                if (!apiInfo) continue;
                 const isKasa = id.startsWith('kasa_');
                 
                 const current = this.perDeviceState[id] || { on: false };
@@ -708,7 +795,12 @@
                     this.perDeviceState[id] = { ...this.perDeviceState[id], on: newOn, state: payload.state };
                     this.updateDeviceControls(id, this.perDeviceState[id]);
                 } catch (e) { console.error(`Toggle failed for ${id}`, e); }
-            }));
+                
+                // Small delay between requests
+                if (i < ids.length - 1) {
+                    await new Promise(r => setTimeout(r, 50));
+                }
+            }
             this.triggerUpdate();
             setTimeout(() => this.updateStatus(`Toggled ${ids.length} device(s)`), 600);
         }
