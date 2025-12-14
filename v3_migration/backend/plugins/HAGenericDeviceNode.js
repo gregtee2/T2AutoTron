@@ -201,30 +201,19 @@
 
 
 
-            // On first call after load, apply current state to devices (sync devices to input)
+            // On first call after load, record initial state but don't sync devices yet
+            // Device sync is handled by graphLoadComplete event handler to avoid timing issues
             if (this.skipInitialTrigger) {
                 this.skipInitialTrigger = false;
                 this.lastTriggerValue = trigger;
                 this.hadConnection = hasConnection;
                 
-                // Sync HSV state AND apply it immediately if connected
+                // Record HSV state for change detection
                 if (hsvInput && typeof hsvInput === 'object') {
                     this.lastHsvInfo = JSON.stringify(hsvInput);
-                    // Apply HSV immediately on first connection
-                    setTimeout(async () => {
-                        await this.applyHSVInput(hsvInput);
-                    }, 500);
                 }
-                
-                // In Follow mode, apply the current trigger state to all devices
-                const mode = this.properties.triggerMode || "Toggle";
-                if (mode === "Follow" && hasConnection) {
-                    // Small delay to ensure connections are established
-                    setTimeout(async () => {
-                        await this.setDevicesState(trigger);
-                    }, 500);
-                }
-                // For other modes (Toggle, Turn On, Turn Off), don't act on load - wait for user action
+                // Note: setDevicesState() is NOT called here anymore
+                // The graphLoadComplete handler will sync devices after all connections are ready
             } else {
                 if (hsvInput && typeof hsvInput === 'object') {
                     const hsvString = JSON.stringify(hsvInput);
@@ -310,11 +299,31 @@
                         this.properties.selectedDeviceIds.filter(Boolean).map(id => this.fetchDeviceState(id))
                     );
                     
-                    // Reset the flag so next data() call processes the initial trigger
+                    // Reset the skip flag so next data() call records the trigger state
                     this.skipInitialTrigger = true;
                     
                     // Trigger engine update - this will cascade through the graph
+                    // and set lastTriggerValue/hadConnection from the actual inputs
                     this.triggerUpdate();
+                    
+                    // After the engine has processed, sync device state to match trigger input
+                    // Use a delay to ensure data() has been called with new values
+                    setTimeout(async () => {
+                        const mode = this.properties.triggerMode || "Follow";
+                        if (mode === "Follow" && this.hadConnection) {
+                            if (this.properties.debug) {
+                                console.log(`[HAGenericDeviceNode] graphLoadComplete: Syncing devices to trigger=${this.lastTriggerValue}`);
+                            }
+                            await this.setDevicesState(this.lastTriggerValue);
+                        }
+                        // Also apply HSV if connected
+                        if (this.lastHsvInfo) {
+                            try {
+                                const hsvInput = JSON.parse(this.lastHsvInfo);
+                                await this.applyHSVInput(hsvInput);
+                            } catch (e) {}
+                        }
+                    }, 500);
                 };
                 
                 window.socket.on("device-state-update", this._onDeviceStateUpdate);
