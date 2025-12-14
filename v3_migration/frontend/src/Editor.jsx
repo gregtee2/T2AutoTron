@@ -2348,7 +2348,20 @@ export function Editor() {
                 }
             }
 
-            // Try File System Access API (Modern Browsers)
+            // Detect if running inside Home Assistant ingress (iframe) or HA add-on
+            const isInIframe = window.self !== window.top;
+            const isHAIngress = isInIframe || window.location.pathname.includes('/api/hassio');
+            
+            // For HA ingress: server-side save is already done above, just show toast and return
+            if (isHAIngress) {
+                debug('Running in HA ingress - graph saved to server only (no file picker)');
+                if (window.T2Toast) {
+                    window.T2Toast.success('Graph saved to Home Assistant', 2000);
+                }
+                return;
+            }
+
+            // Try File System Access API (Modern Browsers) - only for desktop/Electron
             if (window.showSaveFilePicker) {
                 try {
                     const handle = await window.showSaveFilePicker({
@@ -2369,7 +2382,7 @@ export function Editor() {
                 }
             }
 
-            // Fallback to download
+            // Fallback to download (only for desktop browsers, not HA)
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
