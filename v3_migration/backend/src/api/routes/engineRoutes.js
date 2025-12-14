@@ -263,4 +263,88 @@ router.post('/tick', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/engine/last-active
+ * Returns the last active graph JSON for frontend auto-load
+ */
+router.get('/last-active', async (req, res) => {
+  try {
+    const fs = require('fs').promises;
+    const savedGraphsDir = path.join(__dirname, '..', '..', '..', '..', 'Saved_Graphs');
+    const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
+    
+    try {
+      const content = await fs.readFile(lastActivePath, 'utf-8');
+      const graphData = JSON.parse(content);
+      
+      res.json({
+        success: true,
+        graph: graphData,
+        source: '.last_active.json'
+      });
+    } catch (err) {
+      // No last active graph exists
+      res.json({
+        success: false,
+        error: 'No last active graph found',
+        graph: null
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/engine/save-active
+ * Save the current graph as the last active graph (for auto-load on reconnect)
+ */
+router.post('/save-active', async (req, res) => {
+  try {
+    const fs = require('fs').promises;
+    const savedGraphsDir = path.join(__dirname, '..', '..', '..', '..', 'Saved_Graphs');
+    const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
+    
+    // Ensure directory exists
+    await fs.mkdir(savedGraphsDir, { recursive: true });
+    
+    const graphData = req.body;
+    if (!graphData || !graphData.nodes) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid graph data - must contain nodes array'
+      });
+    }
+    
+    await fs.writeFile(lastActivePath, JSON.stringify(graphData, null, 2), 'utf-8');
+    
+    console.log(`[Engine API] Saved last active graph (${graphData.nodes?.length || 0} nodes)`);
+    
+    // Also load into engine if it's running
+    const { engine } = getEngine();
+    if (engine) {
+      try {
+        await engine.loadGraph(lastActivePath);
+        console.log('[Engine API] Graph reloaded into engine');
+      } catch (err) {
+        console.warn('[Engine API] Could not reload into engine:', err.message);
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Graph saved as last active',
+      nodeCount: graphData.nodes?.length || 0
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

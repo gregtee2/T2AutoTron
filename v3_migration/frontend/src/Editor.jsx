@@ -2321,6 +2321,23 @@ export function Editor() {
             try { if (jsonString.length < 2000000) { localStorage.removeItem('saved-graph'); localStorage.setItem('saved-graph', jsonString); } } catch(e) { console.warn('localStorage skipped'); }
             debug('Graph saved to localStorage');
 
+            // Also save to server as "last active" for HA add-on persistence
+            try {
+                const API_URL = import.meta.env.VITE_API_URL || '';
+                const response = await fetch(`${API_URL}/api/engine/save-active`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: jsonString
+                });
+                if (response.ok) {
+                    debug('[handleSave] Graph saved to server as last active');
+                } else {
+                    console.warn('[handleSave] Failed to save to server:', response.status);
+                }
+            } catch (err) {
+                console.warn('[handleSave] Failed to save to server:', err);
+            }
+
             // Also save to an Electron-accessible temp file so the desktop app can reload even if localStorage is empty
             if (window.api?.saveTempFile) {
                 try {
@@ -2471,6 +2488,18 @@ export function Editor() {
                         lastAutoSaveRef.current = Date.now();
                         setHasUnsavedChanges(false);
                         
+                        // Also save to server as "last active" for HA add-on persistence
+                        try {
+                            const API_URL = import.meta.env.VITE_API_URL || '';
+                            await fetch(`${API_URL}/api/engine/save-active`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: jsonString
+                            });
+                        } catch (err) {
+                            // Silent fail for auto-save to server
+                        }
+                        
                         // Show toast notification if available
                         if (window.T2Toast) {
                             window.T2Toast.success('Auto-saved', 2000);
@@ -2529,6 +2558,59 @@ export function Editor() {
             
             return () => clearTimeout(timer);
         }
+    }, [editorInstance, areaInstance, engineInstance]);
+
+    // Auto-load last active graph from server on initial mount (for HA add-on)
+    // This ensures users don't see a blank canvas when returning to the browser UI
+    const hasAutoLoadedFromServer = useRef(false);
+    useEffect(() => {
+        if (!editorInstance || !areaInstance || !engineInstance) return;
+        if (hasAutoLoadedFromServer.current) return;
+        
+        // Don't auto-load if there's already localStorage data or post-update flag
+        const hasLocalGraph = localStorage.getItem('saved-graph');
+        const isPostUpdate = sessionStorage.getItem('autoLoadAfterUpdate') === 'true';
+        
+        if (hasLocalGraph || isPostUpdate) {
+            debug('[ServerAutoLoad] Skipping - has local graph or post-update');
+            return;
+        }
+        
+        hasAutoLoadedFromServer.current = true;
+        
+        const loadFromServer = async () => {
+            try {
+                debug('[ServerAutoLoad] Fetching last active graph from server...');
+                const API_URL = import.meta.env.VITE_API_URL || '';
+                const response = await fetch(`${API_URL}/api/engine/last-active`);
+                const data = await response.json();
+                
+                if (data.success && data.graph) {
+                    debug('[ServerAutoLoad] Found last active graph, loading...');
+                    
+                    // Store in localStorage so handleLoad can use it
+                    localStorage.setItem('saved-graph', JSON.stringify(data.graph));
+                    
+                    // Trigger the load
+                    if (window.T2Toast) {
+                        window.T2Toast.info('Loading your last graph...', 2000);
+                    }
+                    
+                    // Small delay then trigger load
+                    setTimeout(() => {
+                        document.dispatchEvent(new CustomEvent('autoLoadGraph'));
+                    }, 500);
+                } else {
+                    debug('[ServerAutoLoad] No last active graph on server');
+                }
+            } catch (err) {
+                console.warn('[ServerAutoLoad] Failed to fetch from server:', err);
+            }
+        };
+        
+        // Delay to ensure editor is fully initialized
+        const timer = setTimeout(loadFromServer, 1500);
+        return () => clearTimeout(timer);
     }, [editorInstance, areaInstance, engineInstance]);
 
     const handleLoad = async () => {
