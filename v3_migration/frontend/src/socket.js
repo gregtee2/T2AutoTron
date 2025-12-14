@@ -12,8 +12,12 @@ export const socket = io(URL, {
     path: socketPath,
     autoConnect: false,
     reconnection: true,
-    reconnectionAttempts: 10,
+    reconnectionAttempts: Infinity,  // Keep trying forever
     reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,      // Cap delay at 5 seconds
+    timeout: 20000,                  // Connection timeout
+    // Use both transports for ingress compatibility
+    transports: ['websocket', 'polling'],
 });
 
 export const connectSocket = () => {

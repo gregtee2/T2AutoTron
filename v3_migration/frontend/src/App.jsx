@@ -221,8 +221,25 @@ function App() {
       setHaStatus({ connected: false, wsConnected: false, deviceCount: 0 });
       authStateRef.current.authenticated = false;
       // Debug: console.log('Socket disconnected');
-      toast.warning('Disconnected from server');
+      toast.warning('Disconnected from server - reconnecting...');
       addEventLog('system', 'Socket disconnected from server');
+    }
+
+    function onReconnect(attemptNumber) {
+      // Debug: console.log('Socket reconnected after', attemptNumber, 'attempts');
+      addEventLog('system', `Socket reconnected after ${attemptNumber} attempt(s)`);
+    }
+
+    function onReconnectAttempt(attemptNumber) {
+      // Only log every 5th attempt to avoid spam
+      if (attemptNumber % 5 === 0) {
+        addEventLog('system', `Reconnection attempt ${attemptNumber}...`);
+      }
+    }
+
+    function onReconnectError(error) {
+      // Debug: console.log('Reconnect error:', error);
+      addEventLog('system', 'Reconnection failed, retrying...');
     }
 
     function onHaConnectionStatus(data) {
@@ -350,6 +367,9 @@ function App() {
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    socket.on('reconnect', onReconnect);
+    socket.on('reconnect_attempt', onReconnectAttempt);
+    socket.on('reconnect_error', onReconnectError);
     socket.on('auth-success', onAuthSuccess);
     socket.on('auth-failed', onAuthFailed);
     socket.on('ha-connection-status', onHaConnectionStatus);
@@ -367,6 +387,9 @@ function App() {
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
+      socket.off('reconnect', onReconnect);
+      socket.off('reconnect_attempt', onReconnectAttempt);
+      socket.off('reconnect_error', onReconnectError);
       socket.off('auth-success', onAuthSuccess);
       socket.off('auth-failed', onAuthFailed);
       socket.off('ha-connection-status', onHaConnectionStatus);

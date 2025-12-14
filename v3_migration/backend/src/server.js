@@ -50,10 +50,12 @@ const io = new Server(server, {
     credentials: true
   },
   maxHttpBufferSize: 1e8,
-  pingTimeout: 30000,
-  pingInterval: 10000,
+  pingTimeout: 60000,      // Increased from 30s to 60s for ingress environments
+  pingInterval: 25000,     // Increased from 10s to 25s (must be less than ingress timeout)
   transports: ['websocket', 'polling'],
-  allowEIO3: true
+  allowEIO3: true,
+  // Allow upgrades from polling to websocket
+  allowUpgrades: true
 });
 
 // Log Socket.IO errors
