@@ -20,10 +20,8 @@ export function getApiBase() {
     
     if (ingressMatch) {
         cachedBaseUrl = ingressMatch[1];
-        console.log('[API] Running in HA ingress, base:', cachedBaseUrl);
     } else {
         cachedBaseUrl = '';
-        console.log('[API] Running standalone, no base path');
     }
     
     return cachedBaseUrl;

@@ -41,10 +41,6 @@ function rotateIfNeeded() {
 }
 
 function initLogger() {
-  console.log('[engineLogger] initLogger() called');
-  console.log('[engineLogger] LOG_DIR:', LOG_DIR);
-  console.log('[engineLogger] LOG_FILE:', LOG_FILE);
-  
   ensureLogDir();
   rotateIfNeeded();
   
@@ -53,9 +49,8 @@ function initLogger() {
   // Open in append mode
   try {
     logStream = fs.createWriteStream(LOG_FILE, { flags: 'a' });
-    console.log('[engineLogger] Stream created successfully');
   } catch (err) {
-    console.error('[engineLogger] Failed to create stream:', err);
+    // Silent failure - engine will work without logging
     return;
   }
   
@@ -66,7 +61,6 @@ ENGINE DEBUG SESSION STARTED: ${sessionStart}
 ================================================================================
 `;
   logStream.write(header);
-  console.log('[engineLogger] Header written');
 }
 
 function log(category, message, data = null) {
@@ -87,9 +81,7 @@ function log(category, message, data = null) {
   }
   
   logStream.write(line + '\n');
-  
-  // Also write to console for real-time visibility
-  console.log(line);
+  // Note: To see engine logs in console, check the engine_debug.log file
 }
 
 function logNodeExecution(nodeId, nodeType, inputs, outputs) {
