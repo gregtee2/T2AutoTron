@@ -501,9 +501,9 @@
             }
         }
 
-        async fetchDevices() {
-            // Skip API calls during graph loading
-            if (typeof window !== 'undefined' && window.graphLoading) return;
+        async fetchDevices(force = false) {
+            // Skip API calls during graph loading (unless forced)
+            if (!force && typeof window !== 'undefined' && window.graphLoading) return;
             try {
                 // Use unified /api/devices to get ALL devices (HA, Kasa, Hue, Shelly, etc.)
                 const response = await queuedFetch('/api/devices', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
@@ -582,6 +582,11 @@
             this.addOutput(`device_out_${index}`, new ClassicPreset.Output(sockets.lightInfo || new ClassicPreset.Socket('lightInfo'), `Device ${index + 1}`));
             this.updateNodeHeight();
             this.triggerUpdate();
+            
+            // If devices haven't loaded yet, force fetch them now
+            if (!this.devices || this.devices.length === 0) {
+                this.fetchDevices(true);
+            }
         }
 
         onRemoveDevice() {
