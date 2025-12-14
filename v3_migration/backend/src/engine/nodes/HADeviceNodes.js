@@ -424,8 +424,14 @@ class HAGenericDeviceNode {
       return { is_on: false };
     }
 
+    // Skip first tick if trigger is undefined (buffer not yet populated)
+    // This prevents turning off devices when engine starts
+    if (trigger === undefined) {
+      return { is_on: !!this.lastTrigger };
+    }
+
     // Handle trigger changes based on mode
-    if (trigger !== undefined && trigger !== this.lastTrigger) {
+    if (trigger !== this.lastTrigger) {
       const wasTriggered = this.lastTrigger;
       this.lastTrigger = trigger;
       

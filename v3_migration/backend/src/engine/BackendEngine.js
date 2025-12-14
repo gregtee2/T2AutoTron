@@ -210,12 +210,16 @@ class BackendEngine {
         // Gather inputs from connected nodes
         const inputs = this.gatherInputs(nodeId);
         
-        // Execute node's data() method if it exists
-        if (typeof node.data === 'function') {
+        // Execute node's data() or process() method if it exists
+        const execMethod = typeof node.data === 'function' ? 'data' 
+                         : typeof node.process === 'function' ? 'process' 
+                         : null;
+        
+        if (execMethod) {
           try {
-            const outputs = await node.data(inputs);
+            const outputs = await node[execMethod](inputs);
             if (this.debug) {
-              console.log(`[BackendEngine] Node ${nodeId} data() returned:`, outputs);
+              console.log(`[BackendEngine] Node ${nodeId} ${execMethod}() returned:`, outputs);
             }
             if (outputs) {
               this.outputs.set(nodeId, outputs);
