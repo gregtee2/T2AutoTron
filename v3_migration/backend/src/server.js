@@ -68,19 +68,24 @@ io.on('error', (error) => {
 const updateService = require('./services/updateService');
 
 // === PERIODIC UPDATE CHECK (every 5 minutes) ===
+// Skip update checks in HA add-on - updates come from HA Supervisor, not git
 let lastNotifiedVersion = null;
-setInterval(async () => {
-  try {
-    const updateInfo = await updateService.checkForUpdates(true); // Force check
-    if (updateInfo.hasUpdate && updateInfo.newVersion !== lastNotifiedVersion) {
-      lastNotifiedVersion = updateInfo.newVersion;
-      io.emit('update-available', updateInfo); // Broadcast to ALL connected clients
-      debug(`[Update] Broadcast update notification: ${updateInfo.currentVersion} → ${updateInfo.newVersion}`);
+if (!IS_HA_ADDON) {
+  setInterval(async () => {
+    try {
+      const updateInfo = await updateService.checkForUpdates(true); // Force check
+      if (updateInfo.hasUpdate && updateInfo.newVersion !== lastNotifiedVersion) {
+        lastNotifiedVersion = updateInfo.newVersion;
+        io.emit('update-available', updateInfo); // Broadcast to ALL connected clients
+        debug(`[Update] Broadcast update notification: ${updateInfo.currentVersion} → ${updateInfo.newVersion}`);
+      }
+    } catch (err) {
+      debug('[Update] Periodic check failed:', err.message);
     }
-  } catch (err) {
-    debug('[Update] Periodic check failed:', err.message);
-  }
-}, 5 * 60 * 1000); // Check every 5 minutes
+  }, 5 * 60 * 1000); // Check every 5 minutes
+} else {
+  debug('[Update] Skipping update checks - HA add-on updates via Supervisor');
+}
 
 // Log client connections/disconnections
 io.on('connection', (socket) => {
@@ -88,17 +93,20 @@ io.on('connection', (socket) => {
   debug(`Socket.IO client connected: ${socket.id}`);
 
   // === CHECK FOR UPDATES ON CONNECTION ===
-  (async () => {
-    try {
-      const updateInfo = await updateService.checkForUpdates();
-      if (updateInfo.hasUpdate) {
-        socket.emit('update-available', updateInfo);
-        debug(`[Update] Notified client of update: ${updateInfo.currentVersion} → ${updateInfo.newVersion}`);
+  // Skip in HA add-on - updates come from HA Supervisor, not git
+  if (!IS_HA_ADDON) {
+    (async () => {
+      try {
+        const updateInfo = await updateService.checkForUpdates();
+        if (updateInfo.hasUpdate) {
+          socket.emit('update-available', updateInfo);
+          debug(`[Update] Notified client of update: ${updateInfo.currentVersion} → ${updateInfo.newVersion}`);
+        }
+      } catch (err) {
+        debug('[Update] Check failed:', err.message);
       }
-    } catch (err) {
-      debug('[Update] Check failed:', err.message);
-    }
-  })();
+    })();
+  }
 
   // === CLIENT LOGGING ===
   socket.on('log', ({ message, level, timestamp }) => {

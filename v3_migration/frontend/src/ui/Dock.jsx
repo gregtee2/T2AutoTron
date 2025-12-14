@@ -9,6 +9,9 @@ import { onPluginProgress } from '../registries/PluginLoader';
 import { useToast } from './Toast';
 import { authFetch } from '../auth/authClient';
 
+// Detect if running as HA add-on (via ingress path)
+const IS_HA_ADDON = window.location.pathname.includes('/api/hassio/ingress/');
+
 export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImport, hasUnsavedChanges, isMerged = false, onToggleMerged }) {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -474,14 +477,26 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                     <button onClick={() => setShortcutsOpen(true)} className="dock-btn dock-btn-help">
                         ❓ Keyboard Shortcuts
                     </button>
-                    <button 
-                        onClick={handleCheckForUpdates} 
-                        disabled={checkingUpdate}
-                        className="dock-btn dock-btn-update"
-                        title="Check for available updates (full rebuild)"
-                    >
-                        {checkingUpdate ? '⏳ Checking...' : '🔄 Check for Updates'}
-                    </button>
+                    {IS_HA_ADDON ? (
+                        /* HA Add-on: Updates come from HA Supervisor, not git */
+                        <button 
+                            onClick={() => toast.info('📦 Add-on updates are available through Home Assistant → Settings → Add-ons → T2AutoTron → Update', { duration: 8000 })}
+                            className="dock-btn dock-btn-update"
+                            title="Updates are managed by Home Assistant Supervisor"
+                        >
+                            ℹ️ Update via HA
+                        </button>
+                    ) : (
+                        /* Desktop/Electron: Git-based updates */
+                        <button 
+                            onClick={handleCheckForUpdates} 
+                            disabled={checkingUpdate}
+                            className="dock-btn dock-btn-update"
+                            title="Check for available updates (full rebuild)"
+                        >
+                            {checkingUpdate ? '⏳ Checking...' : '🔄 Check for Updates'}
+                        </button>
+                    )}
                     <button 
                         onClick={handlePluginUpdate} 
                         disabled={checkingPlugins}
