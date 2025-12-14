@@ -79,47 +79,77 @@ class BackendNodeRegistry {
    */
   getByLabel(label) {
     // Build a label-to-name mapping based on common patterns
+    // These map frontend display labels to backend node class names
     const labelMappings = {
       // Color nodes
       'Timeline Color': 'SplineTimelineColorNode',
+      'All-in-One Color Control': 'SplineTimelineColorNode',  // Similar functionality
       'HSV to RGB': 'HSVToRGBNode',
       'RGB to HSV': 'RGBToHSVNode',
       'Color Mixer': 'ColorMixerNode',
+      'HSV Control': null,  // Frontend-only node
+      'HSV Modifier': null,  // Frontend-only node
+      
       // Time nodes
       'Time of Day': 'TimeOfDayNode',
       'Time Range': 'TimeRangeNode',
+      'Time Range (Continuous)': 'TimeRangeNode',
       'Current Time': 'TimeOfDayNode',
+      'Sunrise/Sunset Trigger': 'TimeOfDayNode',  // Use TimeOfDay for now
+      
       // Logic nodes
       'AND': 'ANDNode',
       'OR': 'ORNode',
       'NOT': 'NOTNode',
       'XOR': 'XORNode',
       'Compare': 'CompareNode',
+      'Comparison': 'CompareNode',
       'Switch': 'SwitchNode',
       'AND Gate': 'ANDGateNode',
       'OR Gate': 'ORGateNode',
       'NOT Gate': 'NOTGateNode',
       'XOR Gate': 'XORGateNode',
+      'Logic Condition': 'CompareNode',
+      'Logic Operations': 'ANDNode',
+      'Conditional Switch': 'SwitchNode',
+      
       // HA nodes
       'HA Device State': 'HADeviceStateNode',
       'HA Device State Output': 'HADeviceStateOutputNode',
+      'HA Device State Display': 'HADeviceStateNode',
       'HA Service Call': 'HAServiceCallNode',
       'HA Light Control': 'HALightControlNode',
       'HA Device Automation': 'HADeviceAutomationNode',
-      'Device State': 'HADeviceStateNode',
       'HA Generic Device': 'HADeviceAutomationNode',
+      'Device State': 'HADeviceStateNode',
+      
       // Device nodes
       'Hue Light': 'HueLightNode',
+      'Hue Lights': 'HueLightNode',
       'Kasa Light': 'KasaLightNode',
+      'Kasa Lights': 'KasaLightNode',
       'Kasa Plug': 'KasaPlugNode',
-      // Other
+      'Kasa Plug Control': 'KasaPlugNode',
+      
+      // Utility nodes
       'Delay': 'DelayNode',
       'Trigger': 'TriggerNode',
+      'Toggle': 'TriggerNode',  // Toggle acts as a trigger
       'Inject': 'InjectNode',
-      'Debug': null  // Debug nodes don't run on backend
+      
+      // Nodes that don't run on backend (UI-only)
+      'Debug': null,
+      'Display': null,
+      'Backdrop': null,
+      'Receiver': null,
+      'Sender': null
     };
 
     const nodeName = labelMappings[label];
+    if (nodeName === null) {
+      // Explicitly marked as not-for-backend
+      return { name: null, NodeClass: null, skipReason: 'UI-only node' };
+    }
     if (nodeName && this.nodes.has(nodeName)) {
       return { name: nodeName, NodeClass: this.nodes.get(nodeName) };
     }

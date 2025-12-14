@@ -71,6 +71,13 @@ class BackendEngine {
       if (!NodeClass && nodeData.label) {
         const byLabel = registry.getByLabel(nodeData.label);
         if (byLabel) {
+          if (byLabel.skipReason) {
+            // Node explicitly marked as UI-only, skip silently
+            if (this.debug) {
+              console.log(`[BackendEngine] Skipping UI-only node: ${nodeData.label}`);
+            }
+            continue;
+          }
           nodeType = byLabel.name;
           NodeClass = byLabel.NodeClass;
           if (this.debug) {
