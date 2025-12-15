@@ -53,7 +53,9 @@ router.get('/status', (req, res) => {
       connectionCount: status.connectionCount,
       tickCount: status.tickCount,
       lastTickTime: status.lastTickTime,
-      uptime: status.running ? Date.now() - status.startTime : 0
+      uptime: status.running ? Date.now() - status.startTime : 0,
+      frontendActive: status.frontendActive,
+      frontendLastSeen: status.frontendLastSeen
     }
   });
 });

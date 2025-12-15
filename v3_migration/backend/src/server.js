@@ -1,7 +1,9 @@
+const path = require('path');
 
 // Detect Home Assistant add-on environment
 const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
-const ENV_PATH = IS_HA_ADDON ? '/data/.env' : './.env';
+// Use absolute path relative to this file, not working directory
+const ENV_PATH = IS_HA_ADDON ? '/data/.env' : path.join(__dirname, '..', '.env');
 
 // ALWAYS log this so we can diagnose addon detection issues
 console.log(`[Startup] IS_HA_ADDON=${IS_HA_ADDON}, SUPERVISOR_TOKEN=${process.env.SUPERVISOR_TOKEN ? 'present' : 'missing'}`);
@@ -11,6 +13,30 @@ require('dotenv').config({ path: ENV_PATH });
 // Debug mode - set VERBOSE_LOGGING=true in .env to enable detailed console output
 const DEBUG = process.env.VERBOSE_LOGGING === 'true';
 const debug = (...args) => DEBUG && console.log('[DEBUG]', ...args);
+
+// Global error handlers to catch crash causes
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err);
+  // Don't exit - let the server try to continue
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit - let the server try to continue  
+});
+
+process.on('beforeExit', (code) => {
+  console.log('[EXIT] Process beforeExit with code:', code);
+  // Prevent exit by scheduling more work
+  if (code === 0) {
+    console.log('[EXIT] Preventing clean exit - server should stay running');
+    setImmediate(() => {});
+  }
+});
+
+process.on('exit', (code) => {
+  console.log('[EXIT] Process exit with code:', code);
+});
 
 debug('Starting server.js...');
 debug('Running as HA add-on:', IS_HA_ADDON);
@@ -35,7 +61,6 @@ const { loadManagers, loadRoutes } = require('./devices/pluginLoader');
 const deviceManagers = require('./devices/managers/deviceManagers');
 const mongoose = require('mongoose');
 const fs = require('fs').promises;
-const path = require('path');
 const requireLocalOrPin = require('./api/middleware/requireLocalOrPin');
 
 debug('Weather imports:', {
@@ -955,6 +980,25 @@ async function startServer() {
       logger.log(`Server running on http://${HOST}:${PORT}`, 'info', false, 'server:start');
       console.log(chalk.cyan(`✓ Server running on http://${HOST}:${PORT}`));
     });
+    
+    // Keep-alive: Use a short interval with actual work to prevent Node.js exit
+    // The tplink-smarthome-api unrefs its sockets after discovery
+    let keepAliveCounter = 0;
+    const keepAlive = setInterval(() => {
+      keepAliveCounter++;
+      // Do actual work so Node can't optimize this away
+      if (keepAliveCounter % 60 === 0) {
+        console.log(`[Server] Uptime: ${Math.floor(keepAliveCounter / 60)} minutes`);
+      }
+    }, 1000); // Every 1 second
+    keepAlive.ref();
+    
+    // Explicitly keep stdin open to prevent exit
+    if (process.stdin.isTTY) {
+      process.stdin.resume();
+    }
+    
+    console.log('[Server] Keep-alive active, handles:', process._getActiveHandles().length);
   } catch (err) {
     console.error('Startup error:', err.message);
     logger.log(`Startup failed: ${err.message}`, 'error', false, 'error:startup');

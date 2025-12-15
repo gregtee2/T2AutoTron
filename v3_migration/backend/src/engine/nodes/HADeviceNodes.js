@@ -439,6 +439,16 @@ class HAGenericDeviceNode {
     const trigger = inputs.trigger?.[0];
     const hsv = inputs.hsv_info?.[0];
     
+    // Debug: Log what inputs we're receiving
+    const hasHsv = hsv !== undefined && hsv !== null;
+    if (hasHsv || (this.tickCount && this.tickCount % 100 === 0)) {
+      engineLogger.log('HA-INPUTS', 'Received inputs', { 
+        trigger, 
+        hsv: hasHsv ? hsv : 'none',
+        allInputKeys: Object.keys(inputs)
+      });
+    }
+    
     const entityIds = getEntityIds(this.properties);
     
     if (entityIds.length === 0) {
