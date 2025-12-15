@@ -14,8 +14,8 @@ Now we have **ONE recipe book** that both use. Change it once, both update!
 | Phase | Status | Notes |
 |-------|--------|-------|
 | **1. POC - First Node** | ✅ Complete | `TimeOfDayNode` unified |
-| **2. POC - Second Node** | ⏳ Next | `DelayNode` (has inputs/properties) |
-| **3. POC - Third Node** | ⏳ Planned | `HAGenericDeviceNode` (device control) |
+| **2. POC - Second Node** | ✅ Complete | `DelayNode` (4 modes: delay, debounce, throttle, retriggerable) |
+| **3. POC - Third Node** | ⏳ Next | `HAGenericDeviceNode` (device control) |
 | **4. Frontend Loader** | ⏳ Planned | Auto-generate React components |
 | **5. Full Migration** | ⏳ Future | All 47 plugins → unified format |
 
@@ -24,8 +24,10 @@ Now we have **ONE recipe book** that both use. Change it once, both update!
 ```
 v3_migration/shared/
 ├── nodes/                    # Unified node definitions
-│   └── time/
-│       └── TimeOfDay.node.js # First unified node ✅
+│   ├── time/
+│   │   └── TimeOfDay.node.js # Time-based trigger ✅
+│   └── timer/
+│       └── Delay.node.js     # Delay/debounce/throttle/retriggerable ✅
 ├── UnifiedNodeRegistry.js    # Loads and manages definitions
 ├── EngineNodeWrapper.js      # Makes unified nodes work with backend engine
 ├── test-unified.js           # Test file (run with: node test-unified.js)

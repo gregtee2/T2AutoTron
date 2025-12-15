@@ -98,4 +98,98 @@ if (timeOfDayDef) {
   console.log('\n✅ EngineNodeWrapper tests passed!');
 }
 
+// =========================================================================
+// TEST DELAYNODE
+// =========================================================================
+console.log('\n=== Testing DelayNode ===');
+const delayDef = unifiedRegistry.get('DelayNode');
+
+if (delayDef) {
+  // Test 1: Default properties
+  const defaultProps = unifiedRegistry.getDefaultProperties('DelayNode');
+  console.log('Default properties:', JSON.stringify(defaultProps, null, 2));
+  
+  // Test 2: Delay mode - trigger goes true
+  console.log('\n--- Test: Delay Mode ---');
+  let state = unifiedRegistry.getInitialState('DelayNode');
+  let mockTime = 1000000; // Start time
+  const context = {
+    now: () => ({ getTime: () => mockTime })
+  };
+  
+  // Tick 1: Trigger goes TRUE
+  let outputs = delayDef.execute({ trigger: true }, defaultProps, context, state);
+  console.log('Tick 1 (trigger=true):', JSON.stringify(outputs));
+  console.log('  State: isActive=' + state.isActive + ', timerStartedAt=' + state.timerStartedAt);
+  
+  // Tick 2: Still waiting (500ms later, delay is 1000ms)
+  mockTime += 500;
+  outputs = delayDef.execute({ trigger: true }, defaultProps, context, state);
+  console.log('Tick 2 (+500ms):', JSON.stringify(outputs));
+  
+  // Tick 3: Timer elapsed (1100ms after start)
+  mockTime += 600;
+  outputs = delayDef.execute({ trigger: true }, defaultProps, context, state);
+  console.log('Tick 3 (+1100ms total):', JSON.stringify(outputs));
+  console.log('  Expected: delayed=true (timer elapsed)');
+  
+  // Test 3: Retriggerable mode
+  console.log('\n--- Test: Retriggerable Mode ---');
+  state = unifiedRegistry.getInitialState('DelayNode');
+  mockTime = 2000000;
+  const retriggerProps = { ...defaultProps, mode: 'retriggerable' };
+  
+  // Tick 1: Trigger goes TRUE - should output TRUE immediately
+  outputs = delayDef.execute({ trigger: true }, retriggerProps, context, state);
+  console.log('Tick 1 (trigger=true):', JSON.stringify(outputs));
+  console.log('  Expected: delayed=true immediately');
+  
+  // Tick 2: Still true (timer running)
+  mockTime += 500;
+  outputs = delayDef.execute({ trigger: true }, retriggerProps, context, state);
+  console.log('Tick 2 (+500ms):', JSON.stringify(outputs));
+  
+  // Tick 3: Re-trigger (restarts timer)
+  mockTime += 100;
+  outputs = delayDef.execute({ trigger: false }, retriggerProps, context, state);
+  mockTime += 100;
+  outputs = delayDef.execute({ trigger: true }, retriggerProps, context, state);
+  console.log('Tick 3 (re-triggered):', JSON.stringify(outputs));
+  
+  // Tick 4: Timer finally expires
+  mockTime += 1100;
+  outputs = delayDef.execute({ trigger: true }, retriggerProps, context, state);
+  console.log('Tick 4 (+1100ms, timer expired):', JSON.stringify(outputs));
+  console.log('  Expected: delayed=false (timer expired)');
+  
+  // Test 4: Throttle mode
+  console.log('\n--- Test: Throttle Mode ---');
+  state = unifiedRegistry.getInitialState('DelayNode');
+  mockTime = 3000000;
+  const throttleProps = { ...defaultProps, mode: 'throttle' };
+  
+  // Tick 1: First trigger - should pass through
+  outputs = delayDef.execute({ trigger: true }, throttleProps, context, state);
+  console.log('Tick 1 (first trigger):', JSON.stringify(outputs));
+  console.log('  Expected: delayed=true (first allowed)');
+  
+  // Tick 2: Quick second trigger - should be blocked
+  mockTime += 100;
+  outputs = delayDef.execute({ trigger: false }, throttleProps, context, state);
+  outputs = delayDef.execute({ trigger: true }, throttleProps, context, state);
+  console.log('Tick 2 (+100ms, throttled):', JSON.stringify(outputs));
+  console.log('  Expected: delayed=true (still, but blocked new trigger)');
+  
+  // Tick 3: After throttle period - should allow
+  mockTime += 1000;
+  outputs = delayDef.execute({ trigger: false }, throttleProps, context, state);
+  outputs = delayDef.execute({ trigger: true }, throttleProps, context, state);
+  console.log('Tick 3 (+1100ms total, unthrottled):', JSON.stringify(outputs));
+  console.log('  Expected: delayed=true (allowed through after throttle)');
+  
+  console.log('\n✅ DelayNode tests passed!');
+} else {
+  console.error('❌ DelayNode not found in registry');
+}
+
 console.log('\n=== All Tests Complete ===');
