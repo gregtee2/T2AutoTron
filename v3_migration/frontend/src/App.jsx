@@ -636,8 +636,19 @@ function App() {
               eventLogs
                 .filter(log => {
                   if (eventLogFilter === 'all') return true;
-                  if (eventLogFilter === 'app') return log.details?.triggeredBy || log.details?.source === 'app';
-                  if (eventLogFilter === 'ha') return log.details?.source && log.details.source !== 'app' && !log.details?.triggeredBy;
+                  // App filter: device changes from nodes, node execution events, system events
+                  if (eventLogFilter === 'app') {
+                    return log.details?.triggeredBy || 
+                           log.details?.source === 'app' || 
+                           log.type === 'node' || 
+                           log.type === 'device' ||
+                           log.type === 'system';
+                  }
+                  // HA filter: external triggers from HA/Hue/Kasa (not from app nodes)
+                  if (eventLogFilter === 'ha') {
+                    return log.type === 'trigger' || 
+                           (log.details?.source && log.details.source !== 'app' && !log.details?.triggeredBy);
+                  }
                   return true;
                 })
                 .map((log, index) => (

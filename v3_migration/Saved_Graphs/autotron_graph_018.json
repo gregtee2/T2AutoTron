@@ -32,7 +32,7 @@
           "currentState": false,
           "status": "Initializing...",
           "debug": false,
-          "pulseMode": true
+          "pulseMode": false
         }
       }
     },
@@ -146,7 +146,7 @@
           "_lastEval": {
             "solar": false,
             "temp": true,
-            "humidity": true,
+            "humidity": false,
             "wind": false,
             "hourlyRain": false,
             "eventRain": false,
@@ -282,7 +282,6 @@
             "8480926f954c2743",
             "ccf1a34014c85926",
             "d34623b94b64ad5c",
-            "3809449d3be5a2d5",
             "0cab81e8c5c154ff",
             "7326e8f64d174170",
             "80cb637e8dec510c",
@@ -293,7 +292,10 @@
             "1c6a806bccd7eae4",
             "15d23e2dcb5c4e04",
             "02289ed0e7497993",
-            "e5129f50942c3bf8"
+            "e5129f50942c3bf8",
+            "104d2d18126c68aa",
+            "983a98adf4480305",
+            "6d35a83f40cff6b0"
           ],
           "locked": true
         }
@@ -613,42 +615,6 @@
       }
     },
     {
-      "id": "3809449d3be5a2d5",
-      "label": "Time of Day",
-      "position": {
-        "x": 1721.4624559865986,
-        "y": 4970.632934639171
-      },
-      "data": {
-        "id": "3809449d3be5a2d5",
-        "label": "Time of Day",
-        "properties": {
-          "customName": "9:30 On",
-          "start_hour": 9,
-          "start_minute": 30,
-          "start_ampm": "PM",
-          "start_enabled": true,
-          "stop_hour": 11,
-          "stop_minute": 0,
-          "stop_ampm": "PM",
-          "stop_enabled": true,
-          "cycle_hour": 4,
-          "cycle_minute": 45,
-          "cycle_ampm": "AM",
-          "cycle_duration": 10,
-          "cycle_enabled": false,
-          "timezone": "America/Los_Angeles",
-          "next_on_date": "2025-12-15T05:30:00.000Z",
-          "next_off_date": "2025-12-15T07:00:00.000Z",
-          "next_cycle_date": null,
-          "currentState": false,
-          "status": "Initializing...",
-          "debug": false,
-          "pulseMode": true
-        }
-      }
-    },
-    {
       "id": "0cab81e8c5c154ff",
       "label": "Sender",
       "position": {
@@ -660,7 +626,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "9:30 On",
-          "lastValue": false,
+          "lastValue": true,
           "registeredName": "[Trigger]9:30 On",
           "finalName": "[Trigger]9:30 On"
         }
@@ -702,8 +668,8 @@
       "id": "90d3eea48e12005f",
       "label": "Receiver",
       "position": {
-        "x": 2767.9224246092535,
-        "y": -1294.395990774494
+        "x": 3177.3843502503955,
+        "y": -1194.227193514644
       },
       "data": {
         "id": "90d3eea48e12005f",
@@ -719,8 +685,8 @@
       "id": "f4dd2d2e6355d1c9",
       "label": "Integer Selector",
       "position": {
-        "x": 2787.246638942592,
-        "y": -978.4727268502725
+        "x": 2785.489291622244,
+        "y": -1018.8917152182822
       },
       "data": {
         "id": "f4dd2d2e6355d1c9",
@@ -999,7 +965,8 @@
             "cb87122766b2be7d",
             "ceb925173a2931a7",
             "6ac17d4ab201b32b",
-            "50ff70ef0f2acc96"
+            "50ff70ef0f2acc96",
+            "7d16f3641fda9279"
           ],
           "locked": true
         }
@@ -1344,8 +1311,8 @@
       "id": "2f7d4a81e11769d4",
       "label": "Kasa Plug Control",
       "position": {
-        "x": 17893.622061943075,
-        "y": 1080.1115948407896
+        "x": 17649.76350971339,
+        "y": 793.8428596146358
       },
       "data": {
         "id": "2f7d4a81e11769d4",
@@ -2011,7 +1978,7 @@
             "Hue color Leg Lamg (ha)",
             "Dads Shark (ha)"
           ],
-          "status": "Control applied to 3 devices",
+          "status": "Loaded 815 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2035,7 +2002,7 @@
         "id": "80cb637e8dec510c",
         "label": "Time of Day",
         "properties": {
-          "customName": "",
+          "customName": "Copper fountain",
           "start_hour": 7,
           "start_minute": 30,
           "start_ampm": "AM",
@@ -2082,8 +2049,8 @@
       "id": "04169d0d9714a784",
       "label": "Sender",
       "position": {
-        "x": 3138.905438520521,
-        "y": -3492.8316221054206
+        "x": 3144.7329210461758,
+        "y": -3586.0713425158997
       },
       "data": {
         "id": "04169d0d9714a784",
@@ -2091,13 +2058,13 @@
         "properties": {
           "bufferName": "Office Colors",
           "lastValue": {
-            "hue": 0.0790960451977401,
-            "saturation": 0.375796178343949,
-            "brightness": 85,
+            "hue": 0.08422939068100359,
+            "saturation": 0.5344827586206897,
+            "brightness": 80,
             "rgb": {
-              "r": 52,
-              "g": 42,
-              "b": 33
+              "r": 55,
+              "g": 40,
+              "b": 25
             }
           },
           "registeredName": "[HSV]Office Colors",
@@ -2135,13 +2102,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Office Colors",
           "lastValue": {
-            "hue": 0.0790960451977401,
-            "saturation": 0.375796178343949,
-            "brightness": 85,
+            "hue": 0.08422939068100359,
+            "saturation": 0.5344827586206897,
+            "brightness": 80,
             "rgb": {
-              "r": 52,
-              "g": 42,
-              "b": 33
+              "r": 55,
+              "g": 40,
+              "b": 25
             }
           },
           "lastTriggerSource": "Office Colors"
@@ -2293,7 +2260,7 @@
           "selectedDeviceNames": [
             "Bar Lamp (ha)"
           ],
-          "status": "Control applied to 1 devices",
+          "status": "Loaded 815 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2319,13 +2286,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Temps",
           "lastValue": {
-            "hue": 0.32320441988950277,
-            "saturation": 0.8008849557522123,
-            "brightness": 137,
+            "hue": 0.367911479944675,
+            "saturation": 0.964,
+            "brightness": 123,
             "rgb": {
-              "r": 30,
+              "r": 4,
               "g": 121,
-              "b": 24
+              "b": 28
             }
           },
           "lastTriggerSource": "Temps"
@@ -2387,8 +2354,8 @@
       "id": "bf71124258f2c9f4",
       "label": "Date Comparison",
       "position": {
-        "x": -307.31353447666316,
-        "y": -1926.8751204463306
+        "x": -335.8824641541798,
+        "y": -1794.4191737596627
       },
       "data": {
         "id": "bf71124258f2c9f4",
@@ -2426,8 +2393,8 @@
       "id": "af5d78eb391594ce",
       "label": "Conditional Integer Output",
       "position": {
-        "x": 117.52172952835048,
-        "y": -1919.2199844648908
+        "x": 370.9145558428505,
+        "y": -1649.164854033774
       },
       "data": {
         "id": "af5d78eb391594ce",
@@ -2441,8 +2408,8 @@
       "id": "c50730db0a8fc75b",
       "label": "Integer Selector",
       "position": {
-        "x": 120.18368325549595,
-        "y": -1659.7925671341604
+        "x": 24.16769245690131,
+        "y": -1653.1935398815285
       },
       "data": {
         "id": "c50730db0a8fc75b",
@@ -2458,8 +2425,8 @@
       "id": "3f6956273b66f32c",
       "label": "All-in-One Color Control",
       "position": {
-        "x": -296.1770583598425,
-        "y": -3601.345706561669
+        "x": 18.55729103360062,
+        "y": -3651.395692320434
       },
       "data": {
         "id": "3f6956273b66f32c",
@@ -2485,8 +2452,8 @@
       "id": "a096aaaa5d139111",
       "label": "All-in-One Color Control",
       "position": {
-        "x": 148.33315858178815,
-        "y": -3599.4436659545527
+        "x": 486.2087544937136,
+        "y": -3661.9162783708057
       },
       "data": {
         "id": "a096aaaa5d139111",
@@ -2545,8 +2512,8 @@
       "id": "6ac17d4ab201b32b",
       "label": "Kasa Plug Control",
       "position": {
-        "x": 17898.845273924704,
-        "y": 1735.7235202115548
+        "x": 17651.452539778646,
+        "y": 1484.7966041491236
       },
       "data": {
         "id": "6ac17d4ab201b32b",
@@ -2568,16 +2535,16 @@
       "id": "50ff70ef0f2acc96",
       "label": "Receiver",
       "position": {
-        "x": 17377.843753299836,
-        "y": 1662.7709981902242
+        "x": 17183.456465736082,
+        "y": 1622.585164703487
       },
       "data": {
         "id": "50ff70ef0f2acc96",
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]9:30 On",
-          "lastValue": false,
-          "lastTriggerSource": null
+          "lastValue": true,
+          "lastTriggerSource": "9:30 On"
         }
       }
     },
@@ -3005,8 +2972,8 @@
       "id": "a3d528fc57e1ff4d",
       "label": "Time of Day",
       "position": {
-        "x": 2083.7206533686985,
-        "y": -3565.1318475998733
+        "x": 2087.6056417191353,
+        "y": -3594.269260228148
       },
       "data": {
         "id": "a3d528fc57e1ff4d",
@@ -3583,8 +3550,8 @@
       "id": "d5004b3611dddf0f",
       "label": "Timeline Color",
       "position": {
-        "x": 29.391543298263528,
-        "y": -2994.0695711293115
+        "x": 44.03977582492767,
+        "y": -2766.231349106558
       },
       "data": {
         "id": "d5004b3611dddf0f",
@@ -3671,8 +3638,8 @@
       "id": "ce37567d8626a0db",
       "label": "Timeline Color",
       "position": {
-        "x": 482.90021402576326,
-        "y": -3004.166235251479
+        "x": 505.05230238016713,
+        "y": -2766.872861063474
       },
       "data": {
         "id": "ce37567d8626a0db",
@@ -3786,8 +3753,8 @@
       "id": "e4a99a5458a16357",
       "label": "HA Device Automation",
       "position": {
-        "x": 1549.6153748986335,
-        "y": -1818.9127929532247
+        "x": 1626.512300866852,
+        "y": -1812.5047157892063
       },
       "data": {
         "id": "e4a99a5458a16357",
@@ -3800,7 +3767,7 @@
             "value"
           ],
           "lastOutputValues": {
-            "value": 71.15
+            "value": 64.8
           },
           "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
         }
@@ -3810,8 +3777,8 @@
       "id": "6dbc9bbdcd1943e0",
       "label": "HA Device State Output",
       "position": {
-        "x": 1055.5293973619164,
-        "y": -2001.8172426982119
+        "x": 1098.2499117887044,
+        "y": -2004.124717315438
       },
       "data": {
         "id": "6dbc9bbdcd1943e0",
@@ -3819,7 +3786,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
           "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Sunshine terrace  Feels like: 71.15",
+          "status": "✅ Sunshine terrace  Feels like: 64.8",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -3831,8 +3798,8 @@
       "id": "7b0803eadc605db8",
       "label": "Timeline Color",
       "position": {
-        "x": 2162.77394207547,
-        "y": -2332.372651822742
+        "x": 2224.718687994313,
+        "y": -2343.052780429439
       },
       "data": {
         "id": "7b0803eadc605db8",
@@ -3910,15 +3877,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.5757352941176471,
+          "position": 0.48235294117647054,
           "isInRange": true,
-          "outputHue": 0.32320441988950277,
-          "outputSaturation": 0.8008849557522123,
-          "outputBrightness": 137,
+          "outputHue": 0.367911479944675,
+          "outputSaturation": 0.964,
+          "outputBrightness": 123,
           "outputRgb": {
-            "r": 30,
+            "r": 4,
             "g": 121,
-            "b": 24
+            "b": 28
           }
         }
       }
@@ -3927,8 +3894,8 @@
       "id": "d7f72f4c35755d5d",
       "label": "Sender",
       "position": {
-        "x": 2706.238657651757,
-        "y": -2329.893870414524
+        "x": 2742.551094914527,
+        "y": -2340.573999021221
       },
       "data": {
         "id": "d7f72f4c35755d5d",
@@ -3936,13 +3903,13 @@
         "properties": {
           "bufferName": "Temps",
           "lastValue": {
-            "hue": 0.32320441988950277,
-            "saturation": 0.8008849557522123,
-            "brightness": 137,
+            "hue": 0.367911479944675,
+            "saturation": 0.964,
+            "brightness": 123,
             "rgb": {
-              "r": 30,
+              "r": 4,
               "g": 121,
-              "b": 24
+              "b": 28
             }
           },
           "registeredName": "[HSV]Temps",
@@ -3954,8 +3921,8 @@
       "id": "24035c8839725684",
       "label": "Receiver",
       "position": {
-        "x": -292.00786910104694,
-        "y": -2957.733432269113
+        "x": -322.5156081259086,
+        "y": -3010.01753911114
       },
       "data": {
         "id": "24035c8839725684",
@@ -4145,16 +4112,233 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.4983140674603175,
+          "position": 0.5524547817460318,
           "isInRange": true,
-          "outputHue": 0.0790960451977401,
-          "outputSaturation": 0.375796178343949,
-          "outputBrightness": 85,
+          "outputHue": 0.08422939068100359,
+          "outputSaturation": 0.5344827586206897,
+          "outputBrightness": 80,
           "outputRgb": {
-            "r": 52,
-            "g": 42,
-            "b": 33
+            "r": 55,
+            "g": 40,
+            "b": 25
           }
+        }
+      }
+    },
+    {
+      "id": "7d16f3641fda9279",
+      "label": "Debug",
+      "position": {
+        "x": 17359.997834352645,
+        "y": 1970.5251229388248
+      },
+      "data": {
+        "inputs": {
+          "input": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input",
+            "id": "55705dfa5fe5195e",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "d664f275d54cfed8"
+          }
+        },
+        "controls": {},
+        "label": "Debug",
+        "id": "7d16f3641fda9279",
+        "width": 260,
+        "properties": {
+          "name": "",
+          "toConsole": false,
+          "maxHistory": 10,
+          "enabled": true,
+          "history": [
+            {
+              "time": "3:43:19 PM",
+              "timestamp": 1765755799267,
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "time": "3:43:16 PM",
+              "timestamp": 1765755796548,
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "time": "3:42:53 PM",
+              "timestamp": 1765755773927,
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "time": "3:42:52 PM",
+              "timestamp": 1765755772361,
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "time": "3:42:49 PM",
+              "timestamp": 1765755769674,
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "time": "3:42:48 PM",
+              "timestamp": 1765755768203,
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "time": "3:41:11 PM",
+              "timestamp": 1765755671516,
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "time": "3:24:18 PM",
+              "timestamp": 1765754658315,
+              "value": false,
+              "type": "boolean"
+            }
+          ],
+          "currentValue": true,
+          "messageCount": 8
+        },
+        "selected": false
+      }
+    },
+    {
+      "id": "104d2d18126c68aa",
+      "label": "Debug",
+      "position": {
+        "x": 2561.4411779371276,
+        "y": 5226.849905391136
+      },
+      "data": {
+        "inputs": {
+          "input": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input",
+            "id": "6c79527153b17f79",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "d83eec9414e63a17"
+          }
+        },
+        "controls": {},
+        "label": "Debug",
+        "id": "104d2d18126c68aa",
+        "width": 260,
+        "properties": {
+          "name": "",
+          "toConsole": false,
+          "maxHistory": 10,
+          "enabled": true,
+          "history": [
+            {
+              "time": "3:43:19 PM",
+              "timestamp": 1765755799264,
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "time": "3:43:16 PM",
+              "timestamp": 1765755796545,
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "time": "3:41:11 PM",
+              "timestamp": 1765755671514,
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "time": "3:24:34 PM",
+              "timestamp": 1765754674569,
+              "value": false,
+              "type": "boolean"
+            }
+          ],
+          "currentValue": true,
+          "messageCount": 4
+        },
+        "selected": false
+      }
+    },
+    {
+      "id": "983a98adf4480305",
+      "label": "Time of Day",
+      "position": {
+        "x": 1717.9509443197703,
+        "y": 4967.121422972343
+      },
+      "data": {
+        "id": "983a98adf4480305",
+        "label": "Time of Day",
+        "properties": {
+          "customName": "Copper Fountain On 9:30",
+          "start_hour": 9,
+          "start_minute": 30,
+          "start_ampm": "AM",
+          "start_enabled": true,
+          "stop_hour": 8,
+          "stop_minute": 0,
+          "stop_ampm": "PM",
+          "stop_enabled": true,
+          "cycle_hour": 4,
+          "cycle_minute": 45,
+          "cycle_ampm": "AM",
+          "cycle_duration": 10,
+          "cycle_enabled": false,
+          "timezone": "America/Los_Angeles",
+          "next_on_date": "2025-12-15T17:30:00.000Z",
+          "next_off_date": "2025-12-15T04:00:00.000Z",
+          "next_cycle_date": null,
+          "currentState": true,
+          "status": "Initializing...",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "6d35a83f40cff6b0",
+      "label": "Toggle",
+      "position": {
+        "x": 2551.387694403207,
+        "y": 4768.517167621251
+      },
+      "data": {
+        "id": "6d35a83f40cff6b0",
+        "label": "Toggle",
+        "properties": {
+          "state": true,
+          "pulseMode": false,
+          "lastCommand": true
         }
       }
     }
@@ -4214,13 +4398,6 @@
       "source": "d384f545fa2b7f45",
       "target": "d34623b94b64ad5c",
       "sourceOutput": "result",
-      "targetInput": "in"
-    },
-    {
-      "id": "529e44a671e9defd",
-      "source": "3809449d3be5a2d5",
-      "target": "0cab81e8c5c154ff",
-      "sourceOutput": "state",
       "targetInput": "in"
     },
     {
@@ -4887,11 +5064,32 @@
       "target": "04169d0d9714a784",
       "sourceOutput": "hsvInfo",
       "targetInput": "in"
+    },
+    {
+      "id": "e1cb1e061467d6f2",
+      "source": "50ff70ef0f2acc96",
+      "target": "7d16f3641fda9279",
+      "sourceOutput": "out",
+      "targetInput": "input"
+    },
+    {
+      "id": "41312da2d2fee0d5",
+      "source": "983a98adf4480305",
+      "target": "104d2d18126c68aa",
+      "sourceOutput": "state",
+      "targetInput": "input"
+    },
+    {
+      "id": "65aa58129459512b",
+      "source": "983a98adf4480305",
+      "target": "0cab81e8c5c154ff",
+      "sourceOutput": "state",
+      "targetInput": "in"
     }
   ],
   "viewport": {
-    "x": -2173.991035024968,
-    "y": 3488.872555936743,
-    "k": 1.0454086506336695
+    "x": -826.6881915618449,
+    "y": -3235.4273395646933,
+    "k": 0.689161885139297
   }
 }
