@@ -46,12 +46,6 @@ debug('Weather imports:', {
 const app = express();
 const server = http.createServer(app);
 
-// Detect if running in HA add-on mode
-const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
-if (IS_HA_ADDON) {
-  console.log('[Server] Running in Home Assistant Add-on mode');
-}
-
 const io = new Server(server, {
   cors: {
     // Allow all origins in add-on mode since ingress uses dynamic paths
