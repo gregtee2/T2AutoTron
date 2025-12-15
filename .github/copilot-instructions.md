@@ -1,5 +1,34 @@
 # T2AutoTron 2.1 - AI Coding Instructions
 
+## 🚀 ACTIVE PROJECT: Unified Architecture (v3.0 Refactor)
+
+**Status**: POC Phase - Ready to Start  
+**Document**: `v3_migration/UNIFIED_ARCHITECTURE_PROPOSAL.md`  
+**Branch**: Create `feature/unified-architecture` before starting
+
+### What We're Doing
+Eliminating duplicate code between frontend plugins (47 files) and backend engine nodes (45 classes). Currently the same logic is written twice - once for the pretty UI, once for the 24/7 engine. We want ONE definition that both use.
+
+### Next Steps for Agent
+1. Create git branch: `feature/unified-architecture`
+2. Create folder: `v3_migration/shared/nodes/`
+3. Pick 3 test nodes: `CurrentTimeNode`, `DelayNode`, `HAGenericDeviceNode`
+4. Write unified definitions for those 3 (see proposal doc for format)
+5. Build loader that works in both frontend and backend
+6. Test that they actually work
+
+### Key Files to Read First
+- `v3_migration/UNIFIED_ARCHITECTURE_PROPOSAL.md` - Full context and plan
+- `backend/plugins/CurrentTimeNode.js` - Example frontend plugin
+- `backend/src/engine/nodes/TimeNodes.js` - Example backend node class
+
+### Human Context
+- Owner is NOT a programmer - use caveman explanations
+- AI agent time ≠ human time (200 human hours ≈ 6-10 agent hours)
+- Frontend UI stays mostly the same - just how nodes are defined changes
+
+---
+
 ## 🦴 Caveman Explanations (IMPORTANT - READ THIS FIRST)
 
 **The project owner is not a programmer.** When explaining problems, fixes, or concepts:
