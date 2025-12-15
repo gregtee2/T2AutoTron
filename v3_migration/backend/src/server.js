@@ -253,17 +253,20 @@ io.on('connection', (socket) => {
   // === DISCONNECT ===
   socket.on('disconnect', (reason) => {
     logger.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`, 'warn', false, 'socket:disconnect');
-    debug(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`);
+    console.log(`[Socket] Disconnect: ${socket.id}, reason: ${reason}, wasInActiveEditors: ${activeEditors.has(socket.id)}`);
     
     // Remove from active editors and update engine
     if (activeEditors.has(socket.id)) {
       activeEditors.delete(socket.id);
-      debug(`[Editor] Editor disconnected: ${socket.id}, active editors: ${activeEditors.size}`);
+      console.log(`[Editor] Editor disconnected: ${socket.id}, active editors remaining: ${activeEditors.size}`);
       
       // If no more editors, tell engine to resume device control
       if (activeEditors.size === 0 && backendEngine) {
+        console.log('[Engine] No active editors - resuming backend engine device control');
         backendEngine.setFrontendActive(false);
       }
+    } else {
+      console.log(`[Socket] Disconnect from non-editor client: ${socket.id}`);
     }
   });
 
@@ -271,7 +274,7 @@ io.on('connection', (socket) => {
   // Frontend emits this when editor becomes active
   socket.on('editor-active', () => {
     activeEditors.add(socket.id);
-    debug(`[Editor] Editor active: ${socket.id}, total active: ${activeEditors.size}`);
+    console.log(`[Editor] Editor active: ${socket.id}, total active: ${activeEditors.size}`);
     
     // Tell engine to pause device commands while frontend is active
     if (backendEngine) {
@@ -285,10 +288,11 @@ io.on('connection', (socket) => {
   // Frontend emits this when user explicitly wants engine to take over
   socket.on('editor-inactive', () => {
     activeEditors.delete(socket.id);
-    debug(`[Editor] Editor inactive: ${socket.id}, remaining active: ${activeEditors.size}`);
+    console.log(`[Editor] Editor inactive (explicit): ${socket.id}, remaining active: ${activeEditors.size}`);
     
     // If no more active editors, resume engine device control
     if (activeEditors.size === 0 && backendEngine) {
+      console.log('[Engine] No active editors - resuming backend engine device control');
       backendEngine.setFrontendActive(false);
     }
     
