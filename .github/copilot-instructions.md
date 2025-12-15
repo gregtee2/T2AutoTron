@@ -1,16 +1,51 @@
 # T2AutoTron 2.1 - AI Coding Instructions
 
-## 🦴 Caveman Explanations (Quick Reference)
+## 🦴 Caveman Explanations (IMPORTANT - READ THIS FIRST)
 
-When documenting fixes, include a "caveman explanation" - a simple, jargon-free summary that anyone can understand. This helps future developers (and AI assistants) quickly grasp what went wrong and why.
+**The project owner is not a programmer.** When explaining problems, fixes, or concepts:
 
-### Example Format:
+1. **Always include a "caveman explanation"** - a simple, jargon-free summary that anyone can understand
+2. **Avoid technical jargon** without explaining what it means in plain English
+3. **Use analogies** - compare technical concepts to everyday things (cars, plumbing, jobs, etc.)
+4. **Explain the "why"** - not just what you did, but why it matters
+
+### Communication Guidelines for AI Agents
+
+When working on this project:
+- **Before diving into code**, explain what you're about to do and why
+- **After fixing something**, provide a caveman summary of what was wrong and how you fixed it
+- **When something is complex**, break it down into simple parts
+- **Use emojis** to make things visually scannable (✅ ❌ 🔴 🟢 🦴)
+- **Tables and lists** are easier to read than paragraphs of text
+
+### Caveman Explanation Format
+
+When documenting fixes or explaining problems, use this format:
+
 ```
 ## The Problem (Caveman Edition) 🦴
-**What broke**: [Simple description of the symptom]
-**Why it broke**: [Root cause in plain English]
-**The fix**: [What we did to fix it]
+**What broke**: [Simple description of the symptom - what the user sees]
+**Why it broke**: [Root cause in plain English - no jargon]
+**The fix**: [What we did to fix it - simple version]
+**Now it works because**: [Why the fix solves the problem]
 ```
+
+### Good Caveman Analogies to Use
+
+| Technical Concept | Caveman Analogy |
+|-------------------|-----------------|
+| Server crashing | "The worker quit their job unexpectedly" |
+| Event loop empty | "Nobody scheduled any more work, so the worker went home" |
+| Keep-alive/heartbeat | "A timer that says 'Hey, I'm still here, don't leave!'" |
+| API call failing | "Tried to make a phone call but nobody answered" |
+| Authentication error | "Showed up at the door but forgot the password" |
+| Race condition | "Two people trying to go through the same door at once" |
+| Memory leak | "Kept collecting stuff but never threw anything away" |
+| Callback/Promise | "Left a note saying 'call me back when you're done'" |
+| Socket connection | "An open phone line between two computers" |
+| Cache | "A sticky note to remember something so you don't have to look it up again" |
+
+---
 
 ### Recent Caveman Fixes:
 
