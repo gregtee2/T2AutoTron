@@ -1,5 +1,67 @@
 # T2AutoTron 2.1 - AI Coding Instructions
 
+## 🦴 Caveman Explanations (Quick Reference)
+
+When documenting fixes, include a "caveman explanation" - a simple, jargon-free summary that anyone can understand. This helps future developers (and AI assistants) quickly grasp what went wrong and why.
+
+### Example Format:
+```
+## The Problem (Caveman Edition) 🦴
+**What broke**: [Simple description of the symptom]
+**Why it broke**: [Root cause in plain English]
+**The fix**: [What we did to fix it]
+```
+
+### Recent Caveman Fixes:
+
+#### Server Quitting Early (2025-12-14)
+- **What broke**: Server started up fine, then quit after ~20 seconds. Lights stopped changing colors.
+- **Why it broke**: Node.js has a rule: "If there's no work scheduled, I'm done - goodbye!" The Kasa smart plug code was accidentally telling Node.js "don't wait for me" on its network connections. After startup finished, Node.js saw no "real" work left and exited.
+- **The fix**: Added a heartbeat - a 60-second timer that says "Hey, I'm still here, don't leave!" Now Node.js always has something to wait for.
+
+---
+
+## Recent Server Stability Fix (2025-12-14)
+
+### Problem
+Server was exiting with code 0 (clean exit) after ~15-20 seconds, stopping all automations.
+
+### 🦴 Caveman Version
+The server was quitting its job too early. Node.js thought "nobody needs me anymore" and shut down. We added a heartbeat to keep it alive.
+
+### Root Cause
+- Node.js exits when the event loop is empty (no timers, no I/O pending)
+- `tplink-smarthome-api` (Kasa library) was unreferencing its UDP sockets
+- After initial device discovery, no referenced handles remained
+- Node.js saw empty event loop → clean exit
+
+### The Fix
+1. **Absolute .env path**: Changed from relative to `path.join(__dirname, '..', '.env')`
+2. **Keep-alive interval**: Added 60-second interval with explicit `.ref()` 
+3. **beforeExit handler**: Safety net to prevent clean exits
+4. **Uptime logging**: Shows `[Server] Uptime: X minutes` every minute
+
+### Key Code
+```javascript
+// Keep the process alive - prevents exit when event loop is empty
+const keepAlive = setInterval(() => {
+    const uptime = Math.floor((Date.now() - startTime) / 60000);
+    console.log(`[Server] Uptime: ${uptime} minutes`);
+}, 60000);
+keepAlive.ref(); // Ensure this interval keeps process alive
+
+// Safety net - prevent clean exit
+process.on('beforeExit', (code) => {
+    console.log('[EXIT] Process beforeExit with code:', code);
+    setTimeout(() => {}, 1000); // Schedule work to prevent exit
+});
+```
+
+### Files Modified
+- `v3_migration/backend/src/server.js` - Keep-alive interval, beforeExit handler, absolute .env path
+
+---
+
 ## Recent Add-on CORS & Device Control Fixes (2025-12-14)
 
 Fixed issues specific to the **Home Assistant Add-on** environment (Docker/ingress):
@@ -735,12 +797,16 @@ Engine accepts the same graph JSON format as frontend save/load:
 3. **Lazy Loading**: `engineRoutes.js` uses lazy `require()` to avoid circular dependencies
 4. **Path Note**: Routes are at `src/api/routes/`, engine at `src/engine/` - use `../../engine` not `../engine`
 
-### Current Status (as of 2025-12-13)
+### Current Status (as of 2025-12-14)
 - ✅ All 5 phases complete (Core, Devices, Colors, API, UI)
-- ✅ 27 node types registered
+- ✅ 53 node types registered (was 27, expanded for full coverage)
 - ✅ All 71 tests pass
-- 🔴 **Issue**: Server crashes on startup with exit code 1 (Kasa TCP errors from offline devices)
-- 🔧 **Fix applied**: Added error handlers to `kasaManager.js`, needs testing
+- ✅ **Server stability fixed** - Keep-alive interval prevents premature exit
+- ✅ Engine runs 24/7 independently of frontend
+- ✅ Colors/HSV flow correctly through SplineTimeline → Buffer → HAGenericDevice
+
+### 🦴 Backend Engine Caveman Summary
+The engine is like a robot that runs your light automations. Before, it only worked when you had the app open (like a TV that only works when you're watching). Now it runs on the server 24/7, even when you close the browser. Your lights keep changing colors while you sleep!
 
 ### Testing the Engine
 ```bash
@@ -815,8 +881,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 | # | Fix | Notes |
 |---|-----|-------|
-| 1 | HA Token refresh | Settings panel now updates token immediately via `homeAssistantManager.updateConfig()` |
-| 2 | Pan/Zoom freeze | F5 resets view; auto-reset on graph load via `graphLoadComplete` event |
+| 1 | **Server early exit** | Server was quitting after ~20 seconds. Added keep-alive interval + beforeExit handler. See Caveman Explanation above. |
+| 2 | HA Token refresh | Settings panel now updates token immediately via `homeAssistantManager.updateConfig()` |
+| 3 | Pan/Zoom freeze | F5 resets view; auto-reset on graph load via `graphLoadComplete` event |
 | 3 | Reset performance | `resetEditorView()` uses `requestAnimationFrame` to avoid blocking (was 350ms+, now <16ms) |
 | 4 | DeviceStateControl CSS | No longer injects CSS on every render (major performance fix) |
 | 5 | Keyframe animations | Moved from dynamic injection to `node-styles.css` |
