@@ -241,6 +241,16 @@ body {
   background: rgba(0, 243, 255, 0.05);
 }
 
+.log-entry.clickable {
+  cursor: pointer;
+}
+
+.log-entry.clickable:hover {
+  background: rgba(0, 243, 255, 0.15);
+  border-left: 2px solid var(--accent-color, #00f3ff);
+  padding-left: 4px;
+}
+
 .log-time {
   color: #666;
   font-size: inherit;

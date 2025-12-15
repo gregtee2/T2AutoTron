@@ -314,7 +314,7 @@ function App() {
       
       if (pending && (Date.now() - pending.timestamp) < 5000) {
         // This change was triggered by a node in the app
-        addEventLog('device', `${deviceName} → ${stateStr}`, { source: 'app', triggeredBy: pending.nodeTitle });
+        addEventLog('device', `${deviceName} → ${stateStr}`, { source: 'app', triggeredBy: pending.nodeTitle, nodeId: pending.nodeId });
         pendingCommands.delete(id);
       } else {
         // This change came externally (physical switch, other automation, etc.)
@@ -330,7 +330,7 @@ function App() {
     // Listen for node execution events
     function onNodeExecuted(data) {
       const { nodeId, nodeLabel, result } = data;
-      addEventLog('node', `${nodeLabel || nodeId} executed`, result);
+      addEventLog('node', `${nodeLabel || nodeId} executed`, { ...result, nodeId });
     }
 
     // Listen for scheduled events updates
@@ -477,8 +477,9 @@ function App() {
     // Expose toast for plugins: window.T2Toast.success('message'), .error(), .warning(), .info()
     window.T2Toast = toast;
     // Expose pending commands tracker for nodes to register their commands
-    window.registerPendingCommand = (deviceId, nodeTitle, action) => {
-      pendingCommands.set(deviceId, { nodeTitle, action, timestamp: Date.now() });
+    // nodeId is optional - if provided, clicking the event log entry will focus that node
+    window.registerPendingCommand = (deviceId, nodeTitle, action, nodeId) => {
+      pendingCommands.set(deviceId, { nodeTitle, action, nodeId, timestamp: Date.now() });
     };
     return () => {
       delete window.addEventLog;
@@ -652,7 +653,13 @@ function App() {
                   return true;
                 })
                 .map((log, index) => (
-                <div key={index} className={`log-entry log-${log.type}`} title={log.details?.triggeredBy ? `Triggered by: ${log.details.triggeredBy}` : (log.details?.source && log.details.source !== 'app' ? `Triggered externally via ${log.details.source}` : '')}>
+                <div 
+                  key={index} 
+                  className={`log-entry log-${log.type}${log.details?.nodeId ? ' clickable' : ''}`} 
+                  title={log.details?.nodeId ? 'Click to jump to this node' : (log.details?.triggeredBy ? `Triggered by: ${log.details.triggeredBy}` : (log.details?.source && log.details.source !== 'app' ? `Triggered externally via ${log.details.source}` : ''))}
+                  onClick={() => log.details?.nodeId && focusNode(log.details.nodeId)}
+                  style={log.details?.nodeId ? { cursor: 'pointer' } : {}}
+                >
                   <span className="log-time">{log.timestamp}</span>
                   <span className={`log-type-badge ${log.type}`}>{log.type === 'trigger' ? 'external' : log.type}</span>
                   <span className="log-message">{log.message}</span>

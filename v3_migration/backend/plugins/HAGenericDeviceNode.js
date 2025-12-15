@@ -734,8 +734,9 @@
             
             // Register pending commands so the Event Log knows this change came from the app
             const nodeTitle = this.getEffectiveTriggerSource();
+            const nodeId = this.id;
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
-                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'color'));
+                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'color', nodeId));
             }
             
             // Process devices sequentially to prevent API flood
@@ -842,8 +843,9 @@
             
             // Register pending commands so the Event Log knows this change came from the app
             const nodeTitle = this.getEffectiveTriggerSource();
+            const nodeId = this.id;
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
-                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off'));
+                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off', nodeId));
             }
             
             // Process devices sequentially to prevent API flood (ERR_INSUFFICIENT_RESOURCES)
@@ -891,8 +893,9 @@
             
             // Register pending commands so the Event Log knows this change came from the app
             const nodeTitle = this.getEffectiveTriggerSource();
+            const nodeId = this.id;
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
-                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'toggle'));
+                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'toggle', nodeId));
             }
             
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;

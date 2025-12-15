@@ -235,8 +235,9 @@
             
             // Register pending commands so the Event Log knows this change came from the app
             const nodeTitle = this.getEffectiveTriggerSource();
+            const nodeId = this.id;
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
-                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off'));
+                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off', nodeId));
             }
             
             await Promise.all(ids.map(async (id) => {
@@ -260,8 +261,9 @@
             
             // Register pending commands so the Event Log knows this change came from the app
             const nodeTitle = this.getEffectiveTriggerSource();
+            const nodeId = this.id;
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
-                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'toggle'));
+                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'toggle', nodeId));
             }
             
             await Promise.all(ids.map(async (id) => {
