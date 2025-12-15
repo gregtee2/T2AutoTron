@@ -3,6 +3,13 @@
  * 
  * Dedicated logger for backend engine debugging.
  * Writes all engine activity to a timestamped log file for analysis.
+ * 
+ * LOG LEVELS:
+ *   0 = QUIET   - Only errors and device commands
+ *   1 = NORMAL  - State changes, trigger flips, device commands (DEFAULT)
+ *   2 = VERBOSE - All buffer activity, every tick (huge logs!)
+ * 
+ * Set via ENGINE_LOG_LEVEL env var or engine.setLogLevel()
  */
 
 const fs = require('fs');
@@ -12,10 +19,17 @@ const path = require('path');
 // Path: backend/src/engine -> backend/src -> backend -> crashes (which is in v3_migration/)
 const LOG_DIR = path.join(__dirname, '..', '..', '..', 'crashes');
 const LOG_FILE = path.join(LOG_DIR, 'engine_debug.log');
-const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB max
+const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB max
+
+// Log level: 0=quiet, 1=normal (default), 2=verbose
+let LOG_LEVEL = parseInt(process.env.ENGINE_LOG_LEVEL || '1', 10);
 
 let logStream = null;
 let sessionStart = null;
+
+// Track last values to detect changes
+const lastBufferValues = new Map();
+const lastTriggerStates = new Map();
 
 function ensureLogDir() {
   if (!fs.existsSync(LOG_DIR)) {
@@ -85,19 +99,39 @@ function log(category, message, data = null) {
 }
 
 function logNodeExecution(nodeId, nodeType, inputs, outputs) {
-  log('NODE', `${nodeType} (${nodeId})`, { inputs, outputs });
+  // Only log node execution in verbose mode
+  if (LOG_LEVEL >= 2) {
+    log('NODE', `${nodeType} (${nodeId})`, { inputs, outputs });
+  }
 }
 
 function logTriggerChange(nodeId, from, to, action) {
+  // Always log trigger changes - these are important state transitions
   log('TRIGGER', `${nodeId}: ${from} → ${to}`, { action });
 }
 
 function logBufferSet(bufferName, value) {
-  log('BUFFER-SET', bufferName, value);
+  // Only log if value actually changed, or in verbose mode
+  const key = bufferName;
+  const lastValue = lastBufferValues.get(key);
+  const valueStr = JSON.stringify(value);
+  const lastValueStr = JSON.stringify(lastValue);
+  
+  if (LOG_LEVEL >= 2) {
+    // Verbose: log everything
+    log('BUFFER-SET', bufferName, value);
+  } else if (valueStr !== lastValueStr) {
+    // Normal: only log changes
+    log('BUFFER-CHANGE', bufferName, { from: lastValue, to: value });
+  }
+  lastBufferValues.set(key, value);
 }
 
 function logBufferGet(bufferName, value) {
-  log('BUFFER-GET', bufferName, value);
+  // Only log buffer reads in verbose mode (too noisy otherwise)
+  if (LOG_LEVEL >= 2) {
+    log('BUFFER-GET', bufferName, value);
+  }
 }
 
 function logEngineEvent(event, details = null) {
@@ -109,7 +143,19 @@ function logDeviceCommand(entityId, command, payload) {
 }
 
 function logWarmup(nodeId, tick, trigger, lastTrigger) {
-  log('WARMUP', `${nodeId} tick ${tick}/3`, { trigger, lastTrigger });
+  // Only log warmup in verbose mode
+  if (LOG_LEVEL >= 2) {
+    log('WARMUP', `${nodeId} tick ${tick}/3`, { trigger, lastTrigger });
+  }
+}
+
+function setLogLevel(level) {
+  LOG_LEVEL = Math.max(0, Math.min(2, parseInt(level, 10) || 1));
+  log('CONFIG', `Log level set to ${LOG_LEVEL} (${['QUIET', 'NORMAL', 'VERBOSE'][LOG_LEVEL]})`);
+}
+
+function getLogLevel() {
+  return LOG_LEVEL;
 }
 
 function close() {
@@ -141,6 +187,8 @@ module.exports = {
   logEngineEvent,
   logDeviceCommand,
   logWarmup,
+  setLogLevel,
+  getLogLevel,
   close,
   LOG_FILE
 };

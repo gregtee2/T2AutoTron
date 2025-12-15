@@ -451,13 +451,15 @@ class HAGenericDeviceNode {
     }
     this.tickCount++;
     
-    // Log every tick for debugging
-    engineLogger.log('HA-DEVICE-TICK', `tick=${this.tickCount}`, { 
-      trigger, 
-      lastTrigger: this.lastTrigger, 
-      entities: entityIds,
-      mode: this.properties.triggerMode || 'Follow'
-    });
+    // Log every tick only in verbose mode (level 2) - too noisy otherwise
+    if (engineLogger.getLogLevel() >= 2) {
+      engineLogger.log('HA-DEVICE-TICK', `tick=${this.tickCount}`, { 
+        trigger, 
+        lastTrigger: this.lastTrigger, 
+        entities: entityIds,
+        mode: this.properties.triggerMode || 'Follow'
+      });
+    }
     
     // Skip first 3 ticks to let buffers populate
     // This prevents turning off devices when engine starts
@@ -472,7 +474,10 @@ class HAGenericDeviceNode {
 
     // Skip if trigger is still undefined (no connection)
     if (trigger === undefined) {
-      engineLogger.log('HA-DEVICE', 'trigger undefined, skipping', { lastTrigger: this.lastTrigger });
+      // Only log this in verbose mode - it fires every tick for disconnected nodes
+      if (engineLogger.getLogLevel() >= 2) {
+        engineLogger.log('HA-DEVICE', 'trigger undefined, skipping', { lastTrigger: this.lastTrigger });
+      }
       return { is_on: !!this.lastTrigger };
     }
 
