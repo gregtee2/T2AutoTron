@@ -1,0 +1,115 @@
+# Unified Node Architecture
+
+**Status**: POC Phase 1 Complete ✅  
+**Branch**: `feature/unified-architecture`
+
+## 🦴 What Is This? (Caveman Edition)
+
+Before, we had **TWO recipe books** - one for the pretty UI (frontend plugins) and one for the robot worker (backend engine). If you changed a recipe in one book, you had to manually copy it to the other book.
+
+Now we have **ONE recipe book** that both use. Change it once, both update!
+
+## Current Status
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| **1. POC - First Node** | ✅ Complete | `TimeOfDayNode` unified |
+| **2. POC - Second Node** | ⏳ Next | `DelayNode` (has inputs/properties) |
+| **3. POC - Third Node** | ⏳ Planned | `HAGenericDeviceNode` (device control) |
+| **4. Frontend Loader** | ⏳ Planned | Auto-generate React components |
+| **5. Full Migration** | ⏳ Future | All 47 plugins → unified format |
+
+## File Structure
+
+```
+v3_migration/shared/
+├── nodes/                    # Unified node definitions
+│   └── time/
+│       └── TimeOfDay.node.js # First unified node ✅
+├── UnifiedNodeRegistry.js    # Loads and manages definitions
+├── EngineNodeWrapper.js      # Makes unified nodes work with backend engine
+├── test-unified.js           # Test file (run with: node test-unified.js)
+└── README.md                 # This file
+```
+
+## How Unified Nodes Work
+
+### Definition Format
+
+Each node is defined in a single `.node.js` file:
+
+```javascript
+module.exports = {
+  // Identity
+  id: 'MyNode',
+  version: '1.0.0',
+  
+  // UI metadata
+  label: 'My Node',
+  category: 'Category',
+  icon: '🔧',
+  helpText: 'What this node does...',
+  
+  // Schema
+  inputs: { /* input definitions */ },
+  outputs: { /* output definitions */ },
+  properties: { /* configurable properties */ },
+  
+  // Logic - runs in BOTH frontend and backend
+  execute(inputs, properties, context, state) {
+    // ... pure logic, no React, no require() ...
+    return { outputName: value };
+  }
+};
+```
+
+### Using in Backend Engine
+
+```javascript
+const unifiedRegistry = require('./shared/UnifiedNodeRegistry');
+const { createEngineNode } = require('./shared/EngineNodeWrapper');
+
+// Load definitions
+unifiedRegistry.loadFromDirectory('./shared/nodes');
+
+// Create engine-compatible node
+const TimeOfDayDef = unifiedRegistry.get('TimeOfDayNode');
+const TimeOfDayClass = createEngineNode(TimeOfDayDef);
+
+// Use like any other engine node
+const node = new TimeOfDayClass();
+node.restore(savedData);
+const outputs = node.data(inputs);
+```
+
+### Using in Frontend (TODO)
+
+Will auto-generate React components from the definition schema.
+
+## Key Constraints
+
+1. **No Browser APIs in execute()** - Must work in Node.js too
+2. **No Node.js APIs in execute()** - Must work in browser too
+3. **Use context.now()** - Don't use `new Date()` directly (allows testing with mock time)
+4. **State is passed in** - Don't use class instance variables for state
+
+## Running Tests
+
+```bash
+cd v3_migration/shared
+node test-unified.js
+```
+
+Expected output:
+```
+✅ TimeOfDayNode tests passed!
+✅ EngineNodeWrapper tests passed!
+=== All Tests Complete ===
+```
+
+## Next Steps
+
+1. Create `DelayNode.node.js` - tests inputs, properties, timing
+2. Create `HAGenericDeviceNode.node.js` - tests device manager integration
+3. Build frontend loader that generates React components from definitions
+4. Test in actual running system
