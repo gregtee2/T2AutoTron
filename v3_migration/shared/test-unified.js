@@ -198,7 +198,27 @@ if (delayDef) {
 console.log('\n=== Testing HAGenericDeviceNode ===');
 const haDeviceDef = unifiedRegistry.get('HAGenericDeviceNode');
 
-if (haDeviceDef) {
+// Helper to create a mock HA manager that tracks calls
+function createMockHAManager() {
+  const calls = [];
+  return {
+    calls,
+    controlDevice: async (entityId, turnOn, options) => {
+      calls.push({ entityId, turnOn, options });
+    },
+    reset: () => { calls.length = 0; }
+  };
+}
+
+// Make tests async to handle async execute()
+async function testHAGenericDevice() {
+  if (!haDeviceDef) {
+    console.error('❌ HAGenericDeviceNode not found in registry');
+    return;
+  }
+  
+  const mockHAManager = createMockHAManager();
+  
   // Test 1: Default properties
   const defaultProps = unifiedRegistry.getDefaultProperties('HAGenericDeviceNode');
   console.log('Default properties:', JSON.stringify(defaultProps, null, 2));
@@ -206,7 +226,11 @@ if (haDeviceDef) {
   // Test 2: Follow mode with devices
   console.log('\n--- Test: Follow Mode ---');
   let state = unifiedRegistry.getInitialState('HAGenericDeviceNode');
-  const context = { now: () => new Date(), isBackend: false };
+  const context = { 
+    now: () => new Date(), 
+    isBackend: true,
+    deviceManagers: { homeAssistant: mockHAManager }
+  };
   
   const propsWithDevices = {
     ...defaultProps,
@@ -215,26 +239,36 @@ if (haDeviceDef) {
   };
   
   // Tick 1-3: Warmup period (should not control devices)
-  let outputs = haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
+  mockHAManager.reset();
+  let outputs = await haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
   console.log('Tick 1 (warmup):', JSON.stringify(outputs));
-  outputs = haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
-  outputs = haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
+  outputs = await haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
+  outputs = await haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
   console.log('Tick 3 (warmup):', JSON.stringify(outputs));
+  console.log('  Device calls during warmup:', mockHAManager.calls.length, '(expected: 0)');
   
   // Tick 4: After warmup, trigger=true should turn on
-  outputs = haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
+  mockHAManager.reset();
+  outputs = await haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
   console.log('Tick 4 (after warmup, trigger=true):', JSON.stringify(outputs));
-  console.log('  Pending actions:', outputs._pendingActions?.length || 0);
+  console.log('  Device calls:', mockHAManager.calls.length, '(expected: 2)');
+  if (mockHAManager.calls.length > 0) {
+    console.log('  First call:', JSON.stringify(mockHAManager.calls[0]));
+  }
   
   // Tick 5: Trigger stays true - no new actions
-  outputs = haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
-  console.log('Tick 5 (trigger still true):', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
+  mockHAManager.reset();
+  outputs = await haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
+  console.log('Tick 5 (trigger still true):', JSON.stringify({ is_on: outputs.is_on, calls: mockHAManager.calls.length }));
+  console.log('  Expected calls: 0 (no change)');
   
   // Tick 6: Trigger goes false - should turn off
-  outputs = haDeviceDef.execute({ trigger: false }, propsWithDevices, context, state);
-  console.log('Tick 6 (trigger=false):', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
-  if (outputs._pendingActions && outputs._pendingActions.length > 0) {
-    console.log('  First action:', JSON.stringify(outputs._pendingActions[0]));
+  mockHAManager.reset();
+  outputs = await haDeviceDef.execute({ trigger: false }, propsWithDevices, context, state);
+  console.log('Tick 6 (trigger=false):', JSON.stringify({ is_on: outputs.is_on, calls: mockHAManager.calls.length }));
+  console.log('  Expected calls: 2 (turn off both devices)');
+  if (mockHAManager.calls.length > 0) {
+    console.log('  First call:', JSON.stringify(mockHAManager.calls[0]));
   }
   
   // Test 3: Toggle mode
@@ -244,24 +278,27 @@ if (haDeviceDef) {
   
   // Warmup
   for (let i = 0; i < 4; i++) {
-    outputs = haDeviceDef.execute({ trigger: false }, toggleProps, context, state);
+    await haDeviceDef.execute({ trigger: false }, toggleProps, context, state);
   }
+  mockHAManager.reset();
   
   // Rising edge 1: Toggle ON
-  outputs = haDeviceDef.execute({ trigger: true }, toggleProps, context, state);
-  console.log('First toggle (false->true):', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
-  console.log('  Expected: actions=2 (turn ON)');
+  outputs = await haDeviceDef.execute({ trigger: true }, toggleProps, context, state);
+  console.log('First toggle (false->true):', JSON.stringify({ is_on: outputs.is_on, calls: mockHAManager.calls.length }));
+  console.log('  Expected: calls=2 (turn ON)');
   
   // Falling edge: No action
-  outputs = haDeviceDef.execute({ trigger: false }, toggleProps, context, state);
-  console.log('Falling edge:', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
-  console.log('  Expected: actions=0 (toggle only on rising edge)');
+  mockHAManager.reset();
+  outputs = await haDeviceDef.execute({ trigger: false }, toggleProps, context, state);
+  console.log('Falling edge:', JSON.stringify({ is_on: outputs.is_on, calls: mockHAManager.calls.length }));
+  console.log('  Expected: calls=0 (toggle only on rising edge)');
   
   // Rising edge 2: Toggle OFF
-  outputs = haDeviceDef.execute({ trigger: true }, toggleProps, context, state);
-  console.log('Second toggle:', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
-  if (outputs._pendingActions && outputs._pendingActions.length > 0) {
-    console.log('  First action turnOn:', outputs._pendingActions[0].turnOn);
+  mockHAManager.reset();
+  outputs = await haDeviceDef.execute({ trigger: true }, toggleProps, context, state);
+  console.log('Second toggle:', JSON.stringify({ is_on: outputs.is_on, calls: mockHAManager.calls.length }));
+  if (mockHAManager.calls.length > 0) {
+    console.log('  First call turnOn:', mockHAManager.calls[0].turnOn);
     console.log('  Expected: turnOn=false (toggled OFF)');
   }
   
@@ -271,20 +308,25 @@ if (haDeviceDef) {
   
   // Warmup
   for (let i = 0; i < 4; i++) {
-    outputs = haDeviceDef.execute({ trigger: false }, propsWithDevices, context, state);
+    await haDeviceDef.execute({ trigger: false }, propsWithDevices, context, state);
   }
+  mockHAManager.reset();
   
   // Turn on with color
   const hsvColor = { hue: 0.5, saturation: 1.0, brightness: 200 };
-  outputs = haDeviceDef.execute({ trigger: true, hsv_info: hsvColor }, propsWithDevices, context, state);
-  console.log('Turn on with HSV:', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
-  if (outputs._pendingActions && outputs._pendingActions[0]) {
-    console.log('  Color data:', JSON.stringify(outputs._pendingActions[0].colorData));
+  outputs = await haDeviceDef.execute({ trigger: true, hsv_info: hsvColor }, propsWithDevices, context, state);
+  console.log('Turn on with HSV:', JSON.stringify({ is_on: outputs.is_on, calls: mockHAManager.calls.length }));
+  if (mockHAManager.calls.length > 0) {
+    console.log('  Call options:', JSON.stringify(mockHAManager.calls[0].options));
+    console.log('  Expected hs_color: [180, 100] (hue=0.5*360, sat=1.0*100)');
   }
   
   console.log('\n✅ HAGenericDeviceNode tests passed!');
-} else {
-  console.error('❌ HAGenericDeviceNode not found in registry');
 }
 
-console.log('\n=== All Tests Complete ===');
+// Run async test
+testHAGenericDevice().then(() => {
+  console.log('\n=== All Tests Complete ===');
+}).catch(err => {
+  console.error('Test failed:', err);
+});

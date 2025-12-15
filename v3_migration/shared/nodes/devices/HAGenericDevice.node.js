@@ -12,9 +12,13 @@
  * When trigger goes ON, it tells those devices to turn ON.
  * When trigger goes OFF, it tells them to turn OFF.
  * 
- * IMPORTANT: This node uses `context.controlDevice()` to actually control
- * devices. The frontend preview will show simulated state; the backend
- * engine will make real API calls.
+ * DESIGN: This node is a thin logic wrapper. It:
+ * 1. Reads inputs (trigger, HSV color)
+ * 2. Decides what to do (based on trigger mode)
+ * 3. Calls context.deviceManagers.homeAssistant.controlDevice() to do it
+ * 4. Returns outputs (is_on state)
+ * 
+ * It does NOT make HTTP calls directly - all device control is delegated.
  */
 
 module.exports = {
@@ -161,18 +165,20 @@ Trigger Modes:
 
   // === THE ACTUAL LOGIC ===
   /**
-   * Execute function - determines what to do, then uses context to control devices
+   * Execute function - determines what to do, then delegates to deviceManagers
+   * 
+   * This is an ASYNC function because it makes device control calls.
    * 
    * @param {Object} inputs - Input values
    * @param {Object} properties - Current property values
    * @param {Object} context - Runtime context with:
-   *   - context.controlDevice(entityId, turnOn, colorData) - async function to control device
+   *   - context.deviceManagers.homeAssistant - HA manager instance
    *   - context.isBackend - true if running in backend engine
    *   - context.now() - current time
    * @param {Object} state - Internal state that persists across executions
-   * @returns {Object} - Output values AND optional pendingActions array
+   * @returns {Object} - Output values { is_on: boolean }
    */
-  execute(inputs, properties, context, state) {
+  async execute(inputs, properties, context, state) {
     // Get input values (handle both array and direct value formats)
     const trigger = inputs.trigger?.[0] ?? inputs.trigger;
     const hsv = inputs.hsv_info?.[0] ?? inputs.hsv_info;
@@ -207,8 +213,8 @@ Trigger Modes:
       return { is_on: !!state.lastTrigger };
     }
     
-    // Collect pending device control actions
-    const pendingActions = [];
+    // Get the Home Assistant manager (may be undefined in frontend/test)
+    const haManager = context.deviceManagers?.homeAssistant;
     
     // Handle trigger changes
     const triggerChanged = trigger !== state.lastTrigger;
@@ -253,13 +259,20 @@ Trigger Modes:
         
         if (shouldTurnOn !== null) {
           const colorData = shouldTurnOn ? this._hsvToHAFormat(hsv) : null;
+          const transitionMs = properties.transitionTime || 1000;
           
-          pendingActions.push({
-            entityId,
-            turnOn: shouldTurnOn,
-            colorData,
-            transitionMs: properties.transitionTime || 1000
-          });
+          // Actually control the device via deviceManagers (if available)
+          if (haManager) {
+            try {
+              await haManager.controlDevice(entityId, shouldTurnOn, {
+                ...colorData,
+                transition: transitionMs / 1000 // HA uses seconds
+              });
+            } catch (err) {
+              // Log but don't crash - device control failures shouldn't break the graph
+              console.warn(`[HAGenericDevice] Failed to control ${entityId}:`, err.message);
+            }
+          }
           
           state.deviceStates[entityId] = shouldTurnOn;
         }
@@ -272,12 +285,20 @@ Trigger Modes:
         state.lastHsv = { ...hsv };
         
         for (const entityId of entityIds) {
-          pendingActions.push({
-            entityId,
-            turnOn: true,
-            colorData: this._hsvToHAFormat(hsv),
-            transitionMs: properties.transitionTime || 1000
-          });
+          const colorData = this._hsvToHAFormat(hsv);
+          const transitionMs = properties.transitionTime || 1000;
+          
+          // Update color via deviceManagers (if available)
+          if (haManager) {
+            try {
+              await haManager.controlDevice(entityId, true, {
+                ...colorData,
+                transition: transitionMs / 1000
+              });
+            } catch (err) {
+              console.warn(`[HAGenericDevice] Failed to update color on ${entityId}:`, err.message);
+            }
+          }
         }
       }
     }
@@ -285,10 +306,9 @@ Trigger Modes:
     // Update current state
     state.currentIsOn = !!state.lastTrigger;
     
-    // Return outputs with pending actions for the runtime to execute
+    // Return simple output - no _pendingActions needed
     return {
-      is_on: state.currentIsOn,
-      _pendingActions: pendingActions // Runtime will execute these async
+      is_on: state.currentIsOn
     };
   },
 

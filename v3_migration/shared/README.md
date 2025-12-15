@@ -108,12 +108,50 @@ Expected output:
 ```
 ✅ TimeOfDayNode tests passed!
 ✅ EngineNodeWrapper tests passed!
+✅ DelayNode tests passed!
+✅ HAGenericDeviceNode tests passed!
 === All Tests Complete ===
 ```
 
+## Design Patterns
+
+### Device Control (Delegation Pattern)
+
+Device nodes (HAGenericDevice, HueLight, KasaLight, etc.) should **NOT** make HTTP calls directly. Instead, they delegate to device managers:
+
+```javascript
+// ❌ BAD - Don't make HTTP calls directly
+async execute(inputs, properties, context, state) {
+  await fetch(`http://homeassistant/api/services/light/turn_on`, {...});
+}
+
+// ✅ GOOD - Delegate to device manager
+async execute(inputs, properties, context, state) {
+  const haManager = context.deviceManagers?.homeAssistant;
+  if (haManager) {
+    await haManager.controlDevice(entityId, shouldTurnOn, { ...colorData });
+  }
+  return { is_on: shouldTurnOn };
+}
+```
+
+**Why?** 
+- Device managers handle authentication, rate limiting, error recovery
+- Frontend can run with a mock manager for preview
+- Backend runs with real managers for actual control
+- Node logic stays pure and testable
+
+### Async vs Sync Execute
+
+- **Simple nodes** (TimeOfDay, logic gates): Use sync `execute()`
+- **Device nodes** (HAGenericDevice, HueLight): Use async `execute()` to await device manager calls
+
+The `EngineNodeWrapper` handles both automatically.
+
 ## Next Steps
 
-1. Create `DelayNode.node.js` - tests inputs, properties, timing
-2. Create `HAGenericDeviceNode.node.js` - tests device manager integration
+1. ~~Create `DelayNode.node.js`~~ ✅ Complete
+2. ~~Create `HAGenericDeviceNode.node.js`~~ ✅ Complete
 3. Build frontend loader that generates React components from definitions
 4. Test in actual running system
+5. Migrate remaining nodes (start with simple ones)
