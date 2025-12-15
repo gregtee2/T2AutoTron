@@ -283,18 +283,10 @@
         }
         
         // Get effective trigger source for Event Log attribution
-        // Checks: 1) Custom node title, 2) Recent buffer trigger source, 3) Default label
         getEffectiveTriggerSource() {
             // If user set a custom title, use it (they're explicitly naming this node)
             if (this.properties.customTitle && this.properties.customTitle.trim()) {
                 return this.properties.customTitle;
-            }
-            // Check if there's a recent buffer trigger source
-            if (window.AutoTronBuffer && typeof window.AutoTronBuffer.getLastTriggerSource === 'function') {
-                const bufferSource = window.AutoTronBuffer.getLastTriggerSource();
-                if (bufferSource) {
-                    return bufferSource;
-                }
             }
             // Fall back to node label
             return this.label || 'HA Device';

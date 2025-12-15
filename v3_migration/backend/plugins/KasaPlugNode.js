@@ -54,12 +54,9 @@
 
         // Get effective trigger source for Event Log attribution
         getEffectiveTriggerSource() {
-            // Check if there's a recent buffer trigger source
-            if (window.AutoTronBuffer && typeof window.AutoTronBuffer.getLastTriggerSource === 'function') {
-                const bufferSource = window.AutoTronBuffer.getLastTriggerSource();
-                if (bufferSource) {
-                    return bufferSource;
-                }
+            // If user set a custom title, use it
+            if (this.properties.customTitle && this.properties.customTitle.trim()) {
+                return this.properties.customTitle;
             }
             // Fall back to node label
             return this.label || 'Kasa Plug';
