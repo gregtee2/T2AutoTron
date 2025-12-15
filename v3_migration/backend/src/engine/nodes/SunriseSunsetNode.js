@@ -87,6 +87,10 @@ function calculateSunTimes(date, latitude, longitude) {
 
 /**
  * SunriseSunsetNode - Outputs true during solar time windows
+ * 
+ * Frontend properties include AM/PM format for fixed times:
+ * - fixed_stop_hour, fixed_stop_minute, fixed_stop_ampm, fixed_stop_enabled
+ * - fixed_on_hour, fixed_on_minute, fixed_on_ampm, fixed_on_enabled
  */
 class SunriseSunsetNode {
   constructor() {
@@ -95,21 +99,39 @@ class SunriseSunsetNode {
     this.properties = {
       latitude: 34.0522,
       longitude: -118.2437,
+      on_offset_hours: 0,
       on_offset_minutes: 30,
       on_offset_direction: 'Before',  // Before/After
       on_enabled: true,
       fixed_on_enabled: false,
-      fixed_on_hour: 18,
+      fixed_on_hour: 6,
       fixed_on_minute: 0,
+      fixed_on_ampm: 'PM',
+      off_offset_hours: 0,
       off_offset_minutes: 0,
       off_offset_direction: 'Before',
-      off_enabled: true,
+      off_enabled: false,
       fixed_stop_enabled: true,
-      fixed_stop_hour: 22,
-      fixed_stop_minute: 30
+      fixed_stop_hour: 10,
+      fixed_stop_minute: 30,
+      fixed_stop_ampm: 'PM',
+      currentState: false
     };
     this._cachedSunTimes = null;
     this._cacheDate = null;
+  }
+
+  /**
+   * Convert 12-hour format to 24-hour format
+   */
+  to24Hour(hour, ampm) {
+    let h = parseInt(hour) || 0;
+    if (ampm === 'PM' && h !== 12) {
+      h += 12;
+    } else if (ampm === 'AM' && h === 12) {
+      h = 0;
+    }
+    return h;
   }
 
   restore(data) {
@@ -134,10 +156,15 @@ class SunriseSunsetNode {
     let onTime;
     if (this.properties.fixed_on_enabled) {
       onTime = new Date(now);
-      onTime.setHours(this.properties.fixed_on_hour, this.properties.fixed_on_minute, 0, 0);
+      // Handle AM/PM format
+      const hour24 = this.to24Hour(this.properties.fixed_on_hour, this.properties.fixed_on_ampm);
+      onTime.setHours(hour24, this.properties.fixed_on_minute || 0, 0, 0);
     } else if (sunset && this.properties.on_enabled) {
       onTime = new Date(sunset);
-      const offsetMs = this.properties.on_offset_minutes * 60 * 1000;
+      // Handle offset (hours + minutes)
+      const offsetHours = parseInt(this.properties.on_offset_hours) || 0;
+      const offsetMinutes = parseInt(this.properties.on_offset_minutes) || 0;
+      const offsetMs = (offsetHours * 60 + offsetMinutes) * 60 * 1000;
       if (this.properties.on_offset_direction === 'Before') {
         onTime.setTime(onTime.getTime() - offsetMs);
       } else {
@@ -149,15 +176,19 @@ class SunriseSunsetNode {
     let offTime;
     if (this.properties.fixed_stop_enabled) {
       offTime = new Date(now);
-      offTime.setHours(this.properties.fixed_stop_hour, this.properties.fixed_stop_minute, 0, 0);
-      // If off time is before on time, it's tomorrow
-      if (onTime && offTime < onTime) {
+      // Handle AM/PM format
+      const hour24 = this.to24Hour(this.properties.fixed_stop_hour, this.properties.fixed_stop_ampm);
+      offTime.setHours(hour24, this.properties.fixed_stop_minute || 0, 0, 0);
+      // If off time is before on time, it's tomorrow (overnight scenario)
+      if (onTime && offTime <= onTime) {
         offTime.setDate(offTime.getDate() + 1);
       }
     } else if (sunrise && this.properties.off_enabled) {
       offTime = new Date(sunrise);
       offTime.setDate(offTime.getDate() + 1);  // Tomorrow's sunrise
-      const offsetMs = this.properties.off_offset_minutes * 60 * 1000;
+      const offsetHours = parseInt(this.properties.off_offset_hours) || 0;
+      const offsetMinutes = parseInt(this.properties.off_offset_minutes) || 0;
+      const offsetMs = (offsetHours * 60 + offsetMinutes) * 60 * 1000;
       if (this.properties.off_offset_direction === 'Before') {
         offTime.setTime(offTime.getTime() - offsetMs);
       } else {

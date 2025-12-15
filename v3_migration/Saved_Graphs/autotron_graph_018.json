@@ -485,7 +485,7 @@
           "cycle_duration": 10,
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
-          "next_on_date": "2025-12-15T05:00:00.000Z",
+          "next_on_date": "2025-12-16T05:00:00.000Z",
           "next_off_date": "2025-12-15T07:00:00.000Z",
           "next_cycle_date": null,
           "currentState": false,
@@ -989,7 +989,7 @@
           "selectedDeviceNames": [
             "Master Bedroom Wall Light"
           ],
-          "status": "Loaded 815 devices",
+          "status": "Control applied to 1 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1019,7 +1019,7 @@
           "selectedDeviceNames": [
             "Hue bloom Master Bath (ha)"
           ],
-          "status": "Loaded 815 devices",
+          "status": "Control applied to 1 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1102,10 +1102,10 @@
           "cycle_duration": 10,
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
-          "next_on_date": "2025-12-15T05:00:00.000Z",
+          "next_on_date": "2025-12-16T05:00:00.000Z",
           "next_off_date": "2025-12-15T17:00:00.000Z",
           "next_cycle_date": null,
-          "currentState": false,
+          "currentState": true,
           "status": "Initializing...",
           "debug": false,
           "pulseMode": false
@@ -1135,7 +1135,7 @@
             "Back Door Sconce Upper (ha)",
             "Front West Upper Sconce (ha)"
           ],
-          "status": "Loaded 815 devices",
+          "status": "Applying control...",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1171,7 +1171,7 @@
             "Front West Lower Sconce (ha)",
             "House Back Lower Sconce (ha)"
           ],
-          "status": "Loaded 815 devices",
+          "status": "Applying control...",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1422,13 +1422,13 @@
         "properties": {
           "bufferName": "Sconce Top Lights",
           "lastValue": {
-            "hue": 0.37516339869281046,
-            "saturation": 1,
+            "hue": 0.045714285714285714,
+            "saturation": 0.9162303664921466,
             "brightness": 254,
             "rgb": {
-              "r": 0,
-              "g": 254,
-              "b": 64
+              "r": 190,
+              "g": 64,
+              "b": 16
             }
           },
           "registeredName": "[HSV]Sconce Top Lights",
@@ -1449,12 +1449,12 @@
         "properties": {
           "bufferName": "Sconce Bottom Light",
           "lastValue": {
-            "hue": 0,
+            "hue": 0.23298429319371727,
             "saturation": 1,
             "brightness": 254,
             "rgb": {
-              "r": 254,
-              "g": 0,
+              "r": 115,
+              "g": 190,
               "b": 0
             }
           },
@@ -1476,13 +1476,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Sconce Top Lights",
           "lastValue": {
-            "hue": 0.37516339869281046,
-            "saturation": 1,
+            "hue": 0.045714285714285714,
+            "saturation": 0.9162303664921466,
             "brightness": 254,
             "rgb": {
-              "r": 0,
-              "g": 254,
-              "b": 64
+              "r": 190,
+              "g": 64,
+              "b": 16
             }
           },
           "lastTriggerSource": "Sconce Top Lights"
@@ -1502,12 +1502,12 @@
         "properties": {
           "selectedBuffer": "[HSV]Sconce Bottom Light",
           "lastValue": {
-            "hue": 0,
+            "hue": 0.23298429319371727,
             "saturation": 1,
             "brightness": 254,
             "rgb": {
-              "r": 254,
-              "g": 0,
+              "r": 115,
+              "g": 190,
               "b": 0
             }
           },
@@ -2060,10 +2060,10 @@
           "lastValue": {
             "hue": 0.08888888888888889,
             "saturation": 1,
-            "brightness": 56,
+            "brightness": 55,
             "rgb": {
-              "r": 56,
-              "g": 30,
+              "r": 55,
+              "g": 29,
               "b": 0
             }
           },
@@ -2104,10 +2104,10 @@
           "lastValue": {
             "hue": 0.08888888888888889,
             "saturation": 1,
-            "brightness": 56,
+            "brightness": 55,
             "rgb": {
-              "r": 56,
-              "g": 30,
+              "r": 55,
+              "g": 29,
               "b": 0
             }
           },
@@ -2239,7 +2239,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": false
+          "value": true
         }
       }
     },
@@ -2260,7 +2260,7 @@
           "selectedDeviceNames": [
             "Bar Lamp (ha)"
           ],
-          "status": "Loaded 815 devices",
+          "status": "Applying control...",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2286,13 +2286,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Temps",
           "lastValue": {
-            "hue": 0.7751633986928105,
-            "saturation": 1,
-            "brightness": 68,
+            "hue": 0.463855421686747,
+            "saturation": 0.5424836601307189,
+            "brightness": 99,
             "rgb": {
-              "r": 44,
-              "g": 0,
-              "b": 68
+              "r": 27,
+              "g": 59,
+              "b": 52
             }
           },
           "lastTriggerSource": "Temps"
@@ -2956,13 +2956,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 44,
-        "position": 0.7333333333333333,
+        "lastTimeStep": 46,
+        "position": 0.7666666666666667,
         "isInRange": true,
         "lastColor": {
           "r": 255,
-          "g": 161,
-          "b": 84
+          "g": 157,
+          "b": 78
         },
         "inputStartTime": "4:16 PM",
         "inputEndTime": "10:30 PM"
@@ -3268,15 +3268,18 @@
         "id": "315ccd48fd131de3",
         "label": "HA Device Automation",
         "properties": {
-          "status": "⚠️ No input data received",
+          "status": "Fields: state, battery",
           "debug": false,
           "lastEntityType": "binary_sensor",
           "selectedFields": [
             "state",
             "battery"
           ],
-          "lastOutputValues": {},
-          "lastInputDeviceId": null
+          "lastOutputValues": {
+            "state": false,
+            "battery": "unknown"
+          },
+          "lastInputDeviceId": "binary_sensor.third_reality_inc_3rdts01056z"
         }
       }
     },
@@ -3291,7 +3294,7 @@
         "id": "18cb43271d9376b5",
         "label": "HA Device State Display",
         "properties": {
-          "status": "⚠️ No input data received",
+          "status": "⚠️ No valid device data received",
           "debug": false,
           "lastData": null
         }
@@ -3449,15 +3452,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0.5270520674300254,
+          "position": 0.5580562659033079,
           "isInRange": true,
-          "outputHue": 0.1049382716049383,
-          "outputSaturation": 0.6923076923076922,
-          "outputBrightness": 60,
+          "outputHue": 0.10297239915074309,
+          "outputSaturation": 0.7621359223300971,
+          "outputBrightness": 56,
           "outputRgb": {
-            "r": 46,
-            "g": 34,
-            "b": 14
+            "r": 45,
+            "g": 32,
+            "b": 11
           }
         }
       }
@@ -3542,15 +3545,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0.5270520674300254,
+          "position": 0.5580562659033079,
           "isInRange": true,
-          "outputHue": 0.09689922480620154,
-          "outputSaturation": 0.6745098039215687,
-          "outputBrightness": 89,
+          "outputHue": 0.09706959706959706,
+          "outputSaturation": 0.7137254901960784,
+          "outputBrightness": 84,
           "outputRgb": {
-            "r": 89,
-            "g": 64,
-            "b": 29
+            "r": 84,
+            "g": 59,
+            "b": 24
           }
         }
       }
@@ -3630,15 +3633,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.3937466666666667,
+          "position": 0.7437333333333334,
           "isInRange": true,
-          "outputHue": 0.37516339869281046,
-          "outputSaturation": 1,
+          "outputHue": 0.045714285714285714,
+          "outputSaturation": 0.9162303664921466,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 0,
-            "g": 254,
-            "b": 64
+            "r": 190,
+            "g": 64,
+            "b": 16
           }
         }
       }
@@ -3718,14 +3721,14 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.39380333333333334,
+          "position": 0.7437,
           "isInRange": true,
-          "outputHue": 0,
+          "outputHue": 0.23298429319371727,
           "outputSaturation": 1,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 254,
-            "g": 0,
+            "r": 115,
+            "g": 190,
             "b": 0
           }
         }
@@ -3769,14 +3772,16 @@
         "id": "e4a99a5458a16357",
         "label": "HA Device Automation",
         "properties": {
-          "status": "⚠️ No input data received",
+          "status": "Fields: value",
           "debug": false,
           "lastEntityType": "sensor",
           "selectedFields": [
             "value"
           ],
-          "lastOutputValues": {},
-          "lastInputDeviceId": null
+          "lastOutputValues": {
+            "value": 52.9
+          },
+          "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
         }
       }
     },
@@ -3793,7 +3798,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
           "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Devices fetched",
+          "status": "✅ Sunshine terrace  Feels like: 52.9",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -3884,15 +3889,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0,
+          "position": 0.30735294117647055,
           "isInRange": true,
-          "outputHue": 0.7751633986928105,
-          "outputSaturation": 1,
-          "outputBrightness": 68,
+          "outputHue": 0.463855421686747,
+          "outputSaturation": 0.5424836601307189,
+          "outputBrightness": 99,
           "outputRgb": {
-            "r": 44,
-            "g": 0,
-            "b": 68
+            "r": 27,
+            "g": 59,
+            "b": 52
           }
         }
       }
@@ -3910,13 +3915,13 @@
         "properties": {
           "bufferName": "Temps",
           "lastValue": {
-            "hue": 0.7751633986928105,
-            "saturation": 1,
-            "brightness": 68,
+            "hue": 0.463855421686747,
+            "saturation": 0.5424836601307189,
+            "brightness": 99,
             "rgb": {
-              "r": 44,
-              "g": 0,
-              "b": 68
+              "r": 27,
+              "g": 59,
+              "b": 52
             }
           },
           "registeredName": "[HSV]Temps",
@@ -4125,14 +4130,14 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.9192563095238095,
+          "position": 0.938597003968254,
           "isInRange": true,
           "outputHue": 0.08888888888888889,
           "outputSaturation": 1,
-          "outputBrightness": 56,
+          "outputBrightness": 55,
           "outputRgb": {
-            "r": 56,
-            "g": 30,
+            "r": 55,
+            "g": 29,
             "b": 0
           }
         }
@@ -4931,20 +4936,6 @@
       "targetInput": "trigger"
     },
     {
-      "id": "7013ba6753d00254",
-      "source": "3fb3a20b014821a8",
-      "target": "228368262223f1db",
-      "sourceOutput": "out",
-      "targetInput": "hsv_info"
-    },
-    {
-      "id": "97242148e2d79b7f",
-      "source": "cb87122766b2be7d",
-      "target": "771f2954e396349a",
-      "sourceOutput": "out",
-      "targetInput": "hsv_info"
-    },
-    {
       "id": "8cf22c32f3c1f502",
       "source": "9e2a30f7a17e5bd5",
       "target": "771f2954e396349a",
@@ -5048,11 +5039,25 @@
       "target": "0cab81e8c5c154ff",
       "sourceOutput": "state",
       "targetInput": "in"
+    },
+    {
+      "id": "96506f4a5df11d6c",
+      "source": "3fb3a20b014821a8",
+      "target": "228368262223f1db",
+      "sourceOutput": "out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "38f6bb11ac14fcb6",
+      "source": "cb87122766b2be7d",
+      "target": "771f2954e396349a",
+      "sourceOutput": "out",
+      "targetInput": "hsv_info"
     }
   ],
   "viewport": {
-    "x": 240.73751720890635,
-    "y": 293.6794097791758,
-    "k": 0.06589825060348144
+    "x": 324.0918476532405,
+    "y": 307.0218669007865,
+    "k": 0.06521734997637128
   }
 }
