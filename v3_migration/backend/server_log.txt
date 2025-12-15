@@ -1,0 +1,211 @@
+[Startup] Keep-alive interval started
+[Startup] IS_HA_ADDON=false, SUPERVISOR_TOKEN=missing
+  _________   ___         __                        __  _                 
+ /_  __/__ \ /   | __  __/ /_____  ____ ___  ____ _/ /_(_)___  ____  _____
+  / /  __/ // /| |/ / / / __/ __ \/ __ `__ \/ __ `/ __/ / __ \/ __ \/ ___/
+ / /  / __// ___ / /_/ / /_/ /_/ / / / / / / /_/ / /_/ / /_/ / / / (__  ) 
+/_/  /____/_/  |_\__,_/\__/\____/_/ /_/ /_/\__,_/\__/_/\____/_/ /_/____/  
+                                                                          
+Welcome to T2Automations - Visual Node-Based Home Automation
+[2025-12-15T19:53:33.015Z] ΓÜá∩╕Å MongoDB attempt 1 failed: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+ΓÜá MongoDB not available - continuing without database
+[2025-12-15T19:53:38.034Z] ΓÜá∩╕Å MongoDB attempt 2 failed: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+[2025-12-15T19:53:38.034Z] ΓÜá∩╕Å MongoDB not available - running without database
+[2025-12-15T19:53:38.259Z] Telegram bot ready
+[2025-12-15T19:53:38.558Z] Γ£à Connected to Hue Bridge
+[2025-12-15T19:53:38.986Z] Γ£à ≡ƒƒí Connected Hue Light: Downstairs Fire Extinguisher (ID: 2)
+[2025-12-15T19:53:39.103Z] Telegram: Device online: Denon AVR-X1700H is OFF
+[2025-12-15T19:53:39.142Z] Γ£à ≡ƒƒí Connected Hue Light: Living Room Lamp North (ID: 3)
+[2025-12-15T19:53:39.251Z] Γ£à ≡ƒƒí Connected Hue Light: Bar Undermount Strip (ID: 4)
+[2025-12-15T19:53:39.360Z] Γ£à ≡ƒƒí Connected Hue Light: Back door sconce upper (ID: 5)
+[2025-12-15T19:53:39.471Z] Γ£à ≡ƒƒí Connected Hue Light: Living room wall washer North (ID: 6)
+[2025-12-15T19:53:39.549Z] Γ£à ≡ƒƒí Connected Hue Light: Living room wall washer south (ID: 7)
+[2025-12-15T19:53:39.642Z] Γ£à ≡ƒƒí Connected Hue Light: Living room ceiling 4 (ID: 8)
+[2025-12-15T19:53:39.752Z] Γ£à ≡ƒƒí Connected Hue Light: Living room ceiling 5 (ID: 9)
+[2025-12-15T19:53:39.861Z] Γ£à ≡ƒƒí Connected Hue Light: Living room ceiling 2 (ID: 11)
+[2025-12-15T19:53:39.987Z] Γ£à ≡ƒƒí Connected Hue Light: Living room ceiling 3 (ID: 12)
+[2025-12-15T19:53:40.098Z] Γ£à ≡ƒƒí Connected Hue Light: Living room ceiling 1 (ID: 13)
+[2025-12-15T19:53:40.208Z] Γ£à ≡ƒƒí Connected Hue Light: House front sconce upper east (ID: 14)
+[2025-12-15T19:53:40.302Z] Γ£à ≡ƒƒí Connected Hue Light: Living Room Lamp South (ID: 15)
+[2025-12-15T19:53:40.394Z] Γ£à ≡ƒƒí Connected Hue Light: Hue bloom Master Bath (ID: 16)
+[2025-12-15T19:53:40.504Z] Γ£à ≡ƒƒí Connected Hue Light: Bar Lamp (ID: 17)
+[2025-12-15T19:53:40.612Z] Γ£à ≡ƒƒí Connected Hue Light: Hue color Leg Lamg (ID: 18)
+[2025-12-15T19:53:40.721Z] Γ£à ≡ƒƒí Connected Hue Light: Kitchen Bar Spot 4 (ID: 19)
+[2025-12-15T19:53:40.828Z] Γ£à ≡ƒƒí Connected Hue Light: Kitchen Bar Spot 2 (ID: 20)
+[2025-12-15T19:53:40.939Z] Γ£à ≡ƒƒí Connected Hue Light: Kitchen Bar Spot 3 (ID: 21)
+[2025-12-15T19:53:41.066Z] Γ£à ≡ƒƒí Connected Hue Light: Kitchen Bar Spot 1 (ID: 22)
+[2025-12-15T19:53:41.173Z] Γ£à ≡ƒƒí Connected Hue Light: Living room ceiling 6 (ID: 23)
+[2025-12-15T19:53:41.282Z] Γ£à Hue setup completed: 21 lights initialized, hueClient: true
+[2025-12-15T19:53:41.429Z] Γ£à info
+[Engine] Socket handlers initialized
+[Engine] Loaded node module: AdditionalNodes.js
+[Engine] Loaded node module: BufferNodes.js
+[ColorNodes] Registered: SplineTimelineColorNode, HSVToRGBNode, RGBToHSVNode, ColorMixerNode
+[Engine] Loaded node module: ColorNodes.js
+[Engine] Loaded node module: DelayNode.js
+[Engine] Loaded node module: HADeviceNodes.js
+[Engine] Loaded node module: HueLightNodes.js
+[Engine] Loaded node module: KasaLightNodes.js
+[Engine] Loaded node module: LogicNodes.js
+[Engine] Loaded node module: SunriseSunsetNode.js
+[Engine] Loaded node module: TimeNodes.js
+[Engine] Loaded node module: UtilityNodes.js
+[Engine] Loaded node module: WeatherNodes.js
+[Engine] Loaded 53 node types
+[Engine] Looking for last active graph at: C:\X_T2_AutoTron2.1\v3_migration\Saved_Graphs\.last_active.json
+[BackendEngine] Attempting to load: C:\X_T2_AutoTron2.1\v3_migration\Saved_Graphs\.last_active.json
+[BackendEngine] Loaded graph from C:\X_T2_AutoTron2.1\v3_migration\Saved_Graphs\.last_active.json
+[BackendEngine] Nodes: 107, Connections: 106
+[Engine] Loaded last active graph with 107 nodes
+[Engine] Auto-started with 107 nodes
+[Server] Keep-alive active, handles: 6
+Γ£ô Server running on http://0.0.0.0:3000
+[2025-12-15T19:53:42.025Z] Queued message (rate limit)
+[2025-12-15T19:53:42.117Z] Queued message (rate limit)
+[2025-12-15T19:53:42.253Z] Queued message (rate limit)
+[2025-12-15T19:53:42.285Z] Queued message (rate limit)
+[2025-12-15T19:53:42.664Z] Queued message (rate limit)
+[2025-12-15T19:53:42.666Z] Queued message (rate limit)
+[2025-12-15T19:53:42.970Z] Queued message (rate limit)
+[2025-12-15T19:53:43.047Z] Queued message (rate limit)
+[2025-12-15T19:53:43.917Z] Telegram: Device online: Basement Left is ON
+[2025-12-15T19:53:43.935Z] Queued message (rate limit)
+[2025-12-15T19:53:44.017Z] Queued message (rate limit)
+[2025-12-15T19:53:44.183Z] Queued message (rate limit)
+[2025-12-15T19:53:44.776Z] Queued message (rate limit)
+[2025-12-15T19:53:46.258Z] Queued message (rate limit)
+[2025-12-15T19:53:49.202Z] Telegram: Device online: Electric Blanket is ON
+[2025-12-15T19:53:52.364Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Back Door Sconce Upper  (ID: 80127BF2C88E692FA373C5A0708C11F123637773, IP: 192.168.1.29)
+[2025-12-15T19:53:53.372Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Lower Sconce  (ID: 801216FCEC2F1C2E5A37826B4056743D2362B314, IP: 192.168.1.22)
+[2025-12-15T19:53:54.489Z] Telegram: Device online: Front West Upper Sconce is OFF
+[2025-12-15T19:53:55.497Z] Queued message (rate limit)
+TCP 192.168.1.22:9999 Error: TCP Timeout after 10000ms
+192.168.1.22:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[Front East Lower Sconce ] device.send() Error: TCP Timeout after 10000ms
+192.168.1.22:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[2025-12-15T19:53:57.394Z] ΓÜá∩╕Å Device offline: Front East Lower Sconce  (will retry with backoff)
+[2025-12-15T19:53:58.418Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Upper Sconce  (ID: 801247CCB03E8832A69D39B40F597F79236371DD, IP: 192.168.1.28)
+[2025-12-15T19:53:59.778Z] Telegram: Device online: Front West Lower Sconce is OFF
+[2025-12-15T19:54:05.070Z] Telegram: Device online: House Back Lower Sconce is OFF
+TCP 192.168.1.29:9999 Error: TCP Timeout after 10000ms
+192.168.1.29:9999 {"smartlife.iot.smartbulb.lightingservice":{"get_light_state":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[Back Door Sconce Upper ] device.send() Error: TCP Timeout after 10000ms
+192.168.1.29:9999 {"smartlife.iot.smartbulb.lightingservice":{"get_light_state":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[2025-12-15T19:54:05.510Z] ΓÜá∩╕Å Device offline: Back Door Sconce Upper  (will retry with backoff)
+TCP 192.168.1.22:9999 Error: TCP Timeout after 10000ms
+192.168.1.22:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[Front East Lower Sconce ] device.send() Error: TCP Timeout after 10000ms
+192.168.1.22:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[2025-12-15T19:54:07.408Z] ΓÜá∩╕Å Device offline: Front East Lower Sconce  (will retry with backoff)
+[2025-12-15T19:54:08.510Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Basement Left (ID: 8012E25E0E92B6D4C67C9CE52899786522C910A0, IP: 192.168.1.61)
+[2025-12-15T19:54:08.510Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Lower Sconce  (ID: 801216FCEC2F1C2E5A37826B4056743D2362B314, IP: 192.168.1.22)
+[2025-12-15T19:54:10.366Z] Telegram: Device online: Downstairs Corner Fixture is OFF
+[2025-12-15T19:54:14.573Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Lower Sconce  (ID: 801216FCEC2F1C2E5A37826B4056743D2362B314, IP: 192.168.1.22)
+TCP 192.168.1.29:9999 Error: TCP Timeout after 10000ms
+192.168.1.29:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[Back Door Sconce Upper ] device.send() Error: TCP Timeout after 10000ms
+192.168.1.29:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[2025-12-15T19:54:15.515Z] ΓÜá∩╕Å Device offline: Back Door Sconce Upper  (will retry with backoff)
+[2025-12-15T19:54:15.667Z] Telegram: Device online: Copper Fountain is ON
+TCP 192.168.1.22:9999 Error: TCP Timeout after 10000ms
+192.168.1.22:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[Front East Lower Sconce ] device.send() Error: TCP Timeout after 10000ms
+192.168.1.22:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[2025-12-15T19:54:17.411Z] ΓÜá∩╕Å Device offline: Front East Lower Sconce  (will retry with backoff)
+[2025-12-15T19:54:19.603Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Lower Sconce  (ID: 801216FCEC2F1C2E5A37826B4056743D2362B314, IP: 192.168.1.22)
+[2025-12-15T19:54:20.962Z] Telegram: Device online: Dads Shark is ON
+[2025-12-15T19:54:23.640Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front West Lower Sconce  (ID: 8012A983D35000C02500D4DD4A73E9D522C9CCC3, IP: 192.168.1.24)
+[2025-12-15T19:54:23.640Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front Middle Upper Sconce  (ID: 8012605533B2744191189812184F487622C8F7A8, IP: 192.168.1.20)
+[2025-12-15T19:54:23.640Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Basement Right (ID: 801203022F62D84739407F7C49300DA622C8BDA6, IP: 192.168.1.11)
+[2025-12-15T19:54:23.640Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Upper Sconce  (ID: 801247CCB03E8832A69D39B40F597F79236371DD, IP: 192.168.1.28)
+[2025-12-15T19:54:24.656Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Lower Sconce  (ID: 801216FCEC2F1C2E5A37826B4056743D2362B314, IP: 192.168.1.22)
+TCP 192.168.1.29:9999 Error: TCP Timeout after 10000ms
+192.168.1.29:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[Back Door Sconce Upper ] device.send() Error: TCP Timeout after 10000ms
+192.168.1.29:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[2025-12-15T19:54:25.517Z] ΓÜá∩╕Å Device offline: Back Door Sconce Upper  (will retry with backoff)
+[2025-12-15T19:54:26.253Z] Telegram: Device online: Low Voltage Front is OFF
+TCP 192.168.1.22:9999 Error: TCP Timeout after 10000ms
+192.168.1.22:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[Front East Lower Sconce ] device.send() Error: TCP Timeout after 10000ms
+192.168.1.22:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[2025-12-15T19:54:27.424Z] ΓÜá∩╕Å Device offline: Front East Lower Sconce  (will retry with backoff)
+[2025-12-15T19:54:28.682Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Lower Sconce  (ID: 801216FCEC2F1C2E5A37826B4056743D2362B314, IP: 192.168.1.22)
+[Server] Uptime: 1 minutes
+[2025-12-15T19:54:29.690Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front West Upper Sconce  (ID: 80124882AAEB57D4FCDDDC6976EF784B22C8E9FD, IP: 192.168.1.25)
+[2025-12-15T19:54:29.691Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: House Back Lower Sconce  (ID: 801283802BD8B885540D1FE8F22A86572363C840, IP: 192.168.1.32)
+[2025-12-15T19:54:31.549Z] Telegram: Device online: Front Middle Lower Sconce is OFF
+[2025-12-15T19:54:33.701Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Upper Sconce  (ID: 801247CCB03E8832A69D39B40F597F79236371DD, IP: 192.168.1.28)
+[2025-12-15T19:54:36.715Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front West Lower Sconce  (ID: 8012A983D35000C02500D4DD4A73E9D522C9CCC3, IP: 192.168.1.24)
+[2025-12-15T19:54:36.716Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Dads Shark (ID: 8006ED663F6679B22A1F413054488E0422BE46AE, IP: 192.168.1.9)
+[2025-12-15T19:54:36.716Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front Middle Lower Sconce  (ID: 8012487854074C894672E83BC06E27EE22C9B114, IP: 192.168.1.23)
+[2025-12-15T19:54:36.716Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front Middle Upper Sconce  (ID: 8012605533B2744191189812184F487622C8F7A8, IP: 192.168.1.20)
+[2025-12-15T19:54:36.716Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Basement Left (ID: 8012E25E0E92B6D4C67C9CE52899786522C910A0, IP: 192.168.1.61)
+[2025-12-15T19:54:36.716Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Low Voltage Front  (ID: 8006019A9DF368EDD0D3C54C64B739A222BE719B, IP: 192.168.1.12)
+[2025-12-15T19:54:36.716Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Back Door Sconce Upper  (ID: 80127BF2C88E692FA373C5A0708C11F123637773, IP: 192.168.1.29)
+[2025-12-15T19:54:36.831Z] Telegram: Device online: Front Middle Upper Sconce is OFF
+TCP 192.168.1.22:9999 Error: TCP Timeout after 10000ms
+192.168.1.22:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[Front East Lower Sconce ] device.send() Error: TCP Timeout after 10000ms
+192.168.1.22:9999 {"system":{"get_sysinfo":{}}}
+    at Timeout._onTimeout (C:\X_T2_AutoTron2.1\v3_migration\backend\node_modules\tplink-smarthome-api\lib\network\tcp-socket.js:58:36)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+[2025-12-15T19:54:37.426Z] ΓÜá∩╕Å Device offline: Front East Lower Sconce  (will retry with backoff)
+[2025-12-15T19:54:39.724Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front West Upper Sconce  (ID: 80124882AAEB57D4FCDDDC6976EF784B22C8E9FD, IP: 192.168.1.25)
+[2025-12-15T19:54:39.724Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: House Back Lower Sconce  (ID: 801283802BD8B885540D1FE8F22A86572363C840, IP: 192.168.1.32)
+[2025-12-15T19:54:40.726Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front Middle Lower Sconce  (ID: 8012487854074C894672E83BC06E27EE22C9B114, IP: 192.168.1.23)
+[2025-12-15T19:54:40.726Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front Middle Upper Sconce  (ID: 8012605533B2744191189812184F487622C8F7A8, IP: 192.168.1.20)
+[2025-12-15T19:54:40.726Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Basement Left (ID: 8012E25E0E92B6D4C67C9CE52899786522C910A0, IP: 192.168.1.61)
+[2025-12-15T19:54:40.726Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Low Voltage Front  (ID: 8006019A9DF368EDD0D3C54C64B739A222BE719B, IP: 192.168.1.12)
+[2025-12-15T19:54:40.726Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Upper Sconce  (ID: 801247CCB03E8832A69D39B40F597F79236371DD, IP: 192.168.1.28)
+[2025-12-15T19:54:40.726Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Front East Lower Sconce  (ID: 801216FCEC2F1C2E5A37826B4056743D2362B314, IP: 192.168.1.22)
+[2025-12-15T19:54:41.727Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Back Door Sconce Upper  (ID: 80127BF2C88E692FA373C5A0708C11F123637773, IP: 192.168.1.29)
+[2025-12-15T19:54:42.112Z] Telegram: Device online: Low Voltage Backyard is OFF
+[2025-12-15T19:54:43.741Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: Copper Fountain  (ID: 80065D313D27312EAA60D828D18FFCD9235A184D, IP: 192.168.1.26)
+[2025-12-15T19:54:43.742Z] ΓÜá∩╕Å ≡ƒö┤ Device offline: House Back Lower Sconce  (ID: 801283802BD8B885540D1FE8F22A86572363C840, IP: 192.168.1.32)

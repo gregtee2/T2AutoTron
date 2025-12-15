@@ -14,16 +14,20 @@
 
 module.exports = {
   // === IDENTITY ===
-  id: 'TimeOfDayNode',
+  id: 'UnifiedTimeOfDayNode',  // Different from existing TimeOfDayNode for POC testing
   version: '1.0.0',
   
+  // === POC FLAG ===
+  // Hidden from frontend context menu - backend engine uses this, frontend uses existing pretty UI
+  hidden: true,
+  
   // === UI METADATA ===
-  label: 'Time of Day',
+  label: 'Time of Day (Unified)',  // Different label to distinguish in context menu
   category: 'Timer/Event',
   icon: '⏰',
   color: '#4a90d9',
   width: 450,
-  height: 200, // Auto-calculated based on content
+  height: 600, // Matches existing TimeOfDayNode height for proper UI display
   helpText: `Time-based trigger that activates during specified hours.
 
 Set start and stop times to define an active window.

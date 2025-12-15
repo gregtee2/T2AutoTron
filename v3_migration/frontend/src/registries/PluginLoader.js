@@ -88,6 +88,23 @@ export async function loadPlugins() {
             }
         }
         
+        // ============================================
+        // PHASE 2: Load Unified Node Definitions (POC)
+        // These are new-style .node.js files from shared/nodes/
+        // ============================================
+        updateProgress({ status: 'Loading unified nodes...' });
+        try {
+            const { loadUnifiedPlugins } = await import('./UnifiedNodeLoader.js');
+            const unifiedNodes = await loadUnifiedPlugins();
+            if (unifiedNodes.length > 0) {
+                console.log(`[PluginLoader] Loaded ${unifiedNodes.length} unified nodes:`, unifiedNodes);
+                loaded += unifiedNodes.length;
+            }
+        } catch (unifiedError) {
+            console.warn('[PluginLoader] Unified plugins not available:', unifiedError.message);
+            // Not a fatal error - unified plugins are optional during POC
+        }
+        
         const failCount = loadingState.failedPlugins.length;
         updateProgress({ 
             isLoading: false, 

@@ -72,6 +72,8 @@ router.post('/start', async (req, res) => {
     // Load builtin nodes if not already loaded
     if (registry.size === 0) {
       await engineModule.loadBuiltinNodes();
+      // Also load unified nodes (single-source-of-truth definitions)
+      await engineModule.loadUnifiedNodes();
     }
     
     // Load last active graph if no graph is loaded
@@ -144,6 +146,8 @@ router.post('/load', express.json(), async (req, res) => {
     // Load builtin nodes if not already loaded
     if (registry.size === 0) {
       await engineModule.loadBuiltinNodes();
+      // Also load unified nodes (single-source-of-truth definitions)
+      await engineModule.loadUnifiedNodes();
     }
     
     let graphPath = req.body.graphPath;
@@ -426,6 +430,162 @@ router.get('/graphs', async (req, res) => {
     });
   } catch (error) {
     console.error('[Engine API] Error listing graphs:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/engine/log/help
+ * Explains log categories and what they mean
+ */
+router.get('/log/help', (req, res) => {
+  res.json({
+    success: true,
+    logLevels: {
+      0: 'QUIET - Only errors and device commands',
+      1: 'NORMAL - State changes + device commands (default)',
+      2: 'VERBOSE - Everything including every tick (huge logs!)'
+    },
+    categories: {
+      'ENGINE': 'Engine start/stop/status events',
+      'DEVICE-CMD': '📤 Command SENT to device (the "order placed")',
+      'HA-DEVICE-SUCCESS': '✅ Device acknowledged command (the "order delivered")',
+      'HA-DEVICE-ERROR': '❌ Device command failed (the "order lost")',
+      'TRIGGER': '🔀 Node trigger state changed (true→false or vice versa)',
+      'BUFFER-CHANGE': '📝 Buffer value changed (color, brightness, etc.)',
+      'BUFFER-SET': 'Buffer value set (verbose mode only)',
+      'BUFFER-GET': 'Buffer value read (verbose mode only)',
+      'NODE': 'Node execution details (verbose mode only)',
+      'HA-INPUTS': 'Inputs received by HA device nodes'
+    },
+    endpoints: {
+      'GET /api/engine/log/level': 'Get current log level',
+      'POST /api/engine/log/level': 'Set log level (body: { level: 0|1|2 })',
+      'GET /api/engine/log/audit': 'Get audit summary from recent logs',
+      'GET /api/engine/log/audit?lines=500': 'Analyze last 500 lines',
+      'GET /api/engine/log/audit?category=DEVICE-CMD': 'Filter by category'
+    },
+    logFile: 'crashes/engine_debug.log',
+    tip: 'To see what lights were controlled overnight, check DEVICE-CMD entries. To verify they worked, check HA-DEVICE-SUCCESS/ERROR.'
+  });
+});
+
+/**
+ * GET /api/engine/log/level
+ * Get current log level
+ */
+router.get('/log/level', (req, res) => {
+  const engineLogger = require('../../engine/engineLogger');
+  res.json({
+    success: true,
+    level: engineLogger.getLogLevel(),
+    levelName: ['QUIET', 'NORMAL', 'VERBOSE'][engineLogger.getLogLevel()] || 'UNKNOWN'
+  });
+});
+
+/**
+ * POST /api/engine/log/level
+ * Set log level (0=QUIET, 1=NORMAL, 2=VERBOSE)
+ * Body: { level: number }
+ */
+router.post('/log/level', express.json(), (req, res) => {
+  const engineLogger = require('../../engine/engineLogger');
+  const { level } = req.body;
+  
+  if (level === undefined || level < 0 || level > 2) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid level. Use 0 (QUIET), 1 (NORMAL), or 2 (VERBOSE)'
+    });
+  }
+  
+  engineLogger.setLogLevel(level);
+  res.json({
+    success: true,
+    message: `Log level set to ${level}`,
+    levelName: ['QUIET', 'NORMAL', 'VERBOSE'][level]
+  });
+});
+
+/**
+ * GET /api/engine/log/audit
+ * Get audit summary from recent log file
+ * Query params:
+ *   - lines: number of lines to analyze (default 1000)
+ *   - category: filter by category (DEVICE-CMD, TRIGGER, etc.)
+ */
+router.get('/log/audit', async (req, res) => {
+  try {
+    const fs = require('fs').promises;
+    const engineLogger = require('../../engine/engineLogger');
+    const logFile = engineLogger.LOG_FILE;
+    
+    const maxLines = parseInt(req.query.lines) || 1000;
+    const filterCategory = req.query.category?.toUpperCase();
+    
+    // Read log file
+    let logContent;
+    try {
+      logContent = await fs.readFile(logFile, 'utf8');
+    } catch (err) {
+      return res.json({
+        success: true,
+        audit: {
+          error: 'No log file found',
+          summary: {}
+        }
+      });
+    }
+    
+    // Get last N lines
+    const lines = logContent.split('\n').slice(-maxLines);
+    
+    // Parse and count by category
+    const categoryCounts = {};
+    const deviceCommands = [];
+    const triggers = [];
+    const errors = [];
+    
+    const linePattern = /^\[([^\]]+)\] \[([^\]]+)\] (.*)$/;
+    
+    for (const line of lines) {
+      const match = line.match(linePattern);
+      if (!match) continue;
+      
+      const [, timestamp, category, message] = match;
+      
+      // Skip if filtering and doesn't match
+      if (filterCategory && category !== filterCategory) continue;
+      
+      categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+      
+      // Collect interesting entries
+      if (category === 'DEVICE-CMD' && deviceCommands.length < 50) {
+        deviceCommands.push({ timestamp, message });
+      }
+      if (category === 'TRIGGER' && triggers.length < 50) {
+        triggers.push({ timestamp, message });
+      }
+      if (category.includes('ERROR') && errors.length < 20) {
+        errors.push({ timestamp, category, message });
+      }
+    }
+    
+    res.json({
+      success: true,
+      audit: {
+        linesAnalyzed: lines.length,
+        categoryCounts,
+        recentDeviceCommands: deviceCommands.slice(-20),
+        recentTriggers: triggers.slice(-20),
+        errors,
+        logFile
+      }
+    });
+  } catch (error) {
     res.status(500).json({
       success: false,
       error: error.message

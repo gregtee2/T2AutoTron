@@ -64,6 +64,31 @@
         }
 
         data() {
+            // Try to use unified execute() for consistent logic with backend engine
+            if (window.executeUnified) {
+                // Initialize internal state if not present
+                if (!this._unifiedState) {
+                    this._unifiedState = {
+                        lastState: null,
+                        currentState: false
+                    };
+                }
+                
+                const result = window.executeUnified('UnifiedTimeOfDayNode', {}, this.properties, this._unifiedState);
+                if (result) {
+                    // Debug: Show unified is being used (remove after testing)
+                    if (!this._loggedUnified) {
+                        console.log('[TimeOfDayNode] ✅ Using UNIFIED execute() - same logic as backend engine');
+                        this._loggedUnified = true;
+                    }
+                    // Sync calculated state back to properties for UI display
+                    this.properties.currentState = result.state;
+                    return result;
+                }
+            }
+            
+            // Fallback to local logic if unified not available
+            console.log('[TimeOfDayNode] ⚠️ Falling back to local logic (unified not available)');
             const formatTime = (hour, minute, ampm) => {
                 const m = String(minute).padStart(2, '0');
                 return `${hour}:${m} ${ampm}`;

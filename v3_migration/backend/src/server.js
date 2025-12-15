@@ -343,6 +343,99 @@ app.get('/api/plugins', async (req, res) => {
   }
 });
 
+// ============================================
+// UNIFIED NODE DEFINITIONS API (POC)
+// Serves .node.js files from shared/nodes/ as browser-compatible scripts
+// ============================================
+app.get('/api/unified-plugins', async (req, res) => {
+  debug('API Request: /api/unified-plugins');
+  try {
+    const sharedNodesDir = path.join(__dirname, '../../shared/nodes');
+    
+    // Check if shared/nodes directory exists
+    try {
+      await fs.access(sharedNodesDir);
+    } catch {
+      // No unified nodes yet - return empty array
+      res.json([]);
+      return;
+    }
+    
+    // Recursively find all .node.js files
+    async function findNodeFiles(dir, basePath = '') {
+      const results = [];
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
+        
+        if (entry.isDirectory()) {
+          results.push(...await findNodeFiles(fullPath, relativePath));
+        } else if (entry.name.endsWith('.node.js')) {
+          results.push(relativePath);
+        }
+      }
+      return results;
+    }
+    
+    const nodeFiles = await findNodeFiles(sharedNodesDir);
+    const pluginPaths = nodeFiles.map(file => `unified/${file}`);
+    
+    debug('Found unified nodes:', pluginPaths.length, 'files');
+    res.json(pluginPaths);
+  } catch (error) {
+    console.error(`Failed to list unified plugins: ${error.message}`);
+    res.status(500).json({ error: 'Failed to list unified plugin files' });
+  }
+});
+
+// Serve individual unified node definition as browser-compatible IIFE
+app.get('/unified/:category/:filename', async (req, res) => {
+  const { category, filename } = req.params;
+  debug(`API Request: /unified/${category}/${filename}`);
+  
+  try {
+    const filePath = path.join(__dirname, '../../shared/nodes', category, filename);
+    
+    // Security: Ensure path doesn't escape the nodes directory
+    const normalizedPath = path.normalize(filePath);
+    const nodesDir = path.normalize(path.join(__dirname, '../../shared/nodes'));
+    if (!normalizedPath.startsWith(nodesDir)) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+    
+    const content = await fs.readFile(filePath, 'utf8');
+    
+    // Wrap the CommonJS module in a browser-compatible IIFE
+    // This creates a fake module.exports, runs the code, then registers the definition
+    const wrappedCode = `
+(function() {
+  // Create fake CommonJS environment
+  var module = { exports: {} };
+  var exports = module.exports;
+  
+  // Execute the node definition
+  ${content}
+  
+  // Register with the unified loader (if available)
+  if (window.UnifiedNodeLoader) {
+    window.UnifiedNodeLoader.registerDefinition(module.exports);
+  } else {
+    console.warn('[UnifiedPlugin] window.UnifiedNodeLoader not available for:', '${filename}');
+  }
+})();
+`;
+    
+    res.type('application/javascript');
+    res.send(wrappedCode);
+  } catch (error) {
+    console.error(`Failed to serve unified plugin ${category}/${filename}:`, error.message);
+    res.status(404).json({ error: 'Unified plugin not found' });
+  }
+});
+
 // Serve index.html with correct base URL for HA ingress
 // This must come BEFORE express.static to intercept the root path
 app.get('/', async (req, res) => {

@@ -9,6 +9,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3000',
       '/plugins': 'http://localhost:3000',
+      '/unified': 'http://localhost:3000',  // Unified node definitions (POC)
       '/socket.io': {
         target: 'http://localhost:3000',
         ws: true

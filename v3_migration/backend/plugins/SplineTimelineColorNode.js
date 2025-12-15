@@ -1083,6 +1083,58 @@
 
 
         data(inputs) {
+            // === UNIFIED ARCHITECTURE: Call shared execute() if available ===
+            if (typeof window !== 'undefined' && window.executeUnified) {
+                // Initialize internal state if needed
+                if (!this._unifiedState) {
+                    this._unifiedState = {
+                        timerStart: null,
+                        pingPongDirection: 1,
+                        lastOutputTime: 0,
+                        lastOutputHsv: null,
+                        position: 0,
+                        isInRange: false
+                    };
+                }
+                
+                try {
+                    // Provide spline evaluate function from T2Spline if available
+                    const context = {
+                        now: () => new Date(),
+                        splineEvaluate: window.T2Spline?.evaluate || null
+                    };
+                    
+                    // Call unified execute
+                    const result = window.executeUnified(
+                        'SplineTimelineColorNode',
+                        inputs,
+                        this.properties,
+                        this._unifiedState,
+                        context
+                    );
+                    
+                    if (result && result.hsvInfo) {
+                        // Sync state back to properties for UI
+                        this.properties.position = this._unifiedState.position;
+                        this.properties.isInRange = this._unifiedState.isInRange;
+                        this.properties.outputHue = result.hsvInfo.hue;
+                        this.properties.outputSaturation = result.hsvInfo.saturation;
+                        this.properties.outputBrightness = result.hsvInfo.brightness;
+                        this.properties.outputRgb = result.hsvInfo.rgb;
+                        
+                        // Sync timer state
+                        this.timerStart = this._unifiedState.timerStart;
+                        this.pingPongDirection = this._unifiedState.pingPongDirection;
+                        
+                        console.log('[SplineTimelineColorNode] ✅ Using UNIFIED execute() - same logic as backend engine');
+                        return result;
+                    }
+                } catch (err) {
+                    console.warn('[SplineTimelineColorNode] Unified execute failed, using fallback:', err.message);
+                }
+            }
+            
+            // === FALLBACK: Original data() logic ===
             const inputValue = inputs.value?.[0];
             const trigger = inputs.trigger?.[0];
             const timerDurationInput = inputs.timerDuration?.[0];

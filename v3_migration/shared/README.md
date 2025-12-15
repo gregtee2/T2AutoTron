@@ -1,23 +1,55 @@
 # Unified Node Architecture
 
-**Status**: POC Phase 1 Complete ✅  
+**Status**: POC Complete ✅ (Architecture Validated)  
 **Branch**: `feature/unified-architecture`
 
 ## 🦴 What Is This? (Caveman Edition)
 
 Before, we had **TWO recipe books** - one for the pretty UI (frontend plugins) and one for the robot worker (backend engine). If you changed a recipe in one book, you had to manually copy it to the other book.
 
-Now we have **ONE recipe book** that both use. Change it once, both update!
+Now we have **ONE recipe book** for the logic, but we keep the **pretty hand-drawn pictures** (custom React components) separate. The robot reads the recipe directly, and the pretty UI also reads the same recipe but draws its own nice pictures.
+
+## Architecture Decision: Beautiful UI + Unified Logic
+
+After POC testing, we discovered that auto-generating UI from schema produces functional but ugly interfaces. T2AutoTron's value is its **beautiful, elegant UI** (unlike Node-RED).
+
+### The Solution
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  HAGenericDevice.node.js (Unified Definition)               │
+│  - execute() function (the LOGIC) ← SHARED                  │
+│  - inputs/outputs schema                                    │
+│  - properties schema                                        │
+│  - hidden: true ← Don't show auto-generated UI              │
+└─────────────────────────────────────────────────────────────┘
+              │                           │
+              ▼                           ▼
+┌─────────────────────────┐   ┌─────────────────────────────┐
+│  Backend Engine         │   │  Frontend Plugin            │
+│  Uses execute() directly│   │  HAGenericDeviceNode.js     │
+│  via EngineNodeWrapper  │   │  - Beautiful custom React UI│
+│                         │   │  - (Future: call unified    │
+│                         │   │    execute() for logic)     │
+└─────────────────────────┘   └─────────────────────────────┘
+```
+
+### The `hidden: true` Flag
+
+Unified definitions with `hidden: true` are:
+- ✅ Loaded by the backend engine for 24/7 execution
+- ❌ NOT registered in the frontend context menu
+- The frontend continues using the existing pretty UI plugins
 
 ## Current Status
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| **1. POC - First Node** | ✅ Complete | `TimeOfDayNode` unified |
-| **2. POC - Second Node** | ✅ Complete | `DelayNode` (4 modes: delay, debounce, throttle, retriggerable) |
-| **3. POC - Third Node** | ✅ Complete | `HAGenericDeviceNode` (device control with async actions) |
-| **4. Frontend Loader** | ⏳ Next | Auto-generate React components from definitions |
-| **5. Full Migration** | ⏳ Future | All 47 plugins → unified format |
+| **1. POC - TimeOfDay** | ✅ Complete | Unified definition works in backend |
+| **2. POC - DelayNode** | ✅ Complete | 4 modes working |
+| **3. POC - HAGenericDevice** | ✅ Complete | Delegation pattern working |
+| **4. UI Decision** | ✅ Decided | Keep custom UIs, hide auto-generated |
+| **5. Full Migration** | 🔮 Future | Migrate logic, keep existing UIs |
 
 ## File Structure
 

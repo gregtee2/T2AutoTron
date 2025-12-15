@@ -19,13 +19,17 @@ module.exports = {
   id: 'DelayNode',
   version: '1.0.0',
   
+  // === POC FLAG ===
+  // Hidden from frontend context menu - backend engine uses this, frontend uses existing pretty UI
+  hidden: true,
+  
   // === UI METADATA ===
   label: 'Delay',
   category: 'Timer/Event',
   icon: '⏱️',
   color: '#ce93d8',
-  width: 260,
-  height: 280,
+  width: 280,
+  height: 350,
   helpText: `Time-based signal control for automations.
 
 Modes:

@@ -689,6 +689,92 @@ class PushbuttonNode {
 }
 
 // ============================================================================
+// HSV CONTROL NODE
+// Manual HSV sliders - outputs static HSV values from saved properties
+// ============================================================================
+class HSVControlNode {
+  static type = 'HSVControlNode';
+  
+  constructor(id, properties = {}) {
+    this.id = id;
+    this.type = HSVControlNode.type;
+    this.properties = {
+      hueShift: 10,
+      saturation: 20,
+      brightness: 128,
+      transitionTime: 0,
+      ...properties
+    };
+    this.inputs = ['hsv_in', 'scene_hsv'];
+    this.outputs = ['hsv_out'];
+  }
+  
+  process(inputs = {}) {
+    // Scene input takes priority
+    const scene = inputs.scene_hsv?.[0] || inputs.scene_hsv;
+    if (scene && typeof scene === 'object') {
+      return { hsv_out: scene };
+    }
+    
+    // Pass through hsv_in if present
+    const inputHSV = inputs.hsv_in?.[0] || inputs.hsv_in;
+    if (inputHSV && typeof inputHSV === 'object') {
+      return { hsv_out: inputHSV };
+    }
+    
+    // Otherwise output from saved properties (static values)
+    return {
+      hsv_out: {
+        hue: this.properties.hueShift / 360,
+        saturation: this.properties.saturation / 100,
+        brightness: this.properties.brightness,
+        transition: this.properties.transitionTime
+      }
+    };
+  }
+  
+  restore(state) {
+    if (state.properties) Object.assign(this.properties, state.properties);
+  }
+}
+
+// ============================================================================
+// INTEGER SELECTOR NODE
+// Outputs a static integer value from saved properties
+// ============================================================================
+class IntegerSelectorNode {
+  static type = 'IntegerSelectorNode';
+  
+  constructor(id, properties = {}) {
+    this.id = id;
+    this.type = IntegerSelectorNode.type;
+    this.properties = {
+      value: 0,
+      min: 0,
+      max: 10,
+      ...properties
+    };
+    this.inputs = [];
+    this.outputs = ['value'];
+  }
+  
+  process() {
+    return { value: this.properties.value };
+  }
+  
+  restore(state) {
+    if (state.properties) {
+      Object.assign(this.properties, state.properties);
+      // Clamp value to min/max
+      this.properties.value = Math.max(
+        this.properties.min,
+        Math.min(this.properties.max, this.properties.value)
+      );
+    }
+  }
+}
+
+// ============================================================================
 // REGISTER ALL NODES
 // ============================================================================
 function register(registry) {
@@ -704,6 +790,9 @@ function register(registry) {
   registry.register('PushbuttonNode', PushbuttonNode);
   // Also register as "Toggle" alias
   registry.register('Toggle', PushbuttonNode);
+  // HSV Control and Integer Selector
+  registry.register('HSVControlNode', HSVControlNode);
+  registry.register('IntegerSelectorNode', IntegerSelectorNode);
 }
 
 module.exports = {
@@ -718,5 +807,7 @@ module.exports = {
   LogicConditionNode,
   LogicOperationsNode,
   PushbuttonNode,
+  HSVControlNode,
+  IntegerSelectorNode,
   ColorUtils
 };

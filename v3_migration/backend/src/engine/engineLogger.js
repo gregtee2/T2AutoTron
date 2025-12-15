@@ -15,9 +15,15 @@
 const fs = require('fs');
 const path = require('path');
 
-// Log to crashes folder alongside other logs
-// Path: backend/src/engine -> backend/src -> backend -> crashes (which is in v3_migration/)
-const LOG_DIR = path.join(__dirname, '..', '..', '..', 'crashes');
+// Detect if running in HA add-on (Docker container)
+const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
+
+// Log to crashes folder - use persistent /data/ in Docker, relative path locally
+// In add-on: /data/crashes (persistent volume)
+// Locally: v3_migration/crashes (relative to backend folder)
+const LOG_DIR = IS_HA_ADDON 
+  ? '/data/crashes' 
+  : path.join(__dirname, '..', '..', '..', 'crashes');
 const LOG_FILE = path.join(LOG_DIR, 'engine_debug.log');
 const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB max
 

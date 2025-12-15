@@ -64,6 +64,51 @@
         }
 
         data() {
+            // === UNIFIED ARCHITECTURE: Call shared execute() if available ===
+            if (typeof window !== 'undefined' && window.executeUnified) {
+                // Initialize internal state if needed
+                if (!this._unifiedState) {
+                    this._unifiedState = {
+                        next_on_date: null,
+                        next_off_date: null,
+                        currentState: false,
+                        lastOnTrigger: null,
+                        lastOffTrigger: null
+                    };
+                }
+                
+                try {
+                    // Call unified execute with our properties
+                    const result = window.executeUnified(
+                        'SunriseSunsetNode',
+                        {},  // No inputs for this node
+                        this.properties,
+                        this._unifiedState
+                    );
+                    
+                    if (result) {
+                        // Sync unified state back to properties for UI display
+                        if (this._unifiedState.next_on_date) {
+                            this.properties.next_on_date = this._unifiedState.next_on_date;
+                        }
+                        if (this._unifiedState.next_off_date) {
+                            this.properties.next_off_date = this._unifiedState.next_off_date;
+                        }
+                        this.properties.currentState = result.state;
+                        
+                        console.log('[SunriseSunsetNode] ✅ Using UNIFIED execute() - same logic as backend engine');
+                        return {
+                            state: result.state,
+                            startTime: result.startTime || '',
+                            endTime: result.endTime || ''
+                        };
+                    }
+                } catch (err) {
+                    console.warn('[SunriseSunsetNode] Unified execute failed, using fallback:', err.message);
+                }
+            }
+            
+            // === FALLBACK: Original data() logic ===
             const formatTime = (date) => {
                 if (!date) return '';
                 const d = new Date(date);

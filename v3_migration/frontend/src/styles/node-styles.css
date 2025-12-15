@@ -2741,3 +2741,79 @@
   border-color: rgba(255, 204, 0, 0.3);
   background: rgba(255, 204, 0, 0.05);
 }
+
+/* ============================================================================
+   UNIFIED NODE STYLES - Common styles for dynamically loaded unified nodes
+   ============================================================================ */
+
+.unified-node {
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 8px;
+  color: #fff;
+  font-family: inherit;
+}
+
+.unified-node .title {
+  font-size: 14px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 8px;
+}
+
+.unified-inputs-section,
+.unified-outputs-section {
+  padding: 4px 0;
+}
+
+.unified-input-row,
+.unified-output-row {
+  min-height: 24px;
+}
+
+.unified-socket-label {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.unified-node .content {
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.unified-node .control-row {
+  min-height: 28px;
+}
+
+.unified-node .control-label {
+  font-size: 12px;
+  color: #aaa;
+  min-width: 80px;
+}
+
+.unified-node input[type="text"],
+.unified-node input[type="number"],
+.unified-node select {
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.unified-node input[type="text"]:focus,
+.unified-node input[type="number"]:focus,
+.unified-node select:focus {
+  border-color: #4a90d9;
+  outline: none;
+}
+
+.unified-node button {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.unified-node button:hover {
+  filter: brightness(1.1);
+}

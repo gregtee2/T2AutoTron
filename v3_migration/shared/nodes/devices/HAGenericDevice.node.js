@@ -26,13 +26,17 @@ module.exports = {
   id: 'HAGenericDeviceNode',
   version: '1.0.0',
   
+  // === POC FLAG ===
+  // Hidden from frontend context menu - backend engine uses this, frontend uses existing pretty UI
+  hidden: true,
+  
   // === UI METADATA ===
   label: 'HA Generic Device',
   category: 'Home Assistant',
   icon: '🏠',
   color: '#03a9f4',
-  width: 300,
-  height: 350,
+  width: 420,
+  height: 450,
   helpText: `Control Home Assistant devices (lights, switches, sensors).
 
 Add one or more devices, then connect a trigger signal.
