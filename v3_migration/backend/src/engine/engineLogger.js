@@ -175,8 +175,9 @@ Session duration: ${sessionStart ? Math.round((Date.now() - new Date(sessionStar
 
 // Auto-close on process exit
 process.on('exit', close);
-process.on('SIGINT', () => { close(); process.exit(); });
-process.on('SIGTERM', () => { close(); process.exit(); });
+// Don't call process.exit() here - let the main server handle graceful shutdown
+// process.on('SIGINT', () => { close(); process.exit(); });
+// process.on('SIGTERM', () => { close(); process.exit(); });
 
 module.exports = {
   log,

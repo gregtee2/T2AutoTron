@@ -1,5 +1,22 @@
 const path = require('path');
 
+// ============================================
+// CRITICAL: Start keep-alive IMMEDIATELY to prevent premature exit
+// This must be BEFORE any async operations
+// ============================================
+const startTime = Date.now();
+let keepAliveCounter = 0;
+const KEEP_ALIVE = setInterval(() => {
+  keepAliveCounter++;
+  // Log every minute to show server is still running
+  if (keepAliveCounter % 60 === 0) {
+    const uptimeMinutes = Math.floor((Date.now() - startTime) / 60000);
+    console.log(`[Server] Uptime: ${uptimeMinutes} minutes`);
+  }
+}, 1000);
+KEEP_ALIVE.ref(); // Explicitly keep this interval referenced
+console.log('[Startup] Keep-alive interval started');
+
 // Detect Home Assistant add-on environment
 const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
 // Use absolute path relative to this file, not working directory
@@ -36,6 +53,7 @@ process.on('beforeExit', (code) => {
 
 process.on('exit', (code) => {
   console.log('[EXIT] Process exit with code:', code);
+  console.log('[EXIT] Stack trace:', new Error().stack);
 });
 
 debug('Starting server.js...');
@@ -981,17 +999,8 @@ async function startServer() {
       console.log(chalk.cyan(`✓ Server running on http://${HOST}:${PORT}`));
     });
     
-    // Keep-alive: Use a short interval with actual work to prevent Node.js exit
-    // The tplink-smarthome-api unrefs its sockets after discovery
-    let keepAliveCounter = 0;
-    const keepAlive = setInterval(() => {
-      keepAliveCounter++;
-      // Do actual work so Node can't optimize this away
-      if (keepAliveCounter % 60 === 0) {
-        console.log(`[Server] Uptime: ${Math.floor(keepAliveCounter / 60)} minutes`);
-      }
-    }, 1000); // Every 1 second
-    keepAlive.ref();
+    // Note: Keep-alive is started at the very top of this file (before any async operations)
+    // to ensure the process stays alive even if startup takes a while
     
     // Explicitly keep stdin open to prevent exit
     if (process.stdin.isTTY) {
@@ -1008,7 +1017,28 @@ async function startServer() {
 
 startServer();
 
+// Track if we've received a shutdown signal to prevent double-shutdown
+let shuttingDown = false;
+
 process.on('SIGINT', async () => {
+  console.log('[SIGINT] Received SIGINT signal');
+  // In VS Code terminal, SIGINT can be sent unexpectedly
+  // Only shut down if this is a real user-initiated Ctrl+C
+  if (shuttingDown) {
+    console.log('[SIGINT] Already shutting down, ignoring');
+    return;
+  }
+  
+  // If server has been running less than 30 seconds, ignore SIGINT
+  // This prevents premature shutdown during startup
+  const uptimeMs = Date.now() - startTime;
+  if (uptimeMs < 30000) {
+    console.log(`[SIGINT] Server only running for ${Math.round(uptimeMs/1000)}s, ignoring signal (likely VS Code artifact)`);
+    return;
+  }
+  
+  shuttingDown = true;
+  console.log('[SIGINT] Initiating graceful shutdown...');
   await logger.log('Shutting down server', 'info', false, 'shutdown');
   server.close(async () => {
     await mongoose.connection.close();
