@@ -282,14 +282,70 @@
             return getDeviceApiInfo(id);
         }
         
-        // Get effective trigger source for Event Log attribution
+        // Trace back through connections to find the original trigger source
+        // Returns { nodeName, originName } where nodeName is this node and originName is the source trigger
         getEffectiveTriggerSource() {
-            // If user set a custom title, use it (they're explicitly naming this node)
-            if (this.properties.customTitle && this.properties.customTitle.trim()) {
-                return this.properties.customTitle;
+            const nodeName = this.properties.customTitle?.trim() || this.label || 'HA Device';
+            
+            // Try to trace back to find the original trigger source
+            const originName = this.traceTriggerOrigin();
+            
+            if (originName && originName !== nodeName) {
+                return `${nodeName} ← ${originName}`;
             }
-            // Fall back to node label
-            return this.label || 'HA Device';
+            return nodeName;
+        }
+        
+        // Walk back through the graph to find what triggered this node
+        traceTriggerOrigin() {
+            const editor = window._t2Editor;
+            if (!editor) return null;
+            
+            const visited = new Set();
+            const queue = [this.id];
+            
+            // Node types that are considered "trigger sources"
+            const triggerSourceTypes = [
+                'SchedulerNode', 'TimeRangeNode', 'SunriseSunsetNode', 
+                'ToggleNode', 'PushbuttonNode', 'Toggle',
+                'CurrentTimeNode', 'DayOfWeekNode',
+                'ReceiverNode' // Receiver indicates wireless input - get buffer name
+            ];
+            
+            while (queue.length > 0) {
+                const nodeId = queue.shift();
+                if (visited.has(nodeId)) continue;
+                visited.add(nodeId);
+                
+                // Get all connections where this node is the target
+                const connections = editor.getConnections().filter(c => c.target === nodeId);
+                
+                for (const conn of connections) {
+                    const sourceNode = editor.getNode(conn.source);
+                    if (!sourceNode) continue;
+                    
+                    // Check if this is a trigger source node
+                    const nodeType = sourceNode.constructor?.name || sourceNode.label;
+                    
+                    if (triggerSourceTypes.some(t => nodeType?.includes(t) || sourceNode.label?.includes(t))) {
+                        // For ReceiverNode, get the buffer name as the source
+                        if (nodeType?.includes('Receiver') || sourceNode.label?.includes('Receiver')) {
+                            const bufferName = sourceNode.properties?.selectedBuffer?.replace(/^\[.+\]\s*/, '') || 'Buffer';
+                            return bufferName;
+                        }
+                        // For other trigger sources, use their custom name or label
+                        return sourceNode.properties?.customName?.trim() || 
+                               sourceNode.properties?.name?.trim() ||
+                               sourceNode.label || 
+                               nodeType;
+                    }
+                    
+                    // Otherwise, keep walking back
+                    queue.push(conn.source);
+                }
+            }
+            
+            return null;
         }
         normalizeSelectedDeviceNames() {
             const uniqueDevices = this.getAllDevicesWithUniqueNames();

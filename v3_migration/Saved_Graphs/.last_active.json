@@ -144,7 +144,7 @@
           "logicType": "OR",
           "hysteresis": 5,
           "_lastEval": {
-            "solar": false,
+            "solar": true,
             "temp": true,
             "humidity": false,
             "wind": false,
@@ -212,9 +212,9 @@
           "haToken": "",
           "sunrise_time": "2025-12-15T14:50:01.000Z",
           "sunset_time": "2025-12-16T00:46:42.000Z",
-          "next_on_date": "2025-12-15T00:17:42.000Z",
+          "next_on_date": "2025-12-16T00:17:42.000Z",
           "next_off_date": "2025-12-15T06:30:00.000Z",
-          "currentState": false,
+          "currentState": true,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
           "pulseMode": false
@@ -238,7 +238,7 @@
           "compareOperator": ">",
           "compareThreshold": 80,
           "setVariable": "",
-          "_lastResult": false
+          "_lastResult": true
         }
       }
     },
@@ -391,7 +391,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "1AM Off",
-          "lastValue": false,
+          "lastValue": true,
           "registeredName": "[Trigger]1AM Off",
           "finalName": "[Trigger]1AM Off"
         }
@@ -432,9 +432,9 @@
           "haToken": "",
           "sunrise_time": "2025-12-15T14:50:01.000Z",
           "sunset_time": "2025-12-16T00:46:42.000Z",
-          "next_on_date": "2025-12-15T00:16:42.000Z",
+          "next_on_date": "2025-12-16T00:16:42.000Z",
           "next_off_date": "2025-12-15T10:50:01.000Z",
-          "currentState": false,
+          "currentState": true,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
           "pulseMode": false
@@ -453,7 +453,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "Bathroom Light On/Off",
-          "lastValue": false,
+          "lastValue": true,
           "registeredName": "[Trigger]Bathroom Light On/Off",
           "finalName": "[Trigger]Bathroom Light On/Off"
         }
@@ -608,7 +608,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "House Lights ON/Off",
-          "lastValue": false,
+          "lastValue": true,
           "registeredName": "[Trigger]House Lights ON/Off",
           "finalName": "[Trigger]House Lights ON/Off"
         }
@@ -644,7 +644,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": false,
+          "lastValue": true,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -795,7 +795,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": false
+          "value": true
         }
       }
     },
@@ -834,7 +834,7 @@
           "haToken": "",
           "sunrise_time": "2025-12-15T14:50:01.000Z",
           "sunset_time": "2025-12-16T00:46:42.000Z",
-          "next_on_date": "2025-12-15T00:16:42.000Z",
+          "next_on_date": "2025-12-16T00:16:42.000Z",
           "next_off_date": "2025-12-15T06:30:00.000Z",
           "currentState": false,
           "status": "Los Angeles, California, United States - Updated",
@@ -1067,9 +1067,9 @@
           "haToken": "",
           "sunrise_time": "2025-12-15T14:50:01.000Z",
           "sunset_time": "2025-12-16T00:46:42.000Z",
-          "next_on_date": "2025-12-15T00:16:42.000Z",
+          "next_on_date": "2025-12-16T00:16:42.000Z",
           "next_off_date": "2025-12-15T09:00:00.000Z",
-          "currentState": false,
+          "currentState": true,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
           "pulseMode": false
@@ -1285,7 +1285,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": false,
+          "lastValue": true,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -1302,7 +1302,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": false,
+          "lastValue": true,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -1632,7 +1632,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": false,
+          "lastValue": true,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -1884,7 +1884,8 @@
             "c095e7b26b0c147e"
           ],
           "locked": true
-        }
+        },
+        "selected": false
       }
     },
     {
@@ -1944,8 +1945,8 @@
       "id": "638e3dd2992d1984",
       "label": "Receiver",
       "position": {
-        "x": 9226.681729592925,
-        "y": 3419.1940271057724
+        "x": 9180.042497768509,
+        "y": 3379.4135058437696
       },
       "data": {
         "id": "638e3dd2992d1984",
@@ -1961,8 +1962,8 @@
       "id": "f9e613cfd22bb224",
       "label": "HA Generic Device",
       "position": {
-        "x": 10482.489065066608,
-        "y": 3414.328193977499
+        "x": 10542.489065066608,
+        "y": 3520.328193977499
       },
       "data": {
         "id": "f9e613cfd22bb224",
@@ -2058,13 +2059,13 @@
         "properties": {
           "bufferName": "Office Colors",
           "lastValue": {
-            "hue": 0.08554572271386429,
-            "saturation": 0.6141304347826086,
-            "brightness": 78,
+            "hue": 0.0854341736694678,
+            "saturation": 0.6363636363636364,
+            "brightness": 77,
             "rgb": {
               "r": 56,
               "g": 39,
-              "b": 22
+              "b": 21
             }
           },
           "registeredName": "[HSV]Office Colors",
@@ -2093,8 +2094,8 @@
       "id": "d75099b0931e7056",
       "label": "Receiver",
       "position": {
-        "x": 10087.967978980125,
-        "y": 3403.526541696576
+        "x": 10080.967978980125,
+        "y": 3573.526541696576
       },
       "data": {
         "id": "d75099b0931e7056",
@@ -2102,13 +2103,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Office Colors",
           "lastValue": {
-            "hue": 0.08554572271386429,
-            "saturation": 0.6141304347826086,
-            "brightness": 78,
+            "hue": 0.0854341736694678,
+            "saturation": 0.6363636363636364,
+            "brightness": 77,
             "rgb": {
               "r": 56,
               "g": 39,
-              "b": 22
+              "b": 21
             }
           },
           "lastTriggerSource": "Office Colors"
@@ -2286,13 +2287,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Temps",
           "lastValue": {
-            "hue": 0.37276785714285715,
-            "saturation": 0.9372384937238494,
-            "brightness": 121,
+            "hue": 0.375,
+            "saturation": 0.9137931034482758,
+            "brightness": 119,
             "rgb": {
-              "r": 7,
-              "g": 113,
-              "b": 32
+              "r": 9,
+              "g": 108,
+              "b": 34
             }
           },
           "lastTriggerSource": "Temps"
@@ -2487,7 +2488,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": false,
+          "lastValue": true,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -2536,7 +2537,7 @@
       "label": "Receiver",
       "position": {
         "x": 17183.456465736082,
-        "y": 1622.585164703487
+        "y": 1623.585164703487
       },
       "data": {
         "id": "50ff70ef0f2acc96",
@@ -2735,7 +2736,7 @@
         "width": 200,
         "height": 150,
         "properties": {
-          "value": false
+          "value": true
         }
       }
     },
@@ -2751,7 +2752,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]1AM Off",
-          "lastValue": false,
+          "lastValue": true,
           "lastTriggerSource": "1AM Off"
         }
       }
@@ -2956,9 +2957,9 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": null,
+        "lastTimeStep": 0,
         "position": 0,
-        "isInRange": false,
+        "isInRange": true,
         "lastColor": {
           "r": 255,
           "g": 255,
@@ -3139,7 +3140,7 @@
           "inputCount": 2,
           "mode": "all",
           "lastActiveInput": 2,
-          "lastValue": false
+          "lastValue": true
         }
       }
     },
@@ -3183,14 +3184,20 @@
           "enabled": true,
           "history": [
             {
+              "time": "4:16:42 PM",
+              "timestamp": 1765757802124,
+              "value": true,
+              "type": "boolean"
+            },
+            {
               "time": "4:10:08 PM",
               "timestamp": 1765757408737,
               "value": false,
               "type": "boolean"
             }
           ],
-          "currentValue": false,
-          "messageCount": 1
+          "currentValue": true,
+          "messageCount": 2
         }
       }
     },
@@ -3440,15 +3447,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0,
-          "isInRange": false,
-          "outputHue": 0.5803921568627451,
-          "outputSaturation": 1,
-          "outputBrightness": 254,
+          "position": 0.003276972010178117,
+          "isInRange": true,
+          "outputHue": 0.5803689064558629,
+          "outputSaturation": 0.9960629921259843,
+          "outputBrightness": 253,
           "outputRgb": {
-            "r": 0,
+            "r": 1,
             "g": 131,
-            "b": 254
+            "b": 252
           }
         }
       }
@@ -3533,15 +3540,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0,
-          "isInRange": false,
-          "outputHue": 0,
-          "outputSaturation": 0,
-          "outputBrightness": 254,
+          "position": 0.003276972010178117,
+          "isInRange": true,
+          "outputHue": 0.16666666666666666,
+          "outputSaturation": 0.0039215686274509665,
+          "outputBrightness": 253,
           "outputRgb": {
-            "r": 254,
-            "g": 254,
-            "b": 254
+            "r": 253,
+            "g": 253,
+            "b": 252
           }
         }
       }
@@ -3726,8 +3733,8 @@
       "id": "c4018a258f9c8fbd",
       "label": "All-in-One Color Control",
       "position": {
-        "x": 8659.77062348236,
-        "y": 3408.1062768240176
+        "x": 8633.77062348236,
+        "y": 3376.1062768240176
       },
       "data": {
         "id": "c4018a258f9c8fbd",
@@ -3767,7 +3774,7 @@
             "value"
           ],
           "lastOutputValues": {
-            "value": 63.5
+            "value": 62.6
           },
           "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
         }
@@ -3786,7 +3793,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
           "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Sunshine terrace  Feels like: 63.5",
+          "status": "✅ Sunshine terrace  Feels like: 62.6",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -3877,15 +3884,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.4632352941176471,
+          "position": 0.45,
           "isInRange": true,
-          "outputHue": 0.37276785714285715,
-          "outputSaturation": 0.9372384937238494,
-          "outputBrightness": 121,
+          "outputHue": 0.375,
+          "outputSaturation": 0.9137931034482758,
+          "outputBrightness": 119,
           "outputRgb": {
-            "r": 7,
-            "g": 113,
-            "b": 32
+            "r": 9,
+            "g": 108,
+            "b": 34
           }
         }
       }
@@ -3903,13 +3910,13 @@
         "properties": {
           "bufferName": "Temps",
           "lastValue": {
-            "hue": 0.37276785714285715,
-            "saturation": 0.9372384937238494,
-            "brightness": 121,
+            "hue": 0.375,
+            "saturation": 0.9137931034482758,
+            "brightness": 119,
             "rgb": {
-              "r": 7,
-              "g": 113,
-              "b": 32
+              "r": 9,
+              "g": 108,
+              "b": 34
             }
           },
           "registeredName": "[HSV]Temps",
@@ -3956,8 +3963,8 @@
       "id": "a157051d1861b8b1",
       "label": "Debug",
       "position": {
-        "x": 11050.924498113458,
-        "y": 3879.3336721186156
+        "x": 11127.047608377885,
+        "y": 3828.168958662198
       },
       "data": {
         "inputs": {
@@ -3992,15 +3999,22 @@
           "enabled": true,
           "history": [
             {
+              "time": "4:17:43 PM",
+              "timestamp": 1765757863005,
+              "value": true,
+              "type": "boolean"
+            },
+            {
               "time": "4:10:08 PM",
               "timestamp": 1765757408738,
               "value": false,
               "type": "boolean"
             }
           ],
-          "currentValue": false,
-          "messageCount": 1
-        }
+          "currentValue": true,
+          "messageCount": 2
+        },
+        "selected": false
       }
     },
     {
@@ -4112,15 +4126,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.5851388095238095,
+          "position": 0.5925203968253968,
           "isInRange": true,
-          "outputHue": 0.08554572271386429,
-          "outputSaturation": 0.6141304347826086,
-          "outputBrightness": 78,
+          "outputHue": 0.0854341736694678,
+          "outputSaturation": 0.6363636363636364,
+          "outputBrightness": 77,
           "outputRgb": {
             "r": 56,
             "g": 39,
-            "b": 22
+            "b": 21
           }
         }
       }
@@ -4976,13 +4990,6 @@
       "targetInput": "hsv_info"
     },
     {
-      "id": "1a6c82e519a70fed",
-      "source": "d5686fc3e43513d6",
-      "target": "c095e7b26b0c147e",
-      "sourceOutput": "result",
-      "targetInput": "trigger"
-    },
-    {
       "id": "c0e4a1f95e4742e0",
       "source": "a3d528fc57e1ff4d",
       "target": "6737e33f3ada4c82",
@@ -5023,13 +5030,20 @@
       "target": "0cab81e8c5c154ff",
       "sourceOutput": "state",
       "targetInput": "in"
+    },
+    {
+      "id": "b89743f82083f07c",
+      "source": "d5686fc3e43513d6",
+      "target": "c095e7b26b0c147e",
+      "sourceOutput": "result",
+      "targetInput": "trigger"
     }
   ],
   "viewport": {
-    "x": -16635.452539778646,
-    "y": -1256.7966041491236,
-    "k": 1
+    "x": -8121.17641101375,
+    "y": -2559.1709776033313,
+    "k": 0.8013335212934206
   },
   "autoSaved": true,
-  "timestamp": 1765757528778
+  "timestamp": 1765757928563
 }
