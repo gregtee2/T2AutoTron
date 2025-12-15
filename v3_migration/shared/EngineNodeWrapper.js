@@ -60,21 +60,78 @@ function createEngineNode(definition) {
      * @param {Object} inputs - Input values from connected nodes
      * @returns {Object} - Output values
      */
-    data(inputs) {
+    async data(inputs) {
       // Create context for execute()
       const context = {
         now: () => new Date(),
-        // Add other context items as needed by specific nodes
-        // deviceManagers: { ha, hue, kasa }, etc.
+        isBackend: true,
+        // Device control will be handled by the engine after execute returns
       };
       
       // Call the unified execute function
-      return this.definition.execute(
+      const result = this.definition.execute(
         inputs,
         this.properties,
         context,
         this._state
       );
+      
+      // Handle pending device actions (for HAGenericDeviceNode etc.)
+      if (result._pendingActions && result._pendingActions.length > 0) {
+        await this._executePendingActions(result._pendingActions);
+      }
+      
+      // Remove internal properties before returning
+      const cleanResult = { ...result };
+      delete cleanResult._pendingActions;
+      delete cleanResult._warmup;
+      delete cleanResult._tickCount;
+      
+      return cleanResult;
+    }
+
+    /**
+     * Execute pending device control actions
+     * @param {Array} actions - Array of { entityId, turnOn, colorData, transitionMs }
+     */
+    async _executePendingActions(actions) {
+      // Try to get the HA manager from the engine
+      let haManager = null;
+      try {
+        // Lazy load to avoid circular deps
+        const path = require('path');
+        const managerPath = path.join(__dirname, '..', 'backend', 'src', 'devices', 'managers', 'HomeAssistantManager');
+        haManager = require(managerPath);
+      } catch (e) {
+        // Manager not available - log and skip
+        console.warn('[EngineNodeWrapper] HA manager not available:', e.message);
+        return;
+      }
+      
+      for (const action of actions) {
+        try {
+          const { entityId, turnOn, colorData, transitionMs } = action;
+          const domain = entityId.split('.')[0] || 'light';
+          const service = turnOn ? 'turn_on' : 'turn_off';
+          
+          const payload = { entity_id: entityId };
+          
+          if (domain === 'light') {
+            payload.transition = (transitionMs || 1000) / 1000;
+            if (turnOn && colorData) {
+              if (colorData.hs_color) payload.hs_color = colorData.hs_color;
+              if (colorData.brightness) payload.brightness = colorData.brightness;
+            }
+          }
+          
+          // Use manager's callService method if available
+          if (haManager && typeof haManager.callService === 'function') {
+            await haManager.callService(domain, service, payload);
+          }
+        } catch (e) {
+          console.error('[EngineNodeWrapper] Device action failed:', e.message);
+        }
+      }
     }
 
     /**

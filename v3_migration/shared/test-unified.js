@@ -192,4 +192,99 @@ if (delayDef) {
   console.error('❌ DelayNode not found in registry');
 }
 
+// =========================================================================
+// TEST HAGENERICDEVICENODE
+// =========================================================================
+console.log('\n=== Testing HAGenericDeviceNode ===');
+const haDeviceDef = unifiedRegistry.get('HAGenericDeviceNode');
+
+if (haDeviceDef) {
+  // Test 1: Default properties
+  const defaultProps = unifiedRegistry.getDefaultProperties('HAGenericDeviceNode');
+  console.log('Default properties:', JSON.stringify(defaultProps, null, 2));
+  
+  // Test 2: Follow mode with devices
+  console.log('\n--- Test: Follow Mode ---');
+  let state = unifiedRegistry.getInitialState('HAGenericDeviceNode');
+  const context = { now: () => new Date(), isBackend: false };
+  
+  const propsWithDevices = {
+    ...defaultProps,
+    selectedDeviceIds: ['ha_light.living_room', 'ha_light.bedroom'],
+    triggerMode: 'Follow'
+  };
+  
+  // Tick 1-3: Warmup period (should not control devices)
+  let outputs = haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
+  console.log('Tick 1 (warmup):', JSON.stringify(outputs));
+  outputs = haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
+  outputs = haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
+  console.log('Tick 3 (warmup):', JSON.stringify(outputs));
+  
+  // Tick 4: After warmup, trigger=true should turn on
+  outputs = haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
+  console.log('Tick 4 (after warmup, trigger=true):', JSON.stringify(outputs));
+  console.log('  Pending actions:', outputs._pendingActions?.length || 0);
+  
+  // Tick 5: Trigger stays true - no new actions
+  outputs = haDeviceDef.execute({ trigger: true }, propsWithDevices, context, state);
+  console.log('Tick 5 (trigger still true):', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
+  
+  // Tick 6: Trigger goes false - should turn off
+  outputs = haDeviceDef.execute({ trigger: false }, propsWithDevices, context, state);
+  console.log('Tick 6 (trigger=false):', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
+  if (outputs._pendingActions && outputs._pendingActions.length > 0) {
+    console.log('  First action:', JSON.stringify(outputs._pendingActions[0]));
+  }
+  
+  // Test 3: Toggle mode
+  console.log('\n--- Test: Toggle Mode ---');
+  state = unifiedRegistry.getInitialState('HAGenericDeviceNode');
+  const toggleProps = { ...propsWithDevices, triggerMode: 'Toggle' };
+  
+  // Warmup
+  for (let i = 0; i < 4; i++) {
+    outputs = haDeviceDef.execute({ trigger: false }, toggleProps, context, state);
+  }
+  
+  // Rising edge 1: Toggle ON
+  outputs = haDeviceDef.execute({ trigger: true }, toggleProps, context, state);
+  console.log('First toggle (false->true):', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
+  console.log('  Expected: actions=2 (turn ON)');
+  
+  // Falling edge: No action
+  outputs = haDeviceDef.execute({ trigger: false }, toggleProps, context, state);
+  console.log('Falling edge:', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
+  console.log('  Expected: actions=0 (toggle only on rising edge)');
+  
+  // Rising edge 2: Toggle OFF
+  outputs = haDeviceDef.execute({ trigger: true }, toggleProps, context, state);
+  console.log('Second toggle:', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
+  if (outputs._pendingActions && outputs._pendingActions.length > 0) {
+    console.log('  First action turnOn:', outputs._pendingActions[0].turnOn);
+    console.log('  Expected: turnOn=false (toggled OFF)');
+  }
+  
+  // Test 4: HSV color input
+  console.log('\n--- Test: HSV Color Input ---');
+  state = unifiedRegistry.getInitialState('HAGenericDeviceNode');
+  
+  // Warmup
+  for (let i = 0; i < 4; i++) {
+    outputs = haDeviceDef.execute({ trigger: false }, propsWithDevices, context, state);
+  }
+  
+  // Turn on with color
+  const hsvColor = { hue: 0.5, saturation: 1.0, brightness: 200 };
+  outputs = haDeviceDef.execute({ trigger: true, hsv_info: hsvColor }, propsWithDevices, context, state);
+  console.log('Turn on with HSV:', JSON.stringify({ is_on: outputs.is_on, actions: outputs._pendingActions?.length || 0 }));
+  if (outputs._pendingActions && outputs._pendingActions[0]) {
+    console.log('  Color data:', JSON.stringify(outputs._pendingActions[0].colorData));
+  }
+  
+  console.log('\n✅ HAGenericDeviceNode tests passed!');
+} else {
+  console.error('❌ HAGenericDeviceNode not found in registry');
+}
+
 console.log('\n=== All Tests Complete ===');

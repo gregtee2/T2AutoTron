@@ -15,8 +15,8 @@ Now we have **ONE recipe book** that both use. Change it once, both update!
 |-------|--------|-------|
 | **1. POC - First Node** | ✅ Complete | `TimeOfDayNode` unified |
 | **2. POC - Second Node** | ✅ Complete | `DelayNode` (4 modes: delay, debounce, throttle, retriggerable) |
-| **3. POC - Third Node** | ⏳ Next | `HAGenericDeviceNode` (device control) |
-| **4. Frontend Loader** | ⏳ Planned | Auto-generate React components |
+| **3. POC - Third Node** | ✅ Complete | `HAGenericDeviceNode` (device control with async actions) |
+| **4. Frontend Loader** | ⏳ Next | Auto-generate React components from definitions |
 | **5. Full Migration** | ⏳ Future | All 47 plugins → unified format |
 
 ## File Structure
@@ -26,8 +26,10 @@ v3_migration/shared/
 ├── nodes/                    # Unified node definitions
 │   ├── time/
 │   │   └── TimeOfDay.node.js # Time-based trigger ✅
-│   └── timer/
-│       └── Delay.node.js     # Delay/debounce/throttle/retriggerable ✅
+│   ├── timer/
+│   │   └── Delay.node.js     # Delay/debounce/throttle/retriggerable ✅
+│   └── devices/
+│       └── HAGenericDevice.node.js  # Home Assistant device control ✅
 ├── UnifiedNodeRegistry.js    # Loads and manages definitions
 ├── EngineNodeWrapper.js      # Makes unified nodes work with backend engine
 ├── test-unified.js           # Test file (run with: node test-unified.js)
