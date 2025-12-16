@@ -9,9 +9,7 @@ module.exports = function (io) {
   router.get('/', async (req, res) => {
     await logger.log('GET /api/lights/kasa called', 'info', false, 'kasa:fetch');
     try {
-      console.log('Calling kasaManager.getDevices...');
       const devices = kasaManager.getDevices();
-      console.log('Kasa devices:', devices);
       if (!Array.isArray(devices)) {
         throw new Error('kasaManager.getDevices() did not return an array');
       }
@@ -25,7 +23,6 @@ module.exports = function (io) {
       res.json({ success: true, lights });
     } catch (error) {
       await logger.log(`Error fetching Kasa lights: ${error.message}`, 'error', false, 'kasa:error');
-      console.error('Kasa GET error:', error);
       res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
     }
   });
@@ -43,7 +40,6 @@ module.exports = function (io) {
       res.json({ success: true, state });
     } catch (error) {
       await logger.log(`Error fetching state for kasa_${id}: ${error.message}`, 'error', false, `kasa:error:${id}`);
-      console.error('Kasa state GET error:', error);
       res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
     }
   });
@@ -77,7 +73,6 @@ module.exports = function (io) {
       res.json({ success: true, message: 'Device toggled successfully' });
     } catch (error) {
       await logger.log(`Error toggling kasa_${id}: ${error.message}`, 'error', false, `kasa:error:${id}`);
-      console.error('Kasa toggle error:', error);
       res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
     }
   });
@@ -123,7 +118,6 @@ module.exports = function (io) {
       res.json({ success: true, message: 'Device turned on successfully' });
     } catch (error) {
       await logger.log(`Error turning on kasa_${id}: ${error.message}`, 'error', false, `kasa:error:${id}`);
-      console.error('Kasa on error:', error);
       res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
     }
   });
@@ -156,7 +150,6 @@ module.exports = function (io) {
       res.json({ success: true, message: 'Device turned off successfully' });
     } catch (error) {
       await logger.log(`Error turning off kasa_${id}: ${error.message}`, 'error', false, `kasa:error:${id}`);
-      console.error('Kasa off error:', error);
       res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
     }
   });
@@ -192,7 +185,6 @@ module.exports = function (io) {
       res.json({ success: true, message: 'Brightness set successfully' });
     } catch (error) {
       await logger.log(`Error setting brightness for kasa_${id}: ${error.message}`, 'error', false, `kasa:error:${id}`);
-      console.error('Kasa brightness error:', error);
       res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
     }
   });
@@ -235,7 +227,6 @@ module.exports = function (io) {
       res.json({ success: true, message: 'Color set successfully' });
     } catch (error) {
       await logger.log(`Error setting color for kasa_${id}: ${error.message}`, 'error', false, `kasa:error:${id}`);
-      console.error('Kasa color error:', error);
       res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
     }
   });
@@ -263,7 +254,6 @@ module.exports = function (io) {
       await logger.log(`Fetched energy for ${device.alias} (ID: kasa_${id})`, 'info', false, `kasa:energy:${id}`);
     } catch (error) {
       await logger.log(`Error fetching energy for kasa_${id}: ${error.message}`, 'error', false, `kasa:error:${id}`);
-      console.error('Kasa energy error:', error);
       res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
     }
   });
@@ -308,7 +298,6 @@ module.exports = function (io) {
       res.json({ success: true, message: 'State updated successfully' });
     } catch (error) {
       await logger.log(`Error updating state for kasa_${id}: ${error.message}`, 'error', false, `kasa:error:${id}`);
-      console.error('Kasa state error:', error);
       res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
     }
   });
