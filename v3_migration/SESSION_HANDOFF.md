@@ -1,4 +1,14 @@
-# Session Handoff - December 14, 2025
+# Session Handoff - December 15, 2025
+
+## ✅ CURRENT STATUS: DEVICE TOGGLE BUG FIXED
+
+The main bug is **FIXED**. Devices now turn on correctly after graph load in both:
+- **Frontend UI** (Rete.js editor in browser/Electron)
+- **Backend Engine** (server-side automation)
+
+The fix is committed to `feature/unified-architecture` branch and ready to merge to `main` + `stable`.
+
+---
 
 ## THE BIG PICTURE
 
@@ -13,7 +23,6 @@ T2AutoTron is a **visual node-based automation editor** for smart home control (
 ### 2. Local Electron App (Windows desktop)
 - Standalone Windows app for development/power users
 - Direct access, no HA required
-- **This is what we're debugging now**
 
 ## WHY THE BACKEND ENGINE EXISTS
 
@@ -23,110 +32,166 @@ T2AutoTron is a **visual node-based automation editor** for smart home control (
 
 **The Solution**: Move automation execution to the **server** (backend engine). The browser becomes just an editor - automations run 24/7 on the server even when no browser is open.
 
-This is **critical for the HA add-on** - users expect home automations to run continuously, not stop when they close a browser tab.
+---
 
-## CURRENT ARCHITECTURE
+## WHAT WAS FIXED THIS SESSION (December 15, 2025)
+
+### 🐛 Bug: Devices Not Turning On After Graph Load
+
+**Symptom**: HAGenericDeviceNode had `trigger=true` from input connection, but devices stayed OFF.
+
+**Root Cause**: SAME BUG in TWO PLACES - the "skip/warmup" logic was "eating" the initial trigger value.
+
+| Location | File | The Problem |
+|----------|------|-------------|
+| Backend Engine | `src/engine/nodes/HADeviceNodes.js` | Warmup period (ticks 1-3) set `lastTrigger = trigger` without acting |
+| Frontend Plugin | `plugins/HAGenericDeviceNode.js` | Skip pass set `lastTriggerValue = trigger` without acting |
+
+Both were setting `lastTrigger` during their skip phase, so when the node ran again, it saw `trigger === lastTrigger` (both true) and thought "nothing changed, do nothing."
+
+**The Fix**: Don't set `lastTrigger` during skip/warmup. Leave it as `false` so the next call sees a proper rising edge (false→true).
+
+### 🐛 Bug: HSV Slider Lag (Fixed earlier this session)
+
+**Symptom**: Moving HSV sliders had 1-2 second delay before lights changed. Presets worked instantly.
+
+**Root Cause**: Throttle logic in `HSVControlNode.js` was resetting the timeout on every drag, so it only fired after you stopped dragging.
+
+**Fix**: Changed to fire immediately on drag start, then throttle subsequent updates.
+
+### 🐛 Bug: Wrong Graph Loaded by Engine
+
+**Symptom**: Backend engine loaded `.last_active.json` with only 2 nodes instead of user's 134-node graph.
+
+**Root Cause**: Frontend `handleLoad()` wasn't saving to `.last_active.json`, so backend had stale graph.
+
+**Fix**: Added `save-active` call in `handleLoad()` after loading from localStorage.
+
+---
+
+## FILES MODIFIED THIS SESSION
+
+| File | What Changed |
+|------|--------------|
+| `backend/plugins/HAGenericDeviceNode.js` | Don't set `lastTriggerValue` during skip pass; add second `triggerUpdate()` 100ms after skip |
+| `backend/src/engine/nodes/HADeviceNodes.js` | Don't set `lastTrigger` during warmup (ticks 1-3); force initial sync on tick 4 if trigger=true |
+| `backend/plugins/HSVControlNode.js` | Fix slider throttle to fire during drag, not just after |
+| `frontend/src/Editor.jsx` | Save to `/api/engine/save-active` after loading graph |
+
+---
+
+## KEY ARCHITECTURE NOTES
+
+### Frontend Plugin vs Backend Engine (Two Cooks)
+
+Think of it like having two cooks who both know the same recipe:
+- **Frontend Plugin** (`backend/plugins/*.js`) = Cook in the dining room (runs in browser)
+- **Backend Engine Node** (`backend/src/engine/nodes/*.js`) = Cook in the kitchen (runs on server)
+
+They use different code but similar logic. Bugs need to be fixed in BOTH places.
+
+### HAGenericDeviceNode Trigger Flow
 
 ```
-Frontend (Browser/Electron)          Backend (Node.js Server)
-┌─────────────────────────┐         ┌─────────────────────────┐
-│  Rete.js Visual Editor  │◄──────►│  Express + Socket.IO    │
-│  (editing only)         │         │                         │
-└─────────────────────────┘         │  BackendEngine          │
-                                    │  ├─ 100ms tick loop     │
-                                    │  ├─ Node processing     │
-                                    │  └─ Device control      │
-                                    │                         │
-                                    │  Device Managers        │
-                                    │  ├─ Home Assistant      │
-                                    │  ├─ Philips Hue         │
-                                    │  ├─ TP-Link Kasa        │
-                                    │  └─ Shelly              │
-                                    └─────────────────────────┘
+SunriseSunset Node → Sender Node → [Buffer] → Receiver Node → HAGenericDeviceNode
+                          ↓                           ↓
+                   (writes to buffer)         (reads from buffer)
+                                                      ↓
+                                              trigger input = true
+                                                      ↓
+                                              Rising edge detected?
+                                              lastTrigger=false, trigger=true
+                                                      ↓
+                                              YES → Turn on devices!
 ```
 
-## WHAT WE'VE BEEN DEBUGGING
+### GraphLoadComplete Event
 
-### Phase 1: HA Add-on Socket Stability (DONE)
-- Fixed socket disconnects when using HA ingress
-- Increased timeouts, infinite reconnection attempts
-- Version: 2.1.35
+When a graph loads:
+1. `graphLoadComplete` event fires
+2. HAGenericDeviceNode sets `skipInitialTrigger = true`
+3. First `triggerUpdate()` runs - records state, doesn't act
+4. Second `triggerUpdate()` (100ms later) - detects rising edge, turns on devices
 
-### Phase 2: Overnight Crash Analysis (DONE)
-- Found 11 crashes overnight
-- Root cause: Kasa device "Back Door Sconce Upper" offline, causing TCP errors every 5 seconds
-- 380MB log file bloat from constant retries
-- **Fixed**: Added offline device backoff (30s→60s→90s... max 5min between retries)
-- **Fixed**: Added 10MB log rotation
-- Version: 2.1.36
+---
 
-### Phase 3: Backend Engine Device Toggle Bug (IN PROGRESS)
-**Problem**: When the backend engine starts, one HA device turns OFF even though the trigger input shows TRUE.
+## NEXT STEPS FOR FUTURE AGENT
 
-**User quote**: "when I start the engine in the local version, it toggles off one of my HA generic device nodes, even though the trigger is still showing True from the input buffer"
-
-**What we've tried**:
-1. Fixed label mapping in `BackendNodeRegistry.js` ('HA Generic Device' → 'HAGenericDeviceNode')
-2. Added 3-tick warmup period to HAGenericDeviceNode (skip first 3 ticks while buffers populate)
-3. Changed execution order: Sender nodes run FIRST, Receiver nodes run LAST
-4. Added comprehensive debug logging to `crashes/engine_debug.log`
-
-**Current status**: User needs to run app with new logging to capture exactly what's happening.
-
-## KEY FILES FOR THIS ISSUE
-
-```
-Backend Engine:
-  backend/src/engine/BackendEngine.js      - Main engine, tick loop, node ordering
-  backend/src/engine/BackendNodeRegistry.js - Maps node labels to classes
-  backend/src/engine/engineLogger.js       - Debug logger → crashes/engine_debug.log
-  backend/src/engine/nodes/HADeviceNodes.js - HA device control with warmup logic
-  backend/src/engine/nodes/BufferNodes.js  - Sender/Receiver for "wireless" connections
-
-Debug Log Location:
-  v3_migration/crashes/engine_debug.log    - Detailed engine events
+### Immediate: Merge to Main/Stable
+```bash
+cd C:\X_T2_AutoTron2.1
+git checkout main
+git merge feature/unified-architecture
+git push origin main
+git push origin main:stable
 ```
 
-## THE SUSPECTED ROOT CAUSE
+Then bump HA add-on version:
+```bash
+cd home-assistant-addons
+# Edit t2autotron/config.yaml - bump version
+git add .; git commit -m "chore: Bump to v2.1.XX"; git push origin main
+```
 
-Sender/Receiver nodes communicate via a shared buffer (not wires). On engine start:
-1. Tick 1: Receiver runs, buffer empty → returns `undefined`
-2. Tick 2: Sender runs, sets buffer to `true`
-3. Tick 3: Receiver gets `true`, passes to HAGenericDevice
-4. After warmup: HAGenericDevice sees trigger change from `undefined` → `true`... or possibly misses it
+### Future: Unified Architecture (Deferred)
 
-The warmup period and execution ordering were added to fix this, but the device still turns off.
+The original goal was to eliminate duplicate code between frontend plugins and backend engine nodes. This was **deferred** to focus on bug fixes. The proposal is in:
+- `v3_migration/UNIFIED_ARCHITECTURE_PROPOSAL.md`
 
-## NEXT STEPS
+---
 
-1. **Run the app and start the engine**
-2. **Check `crashes/engine_debug.log`** - should show:
-   - `EXEC-ORDER` - node execution order
-   - `BUFFER-SET` / `BUFFER-GET` - buffer values
-   - `HA-DEVICE-TICK` - trigger values per tick
-   - `HA-DECISION` - exactly why device was turned on/off
-   - `WARMUP` - ticks 1-3 showing warmup behavior
+## DEBUG LOGGING
 
-3. **Share first 50-100 lines of log** - will reveal root cause
+| Location | Flag | Log File |
+|----------|------|----------|
+| Backend Engine | Always on | `crashes/engine_debug.log` |
+| Backend Server | `VERBOSE_LOGGING=true` in `.env` | Console |
+| Frontend Editor | `EDITOR_DEBUG = true` in `Editor.jsx` | Browser console |
+| Frontend Sockets | `SOCKET_DEBUG = true` in `sockets.js` | Browser console |
 
-## OTHER CONTEXT
+Engine log shows:
+- `HA-INPUTS` - trigger/HSV values received
+- `TRIGGER-CHANGE` - when trigger changes (includes reason)
+- `HA-DEVICE-SUCCESS` / `HA-DEVICE-ERROR` - device control attempts
+- `HA-HSV-SKIP` - when skipping (usually means lastTrigger already matches)
 
-### Current Version: 2.1.36
+---
 
-### Recent Fixes (don't re-fix these):
-- Socket stability: `reconnectionAttempts: Infinity`, `pingTimeout: 60000`
-- Kasa backoff: Offline devices retry at increasing intervals
-- Log rotation: 10MB max before rotating
+## GIT STATE
 
-### Key Copilot Instructions
-The repo has `.github/copilot-instructions.md` with detailed architecture info. Key points:
-- Plugins are in `backend/plugins/` (NOT `frontend/src/nodes/`)
-- Debug logging gated by `VERBOSE_LOGGING` env var
-- Never call `changeCallback()` inside `data()` method
-- Use `window.T2Controls` for shared UI components
+- **Branch**: `feature/unified-architecture`
+- **Status**: All fixes committed and pushed
+- **Ready to merge**: Yes
 
-### Git Workflow
-- `main` = development branch
-- `stable` = production (users pull updates from here)
-- Push to stable: `git push origin main:stable`
+Recent commits on this branch:
+1. `fix: Frontend HAGenericDeviceNode now syncs on graph load`
+2. `fix: Force initial sync after warmup period ends`
+3. `fix: Save graph to .last_active.json when loading`
+4. `fix: HSVControlNode slider throttle`
 
+---
+
+## KEY FILES REFERENCE
+
+```
+Frontend:
+  frontend/src/Editor.jsx         - Main Rete.js editor
+  frontend/src/socket.js          - Socket.IO client
+  frontend/src/ui/Dock.jsx        - Control panel UI
+
+Backend Plugins (run in browser):
+  backend/plugins/HAGenericDeviceNode.js  - HA device control (FIXED)
+  backend/plugins/HSVControlNode.js       - HSV color picker (FIXED)
+  backend/plugins/SenderNode.js           - Write to buffer
+  backend/plugins/ReceiverNode.js         - Read from buffer
+
+Backend Engine (run on server):
+  backend/src/engine/BackendEngine.js     - Main tick loop
+  backend/src/engine/nodes/HADeviceNodes.js - HA control (FIXED)
+  backend/src/engine/nodes/BufferNodes.js - Sender/Receiver
+  backend/src/engine/engineLogger.js      - Debug logger
+
+API Routes:
+  backend/src/api/routes/engineRoutes.js  - /api/engine/* endpoints
+  backend/src/server.js                   - Main Express server
+```

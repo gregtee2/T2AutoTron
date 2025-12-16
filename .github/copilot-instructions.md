@@ -1,21 +1,35 @@
 # T2AutoTron 2.1 - AI Coding Instructions
 
-## 🚀 ACTIVE PROJECT: Unified Architecture (v3.0 Refactor)
+## ✅ COMPLETED: Device Toggle Bug Fix (December 15, 2025)
 
-**Status**: POC Phase - Ready to Start  
+**Status**: FIXED - Ready to merge `feature/unified-architecture` → `main` → `stable`  
+**Handoff Doc**: `v3_migration/SESSION_HANDOFF.md`  
+
+### What Was Fixed
+HAGenericDeviceNode wasn't turning on devices after graph load, even with `trigger=true`. The same bug existed in TWO places:
+- **Frontend Plugin** (`backend/plugins/HAGenericDeviceNode.js`) - skip pass was eating initial trigger
+- **Backend Engine** (`backend/src/engine/nodes/HADeviceNodes.js`) - warmup period was eating initial trigger
+
+Both now leave `lastTrigger` unset during skip/warmup so the next call sees a proper rising edge.
+
+### To Merge & Deploy
+```bash
+cd C:\X_T2_AutoTron2.1
+git checkout main
+git merge feature/unified-architecture
+git push origin main
+git push origin main:stable
+```
+
+---
+
+## 🔮 FUTURE: Unified Architecture (v3.0 Refactor)
+
+**Status**: Deferred - Focus shifted to bug fixes  
 **Document**: `v3_migration/UNIFIED_ARCHITECTURE_PROPOSAL.md`  
-**Branch**: Create `feature/unified-architecture` before starting
 
-### What We're Doing
+### What We Want To Do (Eventually)
 Eliminating duplicate code between frontend plugins (47 files) and backend engine nodes (45 classes). Currently the same logic is written twice - once for the pretty UI, once for the 24/7 engine. We want ONE definition that both use.
-
-### Next Steps for Agent
-1. Create git branch: `feature/unified-architecture`
-2. Create folder: `v3_migration/shared/nodes/`
-3. Pick 3 test nodes: `CurrentTimeNode`, `DelayNode`, `HAGenericDeviceNode`
-4. Write unified definitions for those 3 (see proposal doc for format)
-5. Build loader that works in both frontend and backend
-6. Test that they actually work
 
 ### Key Files to Read First
 - `v3_migration/UNIFIED_ARCHITECTURE_PROPOSAL.md` - Full context and plan
@@ -77,6 +91,17 @@ When documenting fixes or explaining problems, use this format:
 ---
 
 ### Recent Caveman Fixes:
+
+#### Devices Not Turning On After Graph Load (2025-12-15)
+- **What broke**: HAGenericDeviceNode had `trigger=true` from input, but devices stayed OFF.
+- **Why it broke**: The "skip/warmup" logic was "eating" the initial trigger. Both frontend and backend had the same bug: they recorded `lastTrigger = true` during skip without acting. Next time around, `trigger=true` matched `lastTrigger=true` → "nothing changed" → no action.
+- **The fix**: Don't set `lastTrigger` during skip. Leave it as `false` so next call sees a rising edge (false→true) and turns on devices.
+- **Two cooks, same mistake**: Frontend plugin (`plugins/HAGenericDeviceNode.js`) and backend engine (`src/engine/nodes/HADeviceNodes.js`) both needed the same fix.
+
+#### HSV Slider Lag (2025-12-15)
+- **What broke**: Moving HSV color sliders had 1-2 second delay. Preset buttons worked instantly.
+- **Why it broke**: Throttle timer kept resetting on each drag. It only fired AFTER you stopped moving.
+- **The fix**: Fire immediately on drag start, then throttle. Like a faucet that opens right away but limits flow.
 
 #### Server Quitting Early (2025-12-14)
 - **What broke**: Server started up fine, then quit after ~20 seconds. Lights stopped changing colors.
