@@ -77,9 +77,13 @@ module.exports = (deviceService) => (socket) => {
         state: device.state,
         vendor: 'Shelly',
       })),
+      // HA devices are already transformed by homeAssistantManager.getDevices()
+      // They come with: id, name, type, state, attributes
       ha: (allDevices['ha_'] || []).map(device => {
-        if (!device.entity_id || typeof device.entity_id !== 'string') {
-          logger.log(`Invalid HA device: ${JSON.stringify(device)}`, 'error', false, 'ha:invalid_device');
+        // Validate the pre-transformed device format
+        if (!device.id || typeof device.id !== 'string') {
+          // This should rarely happen - only log if truly malformed
+          logger.log(`Malformed HA device (missing id): ${JSON.stringify(device).slice(0, 100)}`, 'warn', false, 'ha:malformed_device');
           return null;
         }
 
@@ -95,16 +99,20 @@ module.exports = (deviceService) => (socket) => {
         else if (attrs.power != null) {
           energyUsage = { power: Number(attrs.power) };
         }
+        // Also check state.power if available
+        else if (device.state?.power != null) {
+          energyUsage = { power: Number(device.state.power) };
+        }
 
         return {
-          id: `ha_${device.entity_id}`,
-          name: attrs.friendly_name || device.entity_id.split('.')[1] || device.entity_id,
-          type: device.entity_id.split('.')[0],
-          state: { on: device.state === 'on' },
+          id: device.id,  // Already prefixed with 'ha_'
+          name: device.name || attrs.friendly_name || device.id.replace('ha_', '').split('.')[1] || device.id,
+          type: device.type || device.id.replace('ha_', '').split('.')[0],
+          state: device.state || { on: false },
           vendor: 'HomeAssistant',
           attributes: attrs,
-          energyUsage: energyUsage,  // ← THIS IS THE KEY: top-level energyUsage!
-          emeter: attrs.emeter       // ← Also expose raw emeter for safety
+          energyUsage: energyUsage,
+          emeter: attrs.emeter
         };
       }).filter(device => device !== null),
     };

@@ -173,6 +173,42 @@ const IS_HA_ADDON = window.location.pathname.includes('/api/hassio/ingress/');
 
 ---
 
+## HA Device Log Spam Fix (2025-12-16)
+
+### Problem
+Console was flooded with hundreds of "❌ Invalid HA device" error messages on every startup and device sync, making logs unreadable.
+
+### 🦴 Caveman Version
+The server was yelling "INVALID!" at every sensor, switch, and phone battery in Home Assistant - even though they're perfectly valid. It was looking for the wrong ID card format.
+
+### Root Cause
+- `homeAssistantManager.getDevices()` returns devices in **transformed format** with `id: 'ha_light.xxx'`
+- `socketHandlers.js` was checking for `device.entity_id` (raw HA format)
+- Every device failed this check and got logged as "invalid"
+- Sensors, switches, binary_sensors, media_players - ALL logged as errors with full JSON dumps
+
+### The Fix
+Updated `socketHandlers.js` to check for `device.id` instead of `device.entity_id`:
+
+```javascript
+// BEFORE (wrong - checking for raw HA format)
+if (!device.entity_id || typeof device.entity_id !== 'string') {
+  logger.log(`Invalid HA device: ${JSON.stringify(device)}`, 'error');
+  return null;
+}
+
+// AFTER (correct - matches pre-transformed format)
+if (!device.id || typeof device.id !== 'string') {
+  logger.log(`Malformed HA device (missing id): ${JSON.stringify(device).slice(0, 100)}`, 'warn');
+  return null;
+}
+```
+
+### Files Modified
+- `v3_migration/backend/src/api/socketHandlers.js` - Fixed HA device validation to match actual data format
+
+---
+
 ## Recent Context Menu & UX Polish (2025-12-13)
 
 Major cleanup of the plugin context menu system and UX improvements:
