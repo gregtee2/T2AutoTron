@@ -458,6 +458,7 @@ class HAGenericDeviceNode {
     // Track ticks for warmup period - don't control devices until engine stabilizes
     if (this.tickCount === undefined) {
       this.tickCount = 0;
+      this.initialSyncDone = false;  // Track if we've done initial sync after warmup
     }
     this.tickCount++;
     
@@ -475,10 +476,7 @@ class HAGenericDeviceNode {
     // This prevents turning off devices when engine starts
     if (this.tickCount <= 3) {
       engineLogger.logWarmup(this.id || 'HAGenericDevice', this.tickCount, trigger, this.lastTrigger);
-      // Initialize lastTrigger to current value without taking action
-      if (trigger !== undefined) {
-        this.lastTrigger = trigger;
-      }
+      // DON'T set lastTrigger during warmup - we want to detect the initial value as a change
       return { is_on: !!trigger || !!this.lastTrigger };
     }
 
@@ -491,9 +489,17 @@ class HAGenericDeviceNode {
       return { is_on: !!this.lastTrigger };
     }
 
+    // Force initial sync on first tick after warmup if trigger is true
+    // This ensures devices turn on if they start with trigger=true
+    const forceSync = !this.initialSyncDone && trigger;
+    if (forceSync) {
+      this.initialSyncDone = true;
+      engineLogger.log('HA-INITIAL-SYNC', 'First tick after warmup, forcing sync', { trigger, entities: entityIds });
+    }
+
     // Handle trigger changes based on mode
-    if (trigger !== this.lastTrigger) {
-      engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, 'CHANGE DETECTED');
+    if (trigger !== this.lastTrigger || forceSync) {
+      engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, forceSync ? 'INITIAL SYNC' : 'CHANGE DETECTED');
       const wasTriggered = this.lastTrigger;
       this.lastTrigger = trigger;
       
