@@ -417,7 +417,10 @@
             // Device sync is handled by graphLoadComplete event handler to avoid timing issues
             if (this.skipInitialTrigger) {
                 this.skipInitialTrigger = false;
-                this.lastTriggerValue = trigger;
+                // DON'T set lastTriggerValue to the current value - that would prevent
+                // the next call from seeing a "rising edge". Leave it as false so that
+                // if trigger=true, the next call will see a false→true transition.
+                // this.lastTriggerValue = trigger;  // REMOVED - was eating the initial trigger
                 this.hadConnection = hasConnection;
                 
                 // Record HSV state for change detection
@@ -522,9 +525,14 @@
                     // and set lastTriggerValue/hadConnection from the actual inputs
                     this.triggerUpdate();
                     
-                    // DO NOT sync devices on graph load - this was causing devices to turn on
-                    // The device state should only change when the user explicitly triggers
-                    // or when input values actually change AFTER the graph is loaded
+                    // After the skip pass, we need a SECOND update to actually process
+                    // the trigger value. Without this, devices never turn on after graph load
+                    // because the first call just records the state without acting.
+                    setTimeout(() => {
+                        // Force the node to check if trigger is already true and act on it
+                        // This handles "Follow" mode where trigger=true means "turn on"
+                        this.triggerUpdate();
+                    }, 100);
                 };
                 
                 window.socket.on("device-state-update", this._onDeviceStateUpdate);
