@@ -134,17 +134,22 @@
             Object.assign(data.properties, newState);
 
             const now = Date.now();
-            const limit = 50;
+            const limit = 100; // 100ms = 10 updates/sec max (was 50ms but caused lag)
+            
+            // Throttle: fire immediately if enough time passed, 
+            // but DON'T cancel pending trailing update
             if (now - lastUpdateRef.current >= limit) {
                 triggerEngineUpdate();
                 lastUpdateRef.current = now;
-            } else {
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                timeoutRef.current = setTimeout(() => {
-                    triggerEngineUpdate();
-                    lastUpdateRef.current = Date.now();
-                }, limit - (now - lastUpdateRef.current));
             }
+            
+            // Always schedule a trailing update to catch the final value
+            // Only one timeout at a time (clear previous, schedule new)
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            timeoutRef.current = setTimeout(() => {
+                triggerEngineUpdate();
+                lastUpdateRef.current = Date.now();
+            }, limit);
         };
 
         useEffect(() => {
