@@ -2878,6 +2878,24 @@ export function Editor() {
                 }
             }, 300);
             
+            // IMPORTANT: Also save to server as "last active" so backend engine loads the same graph
+            // This fixes the bug where engine would load stale/empty .last_active.json
+            try {
+                const jsonString = JSON.stringify(graphData, null, 2);
+                const response = await fetch(apiUrl('/api/engine/save-active'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: jsonString
+                });
+                if (response.ok) {
+                    debug('[handleLoad] Graph saved to server as last active');
+                } else {
+                    console.warn('[handleLoad] Failed to save to server:', response.status);
+                }
+            } catch (saveErr) {
+                console.warn('[handleLoad] Failed to save to server:', saveErr);
+            }
+            
             debug('Graph loaded');
         } catch (err) {
             console.error('Failed to load graph:', err);

@@ -112,6 +112,42 @@ router.post('/start', async (req, res) => {
 });
 
 /**
+ * POST /api/engine/force-takeover
+ * Force the engine to take control (set frontendActive=false and sync all devices)
+ */
+router.post('/force-takeover', async (req, res) => {
+  try {
+    const { engine } = getEngine();
+    
+    // Force frontend inactive
+    engine.setFrontendActive(false);
+    
+    // Reset all device nodes' lastTrigger state to force a sync
+    for (const [nodeId, node] of engine.nodes) {
+      if (node.type === 'HAGenericDeviceNode' || node.label?.includes('HA')) {
+        // Reset state to force re-evaluation
+        if (node.lastTrigger !== undefined) {
+          node.lastTrigger = null;
+          node.lastHsv = null;
+          node.tickCount = 0;
+        }
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Engine taking over - frontendActive set to false, device states reset',
+      status: engine.getStatus()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * POST /api/engine/stop
  * Stop the backend engine
  */
@@ -123,6 +159,44 @@ router.post('/stop', (req, res) => {
     res.json({
       success: true,
       message: 'Engine stopped',
+      status: engine.getStatus()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/engine/takeover
+ * Force the backend engine to take control (set frontendActive=false)
+ * This is useful when the frontend disconnected but the server didn't detect it
+ */
+router.post('/takeover', async (req, res) => {
+  try {
+    const { engine } = getEngine();
+    
+    // Force frontendActive to false
+    engine.setFrontendActive(false);
+    
+    // Reset all node states so they re-trigger on next tick
+    for (const [nodeId, node] of engine.nodes) {
+      if (node.lastTrigger !== undefined) {
+        // Force a state change by setting lastTrigger to undefined
+        // This will cause the next tick to see a "change" and send commands
+        node.lastTrigger = undefined;
+      }
+      if (node.tickCount !== undefined) {
+        // Reset tick count so warmup period resets
+        node.tickCount = 0;
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Engine taking over - frontendActive=false, node states reset',
       status: engine.getStatus()
     });
   } catch (error) {
