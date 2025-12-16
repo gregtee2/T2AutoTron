@@ -207,9 +207,10 @@
             const { node, turnOn, hsvInput } = pendingDeviceSyncs.shift();
             try {
                 if (turnOn !== undefined) {
-                    await node.setDevicesState(turnOn);
-                }
-                if (hsvInput) {
+                    // Pass HSV input when turning on so color is included in command
+                    await node.setDevicesState(turnOn, turnOn ? hsvInput : null);
+                } else if (hsvInput) {
+                    // HSV-only update (no on/off change)
                     await node.applyHSVInput(hsvInput);
                 }
             } catch (e) {
@@ -227,6 +228,17 @@
     // -------------------------------------------------------------------------
     // NODE CLASS
     // -------------------------------------------------------------------------
+
+    function coerceBoolean(value) {
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'number') return value !== 0;
+        if (typeof value === 'string') {
+            const s = value.trim().toLowerCase();
+            if (s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no' || s === 'n') return false;
+            if (s === '1' || s === 'true' || s === 'on' || s === 'yes' || s === 'y') return true;
+        }
+        return !!value;
+    }
     class HAGenericDeviceNode extends ClassicPreset.Node {
         constructor(changeCallback) {
             super("HA Generic Device");
@@ -373,7 +385,7 @@
             this.skipInitialTrigger = true;
             
             if (this.controls.filter) this.controls.filter.value = this.properties.filterType;
-            if (this.controls.trigger_mode) this.controls.trigger_mode.value = this.properties.triggerMode || "Toggle";
+            if (this.controls.trigger_mode) this.controls.trigger_mode.value = this.properties.triggerMode || "Follow";
             if (this.controls.transition) this.controls.transition.value = this.properties.transitionTime;
             if (this.controls.debug) this.controls.debug.value = false;
 
@@ -406,19 +418,28 @@
             const hsvInput = inputs.hsv_info?.[0];
             const triggerRaw = inputs.trigger?.[0];
             // Ensure trigger is always a boolean for consistent edge detection
-            const trigger = !!triggerRaw;
+            // (important: some sources may provide "false" as a string)
+            const trigger = coerceBoolean(triggerRaw);
             // Track if we have an actual connection (triggerRaw is not undefined)
             const hasConnection = triggerRaw !== undefined;
             let needsUpdate = false;
 
 
 
-            // On first call after load, record initial state but don't sync devices yet
-            // Device sync is handled by graphLoadComplete event handler to avoid timing issues
+            // On first call after load, do minimal bookkeeping.
+            // Important: in Follow mode we want a second evaluation to detect the
+            // trigger connection and perform an initial sync (so devices don't get
+            // stuck ON when the trigger is FALSE).
             if (this.skipInitialTrigger) {
                 this.skipInitialTrigger = false;
-                this.lastTriggerValue = trigger;
-                this.hadConnection = hasConnection;
+
+                const mode = this.properties.triggerMode || "Follow";
+                // For non-Follow modes, preserve the old behavior: record the current
+                // trigger so we don't accidentally fire a toggle/pulse on load.
+                if (mode !== "Follow") {
+                    this.lastTriggerValue = trigger;
+                    this.hadConnection = hasConnection;
+                }
                 
                 // Record HSV state for change detection
                 if (hsvInput && typeof hsvInput === 'object') {
@@ -440,14 +461,15 @@
                 const fallingEdge = !trigger && this.lastTriggerValue;
                 // Detect when a new connection is made (had no connection, now has one)
                 const newConnection = hasConnection && !this.hadConnection;
-                const mode = this.properties.triggerMode || "Toggle";
+                const mode = this.properties.triggerMode || "Follow";
 
                 if (mode === "Toggle" && risingEdge) { await this.onTrigger(); needsUpdate = true; }
                 else if (mode === "Follow" && (risingEdge || fallingEdge || newConnection)) { 
-                    await this.setDevicesState(trigger); 
+                    // Pass HSV input when turning on so color is included in the command
+                    await this.setDevicesState(trigger, trigger ? hsvInput : null); 
                     needsUpdate = true; 
                 }
-                else if (mode === "Turn On" && risingEdge) { await this.setDevicesState(true); needsUpdate = true; }
+                else if (mode === "Turn On" && risingEdge) { await this.setDevicesState(true, hsvInput); needsUpdate = true; }
                 else if (mode === "Turn Off" && risingEdge) { await this.setDevicesState(false); needsUpdate = true; }
 
                 this.lastTriggerValue = trigger;
@@ -521,6 +543,13 @@
                     // Trigger engine update - this will cascade through the graph
                     // and set lastTriggerValue/hadConnection from the actual inputs
                     this.triggerUpdate();
+
+                    // IMPORTANT: schedule a second evaluation shortly after load.
+                    // This allows Follow mode to see "newConnection" and perform an
+                    // initial sync (turning devices OFF if the trigger is FALSE).
+                    setTimeout(() => {
+                        try { this.triggerUpdate(); } catch (e) {}
+                    }, 120);
                     
                     // DO NOT sync devices on graph load - this was causing devices to turn on
                     // The device state should only change when the user explicitly triggers
@@ -761,12 +790,32 @@
             try {
                 const apiInfo = this.getDeviceApiInfo(id);
                 if (!apiInfo) return;
-                const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
-                const data = await res.json();
-                if (data.success && data.state) {
-                    this.perDeviceState[id] = data.state;
-                    this.updateDeviceControls(id, data.state);
-                    this.triggerUpdate();
+                if (id.startsWith('hue_')) {
+                    const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
+                    const data = await res.json();
+                    if (data.success && data.light && data.light.state) {
+                        const s = data.light.state;
+                        const hueDeg = typeof s.hue === 'number' ? (s.hue / 65535) * 360 : 0;
+                        const satPct = typeof s.sat === 'number' ? (s.sat / 254) * 100 : 0;
+                        const bri255 = typeof s.bri === 'number' ? Math.round((s.bri / 254) * 255) : 0;
+                        const mapped = {
+                            on: !!s.on,
+                            state: s.on ? 'on' : 'off',
+                            brightness: bri255,
+                            hs_color: [hueDeg, satPct]
+                        };
+                        this.perDeviceState[id] = mapped;
+                        this.updateDeviceControls(id, mapped);
+                        this.triggerUpdate();
+                    }
+                } else {
+                    const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
+                    const data = await res.json();
+                    if (data.success && data.state) {
+                        this.perDeviceState[id] = data.state;
+                        this.updateDeviceControls(id, data.state);
+                        this.triggerUpdate();
+                    }
                 }
             } catch (e) { console.error("Failed to fetch state for", id, e); }
         }
@@ -797,6 +846,7 @@
                 const deviceType = device?.type || (id.includes('.') ? id.split('.')[0].replace(/^ha_/, '') : 'light');
                 const isLight = deviceType === "light" || deviceType === "bulb";
                 const isKasa = id.startsWith('kasa_');
+                const isHue = id.startsWith('hue_');
                 
                 // BUG FIX: HSV input should NOT turn on a device that is off
                 // Only the Trigger input can change device on/off state
@@ -839,6 +889,20 @@
                         };
                     }
                     if (transitionMs) payload.transition = transitionMs;
+                } else if (isHue) {
+                    // Hue API expects hue/sat/bri (not hs_color/brightness)
+                    const clampNum = (n, min, max) => Math.max(min, Math.min(max, n));
+                    const transitiontime = typeof transitionMs === 'number' ? Math.round(transitionMs / 100) : undefined;
+                    payload = { on: true };
+                    if (turnOn && isLight && hs_color) {
+                        const hueDeg = clampNum(hs_color[0], 0, 360);
+                        const satPct = clampNum(hs_color[1], 0, 100);
+                        const bri255 = brightness !== null ? clampNum(brightness, 1, 255) : 255;
+                        payload.hue = Math.round((hueDeg / 360) * 65535);
+                        payload.sat = Math.round((satPct / 100) * 254);
+                        payload.bri = Math.round((bri255 / 255) * 254);
+                    }
+                    if (typeof transitiontime === 'number') payload.transitiontime = transitiontime;
                 } else {
                     // HA format
                     payload = { on: turnOn, state: turnOn ? "on" : "off" };
@@ -857,6 +921,12 @@
                             method: "POST", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
+                        });
+                    } else if (isHue) {
+                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` },
+                            body: JSON.stringify(payload)
                         });
                     } else {
                         await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
@@ -879,7 +949,7 @@
             setTimeout(() => this.updateStatus(`Control applied to ${ids.length} devices`), 600);
         }
 
-        async setDevicesState(turnOn) {
+        async setDevicesState(turnOn, hsvInfo = null) {
             // Skip API calls during graph loading to prevent resource exhaustion
             if (typeof window !== 'undefined' && window.graphLoading) {
                 return;
@@ -888,6 +958,25 @@
             const ids = this.properties.selectedDeviceIds.filter(Boolean);
             if (ids.length === 0) return;
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
+            
+            // Parse HSV info for color values when turning on
+            let hs_color = null;
+            let brightness = null;
+            if (turnOn && hsvInfo && typeof hsvInfo === 'object') {
+                // Parse various HSV input formats
+                if (Array.isArray(hsvInfo.hs_color)) {
+                    hs_color = hsvInfo.hs_color;
+                } else if (hsvInfo.h !== undefined && hsvInfo.s !== undefined) {
+                    hs_color = [hsvInfo.h, (hsvInfo.s ?? 0) * 100];
+                } else if (hsvInfo.hue !== undefined && hsvInfo.saturation !== undefined) {
+                    hs_color = [hsvInfo.hue * 360, hsvInfo.saturation * 100];
+                }
+                if (hsvInfo.brightness !== undefined) {
+                    brightness = Math.max(1, Math.min(255, Math.round(hsvInfo.brightness)));
+                } else if (hsvInfo.v !== undefined) {
+                    brightness = Math.max(1, Math.round((hsvInfo.v ?? 0) * 255));
+                }
+            }
             
             // Register pending commands so the Event Log knows this change came from the app
             const nodeTitle = this.getEffectiveTriggerSource();
@@ -902,27 +991,85 @@
                 const apiInfo = this.getDeviceApiInfo(id);
                 if (!apiInfo) continue;
                 const isKasa = id.startsWith('kasa_');
+                const isHue = id.startsWith('hue_');
                 
-                const payload = { on: turnOn, state: turnOn ? "on" : "off" };
-                if (turnOn && transitionMs) payload.transition = transitionMs;
+                const device = this.devices.find(d => d.id === id);
+                const deviceType = device?.type || (id.includes('.') ? id.split('.')[0].replace(/^ha_/, '') : 'light');
+                const isLight = deviceType === 'light' || deviceType === 'bulb';
+                
+                let payload;
+                if (isHue) {
+                    const transitiontime = typeof transitionMs === 'number' ? Math.round(transitionMs / 100) : undefined;
+                    payload = { on: !!turnOn };
+                    // Include color values when turning on a Hue light
+                    if (turnOn && isLight && hs_color) {
+                        const clampNum = (n, min, max) => Math.max(min, Math.min(max, n));
+                        const hueDeg = clampNum(hs_color[0], 0, 360);
+                        const satPct = clampNum(hs_color[1], 0, 100);
+                        payload.hue = Math.round((hueDeg / 360) * 65535);
+                        payload.sat = Math.round((satPct / 100) * 254);
+                        if (brightness !== null) {
+                            payload.bri = Math.round((brightness / 255) * 254);
+                        }
+                    }
+                    if (typeof transitiontime === 'number') payload.transitiontime = transitiontime;
+                } else if (isKasa) {
+                    // Kasa uses hsv format
+                    payload = { on: turnOn, state: turnOn ? "on" : "off" };
+                    if (turnOn && isLight && hs_color) {
+                        payload.hsv = {
+                            hue: Math.round(hs_color[0]),
+                            saturation: Math.round(hs_color[1]),
+                            brightness: brightness !== null ? Math.round((brightness / 255) * 100) : 100
+                        };
+                    }
+                    if (transitionMs) payload.transition = transitionMs;
+                } else {
+                    // HA format - include color values when turning on lights
+                    payload = { on: turnOn, state: turnOn ? "on" : "off" };
+                    if (turnOn && isLight) {
+                        if (hs_color) payload.hs_color = hs_color;
+                        if (brightness !== null) payload.brightness = brightness;
+                    }
+                    if (transitionMs) payload.transition = transitionMs;
+                }
                 try {
                     if (isKasa) {
                         // Kasa uses POST to /on or /off endpoint
                         const action = turnOn ? 'on' : 'off';
-                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
+                        const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
                             method: "POST", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
                         });
+                        if (!res.ok) {
+                            console.error(`Set state failed for ${id} (HTTP ${res.status})`);
+                            continue;
+                        }
+                    } else if (isHue) {
+                        const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!res.ok) {
+                            console.error(`Set state failed for ${id} (HTTP ${res.status})`);
+                            continue;
+                        }
                     } else {
-                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                        const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
                             method: "PUT", 
                             headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                             body: JSON.stringify(payload) 
                         });
+                        if (!res.ok) {
+                            console.error(`Set state failed for ${id} (HTTP ${res.status})`);
+                            continue;
+                        }
                     }
-                    this.perDeviceState[id] = { ...this.perDeviceState[id], on: turnOn, state: payload.state };
-                    this.updateDeviceControls(id, this.perDeviceState[id]);
+
+                    // Don't assume success — fetch authoritative state so UI matches reality
+                    await this.fetchDeviceState(id);
                 } catch (e) { console.error(`Set state failed for ${id}`, e); }
                 
                 // Small delay between requests to prevent API flood
@@ -988,7 +1135,24 @@
 
         handleDeviceStateUpdate(data) {
             let id, state;
-            if (data.id) { id = data.id; state = { ...data, state: data.state || (data.on ? "on" : "off") }; }
+            if (data.id) {
+                id = data.id;
+                // Hue direct updates may send {on,hue,sat,bri}
+                if (id && id.startsWith('hue_') && (data.hue !== undefined || data.sat !== undefined || data.bri !== undefined)) {
+                    const hueDeg = typeof data.hue === 'number' ? (data.hue / 65535) * 360 : 0;
+                    const satPct = typeof data.sat === 'number' ? (data.sat / 254) * 100 : 0;
+                    const bri255 = typeof data.bri === 'number' ? Math.round((data.bri / 254) * 255) : null;
+                    state = {
+                        ...data,
+                        on: !!data.on,
+                        state: data.on ? 'on' : 'off',
+                        ...(bri255 !== null ? { brightness: bri255 } : {}),
+                        hs_color: [hueDeg, satPct]
+                    };
+                } else {
+                    state = { ...data, state: data.state || (data.on ? "on" : "off") };
+                }
+            }
             else if (data.entity_id && data.new_state) {
                 id = data.entity_id;
                 const a = data.new_state.attributes || {};
