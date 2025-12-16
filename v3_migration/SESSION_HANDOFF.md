@@ -1,4 +1,96 @@
-# Session Handoff - December 14, 2025
+# Session Handoff - December 16, 2025
+
+## Addendum (Session 3 - Late Night)
+
+### What changed (Session 3 - Claude Opus 4.5)
+- **Eliminated HA device log spam** (hundreds of "❌ Invalid HA device" messages)
+  - Symptom: Console flooded with error messages for every sensor, switch, binary_sensor in Home Assistant, making logs unreadable.
+  - Root cause: `socketHandlers.js` was checking for `device.entity_id` (raw HA format) but `homeAssistantManager.getDevices()` returns pre-transformed format with `device.id`. Every device failed validation.
+  - Fix: Changed validation to check `device.id` instead of `device.entity_id`, reduced log level to 'warn', truncated JSON output.
+
+### Files touched (Session 3)
+- `v3_migration/backend/src/api/socketHandlers.js` - Fixed HA device validation
+- `.github/copilot-instructions.md` - Added documentation for this fix
+
+### Verification
+- Server starts with clean logs (no spam)
+- All HA devices still populate correctly
+- Commit pushed to main: `6b29d27`
+
+---
+
+## Addendum (Session 2 - Earlier Today)
+
+### What changed (Session 2 - Claude Opus 4.5)
+- **Fixed Follow mode not syncing on graph load** (the basement lights issue!)
+  - Symptom: HA Generic Device nodes in "Follow" mode stayed ON even when trigger input was FALSE after loading a graph.
+  - Root cause: Line 463 in `HAGenericDeviceNode.js` had `|| "Toggle"` as the default mode instead of `|| "Follow"`. The UI showed "Follow" was selected, but the logic was using Toggle mode.
+  - Fix: Changed default from `"Toggle"` to `"Follow"` to match the UI dropdown default.
+- **Fixed same bug in KasaPlugNode.js** (line 150) - was also defaulting to Toggle.
+- **Fixed inconsistent default in HAGenericDeviceNode restore** (line 387) - was also using Toggle.
+- **Fixed package.json path error** in server.js
+  - Symptom: `Cannot find module '../../package.json'` error on `/api/version` endpoint.
+  - Root cause: server.js is in `backend/src/` but was using `../../package.json` (goes to v3_migration root) instead of `../package.json` (goes to backend/).
+  - Fix: Changed path from `../../package.json` to `../package.json`.
+- **Fixed headless mode buffer misalignment** (Sender/Receiver data going to wrong devices)
+  - Symptom: In headless mode, Receivers were getting data from wrong Senders - lights were getting wrong colors.
+  - Root cause: The `topologicalSort()` in BackendEngine.js was putting Receivers LAST in execution order. This meant consumer nodes (like HAGenericDevice) ran BEFORE the Receivers they depended on, getting stale/empty data.
+  - Fix: Added virtual dependencies so every Receiver depends on every Sender. Now execution order is: Senders → Receivers → Consumers (respecting both buffer and wire dependencies).
+
+### Files touched (Session 2)
+- `v3_migration/backend/plugins/HAGenericDeviceNode.js` - Fixed 2 wrong defaults (lines 387, 463)
+- `v3_migration/backend/plugins/KasaPlugNode.js` - Fixed wrong default (line 150)
+- `v3_migration/backend/src/server.js` - Fixed package.json path
+- `v3_migration/backend/src/engine/BackendEngine.js` - Fixed topological sort for buffer dependencies
+
+### Verification
+- All 71 tests pass
+- All modified files pass syntax check (`node --check`)
+- User confirmed Follow mode now works correctly on graph load
+- Headless mode buffer fix ready for testing
+
+---
+
+## Addendum (earlier work today - Session 1)
+
+### What changed
+- Fixed a hard syntax break that prevented Home Assistant integration from loading.
+  - Symptom: server starts, but logs `Failed to load manager homeAssistantManager.js: Missing catch or finally after try` and HA shows Offline.
+  - Root cause: `getState()` in the HA manager had accidental pasted fragments of `updateState()` inside it, making the file invalid JS.
+  - Fix: restored a clean `getState()` implementation (cache -> fetch `/api/states/<entity>` -> normalize -> cache) and moved all action-selection/coercion logic back into `updateState()`.
+- Improved HA “OFF reliability” by hardening boolean handling.
+  - `updateState()` now safely interprets `true/false`, `1/0`, and strings like `"true"/"false"/"on"/"off"`.
+  - This avoids JS truthiness bugs where `"false"` behaves like true.
+- Kept backend tests green after the fix.
+  - Ran: `node --check src/devices/managers/homeAssistantManager.js` (clean)
+  - Ran: `npm test --silent` (71 tests passed)
+
+### Files touched (latest)
+- `v3_migration/backend/src/devices/managers/homeAssistantManager.js`
+- (Earlier in this stabilization push) `v3_migration/backend/plugins/HAGenericDeviceNode.js` (post-command state re-fetch instead of optimistic UI state)
+- (Earlier) `v3_migration/backend/src/server.js` (startup identity logs: PID/CWD/ENV_PATH to detect multiple servers)
+
+### Known remaining issues / follow-ups
+- ~~There is/was an unrelated runtime error seen in logs: `Cannot find module '../../package.json'` from `server.js` on some request path.~~ **FIXED** - path corrected.
+- Operationally: ensure only one backend instance owns port 3000. The added PID/CWD/ENV_PATH logs help identify which process is the "real" server.
+- **Backend engine headless mode** - Buffers don't work correctly when UI is closed. This is the next item to tackle.
+
+### Quick verification steps
+1) Start backend from `v3_migration/backend`:
+   - `cd v3_migration/backend && npm start`
+2) Watch startup logs:
+   - HA manager should load (no “Missing catch or finally after try”).
+3) In the UI, confirm HA shows connected and devices populate.
+4) Toggle a problematic HA device OFF using HA Generic Device, then verify:
+   - the node UI state matches the physical state (it now re-reads state after the command).
+
+## 🚨 CURRENT STATE: RESTORED TO STABLE
+
+**We are on the `main` branch (v2.1.55)** - the stable, working version.
+
+All experimental backend engine changes are on `feature/unified-architecture` branch but that branch has issues. The user ended the session by restoring to `main` because things broke.
+
+---
 
 ## THE BIG PICTURE
 
@@ -8,115 +100,175 @@ T2AutoTron is a **visual node-based automation editor** for smart home control (
 - Runs inside Home Assistant as an add-on
 - Users access via HA's web UI (ingress)
 - **This is the production deployment for most users**
-- Repo: `home-assistant-addons/t2autotron/`
 
 ### 2. Local Electron App (Windows desktop)
 - Standalone Windows app for development/power users
 - Direct access, no HA required
-- **This is what we're debugging now**
 
-## WHY THE BACKEND ENGINE EXISTS
+---
 
-**The Core Problem**: Automations currently run in the browser using Rete.js DataflowEngine. This means:
-- ✅ Desktop Electron app works fine (always open)
-- ❌ HA Add-on breaks when user closes browser tab = **all automations stop**
+## WHAT WE WERE TRYING TO FIX
 
-**The Solution**: Move automation execution to the **server** (backend engine). The browser becomes just an editor - automations run 24/7 on the server even when no browser is open.
+### The Goal: Headless Mode Buffer System
 
-This is **critical for the HA add-on** - users expect home automations to run continuously, not stop when they close a browser tab.
+**The Problem**: When the UI is open, everything works. When the UI is closed (headless mode), lights don't respond correctly to buffer-based automation.
 
-## CURRENT ARCHITECTURE
+**User's Description**: "I loaded the UI, changed the Kasa lights in HA, and they immediately flipped back to the UI intended state. I then quit UI to go headless, and they're not adjusting."
+
+### How Buffers Work
+
+Sender/Receiver nodes communicate via a **shared buffer** (not wires). This allows "wireless" connections:
 
 ```
-Frontend (Browser/Electron)          Backend (Node.js Server)
-┌─────────────────────────┐         ┌─────────────────────────┐
-│  Rete.js Visual Editor  │◄──────►│  Express + Socket.IO    │
-│  (editing only)         │         │                         │
-└─────────────────────────┘         │  BackendEngine          │
-                                    │  ├─ 100ms tick loop     │
-                                    │  ├─ Node processing     │
-                                    │  └─ Device control      │
-                                    │                         │
-                                    │  Device Managers        │
-                                    │  ├─ Home Assistant      │
-                                    │  ├─ Philips Hue         │
-                                    │  ├─ TP-Link Kasa        │
-                                    │  └─ Shelly              │
-                                    └─────────────────────────┘
+[Spline Timeline] → [Sender: [HSV] Master Bedroom]
+                                    ↓ (buffer)
+[Receiver: [HSV] Master Bedroom] → [HA Generic Device]
 ```
 
-## WHAT WE'VE BEEN DEBUGGING
+The backend engine must:
+1. Run Sender nodes FIRST (to populate buffers)
+2. Run Receiver nodes SECOND (to read buffers)
+3. Run consumer nodes LAST (to use the data)
 
-### Phase 1: HA Add-on Socket Stability (DONE)
-- Fixed socket disconnects when using HA ingress
-- Increased timeouts, infinite reconnection attempts
-- Version: 2.1.35
+---
 
-### Phase 2: Overnight Crash Analysis (DONE)
-- Found 11 crashes overnight
-- Root cause: Kasa device "Back Door Sconce Upper" offline, causing TCP errors every 5 seconds
-- 380MB log file bloat from constant retries
-- **Fixed**: Added offline device backoff (30s→60s→90s... max 5min between retries)
-- **Fixed**: Added 10MB log rotation
-- Version: 2.1.36
+## WHAT WE FIXED (on feature branch)
 
-### Phase 3: Backend Engine Device Toggle Bug (IN PROGRESS)
-**Problem**: When the backend engine starts, one HA device turns OFF even though the trigger input shows TRUE.
+### Fix 1: Topological Sort with Virtual Buffer Dependencies
+- Added virtual edges: Sender → Receiver → consumers
+- Ensures execution order respects buffer data flow
+- File: `BackendEngine.js`
 
-**User quote**: "when I start the engine in the local version, it toggles off one of my HA generic device nodes, even though the trigger is still showing True from the input buffer"
+### Fix 2: Buffer Name Normalization
+- Strip `[HSV]`, `[Trigger]` prefixes before matching
+- `[HSV] Master Bedroom` sender matches `[HSV] Master Bedroom` receiver
+- File: `BackendEngine.js`
 
-**What we've tried**:
-1. Fixed label mapping in `BackendNodeRegistry.js` ('HA Generic Device' → 'HAGenericDeviceNode')
-2. Added 3-tick warmup period to HAGenericDeviceNode (skip first 3 ticks while buffers populate)
-3. Changed execution order: Sender nodes run FIRST, Receiver nodes run LAST
-4. Added comprehensive debug logging to `crashes/engine_debug.log`
+### Fix 3: Input Array Unwrapping
+- `gatherInputs()` was returning `{trigger: [true]}` instead of `{trigger: true}`
+- Now unwraps single-element arrays
+- File: `BackendEngine.js`
 
-**Current status**: User needs to run app with new logging to capture exactly what's happening.
+### Fix 4: IntegerSelectorNode Registration
+- Was marked as `null` (UI-only) but needed to run on backend
+- Changed `'Integer Selector': null` → `'Integer Selector': 'IntegerSelectorNode'`
+- File: `BackendNodeRegistry.js`
+
+### Fix 5: HSVControlNode Kept as UI-Only
+- Accidentally registered it, caused ALL lights to turn RED
+- Reverted to `null` - it's a UI control, not a backend node
+- File: `BackendNodeRegistry.js`
+
+---
+
+## WHAT BROKE
+
+After all the fixes, something broke the **frontend UI**:
+
+1. **Timeline Color node** not showing correct times
+2. **HA Generic Device nodes** not responding
+3. User saw: "There was no time on any of the timeline color nodes"
+
+This happened AFTER fixing IntegerSelector and reverting HSVControl. We don't know exactly what caused the frontend issues.
+
+---
+
+## THE RESTORE
+
+User said: "I'm getting tired and need stop this for the evening. Can we find a restore point?"
+
+**Commands run:**
+```bash
+git stash          # Stash any uncommitted changes
+git checkout main  # Switch to stable main branch
+```
+
+**Result:** Now on `main` branch (commit `d869205`, v2.1.55) - stable, working UI.
+
+---
+
+## BRANCH STATUS
+
+| Branch | Commit | Status |
+|--------|--------|--------|
+| `main` | d869205 | ✅ STABLE - Currently checked out |
+| `stable` | d869205 | ✅ STABLE - Same as main |
+| `feature/unified-architecture` | 08b4ac2 | ⚠️ HAS ISSUES - Contains all fixes but frontend broke |
+
+---
+
+## IF CONTINUING THIS WORK
+
+### Option A: Start Fresh from Main
+1. Create new branch: `git checkout -b feature/backend-engine-v2`
+2. Apply fixes ONE AT A TIME, testing after each
+3. Test both frontend AND headless mode after each change
+
+### Option B: Debug the Feature Branch
+1. `git checkout feature/unified-architecture`
+2. Compare files to main: `git diff main -- backend/src/engine/`
+3. Find what broke the frontend
+4. The stashed changes might be relevant: `git stash list`
+
+### Key Files Changed on Feature Branch
+- `backend/src/engine/BackendEngine.js` - Virtual dependencies, array unwrapping
+- `backend/src/engine/BackendNodeRegistry.js` - IntegerSelector, HSVControl mappings
+- `backend/src/engine/nodes/AdditionalNodes.js` - IntegerSelectorNode, HSVControlNode
+
+---
+
+## WHAT TO TEST
+
+When making changes, verify BOTH:
+
+1. **Frontend UI works:**
+   - Timeline Color nodes show times
+   - HA Generic Device nodes respond
+   - Lights change when you adjust controls
+
+2. **Headless mode works:**
+   - Close UI, run only backend
+   - Lights should maintain buffer-defined colors
+   - Check with: `GET http://localhost:3000/api/engine/status`
+
+---
 
 ## KEY FILES FOR THIS ISSUE
 
 ```
 Backend Engine:
-  backend/src/engine/BackendEngine.js      - Main engine, tick loop, node ordering
-  backend/src/engine/BackendNodeRegistry.js - Maps node labels to classes
-  backend/src/engine/engineLogger.js       - Debug logger → crashes/engine_debug.log
-  backend/src/engine/nodes/HADeviceNodes.js - HA device control with warmup logic
-  backend/src/engine/nodes/BufferNodes.js  - Sender/Receiver for "wireless" connections
+  backend/src/engine/BackendEngine.js       - Main engine, topological sort
+  backend/src/engine/BackendNodeRegistry.js - Label → class mappings
+  backend/src/engine/nodes/BufferNodes.js   - Sender/Receiver buffer comms
+  backend/src/engine/nodes/AdditionalNodes.js - IntegerSelector, HSVControl
 
-Debug Log Location:
-  v3_migration/crashes/engine_debug.log    - Detailed engine events
+Frontend Plugins:
+  backend/plugins/SplineTimelineColorNode.js - Timeline color UI
+  backend/plugins/HAGenericDeviceNode.js     - HA device control UI
 ```
 
-## THE SUSPECTED ROOT CAUSE
+---
 
-Sender/Receiver nodes communicate via a shared buffer (not wires). On engine start:
-1. Tick 1: Receiver runs, buffer empty → returns `undefined`
-2. Tick 2: Sender runs, sets buffer to `true`
-3. Tick 3: Receiver gets `true`, passes to HAGenericDevice
-4. After warmup: HAGenericDevice sees trigger change from `undefined` → `true`... or possibly misses it
+## 🦴 CAVEMAN SUMMARY
 
-The warmup period and execution ordering were added to fix this, but the device still turns off.
+**What we tried to do:** Make lights keep their colors when you close the app.
 
-## NEXT STEPS
+**What we did:** Fixed several problems with how the server processes nodes.
 
-1. **Run the app and start the engine**
-2. **Check `crashes/engine_debug.log`** - should show:
-   - `EXEC-ORDER` - node execution order
-   - `BUFFER-SET` / `BUFFER-GET` - buffer values
-   - `HA-DEVICE-TICK` - trigger values per tick
-   - `HA-DECISION` - exactly why device was turned on/off
-   - `WARMUP` - ticks 1-3 showing warmup behavior
+**What went wrong:** After fixing the backend, the frontend UI stopped working. Timeline colors disappeared, lights wouldn't respond.
 
-3. **Share first 50-100 lines of log** - will reveal root cause
+**Where we are now:** Went back to the version that works. All our fixes are saved on a different branch, but we need to figure out what broke the UI before using them.
+
+---
 
 ## OTHER CONTEXT
 
-### Current Version: 2.1.36
+### Current Version: 2.1.55
 
-### Recent Fixes (don't re-fix these):
-- Socket stability: `reconnectionAttempts: Infinity`, `pingTimeout: 60000`
-- Kasa backoff: Offline devices retry at increasing intervals
-- Log rotation: 10MB max before rotating
+### Git Workflow
+- `main` = development branch
+- `stable` = production (users pull updates from here)
+- Push to stable: `git push origin main:stable`
 
 ### Key Copilot Instructions
 The repo has `.github/copilot-instructions.md` with detailed architecture info. Key points:
@@ -124,9 +276,4 @@ The repo has `.github/copilot-instructions.md` with detailed architecture info. 
 - Debug logging gated by `VERBOSE_LOGGING` env var
 - Never call `changeCallback()` inside `data()` method
 - Use `window.T2Controls` for shared UI components
-
-### Git Workflow
-- `main` = development branch
-- `stable` = production (users pull updates from here)
-- Push to stable: `git push origin main:stable`
 
