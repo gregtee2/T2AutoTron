@@ -568,11 +568,23 @@ class HAGenericDeviceNode {
         Math.abs((hsv.brightness || 0) - (this.lastHsv.brightness || 0)) > 1;
 
       if (hsvChanged) {
+        engineLogger.log('HA-HSV-CHANGE', `HSV changed while on`, { 
+          oldHsv: this.lastHsv, 
+          newHsv: hsv,
+          entities: entityIds 
+        });
         this.lastHsv = { ...hsv };
         for (const entityId of entityIds) {
           await this.controlDevice(entityId, true, hsv);
         }
       }
+    } else if (this.tickCount % 100 === 0) {
+      // Debug: log why HSV changes aren't being applied
+      engineLogger.log('HA-HSV-SKIP', `Not updating HSV`, { 
+        lastTrigger: this.lastTrigger, 
+        hasHsv: !!hsv, 
+        mode: this.properties.triggerMode 
+      });
     }
 
     return { is_on: !!this.lastTrigger };
