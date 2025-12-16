@@ -989,7 +989,7 @@
           "selectedDeviceNames": [
             "Master Bedroom Wall Light"
           ],
-          "status": "Loaded 815 devices",
+          "status": "Control applied to 1 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1019,7 +1019,7 @@
           "selectedDeviceNames": [
             "Hue bloom Master Bath (ha)"
           ],
-          "status": "Loaded 815 devices",
+          "status": "Control applied to 1 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1135,7 +1135,7 @@
             "Back Door Sconce Upper (ha)",
             "Front West Upper Sconce (ha)"
           ],
-          "status": "Loaded 815 devices",
+          "status": "Control applied to 4 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1171,7 +1171,7 @@
             "Front West Lower Sconce (ha)",
             "House Back Lower Sconce (ha)"
           ],
-          "status": "Loaded 815 devices",
+          "status": "Control applied to 4 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1422,13 +1422,13 @@
         "properties": {
           "bufferName": "Sconce Top Lights",
           "lastValue": {
-            "hue": 0.3731443994601889,
-            "saturation": 0.9840637450199202,
+            "hue": 0.26747311827956993,
+            "saturation": 0.7515151515151516,
             "brightness": 254,
             "rgb": {
-              "r": 4,
-              "g": 250,
-              "b": 63
+              "r": 90,
+              "g": 164,
+              "b": 41
             }
           },
           "registeredName": "[HSV]Sconce Top Lights",
@@ -1449,12 +1449,12 @@
         "properties": {
           "bufferName": "Sconce Bottom Light",
           "lastValue": {
-            "hue": 0.0026455026455026454,
+            "hue": 0.07936507936507937,
             "saturation": 1,
             "brightness": 254,
             "rgb": {
-              "r": 251,
-              "g": 4,
+              "r": 188,
+              "g": 90,
               "b": 0
             }
           },
@@ -1476,13 +1476,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Sconce Top Lights",
           "lastValue": {
-            "hue": 0.3731443994601889,
-            "saturation": 0.9840637450199202,
+            "hue": 0.26747311827956993,
+            "saturation": 0.7515151515151516,
             "brightness": 254,
             "rgb": {
-              "r": 4,
-              "g": 250,
-              "b": 63
+              "r": 90,
+              "g": 164,
+              "b": 41
             }
           },
           "lastTriggerSource": "Sconce Top Lights"
@@ -1502,12 +1502,12 @@
         "properties": {
           "selectedBuffer": "[HSV]Sconce Bottom Light",
           "lastValue": {
-            "hue": 0.0026455026455026454,
+            "hue": 0.07936507936507937,
             "saturation": 1,
             "brightness": 254,
             "rgb": {
-              "r": 251,
-              "g": 4,
+              "r": 188,
+              "g": 90,
               "b": 0
             }
           },
@@ -1882,7 +1882,8 @@
             "c4018a258f9c8fbd",
             "a157051d1861b8b1",
             "c095e7b26b0c147e",
-            "946f4afaff8f498d"
+            "946f4afaff8f498d",
+            "76af46417c1043fe"
           ],
           "locked": true
         }
@@ -1893,7 +1894,7 @@
       "label": "Kasa Plug Control",
       "position": {
         "x": 9144.83312796818,
-        "y": 3736.39135437519
+        "y": 3737.509415879773
       },
       "data": {
         "id": "642f583dff788b72",
@@ -2285,13 +2286,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Temps",
           "lastValue": {
-            "hue": 0.3980263157894737,
-            "saturation": 0.7794871794871794,
-            "brightness": 112,
+            "hue": 0.410941475826972,
+            "saturation": 0.7197802197802197,
+            "brightness": 110,
             "rgb": {
-              "r": 19,
-              "g": 86,
-              "b": 45
+              "r": 22,
+              "g": 79,
+              "b": 48
             }
           },
           "lastTriggerSource": "Temps"
@@ -2955,13 +2956,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 12,
-        "position": 0.2,
+        "lastTimeStep": 16,
+        "position": 0.26666666666666666,
         "isInRange": true,
         "lastColor": {
           "r": 255,
-          "g": 222,
-          "b": 195
+          "g": 213,
+          "b": 180
         },
         "inputStartTime": "4:17 PM",
         "inputEndTime": "10:30 PM"
@@ -3363,8 +3364,8 @@
       "id": "f655421d76358d81",
       "label": "Timeline Color",
       "position": {
-        "x": 14761.404165346274,
-        "y": 968.9385975616453
+        "x": 14729.160362516795,
+        "y": 1131.9489340884475
       },
       "data": {
         "id": "f655421d76358d81",
@@ -3439,15 +3440,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0.14709110898661568,
+          "position": 0.19984174633524537,
           "isInRange": true,
-          "outputHue": 0.5736961451247166,
-          "outputSaturation": 0.7313432835820896,
-          "outputBrightness": 197,
+          "outputHue": 0.5685358255451713,
+          "outputSaturation": 0.5911602209944751,
+          "outputBrightness": 177,
           "outputRgb": {
-            "r": 42,
-            "g": 105,
-            "b": 155
+            "r": 51,
+            "g": 95,
+            "b": 126
           }
         }
       }
@@ -3532,15 +3533,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0.14709110898661568,
+          "position": 0.19984174633524537,
           "isInRange": true,
-          "outputHue": 0.09722222222222217,
-          "outputSaturation": 0.18823529411764706,
-          "outputBrightness": 204,
+          "outputHue": 0.09743589743589746,
+          "outputSaturation": 0.2549019607843137,
+          "outputBrightness": 186,
           "outputRgb": {
-            "r": 204,
-            "g": 188,
-            "b": 166
+            "r": 186,
+            "g": 166,
+            "b": 139
           }
         }
       }
@@ -3595,7 +3596,7 @@
           "timerDurationValue": 5,
           "timerUnit": "minutes",
           "timerLoopMode": "ping-pong",
-          "outputStepInterval": 1000,
+          "outputStepInterval": 5000,
           "colorMode": "custom",
           "colorStops": [
             {
@@ -3620,15 +3621,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.3769866666666667,
+          "position": 0.3900266666666667,
           "isInRange": true,
-          "outputHue": 0.3731443994601889,
-          "outputSaturation": 0.9840637450199202,
+          "outputHue": 0.26747311827956993,
+          "outputSaturation": 0.7515151515151516,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 4,
-            "g": 250,
-            "b": 63
+            "r": 90,
+            "g": 164,
+            "b": 41
           }
         }
       }
@@ -3683,7 +3684,7 @@
           "timerDurationValue": 5,
           "timerUnit": "minutes",
           "timerLoopMode": "ping-pong",
-          "outputStepInterval": 1000,
+          "outputStepInterval": 5000,
           "colorMode": "custom",
           "colorStops": [
             {
@@ -3708,14 +3709,14 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.37715,
+          "position": 0.3902466666666667,
           "isInRange": true,
-          "outputHue": 0.0026455026455026454,
+          "outputHue": 0.07936507936507937,
           "outputSaturation": 1,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 251,
-            "g": 4,
+            "r": 188,
+            "g": 90,
             "b": 0
           }
         }
@@ -3766,7 +3767,7 @@
             "value"
           ],
           "lastOutputValues": {
-            "value": 58.1
+            "value": 56.5
           },
           "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
         }
@@ -3785,7 +3786,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
           "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Devices fetched",
+          "status": "✅ Sunshine terrace  Feels like: 56.5",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -3876,15 +3877,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.38382352941176473,
+          "position": 0.3602941176470588,
           "isInRange": true,
-          "outputHue": 0.3980263157894737,
-          "outputSaturation": 0.7794871794871794,
-          "outputBrightness": 112,
+          "outputHue": 0.410941475826972,
+          "outputSaturation": 0.7197802197802197,
+          "outputBrightness": 110,
           "outputRgb": {
-            "r": 19,
-            "g": 86,
-            "b": 45
+            "r": 22,
+            "g": 79,
+            "b": 48
           }
         }
       }
@@ -3902,13 +3903,13 @@
         "properties": {
           "bufferName": "Temps",
           "lastValue": {
-            "hue": 0.3980263157894737,
-            "saturation": 0.7794871794871794,
-            "brightness": 112,
+            "hue": 0.410941475826972,
+            "saturation": 0.7197802197802197,
+            "brightness": 110,
             "rgb": {
-              "r": 19,
-              "g": 86,
-              "b": 45
+              "r": 22,
+              "g": 79,
+              "b": 48
             }
           },
           "registeredName": "[HSV]Temps",
@@ -4333,6 +4334,29 @@
           ],
           "currentValue": true,
           "messageCount": 1
+        }
+      }
+    },
+    {
+      "id": "76af46417c1043fe",
+      "label": "Kasa Plug Control",
+      "position": {
+        "x": 9960.52970213264,
+        "y": 4400.777397064883
+      },
+      "data": {
+        "id": "76af46417c1043fe",
+        "label": "Kasa Plug Control",
+        "properties": {
+          "selectedPlugIds": [
+            "kasa_8006FBA073DE808FB9F07529B5FAED3321993B53"
+          ],
+          "selectedPlugNames": [
+            "Downstairs Corner Fixture "
+          ],
+          "status": "Loaded 6 plugs",
+          "triggerMode": "Follow",
+          "autoRefreshInterval": 5000
         }
       }
     }
@@ -5089,10 +5113,10 @@
     }
   ],
   "viewport": {
-    "x": 325.8592777679885,
-    "y": 296.02046402798555,
-    "k": 0.06857837259520123
+    "x": 655.7337360809768,
+    "y": 1817.4554839979264,
+    "k": 0.7068482857977135
   },
   "autoSaved": true,
-  "timestamp": 1765848944072
+  "timestamp": 1765850502100
 }

@@ -51,10 +51,28 @@ class BackendEngine {
 
   /**
    * Check if device commands should be skipped (frontend is controlling)
+   * Includes auto-timeout: if frontend hasn't been seen for 2 minutes, assume it's gone
    * @returns {boolean}
    */
   shouldSkipDeviceCommands() {
-    return this.frontendActive;
+    if (!this.frontendActive) {
+      return false;
+    }
+    
+    // Auto-timeout: if frontend was marked active but hasn't been seen for 2 minutes,
+    // assume it crashed/closed without properly disconnecting
+    const FRONTEND_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
+    if (this.frontendLastSeen && (Date.now() - this.frontendLastSeen) > FRONTEND_TIMEOUT_MS) {
+      console.log('[BackendEngine] Frontend timeout - auto-resuming device control');
+      engineLogger.logEngineEvent('FRONTEND-TIMEOUT', { 
+        lastSeen: this.frontendLastSeen,
+        timeout: FRONTEND_TIMEOUT_MS 
+      });
+      this.setFrontendActive(false);
+      return false;
+    }
+    
+    return true;
   }
 
   /**
@@ -256,6 +274,12 @@ class BackendEngine {
     
     this.lastTickTime = Date.now();
     this.tickCount++;
+
+    // Periodically check frontend timeout (every 10 ticks = 1 second)
+    // This ensures we resume device control even when triggers aren't changing
+    if (this.tickCount % 10 === 0) {
+      this.shouldSkipDeviceCommands(); // This has side-effect of clearing timeout
+    }
 
     try {
       // Get execution order

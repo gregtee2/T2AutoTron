@@ -399,7 +399,18 @@ function App() {
 
     connectSocket();
 
+    // Heartbeat: tell backend we're still here every 30 seconds
+    // This prevents the backend from timing out and taking over while we're active
+    const heartbeatInterval = setInterval(() => {
+      if (socket.connected) {
+        socket.emit('editor-heartbeat');
+      }
+    }, 30000); // 30 seconds
+
     return () => {
+      // Stop heartbeat
+      clearInterval(heartbeatInterval);
+      
       // Tell backend editor is closing before disconnecting
       if (socket.connected) {
         socket.emit('editor-inactive');

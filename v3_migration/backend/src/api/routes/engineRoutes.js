@@ -182,21 +182,32 @@ router.post('/takeover', async (req, res) => {
     engine.setFrontendActive(false);
     
     // Reset all node states so they re-trigger on next tick
+    let resetCount = 0;
     for (const [nodeId, node] of engine.nodes) {
+      // Reset trigger tracking - undefined will be seen as a change
       if (node.lastTrigger !== undefined) {
-        // Force a state change by setting lastTrigger to undefined
-        // This will cause the next tick to see a "change" and send commands
         node.lastTrigger = undefined;
+        resetCount++;
       }
+      // Reset HSV tracking so colors get re-sent
+      if (node.lastHsv !== undefined) {
+        node.lastHsv = null;
+      }
+      // Reset initial sync flag so forced sync happens after warmup
+      if (node.initialSyncDone !== undefined) {
+        node.initialSyncDone = false;
+      }
+      // Reset tick count so warmup period resets
       if (node.tickCount !== undefined) {
-        // Reset tick count so warmup period resets
         node.tickCount = 0;
       }
     }
     
+    console.log(`[Engine] Takeover: reset ${resetCount} nodes, waiting for warmup (3 ticks)`);
+    
     res.json({
       success: true,
-      message: 'Engine taking over - frontendActive=false, node states reset',
+      message: `Engine taking over - frontendActive=false, ${resetCount} nodes reset`,
       status: engine.getStatus()
     });
   } catch (error) {

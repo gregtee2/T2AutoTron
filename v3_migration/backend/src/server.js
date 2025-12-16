@@ -298,6 +298,14 @@ io.on('connection', (socket) => {
     
     socket.emit('editor-inactive-ack', { activeEditors: activeEditors.size });
   });
+
+  // Frontend sends heartbeat every 30 seconds to keep engine from timing out
+  socket.on('editor-heartbeat', () => {
+    // Refresh the frontend last-seen timestamp
+    if (backendEngine && activeEditors.has(socket.id)) {
+      backendEngine.setFrontendActive(true);
+    }
+  });
 });
 
 // Simple version endpoint - returns app version from package.json
