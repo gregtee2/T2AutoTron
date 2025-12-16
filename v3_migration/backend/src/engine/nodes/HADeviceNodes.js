@@ -566,7 +566,10 @@ class HAGenericDeviceNode {
       }
     }
 
-    // Handle HSV changes while on (for Follow mode)
+    // Handle HSV updates while trigger is ON (for Follow mode)
+    // Key behavior: We respect manual on/off overrides, but HSV changes always apply
+    // This means if automation says "trigger=true", we send HSV updates periodically
+    // but we DON'T re-send turn_on - the on/off state was set when trigger changed
     if (this.lastTrigger && hsv && this.properties.triggerMode !== 'Toggle') {
       const hsvChanged = !this.lastHsv ||
         Math.abs((hsv.hue || 0) - (this.lastHsv.hue || 0)) > 0.01 ||
@@ -580,8 +583,27 @@ class HAGenericDeviceNode {
           entities: entityIds 
         });
         this.lastHsv = { ...hsv };
+        // Send HSV update WITHOUT changing on/off state
+        // Uses turn_on but HA won't toggle a light that's already on
         for (const entityId of entityIds) {
           await this.controlDevice(entityId, true, hsv);
+        }
+      } else {
+        // Periodic HSV refresh: every 300 ticks (30 seconds), re-send HSV
+        // This ensures lights that were manually adjusted get color-corrected
+        // Note: This only sends HSV, not on/off - respects manual power toggles
+        const HSV_REFRESH_INTERVAL = 300; // 30 seconds at 100ms per tick
+        if (this.tickCount % HSV_REFRESH_INTERVAL === 0 && this.lastHsv) {
+          engineLogger.log('HA-HSV-REFRESH', `Periodic HSV refresh (not on/off)`, { 
+            tick: this.tickCount,
+            hsv: this.lastHsv,
+            entities: entityIds 
+          });
+          for (const entityId of entityIds) {
+            // Send color update only - this won't turn off a light that's manually on
+            // or turn on a light that's manually off
+            await this.sendHsvOnly(entityId, this.lastHsv);
+          }
         }
       }
     } else if (this.tickCount % 100 === 0) {
@@ -594,6 +616,44 @@ class HAGenericDeviceNode {
     }
 
     return { is_on: !!this.lastTrigger };
+  }
+
+  // Send only HSV color data without affecting on/off state
+  async sendHsvOnly(entityId, hsv) {
+    const config = getHAConfig();
+    if (!config.token || !entityId) return { success: false };
+
+    const domain = entityId.split('.')[0] || 'light';
+    if (domain !== 'light') return { success: false }; // Only lights support HSV
+
+    const url = `${config.host}/api/services/light/turn_on`;
+    const payload = {
+      entity_id: entityId,
+      // Send color without on_off to just update the color
+      hs_color: [
+        Math.round((hsv.hue <= 1 ? hsv.hue : hsv.hue / 360) * 360),
+        Math.round((hsv.saturation <= 1 ? hsv.saturation : hsv.saturation / 100) * 100)
+      ],
+      brightness: Math.round(
+        hsv.brightness <= 1 ? hsv.brightness * 255 :
+        hsv.brightness <= 255 ? hsv.brightness : 255
+      ),
+      transition: 1
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      return { success: response.ok };
+    } catch (error) {
+      return { success: false };
+    }
   }
 }
 
