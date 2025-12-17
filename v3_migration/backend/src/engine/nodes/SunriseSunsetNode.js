@@ -203,11 +203,21 @@ class SunriseSunsetNode {
       const onMs = onTime.getTime();
       const offMs = offTime.getTime();
       
+      // Debug: Log time comparison (only if node has debug enabled)
+      if (this.properties.debug) {
+        console.log(`[SunriseSunset ${this.id?.slice(0,8)}] onTime=${onTime.toLocaleString()}, offTime=${offTime.toLocaleString()}, now=${now.toLocaleString()}`);
+        console.log(`[SunriseSunset ${this.id?.slice(0,8)}] onMs<offMs=${onMs < offMs}, nowMs>onMs=${nowMs >= onMs}, nowMs<offMs=${nowMs < offMs}`);
+      }
+      
       if (onMs < offMs) {
         state = nowMs >= onMs && nowMs < offMs;
       } else {
         // Overnight range
         state = nowMs >= onMs || nowMs < offMs;
+      }
+      
+      if (this.properties.debug) {
+        console.log(`[SunriseSunset ${this.id?.slice(0,8)}] state=${state}`);
       }
     }
     

@@ -164,11 +164,13 @@ class BackendNodeRegistry {
       'Sender': 'SenderNode',
       'Receiver': 'ReceiverNode',
       
+      // Input nodes
+      'Integer Selector': 'IntegerSelectorNode',
+      
       // Nodes that don't run on backend (UI-only)
       'Debug': null,
       'Display': null,
-      'Backdrop': null,
-      'Integer Selector': null  // UI-only input control
+      'Backdrop': null
     };
 
     const nodeName = labelMappings[label];

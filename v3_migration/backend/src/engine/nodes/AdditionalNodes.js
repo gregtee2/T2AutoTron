@@ -70,8 +70,9 @@ class AllInOneColorNode {
   }
   
   process(inputs) {
-    // Pass through scene if connected
-    const scene = inputs.scene_hsv;
+    // Pass through scene if connected (unwrap array if needed)
+    const sceneRaw = inputs.scene_hsv;
+    const scene = Array.isArray(sceneRaw) ? sceneRaw[0] : sceneRaw;
     if (scene) {
       return { hsv_out: scene };
     }
@@ -186,6 +187,8 @@ class ColorGradientNode {
     const inputValue = inputs.value;
     const now = new Date();
     let position = 0;
+    // Debug disabled after confirming fix works - set VERBOSE_LOGGING=true in .env to re-enable
+    const debugThis = false; // this.properties.debug || false;
     
     if (this.properties.rangeMode === 'numerical') {
       if (inputValue !== undefined) {
@@ -197,6 +200,11 @@ class ColorGradientNode {
       // Extract value from array wrapper (backend engine wraps inputs in arrays)
       const externalStart = Array.isArray(inputs.startTime) ? inputs.startTime[0] : inputs.startTime;
       const externalEnd = Array.isArray(inputs.endTime) ? inputs.endTime[0] : inputs.endTime;
+      
+      if (debugThis) {
+        console.log(`[ColorGradient ${this.id.slice(0,8)}] Raw inputs: startTime=${JSON.stringify(inputs.startTime)}, endTime=${JSON.stringify(inputs.endTime)}`);
+        console.log(`[ColorGradient ${this.id.slice(0,8)}] Extracted: externalStart="${externalStart}", externalEnd="${externalEnd}"`);
+      }
       
       let startTime, endTime;
       
@@ -215,6 +223,10 @@ class ColorGradientNode {
         endTime = parseTimeString(this.properties.endTimeHours, this.properties.endTimeMinutes, this.properties.endTimePeriod);
       }
       
+      if (debugThis) {
+        console.log(`[ColorGradient ${this.id.slice(0,8)}] Parsed times: start=${startTime?.toLocaleTimeString()}, end=${endTime?.toLocaleTimeString()}, now=${now.toLocaleTimeString()}`);
+      }
+      
       if (!startTime || !endTime) return { hsvInfo: null };
       
       let startMs = startTime.getTime();
@@ -231,6 +243,10 @@ class ColorGradientNode {
         position = 1;
       } else {
         position = (currentMs - startMs) / (endMs - startMs);
+      }
+      
+      if (debugThis) {
+        console.log(`[ColorGradient ${this.id.slice(0,8)}] Position calc: startMs=${startMs}, endMs=${endMs}, currentMs=${currentMs}, position=${position.toFixed(4)}`);
       }
     }
     
@@ -356,8 +372,9 @@ class ConditionalIntegerOutputNode {
   }
   
   process(inputs) {
-    const A = inputs.a;
-    const B = inputs.b;
+    // Unwrap arrays from backend engine
+    const A = Array.isArray(inputs.a) ? inputs.a[0] : inputs.a;
+    const B = Array.isArray(inputs.b) ? inputs.b[0] : inputs.b;
     
     if (A === true) {
       const intValue = typeof B === "number" ? Math.floor(B) : parseInt(B, 10) || 0;
@@ -395,7 +412,8 @@ class ConditionalSwitchNode {
   }
   
   process(inputs) {
-    let selectVal = inputs.select;
+    // Unwrap array if needed (backend engine wraps inputs)
+    let selectVal = Array.isArray(inputs.select) ? inputs.select[0] : inputs.select;
     if (typeof selectVal !== "number") selectVal = 0;
     
     if (this.properties.clampSelect) {
@@ -403,7 +421,9 @@ class ConditionalSwitchNode {
     }
     
     const chosenIndex = Math.floor(selectVal);
-    const outData = inputs[`data_${chosenIndex}`];
+    // Unwrap array from chosen data input
+    const rawData = inputs[`data_${chosenIndex}`];
+    const outData = Array.isArray(rawData) ? rawData[0] : rawData;
     
     return { out: outData !== undefined ? outData : null };
   }
@@ -417,6 +437,42 @@ class ConditionalSwitchNode {
         this.inputs.push(`data_${i}`);
       }
     }
+  }
+}
+
+// ============================================================================
+// DATE COMPARISON NODE
+// ============================================================================
+// ============================================================================
+// INTEGER SELECTOR NODE
+// ============================================================================
+class IntegerSelectorNode {
+  static type = 'IntegerSelectorNode';
+  
+  constructor(id, properties = {}) {
+    this.id = id;
+    this.type = IntegerSelectorNode.type;
+    this.properties = {
+      value: 0,
+      min: 0,
+      max: 10,
+      ...properties
+    };
+    this.inputs = [];
+    this.outputs = ['value'];
+  }
+  
+  process() {
+    // Just output the configured value (clamped to min/max)
+    const value = Math.max(
+      this.properties.min,
+      Math.min(this.properties.max, this.properties.value)
+    );
+    return { value };
+  }
+  
+  restore(state) {
+    if (state.properties) Object.assign(this.properties, state.properties);
   }
 }
 
@@ -749,6 +805,9 @@ function register(registry) {
   registry.register('ConditionalSwitchNode', ConditionalSwitchNode);
   registry.register('DateComparisonNode', DateComparisonNode);
   registry.register('DayOfWeekComparisonNode', DayOfWeekComparisonNode);
+  registry.register('IntegerSelectorNode', IntegerSelectorNode);
+  // Also register as "Integer Selector" (label alias)
+  registry.register('Integer Selector', IntegerSelectorNode);
   registry.register('LogicConditionNode', LogicConditionNode);
   registry.register('LogicOperationsNode', LogicOperationsNode);
   registry.register('PushbuttonNode', PushbuttonNode);
@@ -765,6 +824,7 @@ module.exports = {
   ConditionalSwitchNode,
   DateComparisonNode,
   DayOfWeekComparisonNode,
+  IntegerSelectorNode,
   LogicConditionNode,
   LogicOperationsNode,
   PushbuttonNode,

@@ -46,12 +46,10 @@ class KasaLightNode {
   restore(data) {
     if (data.properties) {
       Object.assign(this.properties, data.properties);
-    }
-    // Handle old format
-    if (data.selectedDeviceIds) {
-      this.properties.deviceIds = data.selectedDeviceIds.map(id => 
-        id.replace('kasa_', '')
-      );
+      // Frontend uses selectedDeviceIds, backend uses deviceIds - sync them
+      if (this.properties.selectedDeviceIds?.length > 0) {
+        this.properties.deviceIds = this.properties.selectedDeviceIds;
+      }
     }
   }
 
@@ -59,10 +57,13 @@ class KasaLightNode {
     const baseUrl = getApiBaseUrl();
     const endpoint = state.on ? 'on' : 'off';
     
+    // Strip kasa_ prefix if present - the API route adds it back
+    const cleanId = deviceId.replace(/^kasa_/, '');
+    
     try {
       // For simple on/off
       if (!state.hsv) {
-        const response = await fetch(`${baseUrl}/api/lights/kasa/${deviceId}/${endpoint}`, {
+        const response = await fetch(`${baseUrl}/api/lights/kasa/${cleanId}/${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ transition: this.properties.transitionTime })
@@ -71,7 +72,7 @@ class KasaLightNode {
       }
       
       // For color/brightness control
-      const response = await fetch(`${baseUrl}/api/lights/kasa/${deviceId}/state`, {
+      const response = await fetch(`${baseUrl}/api/lights/kasa/${cleanId}/state`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -158,7 +159,8 @@ class KasaPlugNode {
     this.id = null;
     this.label = 'Kasa Plug';
     this.properties = {
-      deviceIds: []
+      deviceIds: [],
+      selectedPlugIds: []  // Frontend uses this name
     };
     this.lastTrigger = null;
   }
@@ -166,6 +168,10 @@ class KasaPlugNode {
   restore(data) {
     if (data.properties) {
       Object.assign(this.properties, data.properties);
+      // Frontend uses selectedPlugIds, backend uses deviceIds - sync them
+      if (this.properties.selectedPlugIds?.length > 0) {
+        this.properties.deviceIds = this.properties.selectedPlugIds;
+      }
     }
   }
 
@@ -173,8 +179,11 @@ class KasaPlugNode {
     const baseUrl = getApiBaseUrl();
     const endpoint = on ? 'on' : 'off';
     
+    // Strip kasa_ prefix if present - the API route adds it back
+    const cleanId = deviceId.replace(/^kasa_/, '');
+    
     try {
-      const response = await fetch(`${baseUrl}/api/lights/kasa/${deviceId}/${endpoint}`, {
+      const response = await fetch(`${baseUrl}/api/lights/kasa/${cleanId}/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });

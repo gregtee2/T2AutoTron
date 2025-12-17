@@ -2915,7 +2915,7 @@
           "timeSteps": 60,
           "useBrightnessOverride": false,
           "brightnessOverride": 254,
-          "debug": false
+          "debug": true
         },
         "colorMode": "custom",
         "predefinedWedge": "warm-to-cool",
