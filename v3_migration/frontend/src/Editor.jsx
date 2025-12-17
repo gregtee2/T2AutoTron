@@ -18,6 +18,7 @@ const debug = (...args) => EDITOR_DEBUG && console.debug('[Editor]', ...args);
 import { Dock } from "./ui/Dock";
 import { ForecastPanel } from "./ui/ForecastPanel";
 import { FavoritesPanel } from "./ui/FavoritesPanel";
+import { SaveModal } from "./ui/SaveModal";
 import { FastContextMenu } from "./FastContextMenu";
 import { validateGraph, repairGraph } from "./utils/graphValidation";
 import { apiUrl } from "./utils/apiBase";
@@ -168,6 +169,10 @@ export function Editor() {
     const favoritesPanelRef = useRef(null);
     const [favoritesDropActive, setFavoritesDropActive] = useState(false);
     const favoritesDragRef = useRef(null);
+    
+    // SaveModal state for HA ingress mode
+    const [showSaveModal, setShowSaveModal] = useState(false);
+    const [currentGraphDataForSave, setCurrentGraphDataForSave] = useState(null);
 
     useEffect(() => {
         try {
@@ -2321,11 +2326,23 @@ export function Editor() {
             const graphData = { nodes, connections, viewport };
             const jsonString = JSON.stringify(graphData, null, 2);
 
-            // Save to localStorage for quick reload
+            // Detect if running inside Home Assistant ingress (iframe) or HA add-on
+            const isInIframe = window.self !== window.top;
+            const isHAIngress = isInIframe || window.location.pathname.includes('/api/hassio');
+            
+            // For HA ingress: show SaveModal so user can choose filename
+            if (isHAIngress) {
+                debug('Running in HA ingress - showing save dialog');
+                setCurrentGraphDataForSave(graphData);
+                setShowSaveModal(true);
+                return;
+            }
+
+            // Save to localStorage for quick reload (desktop mode)
             try { if (jsonString.length < 2000000) { localStorage.removeItem('saved-graph'); localStorage.setItem('saved-graph', jsonString); } } catch(e) { console.warn('localStorage skipped'); }
             debug('Graph saved to localStorage');
 
-            // Also save to server as "last active" for HA add-on persistence
+            // Also save to server as "last active" for persistence
             try {
                 const response = await fetch(apiUrl('/api/engine/save-active'), {
                     method: 'POST',
@@ -2349,19 +2366,6 @@ export function Editor() {
                 } catch (err) {
                     console.warn('[handleSave] Failed to save temp file via Electron API', err);
                 }
-            }
-
-            // Detect if running inside Home Assistant ingress (iframe) or HA add-on
-            const isInIframe = window.self !== window.top;
-            const isHAIngress = isInIframe || window.location.pathname.includes('/api/hassio');
-            
-            // For HA ingress: server-side save is already done above, just show toast and return
-            if (isHAIngress) {
-                debug('Running in HA ingress - graph saved to server only (no file picker)');
-                if (window.T2Toast) {
-                    window.T2Toast.success('Graph saved to Home Assistant', 2000);
-                }
-                return;
             }
 
             // Try File System Access API (Modern Browsers) - only for desktop/Electron
@@ -2575,8 +2579,9 @@ export function Editor() {
         }
     }, [editorInstance, areaInstance, engineInstance]);
 
-    // Auto-load last active graph from server on initial mount (for HA add-on)
-    // This ensures users don't see a blank canvas when returning to the browser UI
+    // Auto-load last active graph from server on initial mount
+    // DISABLED for HA ingress - user should manually click "Load Last" for faster experience
+    // The backend engine keeps running regardless, so no need to auto-load the UI graph
     const hasAutoLoadedFromServer = useRef(false);
     useEffect(() => {
         if (!editorInstance || !areaInstance || !engineInstance) return;
@@ -2586,16 +2591,20 @@ export function Editor() {
         const isInIframe = window.self !== window.top;
         const isHAIngress = isInIframe || window.location.pathname.includes('/api/hassio');
         
-        // For HA ingress: ALWAYS try to load from server (authoritative source)
+        // For HA ingress: DON'T auto-load - let user click "Load Last" button (faster)
+        if (isHAIngress) {
+            debug('[ServerAutoLoad] Skipping - HA ingress mode, user should click Load Last');
+            hasAutoLoadedFromServer.current = true; // Prevent future attempts
+            return;
+        }
+        
         // For desktop/Electron: skip if localStorage has data
-        if (!isHAIngress) {
-            const hasLocalGraph = localStorage.getItem('saved-graph');
-            const isPostUpdate = sessionStorage.getItem('autoLoadAfterUpdate') === 'true';
-            
-            if (hasLocalGraph || isPostUpdate) {
-                debug('[ServerAutoLoad] Skipping - desktop mode with local graph');
-                return;
-            }
+        const hasLocalGraph = localStorage.getItem('saved-graph');
+        const isPostUpdate = sessionStorage.getItem('autoLoadAfterUpdate') === 'true';
+        
+        if (hasLocalGraph || isPostUpdate) {
+            debug('[ServerAutoLoad] Skipping - desktop mode with local graph');
+            return;
         }
         
         hasAutoLoadedFromServer.current = true;
@@ -3268,6 +3277,15 @@ export function Editor() {
                 items={contextMenu.items}
                 onClose={handleContextMenuClose}
                 onSelect={handleContextMenuSelect}
+            />
+            <SaveModal
+                isOpen={showSaveModal}
+                onClose={() => setShowSaveModal(false)}
+                onSave={() => {
+                    setHasUnsavedChanges(false);
+                    setShowSaveModal(false);
+                }}
+                currentGraphData={currentGraphDataForSave}
             />
         </div>
     );

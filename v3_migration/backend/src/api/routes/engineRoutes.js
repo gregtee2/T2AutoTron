@@ -374,6 +374,73 @@ router.post('/save-active', async (req, res) => {
 });
 
 /**
+ * POST /api/engine/save-graph
+ * Save a graph with a specific filename
+ */
+router.post('/save-graph', async (req, res) => {
+  console.log('[Engine API] POST /save-graph called');
+  try {
+    const fs = require('fs').promises;
+    const savedGraphsDir = getGraphsDir();
+    
+    const { filename, graph } = req.body;
+    if (!filename || !graph) {
+      return res.status(400).json({
+        success: false,
+        error: 'Must provide filename and graph data'
+      });
+    }
+    
+    // Sanitize filename - allow alphanumeric, underscores, hyphens, spaces
+    const safeName = filename.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
+    if (!safeName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid filename'
+      });
+    }
+    
+    const finalName = safeName.endsWith('.json') ? safeName : `${safeName}.json`;
+    const filePath = path.join(savedGraphsDir, finalName);
+    
+    // Ensure directory exists
+    await fs.mkdir(savedGraphsDir, { recursive: true });
+    
+    await fs.writeFile(filePath, JSON.stringify(graph, null, 2), 'utf-8');
+    
+    // Also save as last active so engine picks it up
+    const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
+    await fs.writeFile(lastActivePath, JSON.stringify(graph, null, 2), 'utf-8');
+    
+    console.log(`[Engine API] Saved graph as "${finalName}" (${graph.nodes?.length || 0} nodes)`);
+    
+    // Hot-reload into engine
+    try {
+      const { engine } = getEngine();
+      if (engine && engine.running && graph.nodes && graph.nodes.length > 0) {
+        await engine.hotReload(graph);
+        console.log('[Engine API] Graph hot-reloaded into engine');
+      }
+    } catch (err) {
+      console.warn('[Engine API] Could not reload into engine:', err.message);
+    }
+    
+    res.json({
+      success: true,
+      message: `Graph saved as ${finalName}`,
+      filename: finalName,
+      nodeCount: graph.nodes?.length || 0
+    });
+  } catch (error) {
+    console.error('[Engine API] Error in save-graph:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /api/engine/graphs
  * List all saved graph files on the server
  */

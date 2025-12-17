@@ -1,0 +1,214 @@
+/* SaveModal.css - Styles for the graph save dialog */
+
+.save-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+}
+
+.save-modal {
+  background: #1e1e2e;
+  border: 1px solid #3a3a5a;
+  border-radius: 12px;
+  width: 420px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.save-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #3a3a5a;
+}
+
+.save-modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+}
+
+.save-modal-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.save-modal-close:hover {
+  color: #fff;
+}
+
+.save-modal-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.save-modal-input-section {
+  margin-bottom: 20px;
+}
+
+.save-modal-input-section label {
+  display: block;
+  margin-bottom: 8px;
+  color: #aaa;
+  font-size: 14px;
+}
+
+.save-modal-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.save-modal-input-row input {
+  flex: 1;
+  padding: 10px 12px;
+  background: #2a2a3a;
+  border: 1px solid #4a4a6a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.save-modal-input-row input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.save-modal-extension {
+  color: #666;
+  font-size: 14px;
+}
+
+.save-modal-error {
+  background: rgba(255, 100, 100, 0.1);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #ff8888;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.save-modal-existing {
+  margin-top: 16px;
+}
+
+.save-modal-existing h3 {
+  font-size: 14px;
+  color: #888;
+  margin: 0 0 10px 0;
+  font-weight: normal;
+}
+
+.save-modal-loading {
+  font-style: italic;
+  color: #666;
+}
+
+.save-modal-empty {
+  color: #555;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.save-modal-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+}
+
+.save-modal-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #2a2a3a;
+  transition: background 0.15s;
+}
+
+.save-modal-list li:last-child {
+  border-bottom: none;
+}
+
+.save-modal-list li:hover {
+  background: #2a2a4a;
+}
+
+.save-modal-list li.selected {
+  background: #3a3a6a;
+}
+
+.save-modal-list .graph-name {
+  color: #ccc;
+  font-size: 14px;
+}
+
+.save-modal-list .graph-date {
+  color: #666;
+  font-size: 12px;
+}
+
+.save-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #3a3a5a;
+}
+
+.save-modal-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.save-modal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.save-modal-btn-cancel {
+  background: #3a3a4a;
+  color: #aaa;
+}
+
+.save-modal-btn-cancel:hover:not(:disabled) {
+  background: #4a4a5a;
+}
+
+.save-modal-btn-save {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.save-modal-btn-save:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
