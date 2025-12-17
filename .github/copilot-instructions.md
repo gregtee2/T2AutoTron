@@ -78,6 +78,18 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
+#### Forecast Shows Yesterday (2025-12-17)
+- **What broke**: 5-day forecast in HA add-on was showing "yesterday" as the first day.
+- **Why it broke**: Open-Meteo returns dates as "2025-12-17" which JavaScript parses as midnight UTC. When converted to local time, it can become Dec 16 at 6pm in some timezones.
+- **The fix**: Use UTC methods (`getUTCDay()`, `getUTCMonth()`, `getUTCDate()`) instead of local methods to display the actual calendar date.
+- **Now it works because**: We display the date as written by the weather service, ignoring timezone conversion.
+
+#### SaveModal Import Path (2025-12-17)
+- **What broke**: HA add-on v2.1.60 failed to build with error "Could not resolve '../apiConfig'".
+- **Why it broke**: SaveModal.jsx was importing from a file path that didn't exist.
+- **The fix**: Changed `../apiConfig` to `../utils/apiBase` where `apiUrl` actually lives.
+- **Now it works because**: The import points to the correct file.
+
 #### Graph Loading 2-Minute Delay (2025-12-17)
 - **What broke**: Add-on took 2+ minutes to load a graph on startup. UI was frozen.
 - **Why it broke**: The graph has 20 HA Generic Device nodes. Each one was yelling "GIVE ME ALL THE DEVICES!" at the same time during load. 60+ API calls firing at once = traffic jam.
@@ -944,7 +956,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.58 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.63 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -953,7 +965,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 1 | Debug console logging | ✅ Done | All logs gated by `VERBOSE_LOGGING` env var (backend) or `EDITOR_DEBUG`/`SOCKET_DEBUG` flags (frontend) |
 | 2 | Clean build artifacts | ✅ Done | Only 1-2 files in assets/ |
 | 3 | Fix hardcoded HA URL | ✅ Done | Uses `process.env.HA_HOST` with fallback |
-| 4 | Package.json metadata | ✅ Done | v2.1.58, proper author/homepage/keywords |
+| 4 | Package.json metadata | ✅ Done | v2.1.63, proper author/homepage/keywords |
 | 5 | Error boundaries | ✅ Done | `ErrorBoundary.jsx` wraps App |
 | 6 | Secure token storage | ✅ Done | Uses sessionStorage (falls back to localStorage) |
 
@@ -977,7 +989,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 3 | Refactor plugins to T2Node | ⏳ Partial | Some use it, not all |
 | 4 | Event Log App filter | 🔴 Broken | App events not showing - needs investigation |
 
-### 🟢 RECENTLY ADDED (beta.12 - 2.1.55)
+### 🟢 RECENTLY ADDED (2.1.55 - 2.1.63)
 
 | # | Feature | Notes |
 |---|---------|-------|
@@ -999,6 +1011,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 16 | **Graph Loading Speed** | v2.1.58 - Deferred HA API calls during graph loading (was 2 min, now ~10s) |
 | 17 | **Color Throttling** | v2.1.58 - Increased min throttle to 3s for Zigbee lights (prevents flashing/popping) |
 | 18 | **Debug Dashboard** | v2.1.58 - Standalone HTML tool to monitor engine/buffers/lights without HA login |
+| 19 | **Report Bug Button** | v2.1.63 - 🐛 button in Control Panel opens GitHub issue with auto-filled debug info |
+| 20 | **GitHub Issue Templates** | v2.1.63 - Bug report and feature request templates with structured fields |
+| 21 | **Addon Landing Page** | v2.1.63 - Origin story, Node-RED comparison, "Why Share This?" section |
 
 ### 🟢 RECENTLY FIXED
 
@@ -1007,13 +1022,15 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 1 | **Server early exit** | Server was quitting after ~20 seconds. Added keep-alive interval + beforeExit handler. See Caveman Explanation above. |
 | 2 | HA Token refresh | Settings panel now updates token immediately via `homeAssistantManager.updateConfig()` |
 | 3 | Pan/Zoom freeze | F5 resets view; auto-reset on graph load via `graphLoadComplete` event |
-| 3 | Reset performance | `resetEditorView()` uses `requestAnimationFrame` to avoid blocking (was 350ms+, now <16ms) |
-| 4 | DeviceStateControl CSS | No longer injects CSS on every render (major performance fix) |
-| 5 | Keyframe animations | Moved from dynamic injection to `node-styles.css` |
-| 6 | HA Device Automation outputs | `data()` now pure (no changeCallback inside), always returns all dynamic outputs; uses `??` to preserve `false`/`0` |
-| 7 | Add-on CORS/Ingress | v2.1.55 - Allow all origins when `SUPERVISOR_TOKEN` present, fixed Kasa route params |
-| 8 | **Graph loading 2-min delay** | v2.1.58 - HAGenericDeviceNode now waits for `window.graphLoading` to clear before fetching devices |
-| 9 | **Zigbee light flashing** | v2.1.58 - Backend HADeviceNodes throttle increased from 200ms to 3s minimum |
+| 4 | Reset performance | `resetEditorView()` uses `requestAnimationFrame` to avoid blocking (was 350ms+, now <16ms) |
+| 5 | DeviceStateControl CSS | No longer injects CSS on every render (major performance fix) |
+| 6 | Keyframe animations | Moved from dynamic injection to `node-styles.css` |
+| 7 | HA Device Automation outputs | `data()` now pure (no changeCallback inside), always returns all dynamic outputs; uses `??` to preserve `false`/`0` |
+| 8 | Add-on CORS/Ingress | v2.1.55 - Allow all origins when `SUPERVISOR_TOKEN` present, fixed Kasa route params |
+| 9 | **Graph loading 2-min delay** | v2.1.58 - HAGenericDeviceNode now waits for `window.graphLoading` to clear before fetching devices |
+| 10 | **Zigbee light flashing** | v2.1.58 - Backend HADeviceNodes throttle increased from 200ms to 3s minimum |
+| 11 | **Forecast timezone bug** | v2.1.62 - 5-day forecast was showing "yesterday" due to UTC parse issue. Fixed by using `getUTCDay()/getUTCMonth()/getUTCDate()` |
+| 12 | **SaveModal import path** | v2.1.61 - Fixed `../apiConfig` → `../utils/apiBase` import that broke addon build |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 

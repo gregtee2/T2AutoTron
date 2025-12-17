@@ -1,5 +1,63 @@
 # Session Handoff - December 16, 2025
+## Addendum (Session 5 - Bug Reporting & Documentation)
 
+### What changed (Session 5 - Claude Opus 4.5)
+
+#### 🐛 Added Report Bug Button
+- Added 🐛 **Report Bug** button to Control Panel (Dock.jsx)
+- Button fetches version fresh from server, gathers debug info, opens GitHub issue pre-filled
+- Created `.github/ISSUE_TEMPLATE/bug_report.md` with structured bug report format
+- Created `.github/ISSUE_TEMPLATE/feature_request.md` for feature requests
+- Added `dock-btn-bug` CSS styling (red theme)
+
+#### 📚 Updated Addon Landing Page (README.md)
+- Added origin story: VFX artist wanting node-based automation since 2003, LLMs made it possible
+- Added "Why T2AutoTron vs Node-RED" comparison table (honest, not competitive)
+- Added "Why Share This?" section asking users to test and report bugs
+
+#### 📖 Updated DOCS.md (Documentation Tab)
+- Full Node-RED comparison with detailed table
+- Complete origin story with LLMs changing everything
+- "Why Share This?" call for beta testers
+
+#### 🐞 Fixed Forecast Timezone Bug
+- **Symptom**: 5-day forecast showed "yesterday" as first day in HA add-on
+- **Root Cause**: Open-Meteo dates like "2025-12-17" parsed as midnight UTC, then converted to local time (could become Dec 16 in some timezones)
+- **Fix**: Use `getUTCDay()`, `getUTCMonth()`, `getUTCDate()` instead of local date methods
+- **File**: `frontend/src/ui/ForecastPanel.jsx`
+
+#### 🔧 Fixed SaveModal Import Path
+- **Symptom**: HA add-on v2.1.60 failed to build
+- **Error**: `Could not resolve "../apiConfig" from "src/ui/SaveModal.jsx"`
+- **Fix**: Changed import from `../apiConfig` to `../utils/apiBase`
+- **File**: `frontend/src/ui/SaveModal.jsx`
+
+### 🦴 Caveman Explanation
+The weather forecast was confused about what day it is because of timezones. We told it "just read the date exactly as written, don't try to be smart about timezones." Also added a big red button for users to easily report bugs.
+
+### Files touched (Session 5)
+- `v3_migration/frontend/src/ui/Dock.jsx` - Added Report Bug button with async version fetch
+- `v3_migration/frontend/src/ui/Dock.css` - Added .dock-btn-bug styling
+- `v3_migration/frontend/src/ui/ForecastPanel.jsx` - Fixed timezone issue in formatDate()
+- `v3_migration/frontend/src/ui/SaveModal.jsx` - Fixed import path
+- `.github/ISSUE_TEMPLATE/bug_report.md` - New bug report template
+- `.github/ISSUE_TEMPLATE/feature_request.md` - New feature request template
+- `home-assistant-addons/t2autotron/README.md` - Added origin story, Node-RED comparison
+- `home-assistant-addons/t2autotron/DOCS.md` - Added full comparison and origin story
+
+### Version Bumps (Session 5)
+- v2.1.60 → v2.1.61 (SaveModal fix)
+- v2.1.61 → v2.1.62 (Forecast timezone fix)
+- v2.1.62 → v2.1.63 (Report Bug button)
+
+### Verification
+- ✅ All builds succeed
+- ✅ Report Bug button opens GitHub with pre-filled debug info
+- ✅ Forecast shows correct dates (today as first day)
+- ✅ Addon landing page has origin story
+- ✅ Commits pushed to main AND stable
+
+---
 ## Addendum (Session 4 - Timeline Color Fix)
 
 ### What changed (Session 4 - Claude Opus 4.5)
