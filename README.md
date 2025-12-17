@@ -1,32 +1,52 @@
-
 # T2AutoTron 2.1
 
-[![Build Status](https://img.shields.io/github/workflow/status/gregtee2/T2AutoTron/CI?style=flat-square)](https://github.com/gregtee2/T2AutoTron/actions)
 [![License](https://img.shields.io/github/license/gregtee2/T2AutoTron?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.0--beta.1-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)
+[![Version](https://img.shields.io/badge/version-2.1.63--beta-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)
 [![Open in VS Code](https://img.shields.io/badge/Open%20in-VS%20Code-blue?logo=visualstudiocode&style=flat-square)](https://open.vscode.dev/gregtee2/T2AutoTron)
+
+Visual node-based smart home automation editor with a **24/7 backend engine** - your automations run even when you close the browser!
 
 ![Main Interface](screenshots/Main_Canvas.png)
 
+## 🤔 Why T2AutoTron?
 
-**T2AutoTron is a modern, visual node-based automation editor for Home Assistant and smart devices. Build powerful automations with drag-and-drop simplicity—no coding required. Supports real-time device control, advanced logic, and instant integration with Home Assistant, Philips Hue, TP-Link Kasa, and Shelly (via HA). Built with React, Rete.js v3, and Node.js.**
+Back in 2003, I got into home automation. Every app I found was menu-driven - you'd click through screens to set up rules, but you couldn't *see* the logic flow. As a visual effects artist running **Nuke** (a node-based compositing tool), I kept thinking: *"Why can't I just connect device nodes, trigger nodes, and logic nodes together?"*
+
+Nothing like that existed, and I wasn't a programmer. Fast forward 20 years - LLMs changed everything. I could finally design the app I'd always wanted while AI handled the code.
+
+**T2AutoTron is that app.** A visual-first automation editor where you *see* your automations flow in real-time.
+
+### Not a Node-RED replacement - a visual alternative
+
+| | T2AutoTron | Node-RED |
+|-|-----------|----------|
+| **Philosophy** | See data flow live on nodes | Debug via text sidebar |
+| **Learning curve** | Lower - no msg.payload | Steeper |
+| **Color tools** | Built-in HSV, timelines | Manual setup |
+| **Home Automation** | Purpose-built for HA | General-purpose |
+| **Execution** | 24/7 backend engine | Flow-based |
+
+### Why share this?
+
+I'm sure there are others who'd appreciate a visual approach. But this is **beta software** - I need testers! Click the 🐛 **Report Bug** button in the app to help make it better.
 
 ---
 
-## Why Use T2AutoTron?
+## ✨ Features
 
-- **No coding required:** Build automations visually, just connect nodes.
-- **Instant device discovery:** Home Assistant integration finds all your devices automatically.
-- **Multi-platform device support:**
+- 🎨 **Visual Node Editor** - Drag-and-drop automation building with Rete.js
+- ⚡ **24/7 Backend Engine** - Automations run on the server, not in your browser
+- 🏠 **Native HA Integration** - Direct access to all Home Assistant entities
+- 💡 **Multi-Platform Device Support:**
   - **Home Assistant** – All entities (lights, switches, sensors, media players, etc.)
   - **Philips Hue** – Direct bridge API (no HA required)
   - **TP-Link Kasa** – Direct local API (no HA required)
   - **Shelly** – Via Home Assistant integration
-- **Extensible:** Add new node types at runtime—no rebuild needed.
-- **Hot plugin updates:** Update plugins without rebuilding (HA add-on).
-- **Real-time dashboard:** See device status, weather, and events live.
-- **One-click install:** Windows/Mac/Linux scripts, or HA add-on.
-- **Open source:** MIT licensed, ready for community contributions.
+- 🔌 **50+ Node Types** - Time, logic, color, weather, and more
+- 🔄 **Hot Plugin Updates** - Add new nodes without rebuilding
+- 💾 **Auto-Save** - Every 2 minutes to prevent work loss
+- 🖥️ **Desktop App** - Electron app for Windows/Mac/Linux
+- 🏠 **Home Assistant Add-on** - [Also available as an HA add-on](https://github.com/gregtee2/home-assistant-addons)
 
 ---
 
@@ -110,19 +130,26 @@ The app opens in an Electron desktop window.
 
 ---
 
-## Features
+## 📦 Node Categories
+
+| Category | Examples |
+|----------|----------|
+| **Home Assistant** | HA Generic Device, HA Device Automation |
+| **Timer/Event** | Sunrise/Sunset, Time of Day, Delay, Debounce |
+| **Logic** | AND, OR, NOT, Compare, Threshold, Switch |
+| **Color** | HSV Control, Timeline Color, Color Gradient |
+| **Inputs** | Toggle, Number Slider, Trigger Button |
+| **Utility** | Sender/Receiver, Display, Counter |
+| **Direct Devices** | Hue Light, Kasa Plug |
+
+---
+
+## 🎨 Screenshots
 
 ### Visual Node Editor
 Build automations by connecting nodes visually - no coding required.
 
 ![Context Menu](screenshots/Context_Menu.png)
-
-### 37+ Node Types
-- **Device Control**: Home Assistant, Philips Hue (direct bridge control), TP-Link Kasa
-- **Logic**: AND, OR, XOR, Comparison, Conditional Switch
-- **Timing**: Time of Day, Time Range, Sunrise/Sunset, Delay, Debounce
-- **Color**: HSV Control, Color Gradient, All-In-One Color Picker
-- **Utility**: Debug, Display, Sender/Receiver for cross-graph communication
 
 ### Automation Flows
 Create complex automations with visual flows connecting triggers, logic, and device control.
@@ -141,21 +168,22 @@ Configure all your integrations in one place with connection testing.
 
 ### Real-Time Dashboard
 - 5-Day Weather Forecast
-- Device Status (14 devices shown ON)
+- Device Status indicators
 - Event Log with filtering
-- Connection Status indicators
+- Connection Status (HA, Hue, Engine)
 
 ---
 
-## Architecture
-- **Rete.js v3**: Complete migration from LiteGraph to Rete.js v3
-- **React Components**: All nodes are now React components with proper state management
+## 🏗️ Architecture
+- **Rete.js v3**: Modern visual programming framework
+- **React Components**: All nodes are React components with proper state management
+- **24/7 Backend Engine**: Server-side automation execution
 - **Vite Build System**: Fast development with HMR (Hot Module Replacement)
-- **Modern Socket System**: Type-safe socket connections with custom compatibility layer
 - **Plugin Architecture**: Extensible node system - add new nodes without rebuilding
 
-## Working Features
-- ✅ **37+ Node Types**: Full suite of automation nodes
+## ✅ Working Features
+- ✅ **50+ Node Types**: Full suite of automation nodes
+- ✅ **24/7 Backend Engine**: Automations run even when browser is closed
 - ✅ **HAGenericDeviceNode**: Home Assistant device control with Follow mode
 - ✅ **Logic Nodes**: AND, OR, XOR, Comparison, Conditional Switch
 - ✅ **Time Nodes**: Time of Day, Time Range, Sunrise/Sunset, Date Comparison, Day of Week
