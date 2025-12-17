@@ -322,12 +322,14 @@ class SplineTimelineColorNode {
         } else if (this.properties.rangeMode === 'timer') {
             // Timer mode: position based on elapsed time since trigger
             const durationMs = Number(timerDuration) || 60000;
+            const loopMode = this.properties.timerLoopMode || 'none';
             
             // Handle trigger edge detection
             if (trigger && !this.lastTrigger) {
                 // Rising edge - start/restart timer
                 this.timerStart = currentMs;
                 this.timerPaused = false;
+                this.pingPongDirection = 1; // Reset to forward on new trigger
             }
             this.lastTrigger = trigger;
             
@@ -335,12 +337,35 @@ class SplineTimelineColorNode {
                 const elapsed = currentMs - this.timerStart;
                 
                 if (elapsed >= durationMs) {
-                    // Timer complete
-                    position = 1;
-                    this.properties.isInRange = false;
+                    // Timer completed one cycle
+                    if (loopMode === 'loop') {
+                        // Loop mode: restart from beginning
+                        this.timerStart = currentMs;
+                        position = 0;
+                        this.properties.isInRange = true;
+                    } else if (loopMode === 'ping-pong') {
+                        // Ping-pong mode: reverse direction and restart
+                        this.pingPongDirection *= -1;
+                        this.timerStart = currentMs;
+                        position = this.pingPongDirection === 1 ? 0 : 1;
+                        this.properties.isInRange = true;
+                    } else {
+                        // No loop: stay at end position
+                        position = 1;
+                        this.properties.isInRange = false;
+                        // Only restart if trigger is still true (legacy behavior)
+                        if (trigger === true) {
+                            this.timerStart = currentMs;
+                        }
+                    }
                 } else {
+                    // Calculate position based on direction (for ping-pong)
                     const rawPosition = elapsed / durationMs;
-                    position = this.pingPongDirection === 1 ? rawPosition : 1 - rawPosition;
+                    if (this.pingPongDirection === 1) {
+                        position = rawPosition;  // Forward: 0 -> 1
+                    } else {
+                        position = 1 - rawPosition;  // Backward: 1 -> 0
+                    }
                     this.properties.isInRange = true;
                 }
             }
