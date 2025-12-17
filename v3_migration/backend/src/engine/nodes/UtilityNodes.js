@@ -542,6 +542,186 @@ class CombineNode {
   }
 }
 
+/**
+ * SplineCurveNode - Maps input through a spline curve
+ * 
+ * Takes a 0-1 input value and maps it through an editable curve,
+ * useful for non-linear brightness curves, easing, etc.
+ */
+class SplineCurveNode {
+  constructor() {
+    this.id = null;
+    this.label = 'Spline Curve';
+    this.properties = {
+      points: [
+        { x: 0, y: 0 },
+        { x: 0.25, y: 0.25 },
+        { x: 0.75, y: 0.75 },
+        { x: 1, y: 1 }
+      ],
+      interpolation: 'catmull-rom',  // 'linear', 'step', 'catmull-rom', 'bezier'
+      inputMin: 0,
+      inputMax: 1,
+      outputMin: 0,
+      outputMax: 1,
+      lastInput: 0,
+      lastOutput: 0
+    };
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+
+  /**
+   * Evaluate the spline at position x (0-1)
+   */
+  _evaluate(x) {
+    const { points, interpolation } = this.properties;
+    if (!points || points.length < 2) return x;
+    
+    // Clamp x to 0-1
+    x = Math.max(0, Math.min(1, x));
+    
+    // Find segment
+    let segIdx = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+      if (x >= points[i].x && x <= points[i + 1].x) {
+        segIdx = i;
+        break;
+      }
+      if (x > points[i].x) segIdx = i;
+    }
+    
+    const p1 = points[segIdx];
+    const p2 = points[Math.min(segIdx + 1, points.length - 1)];
+    
+    const segmentWidth = p2.x - p1.x;
+    if (segmentWidth === 0) return p1.y;
+    
+    const t = (x - p1.x) / segmentWidth;
+    
+    switch (interpolation) {
+      case 'linear':
+        return p1.y + (p2.y - p1.y) * t;
+      case 'step':
+        return t < 0.5 ? p1.y : p2.y;
+      case 'catmull-rom':
+      default:
+        // Catmull-Rom spline interpolation
+        const p0 = points[Math.max(0, segIdx - 1)];
+        const p3 = points[Math.min(points.length - 1, segIdx + 2)];
+        const t2 = t * t;
+        const t3 = t2 * t;
+        return 0.5 * (
+          (2 * p1.y) +
+          (-p0.y + p2.y) * t +
+          (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+          (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
+        );
+    }
+  }
+
+  data(inputs) {
+    // Get input value
+    let inputValue = inputs.value?.[0] ?? 0;
+    
+    // Normalize to 0-1 range
+    const { inputMin, inputMax, outputMin, outputMax } = this.properties;
+    const normalizedInput = (inputValue - inputMin) / (inputMax - inputMin);
+    const clampedInput = Math.max(0, Math.min(1, normalizedInput));
+    
+    // Evaluate curve
+    const curveOutput = this._evaluate(clampedInput);
+    
+    // Scale to output range
+    const output = outputMin + curveOutput * (outputMax - outputMin);
+    
+    // Store for reference
+    this.properties.lastInput = inputValue;
+    this.properties.lastOutput = output;
+    
+    return { output };
+  }
+}
+
+/**
+ * WatchdogNode - Alert when no input received within timeout period
+ * 
+ * Monitors an input and triggers alert if nothing received within timeout.
+ * Useful for detecting device disconnections or stale data.
+ */
+class WatchdogNode {
+  constructor() {
+    this.id = null;
+    this.label = 'Watchdog';
+    this.properties = {
+      timeout: 60,         // seconds
+      mode: 'alert',       // 'alert' = fire once, 'repeat' = continuous
+      lastInputTime: null,
+      isTimedOut: false,
+      alertFired: false
+    };
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+
+  data(inputs) {
+    const inputVal = inputs.input?.[0];
+    const resetVal = inputs.reset?.[0];
+    const now = Date.now();
+
+    // Handle reset
+    if (resetVal === true) {
+      this.properties.isTimedOut = false;
+      this.properties.alertFired = false;
+      this.properties.lastInputTime = now;
+      return { alert: false, lastSeen: 0, passthrough: null };
+    }
+
+    // Handle input received
+    if (inputVal !== undefined) {
+      this.properties.lastInputTime = now;
+      this.properties.isTimedOut = false;
+      this.properties.alertFired = false;
+      return { alert: false, lastSeen: 0, passthrough: inputVal };
+    }
+
+    // Check for timeout
+    if (this.properties.lastInputTime) {
+      const elapsed = (now - this.properties.lastInputTime) / 1000;
+      const timedOut = elapsed >= this.properties.timeout;
+
+      if (timedOut) {
+        this.properties.isTimedOut = true;
+        
+        // In 'alert' mode, only fire once
+        if (this.properties.mode === 'alert') {
+          if (!this.properties.alertFired) {
+            this.properties.alertFired = true;
+            return { alert: true, lastSeen: elapsed, passthrough: null };
+          }
+          return { alert: false, lastSeen: elapsed, passthrough: null };
+        }
+        
+        // In 'repeat' mode, keep firing
+        return { alert: true, lastSeen: elapsed, passthrough: null };
+      }
+
+      return { alert: false, lastSeen: elapsed, passthrough: null };
+    }
+
+    // No input ever received
+    return { alert: false, lastSeen: 0, passthrough: null };
+  }
+}
+
 // Register all nodes
 registry.register('CounterNode', CounterNode);
 registry.register('RandomNode', RandomNode);
@@ -552,6 +732,8 @@ registry.register('ChangeNode', ChangeNode);
 registry.register('FilterNode', FilterNode);
 registry.register('SmoothNode', SmoothNode);
 registry.register('CombineNode', CombineNode);
+registry.register('SplineCurveNode', SplineCurveNode);
+registry.register('WatchdogNode', WatchdogNode);
 
 module.exports = {
   CounterNode,
@@ -562,5 +744,7 @@ module.exports = {
   ChangeNode,
   FilterNode,
   SmoothNode,
-  CombineNode
+  CombineNode,
+  SplineCurveNode,
+  WatchdogNode
 };

@@ -20,6 +20,71 @@ function getEngine() {
 // Use native fetch (Node 18+) or node-fetch
 const fetch = globalThis.fetch || require('node-fetch');
 
+// ============================================================================
+// HSV Update Tracker - Periodic summary logging (every 60s)
+// ============================================================================
+const hsvUpdateTracker = {
+  updates: new Map(),  // entityId -> { oldHsv, newHsv, count, lastTime }
+  lastSummaryTime: 0,
+  SUMMARY_INTERVAL: 60000,  // 60 seconds
+  
+  track(entityId, oldHsv, newHsv) {
+    const now = Date.now();
+    const existing = this.updates.get(entityId);
+    if (existing) {
+      existing.newHsv = newHsv;
+      existing.count++;
+      existing.lastTime = now;
+    } else {
+      this.updates.set(entityId, { oldHsv, newHsv, count: 1, lastTime: now });
+    }
+    
+    // Check if it's time for a summary
+    if (now - this.lastSummaryTime >= this.SUMMARY_INTERVAL) {
+      this.logSummary();
+    }
+  },
+  
+  logSummary() {
+    if (this.updates.size === 0) {
+      console.log('[HSV-SUMMARY] No updates to report');
+      return;
+    }
+    
+    const now = Date.now();
+    this.lastSummaryTime = now;
+    
+    // Build compact summary
+    const lines = [];
+    for (const [entityId, data] of this.updates) {
+      const shortName = entityId.replace('light.', '');
+      const oldH = data.oldHsv?.hue?.toFixed(3) || '?';
+      const newH = data.newHsv?.hue?.toFixed(3) || '?';
+      const newS = (data.newHsv?.saturation * 100)?.toFixed(0) || '?';
+      const newB = data.newHsv?.brightness?.toFixed(0) || '?';
+      lines.push(`${shortName}: H:${oldH}→${newH} S:${newS}% B:${newB}`);
+    }
+    
+    // Log to console with clear visibility
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(`[HSV-SUMMARY] ${this.updates.size} lights updated in last 60s:`);
+    for (const line of lines) {
+      console.log(`  • ${line}`);
+    }
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('');
+    
+    // Also log to file
+    engineLogger.log('HSV-SUMMARY', `${this.updates.size} lights updated`, {
+      lights: lines.join(' | ')
+    });
+    
+    // Clear for next interval
+    this.updates.clear();
+  }
+};
+
 /**
  * Helper to get HA config from environment
  */
@@ -368,6 +433,11 @@ class HAGenericDeviceNode {
     if (data.properties) {
       Object.assign(this.properties, data.properties);
     }
+    // Force immediate update on graph load - clear tracking state
+    this.lastSentHsv = null;
+    this.lastSendTime = 0;
+    this.lastTrigger = null;
+    this.lastHsv = null;
   }
 
   async controlDevice(entityId, turnOn, hsv = null) {
@@ -439,27 +509,30 @@ class HAGenericDeviceNode {
     const trigger = inputs.trigger?.[0];
     const hsv = inputs.hsv_info?.[0];
     
-    // Debug: Log what inputs we're receiving
+    // Track ticks for warmup period
+    if (this.tickCount === undefined) {
+      this.tickCount = 0;
+      this.warmupComplete = false;
+    }
+    this.tickCount++;
+    
     const hasHsv = hsv !== undefined && hsv !== null;
-    if (hasHsv || (this.tickCount && this.tickCount % 100 === 0)) {
-      engineLogger.log('HA-INPUTS', 'Received inputs', { 
+    const entityIds = getEntityIds(this.properties);
+    const nodeLabel = this.properties.customTitle || this.label || this.id;
+    
+    // Only log HA-INPUTS every 5 minutes (3000 ticks at 10Hz) for debugging
+    if (this.tickCount % 3000 === 0) {
+      engineLogger.log('HA-INPUTS', `${nodeLabel} status`, { 
         trigger, 
-        hsv: hasHsv ? hsv : 'none',
-        allInputKeys: Object.keys(inputs)
+        hasHsv,
+        entityCount: entityIds.length,
+        firstEntity: entityIds[0]
       });
     }
-    
-    const entityIds = getEntityIds(this.properties);
     
     if (entityIds.length === 0) {
       return { is_on: false };
     }
-
-    // Track ticks for warmup period - don't control devices until engine stabilizes
-    if (this.tickCount === undefined) {
-      this.tickCount = 0;
-    }
-    this.tickCount++;
     
     // Log every tick only in verbose mode (level 2) - too noisy otherwise
     if (engineLogger.getLogLevel() >= 2) {
@@ -471,15 +544,33 @@ class HAGenericDeviceNode {
       });
     }
     
-    // Skip first 3 ticks to let buffers populate
-    // This prevents turning off devices when engine starts
-    if (this.tickCount <= 3) {
+    // Warmup period: Skip first 10 ticks (1 second at 100ms/tick)
+    // This ensures all Sender→Receiver→Consumer chains have stabilized
+    // During warmup, just record state without sending commands
+    const WARMUP_TICKS = 10;
+    if (this.tickCount <= WARMUP_TICKS) {
       engineLogger.logWarmup(this.id || 'HAGenericDevice', this.tickCount, trigger, this.lastTrigger);
-      // Initialize lastTrigger to current value without taking action
+      // Record current trigger value without taking action
       if (trigger !== undefined) {
         this.lastTrigger = trigger;
       }
       return { is_on: !!trigger || !!this.lastTrigger };
+    }
+    
+    // Mark warmup complete on first post-warmup tick
+    if (!this.warmupComplete) {
+      this.warmupComplete = true;
+      // On first real tick, DON'T treat current state as a "change"
+      // Just record it and wait for actual changes
+      if (trigger !== undefined) {
+        this.lastTrigger = trigger;
+        engineLogger.log('HA-DEVICE', 'Warmup complete, initial state recorded', { 
+          trigger, 
+          entities: entityIds,
+          mode: this.properties.triggerMode || 'Follow'
+        });
+      }
+      return { is_on: !!trigger };
     }
 
     // Skip if trigger is still undefined (no connection)
@@ -561,21 +652,278 @@ class HAGenericDeviceNode {
     }
 
     // Handle HSV changes while on (for Follow mode)
+    // For slow timelines, we need to:
+    // 1. Compare against LAST SENT value, not last tick
+    // 2. Periodically send even if changes seem small (accumulation)
+    // 3. Use time-based minimum update interval
     if (this.lastTrigger && hsv && this.properties.triggerMode !== 'Toggle') {
-      const hsvChanged = !this.lastHsv ||
-        Math.abs((hsv.hue || 0) - (this.lastHsv.hue || 0)) > 0.01 ||
-        Math.abs((hsv.saturation || 0) - (this.lastHsv.saturation || 0)) > 0.01 ||
-        Math.abs((hsv.brightness || 0) - (this.lastHsv.brightness || 0)) > 1;
-
-      if (hsvChanged) {
-        this.lastHsv = { ...hsv };
+      // Track when we last sent a command
+      const now = Date.now();
+      if (!this.lastSendTime) this.lastSendTime = 0;
+      if (!this.lastSentHsv) this.lastSentHsv = null;
+      
+      // Calculate differences from LAST SENT value (not last tick)
+      const hueDiff = this.lastSentHsv ? Math.abs((hsv.hue || 0) - (this.lastSentHsv.hue || 0)) : 1;
+      const satDiff = this.lastSentHsv ? Math.abs((hsv.saturation || 0) - (this.lastSentHsv.saturation || 0)) : 1;
+      const briDiff = this.lastSentHsv ? Math.abs((hsv.brightness || 0) - (this.lastSentHsv.brightness || 0)) : 255;
+      
+      // Minimum interval between updates (5 seconds) to avoid flooding HA
+      const MIN_UPDATE_INTERVAL = 5000;
+      const timeSinceLastSend = now - this.lastSendTime;
+      
+      // Thresholds: noticeable change = immediate update, small change = periodic update
+      const SIGNIFICANT_HUE_CHANGE = 0.01;    // ~3.6° - visible color shift
+      const SIGNIFICANT_SAT_CHANGE = 0.03;    // 3% saturation
+      const SIGNIFICANT_BRI_CHANGE = 5;       // ~2% brightness
+      const SMALL_CHANGE_INTERVAL = 30000;    // Send every 30s if small changes accumulating
+      const FORCE_UPDATE_INTERVAL = 60000;    // Force update every 60s regardless of change
+      
+      const hasSignificantChange = hueDiff > SIGNIFICANT_HUE_CHANGE || 
+                                   satDiff > SIGNIFICANT_SAT_CHANGE || 
+                                   briDiff > SIGNIFICANT_BRI_CHANGE;
+      
+      const hasSmallChange = hueDiff > 0.001 || satDiff > 0.001 || briDiff > 0.5;
+      const timeForSmallUpdate = hasSmallChange && timeSinceLastSend > SMALL_CHANGE_INTERVAL;
+      const timeForForceUpdate = timeSinceLastSend > FORCE_UPDATE_INTERVAL;  // Force every 60s
+      
+      // First send ever, or significant change, or periodic small change update, or forced periodic
+      const shouldSend = !this.lastSentHsv || hasSignificantChange || timeForSmallUpdate || timeForForceUpdate;
+      
+      // Significant changes can update quickly (200ms debounce) for interactive use
+      // Small/periodic changes still use MIN_UPDATE_INTERVAL (5s) to avoid flooding
+      const minInterval = hasSignificantChange ? 200 : MIN_UPDATE_INTERVAL;
+      
+      if (shouldSend && timeSinceLastSend >= minInterval) {
+        const reason = !this.lastSentHsv ? 'first_send' 
+                     : hasSignificantChange ? 'significant' 
+                     : timeForSmallUpdate ? 'periodic_small' 
+                     : 'forced_60s';
+        engineLogger.log('HA-HSV-CHANGE', `HSV changed, sending command`, { 
+          entities: entityIds,
+          reason: reason,
+          minInterval: minInterval + 'ms',
+          hueDiff: hueDiff.toFixed(4),
+          satDiff: satDiff.toFixed(4),
+          briDiff: briDiff.toFixed(1),
+          newHue: hsv.hue?.toFixed(4),
+          lastHue: this.lastSentHsv?.hue?.toFixed(4),
+          timeSinceLastSend: Math.round(timeSinceLastSend / 1000) + 's'
+        });
+        const oldHsv = this.lastSentHsv ? { ...this.lastSentHsv } : null;
+        this.lastSentHsv = { ...hsv };
+        this.lastSendTime = now;
         for (const entityId of entityIds) {
+          // Track for periodic summary log
+          hsvUpdateTracker.track(entityId, oldHsv, hsv);
           await this.controlDevice(entityId, true, hsv);
         }
       }
+      // Removed HA-HSV-WAITING log - summary tracker provides periodic updates
+    } else if (!this.lastTrigger && this.tickCount % 600 === 0 && hsv) {
+      // Log every 60 seconds when we have HSV but trigger is off
+      engineLogger.log('HA-HSV-SKIP', `HSV available but trigger=${this.lastTrigger}`, { 
+        entities: entityIds,
+        triggerMode: this.properties.triggerMode
+      });
     }
 
     return { is_on: !!this.lastTrigger };
+  }
+}
+
+/**
+ * HADeviceAutomationNode - Extracts fields from device state
+ * 
+ * Takes device state as input and outputs selected fields (brightness, hue, temperature, etc).
+ * Used for reading device values for logic/comparison in automation flows.
+ */
+class HADeviceAutomationNode {
+  static type = 'HADeviceAutomationNode';
+  static label = 'HA Device Automation';
+  
+  constructor(id, properties = {}) {
+    this.id = id;
+    this.type = HADeviceAutomationNode.type;
+    this.properties = {
+      selectedFields: properties.selectedFields || [],
+      lastEntityType: 'unknown',
+      lastOutputValues: {},
+      ...properties
+    };
+    this.inputs = ['device_state'];
+    // Outputs are dynamic based on selectedFields
+    this.outputs = this.properties.selectedFields
+      .filter(f => f && f !== 'Select Field')
+      .map(f => `out_${f}`);
+  }
+
+  /**
+   * Get field value from device state
+   */
+  getFieldValue(device, field) {
+    if (!device) return null;
+    
+    const entityType = device.entity_type?.toLowerCase() || 
+                       device.entityType?.toLowerCase() ||
+                       device.entity_id?.split('.')[0] || 
+                       'unknown';
+
+    switch (field) {
+      case 'state':
+        if (entityType === 'media_player') {
+          return device.status || device.state || null;
+        } else {
+          const status = (device.status || device.state)?.toLowerCase?.();
+          if (status === 'on') return true;
+          if (status === 'off') return false;
+          if (status === 'open') return true;
+          if (status === 'closed') return false;
+          return status || null;
+        }
+        
+      case 'hue':
+      case 'saturation':
+      case 'brightness':
+      case 'position':
+      case 'latitude':
+      case 'longitude':
+      case 'percentage':
+        return typeof device[field] === 'number' ? device[field] : null;
+        
+      case 'volume_level':
+        return typeof device.volume === 'number' ? device.volume : 
+               device.attributes?.volume_level || null;
+               
+      case 'value':
+        // For sensors, value is the main reading
+        if (device.value !== undefined) {
+          const numVal = parseFloat(device.value);
+          return !isNaN(numVal) ? numVal : device.value;
+        }
+        if (device.state !== undefined) {
+          const numVal = parseFloat(device.state);
+          return !isNaN(numVal) ? numVal : device.state;
+        }
+        return device.attributes?.value || null;
+        
+      case 'temperature':
+      case 'pressure':
+      case 'humidity':
+      case 'wind_speed':
+      case 'battery_level':
+        if (typeof device[field] === 'number') return device[field];
+        if (typeof device.attributes?.[field] === 'number') return device.attributes[field];
+        // For sensors, check if this IS the sensor type
+        if (entityType === 'sensor') {
+          const entityId = device.entity_id || '';
+          if (entityId.toLowerCase().includes(field.toLowerCase())) {
+            if (device.value !== undefined) {
+              const numVal = parseFloat(device.value);
+              return !isNaN(numVal) ? numVal : null;
+            }
+            if (device.state !== undefined) {
+              const numVal = parseFloat(device.state);
+              return !isNaN(numVal) ? numVal : null;
+            }
+          }
+        }
+        return null;
+        
+      case 'media_title':
+      case 'media_content_type':
+      case 'media_artist':
+      case 'repeat':
+      case 'battery':
+      case 'unit':
+      case 'zone':
+      case 'condition':
+        return device[field] !== undefined ? device[field] : 
+               device.attributes?.[field] || null;
+               
+      case 'shuffle':
+        return typeof device[field] === 'boolean' ? device[field] : 
+               typeof device.attributes?.shuffle === 'boolean' ? device.attributes.shuffle : null;
+               
+      case 'supported_features':
+        return typeof device[field] === 'number' ? device[field] : 
+               typeof device.attributes?.supported_features === 'number' ? 
+               device.attributes.supported_features : null;
+               
+      case 'on':
+      case 'open':
+        const status = (device.status || device.state)?.toLowerCase?.();
+        return status === 'on' || status === 'open';
+        
+      default:
+        return device[field] !== undefined ? device[field] : 
+               device.attributes?.[field] || null;
+    }
+  }
+
+  data(inputs) {
+    const inputData = inputs.device_state?.[0];
+    const result = {};
+    
+    if (!inputData) {
+      // Return null for all outputs when no input
+      this.outputs.forEach(outputKey => {
+        result[outputKey] = null;
+      });
+      return result;
+    }
+    
+    // Handle both array and object formats
+    let devices = [];
+    if (Array.isArray(inputData)) {
+      devices = inputData;
+    } else if (inputData.lights && Array.isArray(inputData.lights)) {
+      devices = inputData.lights;
+    } else if (typeof inputData === 'object') {
+      devices = [inputData];
+    }
+    
+    if (devices.length === 0) {
+      this.outputs.forEach(outputKey => {
+        result[outputKey] = null;
+      });
+      return result;
+    }
+    
+    const device = devices[0];
+    const entityType = device.entity_type?.toLowerCase() || 
+                       device.entityType?.toLowerCase() || 
+                       device.entity_id?.split('.')[0] || 
+                       'unknown';
+    this.properties.lastEntityType = entityType;
+    
+    // Extract values for each selected field
+    const activeFields = this.properties.selectedFields.filter(f => f && f !== 'Select Field');
+    
+    activeFields.forEach(field => {
+      const value = this.getFieldValue(device, field);
+      const outputKey = `out_${field}`;
+      result[outputKey] = value;
+      this.properties.lastOutputValues[field] = value;
+    });
+    
+    // Ensure all dynamic outputs have a value
+    this.outputs.forEach(outputKey => {
+      if (result[outputKey] === undefined) {
+        result[outputKey] = null;
+      }
+    });
+    
+    return result;
+  }
+  
+  restore(state) {
+    if (state.properties) {
+      Object.assign(this.properties, state.properties);
+      // Rebuild outputs array from selectedFields
+      this.outputs = (this.properties.selectedFields || [])
+        .filter(f => f && f !== 'Select Field')
+        .map(f => `out_${f}`);
+    }
   }
 }
 
@@ -585,12 +933,13 @@ registry.register('HADeviceStateOutputNode', HADeviceStateNode);  // Alias
 registry.register('HAServiceCallNode', HAServiceCallNode);
 registry.register('HALightControlNode', HALightControlNode);
 registry.register('HAGenericDeviceNode', HAGenericDeviceNode);
-registry.register('HADeviceAutomationNode', HAGenericDeviceNode);  // Use full implementation
+registry.register('HADeviceAutomationNode', HADeviceAutomationNode);
 
 module.exports = { 
   HADeviceStateNode, 
   HAServiceCallNode, 
   HALightControlNode,
   HAGenericDeviceNode,
+  HADeviceAutomationNode,
   getHAConfig
 };
