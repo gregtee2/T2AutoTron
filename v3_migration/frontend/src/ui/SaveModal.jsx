@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './SaveModal.css';
-import { apiUrl } from '../apiConfig';
+import { apiUrl } from '../utils/apiBase';
 
 /**
  * SaveModal - Dialog for saving graphs with custom filenames
