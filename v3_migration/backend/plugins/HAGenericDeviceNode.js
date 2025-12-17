@@ -400,13 +400,35 @@
                 this.addControl(`${base}power`, new PowerStatsControl({ power: null, energy: null }));
                 this.addControl(`${base}state`, new DeviceStateControl(id, (devId) => this.perDeviceState[devId]));
                 this.addOutput(`device_out_${index}`, new ClassicPreset.Output(sockets.lightInfo || new ClassicPreset.Socket('lightInfo'), `Device ${index + 1}`));
-                
-                if (id) this.fetchDeviceState(id);
             });
             
             // Update height based on restored devices
             this.updateNodeHeight();
-            this.fetchDevices();
+            
+            // Defer API calls until after graph loading is complete
+            if (typeof window !== 'undefined' && window.graphLoading) {
+                // Wait for graph load to complete, then fetch once
+                const checkAndFetch = () => {
+                    if (window.graphLoading) {
+                        setTimeout(checkAndFetch, 500);
+                    } else {
+                        // Small delay to let other nodes finish, then fetch devices + states
+                        setTimeout(() => {
+                            this.fetchDevices();
+                            this.properties.selectedDeviceIds.forEach(id => {
+                                if (id) this.fetchDeviceState(id);
+                            });
+                        }, 200);
+                    }
+                };
+                setTimeout(checkAndFetch, 100);
+            } else {
+                // Not during graph load - fetch immediately
+                this.fetchDevices();
+                this.properties.selectedDeviceIds.forEach(id => {
+                    if (id) this.fetchDeviceState(id);
+                });
+            }
         }
 
         async data(inputs) {

@@ -482,4 +482,66 @@ router.get('/graphs/:name', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/engine/buffers
+ * Get all AutoTronBuffer values
+ */
+router.get('/buffers', (req, res) => {
+  const { engine } = getEngine();
+  
+  // Import AutoTronBuffer from BufferNodes
+  let buffers = {};
+  try {
+    const { AutoTronBuffer } = require('../../engine/nodes/BufferNodes');
+    for (const key of AutoTronBuffer.keys()) {
+      buffers[key] = AutoTronBuffer.get(key);
+    }
+  } catch (err) {
+    console.log('[Engine API] Could not load buffers:', err.message);
+  }
+  
+  res.json({
+    success: true,
+    buffers
+  });
+});
+
+/**
+ * GET /api/engine/timers
+ * Get active timeline/timer nodes
+ */
+router.get('/timers', (req, res) => {
+  const { engine } = getEngine();
+  const timers = [];
+  
+  // Find all timeline/timer nodes and their state
+  for (const [nodeId, node] of engine.nodes) {
+    if (node.name && (
+      node.name.includes('Timeline') || 
+      node.name.includes('Timer') || 
+      node.name.includes('Delay')
+    )) {
+      const props = node.properties || {};
+      timers.push({
+        nodeId,
+        name: props.customName || props.customTitle || node.name,
+        mode: props.rangeMode || props.mode || 'unknown',
+        duration: props.timerDurationValue ? 
+          `${props.timerDurationValue} ${props.timerUnit || 'ms'}` : 
+          (props.duration || '--'),
+        direction: node.pingPongDirection || 1,
+        position: props.position || 0,
+        progress: props.position || 0,
+        isInRange: props.isInRange || false,
+        loopMode: props.timerLoopMode || 'none'
+      });
+    }
+  }
+  
+  res.json({
+    success: true,
+    timers
+  });
+});
+
 module.exports = router;

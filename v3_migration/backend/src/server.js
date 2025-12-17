@@ -873,6 +873,59 @@ app.use('/api/cameras', cameraRoutes);
 const engineRoutes = require('./api/routes/engineRoutes');
 app.use('/api/engine', engineRoutes);
 
+// ============================================
+// Debug Dashboard API - Simple read-only endpoints
+// No auth required - just for LAN monitoring
+// ============================================
+app.get('/api/debug/lights', async (req, res) => {
+  try {
+    const haManager = require('./devices/managers/homeAssistantManager');
+    const devices = await haManager.getDevices();
+    const lights = devices.filter(d => d.id && d.id.startsWith('ha_light.'));
+    res.json({ success: true, lights });
+  } catch (err) {
+    res.json({ success: false, error: err.message, lights: [] });
+  }
+});
+
+app.get('/api/debug/all', async (req, res) => {
+  try {
+    // Get engine status
+    let engineStatus = { running: false };
+    try {
+      const { engine } = require('./engine');
+      engineStatus = engine.getStatus();
+    } catch (e) {}
+    
+    // Get buffers
+    let buffers = {};
+    try {
+      const { AutoTronBuffer } = require('./engine/nodes/BufferNodes');
+      for (const key of AutoTronBuffer.keys()) {
+        buffers[key] = AutoTronBuffer.get(key);
+      }
+    } catch (e) {}
+    
+    // Get lights from HA
+    let lights = [];
+    try {
+      const haManager = require('./devices/managers/homeAssistantManager');
+      const devices = await haManager.getDevices();
+      lights = devices.filter(d => d.id && d.id.startsWith('ha_light.'));
+    } catch (e) {}
+    
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      engine: engineStatus,
+      buffers,
+      lights
+    });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // Initialize DeviceService
 debug('Initializing DeviceService...');
 async function initializeDeviceService() {

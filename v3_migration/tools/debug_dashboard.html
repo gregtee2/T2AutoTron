@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T2AutoTron Debug</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+        }
+        h1 { color: #00d4ff; margin-bottom: 5px; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
+        
+        .config-bar {
+            background: #252540;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .config-bar input {
+            background: #1a1a2e;
+            border: 1px solid #444;
+            color: #eee;
+            padding: 10px 15px;
+            border-radius: 6px;
+            width: 350px;
+            font-size: 14px;
+        }
+        .config-bar button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .config-bar button:hover { background: #00b8e6; }
+        .status { 
+            padding: 8px 15px; 
+            border-radius: 6px; 
+            font-size: 13px;
+        }
+        .status.connected { background: #1b5e20; color: #81c784; }
+        .status.error { background: #4a1010; color: #e57373; }
+        .status.loading { background: #333; color: #888; }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .panel {
+            background: #252540;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #00d4ff;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        /* Engine stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .stat {
+            background: #1a1a2e;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value { font-size: 24px; font-weight: bold; color: #00d4ff; }
+        .stat-label { font-size: 11px; color: #666; margin-top: 5px; }
+        
+        /* Light list */
+        .light-list { max-height: 400px; overflow-y: auto; }
+        .light-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            gap: 12px;
+        }
+        .light-color {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid #444;
+        }
+        .light-info { flex: 1; }
+        .light-name { font-size: 13px; font-weight: 500; }
+        .light-details { font-size: 11px; color: #888; margin-top: 3px; }
+        .light-state {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .light-state.on { background: #1b5e20; color: #81c784; }
+        .light-state.off { background: #333; color: #666; }
+        
+        /* Buffer list */
+        .buffer-list { max-height: 350px; overflow-y: auto; }
+        .buffer-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            gap: 10px;
+        }
+        .buffer-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #444;
+        }
+        .buffer-name { flex: 1; font-size: 12px; }
+        .buffer-value { font-size: 11px; color: #00d4ff; font-family: monospace; }
+        
+        .no-data { color: #666; text-align: center; padding: 20px; font-style: italic; }
+        .last-update { font-size: 11px; color: #444; margin-top: 10px; text-align: right; }
+        
+        .filter-input {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #eee;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 T2AutoTron Debug Dashboard</h1>
+    <p class="subtitle">Real-time monitoring - No login required</p>
+    
+    <div class="config-bar">
+        <input type="text" id="backendUrl" placeholder="T2AutoTron Backend URL (e.g., http://192.168.1.100:3000)">
+        <button onclick="connect()">Connect</button>
+        <span class="status loading" id="status">Not connected</span>
+    </div>
+    
+    <div class="dashboard">
+        <!-- Engine Status -->
+        <div class="panel">
+            <div class="panel-title">⚙️ Engine Status</div>
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-value" id="engineRunning">--</div>
+                    <div class="stat-label">Status</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="engineNodes">--</div>
+                    <div class="stat-label">Nodes</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="engineTicks">--</div>
+                    <div class="stat-label">Ticks</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="engineUptime">--</div>
+                    <div class="stat-label">Uptime (min)</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Buffers -->
+        <div class="panel">
+            <div class="panel-title">📦 Active Buffers (Sender/Receiver)</div>
+            <input type="text" class="filter-input" id="bufferFilter" placeholder="Filter..." oninput="renderBuffers()">
+            <div class="buffer-list" id="bufferList">
+                <div class="no-data">Connect to view buffers</div>
+            </div>
+        </div>
+        
+        <!-- Lights -->
+        <div class="panel" style="grid-column: span 2;">
+            <div class="panel-title">💡 Light States</div>
+            <input type="text" class="filter-input" id="lightFilter" placeholder="Filter lights..." oninput="renderLights()">
+            <div class="light-list" id="lightList">
+                <div class="no-data">Connect to view lights</div>
+            </div>
+            <div class="last-update" id="lastUpdate"></div>
+        </div>
+    </div>
+
+    <script>
+        let data = { engine: {}, buffers: {}, lights: [] };
+        let refreshInterval = null;
+        
+        // Load saved URL
+        const savedUrl = localStorage.getItem('t2debug_url');
+        if (savedUrl) document.getElementById('backendUrl').value = savedUrl;
+        
+        function hsToRgb(h, s) {
+            h = (h || 0) / 360;
+            s = (s || 0) / 100;
+            const v = 1;
+            let r, g, b;
+            const i = Math.floor(h * 6);
+            const f = h * 6 - i;
+            const p = v * (1 - s);
+            const q = v * (1 - f * s);
+            const t = v * (1 - (1 - f) * s);
+            switch (i % 6) {
+                case 0: r = v; g = t; b = p; break;
+                case 1: r = q; g = v; b = p; break;
+                case 2: r = p; g = v; b = t; break;
+                case 3: r = p; g = q; b = v; break;
+                case 4: r = t; g = p; b = v; break;
+                case 5: r = v; g = p; b = q; break;
+            }
+            return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+        }
+        
+        function hueToRgb(hue) {
+            return hsToRgb(hue * 360, 100);
+        }
+        
+        async function connect() {
+            const url = document.getElementById('backendUrl').value.trim();
+            if (!url) {
+                alert('Please enter the T2AutoTron backend URL');
+                return;
+            }
+            localStorage.setItem('t2debug_url', url);
+            
+            document.getElementById('status').className = 'status loading';
+            document.getElementById('status').textContent = 'Connecting...';
+            
+            await refresh();
+            
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(refresh, 3000);
+        }
+        
+        async function refresh() {
+            const url = document.getElementById('backendUrl').value.trim();
+            if (!url) return;
+            
+            try {
+                const response = await fetch(`${url}/api/debug/all`);
+                data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('status').className = 'status connected';
+                    document.getElementById('status').textContent = '✓ Connected';
+                    
+                    renderEngine();
+                    renderBuffers();
+                    renderLights();
+                    
+                    document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (err) {
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').textContent = `✗ ${err.message}`;
+            }
+        }
+        
+        function renderEngine() {
+            const e = data.engine || {};
+            document.getElementById('engineRunning').textContent = e.running ? '🟢 ON' : '⚫ OFF';
+            document.getElementById('engineNodes').textContent = e.nodeCount || 0;
+            document.getElementById('engineTicks').textContent = (e.tickCount || 0).toLocaleString();
+            document.getElementById('engineUptime').textContent = Math.floor((e.uptime || 0) / 60000);
+        }
+        
+        function renderBuffers() {
+            const filter = document.getElementById('bufferFilter').value.toLowerCase();
+            const buffers = data.buffers || {};
+            const entries = Object.entries(buffers).filter(([k]) => k.toLowerCase().includes(filter));
+            
+            if (entries.length === 0) {
+                document.getElementById('bufferList').innerHTML = '<div class="no-data">No buffers</div>';
+                return;
+            }
+            
+            const html = entries.map(([name, value]) => {
+                let displayValue = '';
+                let colorBox = '';
+                
+                if (value && typeof value === 'object' && 'hue' in value) {
+                    colorBox = `<div class="buffer-color" style="background: ${hueToRgb(value.hue)}"></div>`;
+                    displayValue = `H:${(value.hue || 0).toFixed(3)} S:${(value.saturation || 0).toFixed(2)} B:${value.brightness || 0}`;
+                } else if (typeof value === 'boolean') {
+                    colorBox = `<div class="buffer-color" style="background: ${value ? '#4caf50' : '#333'}"></div>`;
+                    displayValue = value ? 'TRUE' : 'FALSE';
+                } else if (typeof value === 'number') {
+                    displayValue = value.toFixed(2);
+                } else {
+                    displayValue = JSON.stringify(value).slice(0, 40);
+                }
+                
+                return `<div class="buffer-item">${colorBox}<div class="buffer-name">${name}</div><div class="buffer-value">${displayValue}</div></div>`;
+            }).join('');
+            
+            document.getElementById('bufferList').innerHTML = html;
+        }
+        
+        function renderLights() {
+            const filter = document.getElementById('lightFilter').value.toLowerCase();
+            const lights = (data.lights || []).filter(l => 
+                (l.id || '').toLowerCase().includes(filter) || 
+                (l.name || '').toLowerCase().includes(filter)
+            );
+            
+            if (lights.length === 0) {
+                document.getElementById('lightList').innerHTML = '<div class="no-data">No lights found</div>';
+                return;
+            }
+            
+            const html = lights.map(light => {
+                const state = light.state || 'off';
+                const hs = light.hs_color || light.attributes?.hs_color || [0, 0];
+                const brightness = light.brightness || light.attributes?.brightness || 0;
+                const color = state === 'on' ? hsToRgb(hs[0], hs[1]) : '#333';
+                const name = light.name || light.id?.replace('ha_light.', '') || 'Unknown';
+                
+                return `
+                    <div class="light-item">
+                        <div class="light-color" style="background: ${color}; opacity: ${Math.max(0.3, brightness / 255)}"></div>
+                        <div class="light-info">
+                            <div class="light-name">${name}</div>
+                            <div class="light-details">H: ${hs[0]?.toFixed(0) || '--'}° S: ${hs[1]?.toFixed(0) || '--'}% B: ${brightness || '--'}</div>
+                        </div>
+                        <div class="light-state ${state}">${state}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('lightList').innerHTML = html;
+        }
+        
+        // Auto-connect if URL is saved
+        if (savedUrl) {
+            setTimeout(connect, 500);
+        }
+    </script>
+</body>
+</html>
