@@ -545,10 +545,20 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                         ❓ Keyboard Shortcuts
                     </button>
                     <button 
-                        onClick={() => {
+                        onClick={async () => {
+                            // Fetch version fresh to ensure it's current
+                            let version = appVersion || 'unknown';
+                            try {
+                                const resp = await fetch('/api/version');
+                                if (resp.ok) {
+                                    const data = await resp.json();
+                                    version = data.version || version;
+                                }
+                            } catch (e) { /* use cached */ }
+                            
                             // Gather debug info
                             const debugInfo = {
-                                version: appVersion || 'unknown',
+                                version,
                                 userAgent: navigator.userAgent,
                                 isAddon: IS_HA_ADDON,
                                 backend: connectionStatus.backend,
