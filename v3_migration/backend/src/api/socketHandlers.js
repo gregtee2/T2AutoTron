@@ -235,13 +235,16 @@ module.exports = (deviceService) => (socket) => {
   });
 
   // Handle device list request (requires authentication)
-  socket.on('request-device-list', () => {
+  // Supports both 'request-device-list' (legacy) and 'request-devices' (new)
+  const handleDeviceListRequest = () => {
     if (!authManager.isAuthenticated(socket)) {
       socket.emit('error', { message: 'Authentication required' });
       return;
     }
     emitDeviceList();
-  });
+  };
+  socket.on('request-device-list', handleDeviceListRequest);
+  socket.on('request-devices', handleDeviceListRequest);
 
   // Handle forecast request (requires authentication)
   socket.on('request-forecast', async () => {

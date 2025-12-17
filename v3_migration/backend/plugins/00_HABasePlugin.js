@@ -329,6 +329,117 @@
     }
 
     // -------------------------------------------------------------------------
+    // GLOBAL DEVICE CACHE - Shared across all HA nodes
+    // -------------------------------------------------------------------------
+    const deviceCache = {
+        devices: [],           // Flat array of all devices
+        byPrefix: {},          // { ha: [...], kasa: [...], hue: [...] }
+        lastUpdate: null,
+        listeners: new Set(),  // Callbacks to notify on update
+        initialized: false
+    };
+
+    /**
+     * Initialize the global device cache and socket listener
+     * Only runs once, all nodes share the same cache
+     */
+    function initializeDeviceCache() {
+        if (deviceCache.initialized || typeof window === 'undefined' || !window.socket) return;
+        deviceCache.initialized = true;
+
+        // Listen for device list updates from server
+        window.socket.on('device-list-update', (data) => {
+            // console.log('[T2HAUtils] Received device-list-update:', Object.keys(data));
+            deviceCache.byPrefix = data;
+            
+            // Flatten into single array with normalized format
+            const allDevices = [];
+            for (const [prefix, devices] of Object.entries(data)) {
+                if (!Array.isArray(devices)) continue;
+                devices.forEach(d => {
+                    let deviceType = d.type;
+                    if (!deviceType && d.id?.includes('.')) {
+                        deviceType = d.id.split('.')[0].replace(/^(ha_|kasa_|hue_)/, '');
+                    }
+                    allDevices.push({
+                        ...d,
+                        type: deviceType || 'unknown',
+                        source: prefix.replace('_', '')
+                    });
+                });
+            }
+            
+            deviceCache.devices = allDevices.sort((a, b) => compareNames(a.name || a.id, b.name || b.id));
+            deviceCache.lastUpdate = Date.now();
+            
+            // Notify all registered listeners
+            deviceCache.listeners.forEach(callback => {
+                try { callback(deviceCache.devices); } catch (e) { console.error('[T2HAUtils] Cache listener error:', e); }
+            });
+        });
+
+        // Request devices when socket connects/reconnects
+        window.socket.on('connect', () => {
+            // Server auto-sends device-list-update after auth, but request anyway for reconnects
+            setTimeout(() => window.socket.emit('request-devices'), 500);
+        });
+
+        // Request initial device list if already connected
+        if (window.socket.connected) {
+            window.socket.emit('request-devices');
+        }
+    }
+
+    /**
+     * Get cached devices (returns immediately, may be empty on first call)
+     * @returns {Array} - Array of all devices
+     */
+    function getCachedDevices() {
+        // Lazy init - first node to call this sets up the listener
+        initializeDeviceCache();
+        return deviceCache.devices;
+    }
+
+    /**
+     * Get cached devices by prefix (ha, kasa, hue, shelly)
+     * @returns {object} - { ha: [...], kasa: [...], ... }
+     */
+    function getCachedDevicesByPrefix() {
+        initializeDeviceCache();
+        return deviceCache.byPrefix;
+    }
+
+    /**
+     * Register a callback to be notified when device cache updates
+     * @param {function} callback - Called with (devices) array
+     * @returns {function} - Unsubscribe function
+     */
+    function onDeviceCacheUpdate(callback) {
+        initializeDeviceCache();
+        deviceCache.listeners.add(callback);
+        // Return unsubscribe function
+        return () => deviceCache.listeners.delete(callback);
+    }
+
+    /**
+     * Request fresh device list from server (via socket)
+     * All nodes will receive the update via their registered callbacks
+     */
+    function requestDeviceRefresh() {
+        if (window.socket?.connected) {
+            window.socket.emit('request-devices');
+        }
+    }
+
+    /**
+     * Check if device cache has data
+     * @returns {boolean}
+     */
+    function hasDeviceCache() {
+        return deviceCache.devices.length > 0;
+    }
+
+    // -------------------------------------------------------------------------
     // EXPORT TO GLOBAL SCOPE
     // -------------------------------------------------------------------------
     window.T2HAUtils = {
@@ -350,7 +461,14 @@
         
         // Socket.io helpers
         initializeSocketListeners,
-        removeSocketListeners
+        removeSocketListeners,
+        
+        // Device cache (shared across all nodes)
+        getCachedDevices,
+        getCachedDevicesByPrefix,
+        onDeviceCacheUpdate,
+        requestDeviceRefresh,
+        hasDeviceCache
     };
 
     // console.log("[HABasePlugin] T2HAUtils loaded with:", Object.keys(window.T2HAUtils).join(", "));

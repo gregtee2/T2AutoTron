@@ -142,8 +142,27 @@
     let pendingDeviceSyncs = [];
     let deviceSyncInProgress = false;
     
-    // Shared function to fetch devices with debounce (all nodes share one call)
+    // Shared function to get devices - uses T2HAUtils cache (socket-based)
+    // Falls back to HTTP if cache is empty
     async function fetchDevicesDebounced() {
+        // Try cache first (populated via socket 'device-list-update')
+        const { getCachedDevices, hasDeviceCache, requestDeviceRefresh } = window.T2HAUtils || {};
+        
+        if (hasDeviceCache && hasDeviceCache()) {
+            return getCachedDevices();
+        }
+        
+        // Cache empty - request refresh via socket (much faster than HTTP)
+        if (requestDeviceRefresh) {
+            requestDeviceRefresh();
+            // Wait a bit for socket response, then return whatever cache has
+            await new Promise(r => setTimeout(r, 300));
+            if (hasDeviceCache && hasDeviceCache()) {
+                return getCachedDevices();
+            }
+        }
+        
+        // Fallback to HTTP if socket cache still empty
         if (globalFetchPromise) return globalFetchPromise;
         
         // Clear any pending timer
@@ -591,6 +610,22 @@
                     // or when input values actually change AFTER the graph is loaded
                 };
                 
+                // Register for device cache updates (socket-based, shared across all nodes)
+                const { onDeviceCacheUpdate } = window.T2HAUtils || {};
+                if (onDeviceCacheUpdate) {
+                    this._cacheUnsubscribe = onDeviceCacheUpdate((devices) => {
+                        if (devices && devices.length > 0) {
+                            this.devices = devices.slice().sort((a, b) =>
+                                HAGenericDeviceNode.compareNames(a.name || a.id, b.name || b.id)
+                            );
+                            this.updateDeviceSelectorOptions();
+                            if (this.properties.debug) {
+                                console.log(`[HAGenericDeviceNode] Cache update: ${devices.length} devices`);
+                            }
+                        }
+                    });
+                }
+                
                 window.socket.on("device-state-update", this._onDeviceStateUpdate);
                 window.socket.on("ha-connection-status", this._onHaConnectionStatus);
                 window.socket.on("connect", this._onConnect);
@@ -607,40 +642,54 @@
         async fetchDevices(force = false) {
             // Skip API calls during graph loading (unless forced)
             if (!force && typeof window !== 'undefined' && window.graphLoading) return;
+            
             try {
-                // Use unified /api/devices to get ALL devices (HA, Kasa, Hue, Shelly, etc.)
-                const response = await queuedFetch('/api/devices', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
-                const data = await response.json();
+                // Use T2HAUtils cache first (socket-based, shared across all nodes)
+                const { getCachedDevices, hasDeviceCache, requestDeviceRefresh } = window.T2HAUtils || {};
+                let allDevices = [];
                 
-                if (data.success && data.devices) {
-                    // Combine all device sources into a single flat list
-                    const allDevices = [];
-                    for (const [prefix, devices] of Object.entries(data.devices)) {
-                        if (Array.isArray(devices)) {
-                            devices.forEach(d => {
-                                // Preserve original type from the API (bulb, plug, light, switch, etc.)
-                                // Only extract from ID if type is missing
-                                let deviceType = d.type;
-                                if (!deviceType && d.id?.includes('.')) {
-                                    // Extract type from HA entity ID: ha_light.living_room -> light
-                                    deviceType = d.id.split('.')[0].replace(/^(ha_|kasa_|hue_)/, '');
-                                }
-                                deviceType = deviceType || 'unknown';
-                                
-                                allDevices.push({
-                                    ...d,
-                                    type: deviceType,
-                                    source: prefix.replace('_', '') // 'ha', 'kasa', 'hue', 'shelly', etc.
+                if (hasDeviceCache && hasDeviceCache()) {
+                    // Use cached devices
+                    allDevices = getCachedDevices();
+                } else if (requestDeviceRefresh) {
+                    // Request via socket and wait briefly
+                    requestDeviceRefresh();
+                    await new Promise(r => setTimeout(r, 500));
+                    if (hasDeviceCache && hasDeviceCache()) {
+                        allDevices = getCachedDevices();
+                    }
+                }
+                
+                // Fallback to HTTP if cache is empty
+                if (allDevices.length === 0) {
+                    const response = await queuedFetch('/api/devices', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
+                    const data = await response.json();
+                    
+                    if (data.success && data.devices) {
+                        for (const [prefix, devices] of Object.entries(data.devices)) {
+                            if (Array.isArray(devices)) {
+                                devices.forEach(d => {
+                                    let deviceType = d.type;
+                                    if (!deviceType && d.id?.includes('.')) {
+                                        deviceType = d.id.split('.')[0].replace(/^(ha_|kasa_|hue_)/, '');
+                                    }
+                                    allDevices.push({
+                                        ...d,
+                                        type: deviceType || 'unknown',
+                                        source: prefix.replace('_', '')
+                                    });
                                 });
-                            });
+                            }
                         }
                     }
+                }
+                
+                if (allDevices.length > 0) {
                     this.devices = allDevices.sort((a, b) =>
                         HAGenericDeviceNode.compareNames(a.name || a.id, b.name || b.id)
                     );
                     
                     if (this.properties.debug) {
-                        // Log device type breakdown for debugging
                         const typeCounts = this.devices.reduce((acc, d) => {
                             acc[d.type] = (acc[d.type] || 0) + 1;
                             return acc;
@@ -656,8 +705,8 @@
                     this.updateDeviceSelectorOptions();
                     this.triggerUpdate();
                 } else {
-                    console.warn('[HAGenericDeviceNode] Failed to load devices - success:', data.success);
-                    this.updateStatus("Failed to load devices");
+                    console.warn('[HAGenericDeviceNode] No devices loaded');
+                    this.updateStatus("No devices found");
                 }
             } catch (e) {
                 console.error("[HAGenericDeviceNode] Fetch devices error:", e);
@@ -1261,6 +1310,12 @@
             // Remove window event listener
             if (this._onGraphLoadComplete) {
                 window.removeEventListener("graphLoadComplete", this._onGraphLoadComplete);
+            }
+            
+            // Unsubscribe from device cache updates
+            if (this._cacheUnsubscribe) {
+                this._cacheUnsubscribe();
+                this._cacheUnsubscribe = null;
             }
             
             super.destroy?.();
