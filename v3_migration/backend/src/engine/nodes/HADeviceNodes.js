@@ -667,14 +667,17 @@ class HAGenericDeviceNode {
       const satDiff = this.lastSentHsv ? Math.abs((hsv.saturation || 0) - (this.lastSentHsv.saturation || 0)) : 1;
       const briDiff = this.lastSentHsv ? Math.abs((hsv.brightness || 0) - (this.lastSentHsv.brightness || 0)) : 255;
       
-      // Minimum interval between updates (5 seconds) to avoid flooding HA
-      const MIN_UPDATE_INTERVAL = 5000;
+      // Minimum interval between updates to avoid flooding HA / Zigbee
+      // Zigbee lights can't handle more than ~1 command per 3-5 seconds without flashing/popping
+      const MIN_UPDATE_INTERVAL = 5000;       // 5s minimum for normal updates
+      const MIN_FAST_INTERVAL = 3000;         // 3s minimum even for "significant" changes
       const timeSinceLastSend = now - this.lastSendTime;
       
-      // Thresholds: noticeable change = immediate update, small change = periodic update
-      const SIGNIFICANT_HUE_CHANGE = 0.01;    // ~3.6° - visible color shift
-      const SIGNIFICANT_SAT_CHANGE = 0.03;    // 3% saturation
-      const SIGNIFICANT_BRI_CHANGE = 5;       // ~2% brightness
+      // Thresholds: noticeable change = faster update, small change = periodic update
+      // Increased thresholds to reduce command flood during color fading animations
+      const SIGNIFICANT_HUE_CHANGE = 0.05;    // ~18° - larger threshold for animated color changes
+      const SIGNIFICANT_SAT_CHANGE = 0.10;    // 10% saturation 
+      const SIGNIFICANT_BRI_CHANGE = 20;      // ~8% brightness
       const SMALL_CHANGE_INTERVAL = 30000;    // Send every 30s if small changes accumulating
       const FORCE_UPDATE_INTERVAL = 60000;    // Force update every 60s regardless of change
       
@@ -689,9 +692,9 @@ class HAGenericDeviceNode {
       // First send ever, or significant change, or periodic small change update, or forced periodic
       const shouldSend = !this.lastSentHsv || hasSignificantChange || timeForSmallUpdate || timeForForceUpdate;
       
-      // Significant changes can update quickly (200ms debounce) for interactive use
-      // Small/periodic changes still use MIN_UPDATE_INTERVAL (5s) to avoid flooding
-      const minInterval = hasSignificantChange ? 200 : MIN_UPDATE_INTERVAL;
+      // Significant changes can update faster but still need 3s minimum to avoid Zigbee flooding
+      // Small/periodic changes use MIN_UPDATE_INTERVAL (5s) for smooth operation
+      const minInterval = hasSignificantChange ? MIN_FAST_INTERVAL : MIN_UPDATE_INTERVAL;
       
       if (shouldSend && timeSinceLastSend >= minInterval) {
         const reason = !this.lastSentHsv ? 'first_send' 
