@@ -507,15 +507,32 @@
                 this.controls.debug.value = this.properties.debug;
             }
             
-            setTimeout(() => {
-                this.fetchDevices().then(() => {
-                    if (this.properties.selectedDeviceId) {
-                        this.fetchDeviceState(this.properties.selectedDeviceId);
-                    }
-                    this.updateDeviceDropdown();
-                    if (this.changeCallback) this.changeCallback();
-                });
-            }, 500);
+            // Defer API calls until after graph loading is complete
+            const doFetch = () => {
+                // Stagger by random delay to prevent thundering herd
+                const staggerDelay = Math.random() * 2000;
+                setTimeout(() => {
+                    this.fetchDevices().then(() => {
+                        if (this.properties.selectedDeviceId) {
+                            this.fetchDeviceState(this.properties.selectedDeviceId);
+                        }
+                        this.updateDeviceDropdown();
+                        if (this.changeCallback) this.changeCallback();
+                    });
+                }, staggerDelay);
+            };
+            
+            if (typeof window !== 'undefined' && window.graphLoading) {
+                // Wait for graphLoadComplete event
+                const onGraphLoadComplete = () => {
+                    window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
+                    doFetch();
+                };
+                window.addEventListener('graphLoadComplete', onGraphLoadComplete);
+            } else {
+                // Not during graph load - fetch after short delay
+                setTimeout(doFetch, 500);
+            }
         }
 
         serialize() {

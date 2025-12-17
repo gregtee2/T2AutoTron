@@ -22,6 +22,7 @@ class BackendEngine {
     this.lastTickTime = null;
     this.tickCount = 0;
     this.graphPath = null;
+    this.startedAt = null;              // Timestamp when engine started
     this.debug = process.env.ENGINE_DEBUG === 'true' || process.env.VERBOSE_LOGGING === 'true';
     
     // Frontend priority: when frontend is active, engine skips device commands
@@ -328,6 +329,7 @@ class BackendEngine {
 
     this.running = true;
     this.tickCount = 0;
+    this.startedAt = Date.now();
     
     // Log all nodes being executed
     engineLogger.logEngineEvent('START', { nodeCount: this.nodes.size, connections: this.connections.length });
@@ -417,6 +419,8 @@ class BackendEngine {
       tickRate: this.tickRate,
       lastTickTime: this.lastTickTime,
       graphPath: this.graphPath,
+      startedAt: this.startedAt,
+      uptime: this.startedAt ? Date.now() - this.startedAt : 0,
       registeredNodeTypes: registry.list(),
       frontendActive: this.frontendActive,
       frontendLastSeen: this.frontendLastSeen

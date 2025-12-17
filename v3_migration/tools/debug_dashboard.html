@@ -333,20 +333,40 @@
             }
             
             const html = lights.map(light => {
-                const state = light.state || 'off';
-                const hs = light.hs_color || light.attributes?.hs_color || [0, 0];
-                const brightness = light.brightness || light.attributes?.brightness || 0;
-                const color = state === 'on' ? hsToRgb(hs[0], hs[1]) : '#333';
+                // light.state is an object: { state: 'on', on: true, brightness: 100, hs_color: [h, s] }
+                const stateObj = light.state || {};
+                const stateStr = stateObj.state || 'off';
+                const isOn = stateObj.on || stateStr === 'on';
+                
+                // Get hs_color from state object, fallback to attributes
+                const hs = stateObj.hs_color || light.attributes?.hs_color || [0, 0];
+                
+                // Get brightness (state obj has it as 0-100 percentage, attributes has 0-255)
+                let brightness = 0;
+                if (stateObj.brightness !== undefined) {
+                    // State obj brightness is 0-100 percentage, convert to 0-255 for display consistency
+                    brightness = Math.round(stateObj.brightness * 2.55);
+                } else if (light.attributes?.brightness !== undefined) {
+                    brightness = light.attributes.brightness;
+                }
+                
+                // Show actual light color when on, gray when off
+                const color = isOn ? hsToRgb(hs[0], hs[1]) : '#444';
+                // Use brightness to dim the color (but keep minimum visible)
+                const colorOpacity = isOn ? Math.max(0.4, brightness / 255) : 0.3;
                 const name = light.name || light.id?.replace('ha_light.', '') || 'Unknown';
+                
+                // Border glow effect for "on" lights
+                const glowStyle = isOn ? `box-shadow: 0 0 8px ${color};` : '';
                 
                 return `
                     <div class="light-item">
-                        <div class="light-color" style="background: ${color}; opacity: ${Math.max(0.3, brightness / 255)}"></div>
+                        <div class="light-color" style="background: ${color}; opacity: ${colorOpacity}; ${glowStyle}"></div>
                         <div class="light-info">
                             <div class="light-name">${name}</div>
                             <div class="light-details">H: ${hs[0]?.toFixed(0) || '--'}° S: ${hs[1]?.toFixed(0) || '--'}% B: ${brightness || '--'}</div>
                         </div>
-                        <div class="light-state ${state}">${state}</div>
+                        <div class="light-state ${isOn ? 'on' : 'off'}">${stateStr}</div>
                     </div>
                 `;
             }).join('');

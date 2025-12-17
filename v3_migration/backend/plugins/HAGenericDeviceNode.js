@@ -372,7 +372,11 @@
 
         startAutoRefresh() {
             if (this.intervalId) clearInterval(this.intervalId);
-            this.intervalId = setInterval(() => this.fetchDevices(), this.properties.autoRefreshInterval);
+            this.intervalId = setInterval(() => {
+                // Skip refresh during graph loading
+                if (typeof window !== 'undefined' && window.graphLoading) return;
+                this.fetchDevices();
+            }, this.properties.autoRefreshInterval);
         }
 
         restore(state) {
@@ -407,21 +411,29 @@
             
             // Defer API calls until after graph loading is complete
             if (typeof window !== 'undefined' && window.graphLoading) {
-                // Wait for graph load to complete, then fetch once
-                const checkAndFetch = () => {
-                    if (window.graphLoading) {
-                        setTimeout(checkAndFetch, 500);
-                    } else {
-                        // Small delay to let other nodes finish, then fetch devices + states
-                        setTimeout(() => {
-                            this.fetchDevices();
-                            this.properties.selectedDeviceIds.forEach(id => {
-                                if (id) this.fetchDeviceState(id);
-                            });
-                        }, 200);
-                    }
+                // Use event listener instead of polling to avoid CPU churn
+                const onGraphLoadComplete = () => {
+                    window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
+                    // Stagger API calls by random delay (0-2s) to prevent thundering herd
+                    const staggerDelay = Math.random() * 2000;
+                    setTimeout(() => {
+                        this.fetchDevices();
+                        // Further stagger individual device state fetches
+                        this.properties.selectedDeviceIds.forEach((id, index) => {
+                            if (id) {
+                                setTimeout(() => this.fetchDeviceState(id), index * 100);
+                            }
+                        });
+                    }, staggerDelay);
                 };
-                setTimeout(checkAndFetch, 100);
+                window.addEventListener('graphLoadComplete', onGraphLoadComplete);
+                
+                // Fallback: if event never fires (e.g., error during load), check after 10s
+                setTimeout(() => {
+                    if (!window.graphLoading) {
+                        window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
+                    }
+                }, 10000);
             } else {
                 // Not during graph load - fetch immediately
                 this.fetchDevices();
@@ -544,7 +556,8 @@
                 };
                 this._onConnect = () => {
                     window.socket.emit("request-ha-status");
-                    this.fetchDevices();
+                    // Don't fetch devices during graph loading - will be fetched via graphLoadComplete
+                    if (!window.graphLoading) this.fetchDevices();
                 };
                 
                 // Listen for graph load complete event to refresh devices and sync state
@@ -586,7 +599,8 @@
                 // Request current HA status
                 window.socket.emit("request-ha-status");
                 
-                if (window.socket.connected) this.fetchDevices();
+                // Only fetch devices if not during graph loading
+                if (window.socket.connected && !window.graphLoading) this.fetchDevices();
             }
         }
 
