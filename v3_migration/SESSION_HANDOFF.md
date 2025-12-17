@@ -1,5 +1,39 @@
 # Session Handoff - December 16, 2025
 
+## Addendum (Session 4 - Timeline Color Fix)
+
+### What changed (Session 4 - Claude Opus 4.5)
+
+#### 🔧 Fixed Timeline Color nodes outputting null in headless mode
+- **Symptom**: Lights were ON but colors weren't changing. Timeline Color nodes produced `null` instead of HSV values.
+- **Root Cause #1**: Backend `TimeOfDayNode` was missing `startTime` and `endTime` outputs that the frontend plugin had. Timeline node couldn't calculate position without knowing when the period started/ended.
+- **Root Cause #2**: Backend engine's `gatherInputs()` always returns arrays (`{startTime: ["08:00"]}`), but `SplineTimelineColorNode` was reading `inputs.startTime` directly instead of `inputs.startTime?.[0]`.
+- **Fixes**:
+  - Added `formatMinutesToTime()` helper and `startTime`/`endTime` outputs to `TimeNodes.js`
+  - Updated `ColorNodes.js` to use `inputs.xxx?.[0]` pattern like all other backend nodes
+
+#### 🆕 Added 3 missing backend node implementations (100% coverage)
+- **SplineCurveNode**: Maps input through editable spline curve with catmull-rom interpolation
+- **WatchdogNode**: Monitors input, triggers alert if no data within timeout period
+- **HADeviceAutomationNode**: Extracts specific fields (brightness, hue, temp, etc.) from device state
+
+### 🦴 Caveman Explanation
+The Timeline node couldn't paint colors because nobody told it what time the party started, and when they finally did, the time was wrapped in a box it didn't know how to open.
+
+### Files touched (Session 4)
+- `v3_migration/backend/src/engine/nodes/TimeNodes.js` - Added startTime/endTime outputs
+- `v3_migration/backend/src/engine/nodes/ColorNodes.js` - Fixed array access pattern
+- `v3_migration/backend/src/engine/nodes/UtilityNodes.js` - Added SplineCurveNode, WatchdogNode
+- `v3_migration/backend/src/engine/nodes/HADeviceNodes.js` - Added HADeviceAutomationNode
+
+### Verification
+- ✅ All 71 tests pass
+- ✅ Timeline Color nodes now output HSV values in headless mode
+- ✅ Lights change colors correctly when browser is closed
+- ✅ Commits pushed to main AND stable: `f47d8bc`, `df1b1f7`
+
+---
+
 ## Addendum (Session 3 - Late Night)
 
 ### What changed (Session 3 - Claude Opus 4.5)

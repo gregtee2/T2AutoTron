@@ -78,6 +78,12 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
+#### Timeline Colors Null in Headless Mode (2025-12-16)
+- **What broke**: Lights were ON but colors weren't changing when browser was closed. Timeline Color node output was `null`.
+- **Why it broke**: Two problems: (1) Backend `TimeOfDayNode` wasn't telling Timeline when the day period started/ended. (2) Backend wraps all inputs in arrays `["08:00"]` but Timeline was looking for raw values `"08:00"`.
+- **The fix**: Added `startTime`/`endTime` outputs to TimeOfDayNode. Changed Timeline to unwrap the array: `inputs.startTime?.[0]`.
+- **Now it works because**: Timeline knows when the period starts AND can read the time correctly.
+
 #### Server Quitting Early (2025-12-14)
 - **What broke**: Server started up fine, then quit after ~20 seconds. Lights stopped changing colors.
 - **Why it broke**: Node.js has a rule: "If there's no work scheduled, I'm done - goodbye!" The Kasa smart plug code was accidentally telling Node.js "don't wait for me" on its network connections. After startup finished, Node.js saw no "real" work left and exited.
@@ -847,13 +853,14 @@ backend/src/engine/
 ├── BackendNodeRegistry.js # Node type registry with create() factory
 ├── index.js              # Exports engine singleton + registry
 └── nodes/                # Backend node implementations
-    ├── TimeNodes.js      # CurrentTime, TimeRange, DayOfWeek, SunPosition
+    ├── TimeNodes.js      # CurrentTime, TimeRange, DayOfWeek, SunPosition, TimeOfDay
     ├── LogicNodes.js     # AND, OR, NOT, Compare, Switch, Threshold, Latch, Toggle
     ├── DelayNode.js      # Delay, Debounce, Retriggerable modes
-    ├── HADeviceNodes.js  # HALight, HASwitch, HASensor, HAClimate, HAMediaPlayer
+    ├── HADeviceNodes.js  # HALight, HASwitch, HASensor, HAClimate, HAGenericDevice, HADeviceAutomation
     ├── HueLightNodes.js  # HueLight, HueGroup (direct bridge API)
     ├── KasaLightNodes.js # KasaLight, KasaPlug (direct local API)
-    └── ColorNodes.js     # SplineTimelineColor, HSVToRGB, RGBToHSV, ColorMixer
+    ├── ColorNodes.js     # SplineTimelineColor, HSVToRGB, RGBToHSV, ColorMixer
+    └── UtilityNodes.js   # Counter, Random, StateMachine, SplineCurve, Watchdog, Sender, Receiver
 ```
 
 ### API Endpoints
@@ -897,13 +904,14 @@ Engine accepts the same graph JSON format as frontend save/load:
 3. **Lazy Loading**: `engineRoutes.js` uses lazy `require()` to avoid circular dependencies
 4. **Path Note**: Routes are at `src/api/routes/`, engine at `src/engine/` - use `../../engine` not `../engine`
 
-### Current Status (as of 2025-12-14)
+### Current Status (as of 2025-12-16)
 - ✅ All 5 phases complete (Core, Devices, Colors, API, UI)
-- ✅ 53 node types registered (was 27, expanded for full coverage)
+- ✅ **100% node coverage** - All frontend plugins have backend implementations
 - ✅ All 71 tests pass
 - ✅ **Server stability fixed** - Keep-alive interval prevents premature exit
 - ✅ Engine runs 24/7 independently of frontend
 - ✅ Colors/HSV flow correctly through SplineTimeline → Buffer → HAGenericDevice
+- ✅ Timeline Color nodes work in headless mode (fixed 2025-12-16)
 
 ### 🦴 Backend Engine Caveman Summary
 The engine is like a robot that runs your light automations. Before, it only worked when you had the app open (like a TV that only works when you're watching). Now it runs on the server 24/7, even when you close the browser. Your lights keep changing colors while you sleep!
