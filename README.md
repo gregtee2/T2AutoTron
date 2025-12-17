@@ -45,12 +45,44 @@ I'm sure there are others who'd appreciate a visual approach. But this is **beta
 - 🔌 **50+ Node Types** - Time, logic, color, weather, and more
 - 🔄 **Hot Plugin Updates** - Add new nodes without rebuilding
 - 💾 **Auto-Save** - Every 2 minutes to prevent work loss
-- 🖥️ **Desktop App** - Electron app for Windows/Mac/Linux
-- 🏠 **Home Assistant Add-on** - [Also available as an HA add-on](https://github.com/gregtee2/home-assistant-addons)
 
 ---
 
-## 🚀 Quick Start
+## 📦 Installation Options
+
+T2AutoTron can run two ways - pick what works best for you:
+
+| Option | Best For | Install Time |
+|--------|----------|--------------|
+| **🏠 Home Assistant Add-on** | HA users who want everything in one place | 5-10 min |
+| **🖥️ Desktop App** | Standalone use, development, non-HA users | 1-2 min |
+
+---
+
+## 🏠 Option 1: Home Assistant Add-on (Recommended for HA users)
+
+Run T2AutoTron directly inside Home Assistant - no separate computer needed!
+
+### Quick Install
+
+1. **Add the repository** to Home Assistant:
+   - Go to **Settings** → **Add-ons** → **Add-on Store**
+   - Click the **⋮** menu → **Repositories**
+   - Add: `https://github.com/gregtee2/home-assistant-addons`
+
+2. **Find "T2AutoTron"** in the add-on store and click **Install**
+
+3. **Wait for build** (5-10 minutes on Raspberry Pi)
+
+4. **Start the add-on** and click **Open Web UI**
+
+That's it! Your automations now run 24/7 on your HA server.
+
+📖 [Full add-on documentation](https://github.com/gregtee2/home-assistant-addons)
+
+---
+
+## 🖥️ Option 2: Desktop App (Windows/Mac/Linux)
 
 **Requirements:** Windows 10/11, macOS, or Linux
 
