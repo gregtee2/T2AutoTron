@@ -115,13 +115,31 @@ function parseTimeString(hours, minutes, period) {
 }
 
 /**
- * Parse time input from connected node (string like "08:30") to Date object
+ * Parse time input from connected node to Date object
+ * Supports formats: "08:30" (24h), "5:30 PM" (12h), "17:30" (24h)
  */
 function parseTimeInput(timeStr) {
   if (!timeStr || typeof timeStr !== 'string') return null;
+  
+  const now = new Date();
+  
+  // Check for 12-hour format with AM/PM (e.g., "5:30 PM" or "10:00 AM")
+  const ampmMatch = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (ampmMatch) {
+    let h = parseInt(ampmMatch[1], 10);
+    const m = parseInt(ampmMatch[2], 10);
+    const period = ampmMatch[3].toUpperCase();
+    
+    // Convert 12-hour to 24-hour
+    if (period === 'AM' && h === 12) h = 0;
+    else if (period === 'PM' && h !== 12) h += 12;
+    
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+  }
+  
+  // Try 24-hour format (e.g., "08:30" or "17:30")
   const [h, m] = timeStr.split(':').map(Number);
   if (isNaN(h) || isNaN(m)) return null;
-  const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
 }
 
@@ -176,20 +194,22 @@ class ColorGradientNode {
       }
     } else if (this.properties.rangeMode === 'time') {
       // Use connected inputs (startTime/endTime) if available, otherwise fall back to properties
-      const externalStart = inputs.startTime?.[0] || inputs.startTime;
-      const externalEnd = inputs.endTime?.[0] || inputs.endTime;
+      // Extract value from array wrapper (backend engine wraps inputs in arrays)
+      const externalStart = Array.isArray(inputs.startTime) ? inputs.startTime[0] : inputs.startTime;
+      const externalEnd = Array.isArray(inputs.endTime) ? inputs.endTime[0] : inputs.endTime;
       
       let startTime, endTime;
       
-      if (externalStart) {
-        // Use input from connected node (e.g., Sunrise/Sunset Trigger)
+      // Check if we have valid external input (not undefined/null)
+      if (externalStart && typeof externalStart === 'string') {
+        // Use input from connected node (e.g., Sunrise/Sunset Trigger outputs "HH:MM")
         startTime = parseTimeInput(externalStart);
       } else {
-        // Fall back to internal properties
+        // Fall back to internal properties (Hours/Minutes/Period format)
         startTime = parseTimeString(this.properties.startTimeHours, this.properties.startTimeMinutes, this.properties.startTimePeriod);
       }
       
-      if (externalEnd) {
+      if (externalEnd && typeof externalEnd === 'string') {
         endTime = parseTimeInput(externalEnd);
       } else {
         endTime = parseTimeString(this.properties.endTimeHours, this.properties.endTimeMinutes, this.properties.endTimePeriod);

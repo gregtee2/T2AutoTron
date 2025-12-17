@@ -162,7 +162,8 @@ function hsvToRgb(h, s, v) {
  */
 /**
  * Parse time from various formats to minutes-since-midnight
- * @param {string|object} timeInput - Either "HH:MM" string OR { hours, minutes, period } object
+ * Supports: "17:30" (24h), "5:30 PM" (12h), frontend properties (hours/minutes/period)
+ * @param {string|object} timeInput - Either "HH:MM" string, "H:MM AM/PM" string, OR { hours, minutes, period } object
  * @param {object} props - Properties object (optional) to check for startTimeHours/Minutes/Period format
  * @param {string} which - 'start' or 'end' to pick correct property keys
  * @returns {number} Minutes since midnight (0-1439)
@@ -187,9 +188,24 @@ function parseTime(timeInput, props = null, which = null) {
         }
     }
     
-    // Fall back to string format "HH:MM"
+    // Fall back to string format
     if (!timeInput) return 0;
     if (typeof timeInput === 'string') {
+        // Check for 12-hour format with AM/PM (e.g., "5:30 PM" or "10:00 AM")
+        const ampmMatch = timeInput.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (ampmMatch) {
+            let h = parseInt(ampmMatch[1], 10);
+            const m = parseInt(ampmMatch[2], 10);
+            const period = ampmMatch[3].toUpperCase();
+            
+            // Convert 12-hour to 24-hour
+            if (period === 'AM' && h === 12) h = 0;
+            else if (period === 'PM' && h !== 12) h += 12;
+            
+            return h * 60 + m;
+        }
+        
+        // 24-hour format "HH:MM"
         const [h, m] = timeInput.split(':').map(Number);
         return (h || 0) * 60 + (m || 0);
     }
