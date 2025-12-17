@@ -78,6 +78,18 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
+#### Graph Loading 2-Minute Delay (2025-12-17)
+- **What broke**: Add-on took 2+ minutes to load a graph on startup. UI was frozen.
+- **Why it broke**: The graph has 20 HA Generic Device nodes. Each one was yelling "GIVE ME ALL THE DEVICES!" at the same time during load. 60+ API calls firing at once = traffic jam.
+- **The fix**: Added a "wait for the graph to finish loading" check. Now nodes politely wait until loading is done, THEN fetch their device info.
+- **Now it works because**: API calls happen AFTER the graph loads, not during. Graph loads in ~10 seconds now.
+
+#### Zigbee Light Flashing/Popping (2025-12-17)
+- **What broke**: Christmas lights were flashing and popping during color fades (headless mode only, not when UI was open).
+- **Why it broke**: Backend was sending color commands every 200ms. Zigbee lights can only handle 1 command per 3-5 seconds. Too many commands = lights get confused and flash.
+- **The fix**: Increased minimum time between commands from 200ms to 3 seconds. Also raised the "is this change big enough to bother sending?" threshold.
+- **Now it works because**: Lights only get color updates when there's a real change, and never faster than every 3 seconds.
+
 #### Timeline Colors Null in Headless Mode (2025-12-16)
 - **What broke**: Lights were ON but colors weren't changing when browser was closed. Timeline Color node output was `null`.
 - **Why it broke**: Two problems: (1) Backend `TimeOfDayNode` wasn't telling Timeline when the day period started/ended. (2) Backend wraps all inputs in arrays `["08:00"]` but Timeline was looking for raw values `"08:00"`.
@@ -932,7 +944,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.55 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.58 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -941,7 +953,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 1 | Debug console logging | ✅ Done | All logs gated by `VERBOSE_LOGGING` env var (backend) or `EDITOR_DEBUG`/`SOCKET_DEBUG` flags (frontend) |
 | 2 | Clean build artifacts | ✅ Done | Only 1-2 files in assets/ |
 | 3 | Fix hardcoded HA URL | ✅ Done | Uses `process.env.HA_HOST` with fallback |
-| 4 | Package.json metadata | ✅ Done | v2.1.55, proper author/homepage/keywords |
+| 4 | Package.json metadata | ✅ Done | v2.1.58, proper author/homepage/keywords |
 | 5 | Error boundaries | ✅ Done | `ErrorBoundary.jsx` wraps App |
 | 6 | Secure token storage | ✅ Done | Uses sessionStorage (falls back to localStorage) |
 
@@ -984,6 +996,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 13 | **Lasso Selection Fix** | Selection box offset corrected after Favorites panel addition |
 | 14 | **Backend Engine** | Server-side automation engine for 24/7 execution (27 node types, REST API, Socket.IO) |
 | 15 | **Add-on CORS Fix** | v2.1.55 - Fixed 400/404 errors in HA add-on by allowing all origins in ingress mode |
+| 16 | **Graph Loading Speed** | v2.1.58 - Deferred HA API calls during graph loading (was 2 min, now ~10s) |
+| 17 | **Color Throttling** | v2.1.58 - Increased min throttle to 3s for Zigbee lights (prevents flashing/popping) |
+| 18 | **Debug Dashboard** | v2.1.58 - Standalone HTML tool to monitor engine/buffers/lights without HA login |
 
 ### 🟢 RECENTLY FIXED
 
@@ -997,6 +1012,8 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 5 | Keyframe animations | Moved from dynamic injection to `node-styles.css` |
 | 6 | HA Device Automation outputs | `data()` now pure (no changeCallback inside), always returns all dynamic outputs; uses `??` to preserve `false`/`0` |
 | 7 | Add-on CORS/Ingress | v2.1.55 - Allow all origins when `SUPERVISOR_TOKEN` present, fixed Kasa route params |
+| 8 | **Graph loading 2-min delay** | v2.1.58 - HAGenericDeviceNode now waits for `window.graphLoading` to clear before fetching devices |
+| 9 | **Zigbee light flashing** | v2.1.58 - Backend HADeviceNodes throttle increased from 200ms to 3s minimum |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 

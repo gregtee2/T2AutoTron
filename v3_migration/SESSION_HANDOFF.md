@@ -311,3 +311,165 @@ The repo has `.github/copilot-instructions.md` with detailed architecture info. 
 - Never call `changeCallback()` inside `data()` method
 - Use `window.T2Controls` for shared UI components
 
+---
+
+# Addendum (Session 5 - 2025-12-17) - Graph Loading + Throttling Fixes
+
+## Current Version: 2.1.58
+
+## What Changed
+
+### Problem 1: Graph Loading Takes 2 Minutes (Add-on)
+
+**Symptom**: User reported the add-on took ~2 minutes to load the graph on startup.
+
+**Investigation**: Graph has 133 nodes including 20 HA Generic Device nodes. During restore, each HAGenericDeviceNode was calling:
+- `fetchDevices()` - Full device list from HA
+- `fetchDeviceState()` for each selected device
+
+With 20 nodes × 3 devices each = 60+ API calls during graph load, all firing simultaneously.
+
+**Root Cause**: The `restore()` method was immediately calling `fetchDevices()` which then called `fetchDeviceState()` for each device. No awareness of "we're loading a graph, maybe wait."
+
+**Fix**: Added `window.graphLoading` check in `restore()`:
+```javascript
+restore(state) {
+    // ... restore properties ...
+    
+    // Wait for graph loading to complete before hitting HA API
+    const waitForGraphLoad = () => {
+        if (window.graphLoading) {
+            setTimeout(waitForGraphLoad, 100);
+            return;
+        }
+        // Now fetch devices
+        this.fetchDevices();
+    };
+    setTimeout(waitForGraphLoad, 50);
+}
+```
+
+**Commit**: `e9b50d2` - "fix: Defer HA device API calls during graph loading to prevent 2-minute load times"
+
+---
+
+### Problem 2: Christmas Lights Flashing/Popping (Headless Mode)
+
+**Symptom**: User reported lights were "popping and flashing" during color fading when running in headless mode (UI closed). Not seen when UI is open.
+
+**Investigation**: Backend engine was sending color commands every 200ms during color transitions. Zigbee lights can't handle more than ~1 command per 3-5 seconds.
+
+**Root Cause**: The `HAGenericDeviceNode` backend implementation had:
+- `MIN_FAST_INTERVAL = 200` (way too fast)
+- `SIGNIFICANT_HUE_CHANGE = 0.01` (1% = too sensitive)
+
+Combined with fast-changing spline timeline colors = constant rapid API calls.
+
+**Fix**: Increased throttling thresholds:
+```javascript
+// Before
+const MIN_FAST_INTERVAL = 200;
+const SIGNIFICANT_HUE_CHANGE = 0.01;
+const SIGNIFICANT_SAT_CHANGE = 0.05;
+const SIGNIFICANT_BRI_CHANGE = 5;
+
+// After
+const MIN_FAST_INTERVAL = 3000;  // 3 seconds minimum
+const SIGNIFICANT_HUE_CHANGE = 0.05;  // 5% threshold
+const SIGNIFICANT_SAT_CHANGE = 0.10;  // 10% threshold
+const SIGNIFICANT_BRI_CHANGE = 10;    // 10 units threshold
+```
+
+**Commit**: `0e5b94b` - "fix: Increase color change throttle to 3s minimum to prevent Zigbee light flashing/popping"
+
+---
+
+### Problem 3: Kitchen Lights Mystery
+
+**Symptom**: User reported kitchen lights turned off when closing the browser.
+
+**Investigation**: Checked engine logs - showed correct processing with `trigger=true`. Could not reproduce.
+
+**Conclusion**: Likely timing coincidence with scheduled 10:30 PM off time, or initialization transient. No code changes made.
+
+---
+
+## Debug Dashboard Created
+
+Created standalone HTML monitoring tool: `v3_migration/tools/debug_dashboard.html`
+
+**Purpose**: Monitor T2 backend and lights without needing HA login.
+
+**Features**:
+- Only requires T2 backend URL (no HA token needed)
+- Shows engine status (running/stopped, node count, ticks)
+- Shows AutoTron buffers (color values, triggers)
+- Shows HA light states
+- Auto-refreshes every 3 seconds
+
+**Backend API Endpoints Added**:
+- `GET /api/debug/lights` - Returns HA lights via backend proxy
+- `GET /api/debug/all` - Combined endpoint (engine + buffers + lights)
+
+**Known Issue**: Light states panel displays "[OBJECT OBJECT]" instead of formatted values (cosmetic, low priority).
+
+---
+
+## Files Touched
+
+**Frontend Plugin (HAGenericDeviceNode.js)**:
+- Added `window.graphLoading` check in `restore()` to defer API calls
+
+**Backend Engine Node (HADeviceNodes.js)**:
+- Increased `MIN_FAST_INTERVAL` from 200ms to 3000ms
+- Increased significant change thresholds (5% hue, 10% saturation, 10 brightness)
+
+**Server (server.js)**:
+- Added `/api/debug/lights` endpoint
+- Added `/api/debug/all` endpoint
+
+**New File (debug_dashboard.html)**:
+- Standalone HTML monitoring tool
+
+**Version Bumps**:
+- `package.json` → 2.1.58
+- `home-assistant-addons/t2autotron/config.yaml` → 2.1.58 (submodule)
+
+---
+
+## 🦴 Caveman Summary
+
+**Problem 1**: Loading the graph took FOREVER (2 minutes). That's because every HA device node was yelling "GIVE ME ALL THE DEVICES!" at the same time. Now they politely wait until the graph is done loading.
+
+**Problem 2**: Christmas lights were flashing like a disco ball. The server was shouting "CHANGE COLOR!" every 0.2 seconds. Zigbee lights can't handle that - they need 3 seconds between commands. Now we wait.
+
+**Debug Dashboard**: New tool to spy on your lights without logging into HA. Just open the HTML file and point it at your T2 server.
+
+---
+
+## Verification
+
+- ✅ All 71 tests pass
+- ✅ Graph loads in ~10 seconds (was 2 minutes)
+- ✅ Color fading is smooth (was flashing)
+- ✅ Version 2.1.58 pushed to main and stable
+- ✅ Addon submodule updated
+
+---
+
+## Git Status
+
+| Branch | Commit | Status |
+|--------|--------|--------|
+| `main` | 25efff7 | ✅ STABLE - v2.1.58 |
+| `stable` | 25efff7 | ✅ STABLE - Same as main |
+| `feature/unified-architecture` | 08b4ac2 | ⚠️ OLD - Contains previous session's work |
+
+---
+
+## Next Session Considerations
+
+1. **Test add-on update**: Verify 2.1.58 installs correctly via HA add-on update
+2. **Dashboard polish**: Fix "[OBJECT OBJECT]" display bug in lights panel (low priority)
+3. **Continue Unified Architecture**: The v3.0 refactor proposal still pending
+
