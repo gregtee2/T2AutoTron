@@ -34,6 +34,15 @@ function parseTimeString(timeStr) {
 }
 
 /**
+ * Convert minutes since midnight to "HH:MM" format
+ */
+function formatMinutesToTime(minutes) {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/**
  * TimeOfDayNode - Outputs true when current time is within a specified range
  * 
  * Frontend saves: start_hour, start_minute, start_ampm, stop_hour, stop_minute, stop_ampm
@@ -144,7 +153,12 @@ class TimeOfDayNode {
     if (this.properties.pulseMode || this.properties.mode === 'pulse') {
       const trigger = inRange && this.lastState !== true;
       this.lastState = inRange;
-      return { state: trigger, active: trigger };
+      return { 
+        state: trigger, 
+        active: trigger,
+        startTime: formatMinutesToTime(startMinutes),
+        endTime: formatMinutesToTime(endMinutes)
+      };
     }
 
     // Track state changes for debugging
@@ -154,7 +168,14 @@ class TimeOfDayNode {
     
     this.lastState = inRange;
     this.properties.currentState = inRange;  // Keep in sync
-    return { state: inRange, active: inRange };
+    
+    // Return startTime and endTime outputs for downstream nodes like SplineTimelineColor
+    return { 
+      state: inRange, 
+      active: inRange,
+      startTime: formatMinutesToTime(startMinutes),
+      endTime: formatMinutesToTime(endMinutes)
+    };
   }
 }
 

@@ -217,12 +217,12 @@ class SplineTimelineColorNode {
         const currentMs = Date.now();
         let position = 0;
         
-        // Get input values
-        const inputValue = inputs.value ?? null;
-        const trigger = inputs.trigger ?? false;
-        const timerDuration = inputs.timerDuration ?? this.properties.timerDuration;
-        const startTimeInput = inputs.startTime ?? this.properties.startTime;
-        const endTimeInput = inputs.endTime ?? this.properties.endTime;
+        // Get input values - inputs are arrays from gatherInputs()
+        const inputValue = inputs.value?.[0] ?? null;
+        const trigger = inputs.trigger?.[0] ?? false;
+        const timerDuration = inputs.timerDuration?.[0] ?? this.properties.timerDuration;
+        const startTimeInput = inputs.startTime?.[0] ?? this.properties.startTime;
+        const endTimeInput = inputs.endTime?.[0] ?? this.properties.endTime;
         
         // Calculate position based on mode
         if (this.properties.rangeMode === 'numerical') {
@@ -384,9 +384,15 @@ class SplineTimelineColorNode {
     }
     
     restore(state) {
-        if (state) {
-            Object.assign(this.properties, state);
+        // Handle both { properties: {...} } format and direct properties format
+        const props = state?.properties || state;
+        if (props && typeof props === 'object') {
+            Object.assign(this.properties, props);
         }
+        
+        // Force immediate output on restore - don't wait for throttle
+        this.lastOutputTime = 0;
+        this.lastOutputHsv = null;
     }
 }
 
@@ -522,8 +528,10 @@ class ColorMixerNode {
     }
     
     restore(state) {
-        if (state?.mixAmount !== undefined) {
-            this.properties.mixAmount = state.mixAmount;
+        // Handle both { properties: {...} } format and direct properties format
+        const props = state?.properties || state;
+        if (props?.mixAmount !== undefined) {
+            this.properties.mixAmount = props.mixAmount;
         }
     }
 }

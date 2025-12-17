@@ -9,6 +9,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const registry = require('./BackendNodeRegistry');
 const engineLogger = require('./engineLogger');
+const { AutoTronBuffer } = require('./nodes/BufferNodes');
 
 class BackendEngine {
   constructor() {
@@ -91,6 +92,17 @@ class BackendEngine {
     this.connections = [];
     this.outputs.clear();
 
+    // IMPORTANT: clear shared buffers on graph load.
+    // Otherwise, stale values from a previous run can persist and re-trigger devices.
+    try {
+      AutoTronBuffer.clear();
+      if (this.debug) {
+        console.log('[BackendEngine] Cleared AutoTronBuffer on graph load');
+      }
+    } catch (e) {
+      console.warn('[BackendEngine] Failed to clear AutoTronBuffer on graph load:', e?.message || e);
+    }
+
     // Handle both old format (direct nodes array) and new format (nested structure)
     const nodesData = graph.nodes || [];
     const connectionsData = graph.connections || [];
@@ -160,7 +172,7 @@ class BackendEngine {
   /**
    * Gather inputs for a node from connected outputs
    * @param {string} nodeId - Target node ID
-   * @returns {object} - Inputs object keyed by input name
+   * @returns {object} - Inputs object keyed by input name, values are arrays
    */
   gatherInputs(nodeId) {
     const inputs = {};
@@ -170,7 +182,7 @@ class BackendEngine {
         const sourceOutputs = this.outputs.get(conn.source) || {};
         const value = sourceOutputs[conn.sourceOutput];
         
-        // Accumulate values for inputs (some inputs accept multiple connections)
+        // Always use arrays for consistency
         if (!inputs[conn.targetInput]) {
           inputs[conn.targetInput] = [];
         }
@@ -183,8 +195,8 @@ class BackendEngine {
 
   /**
    * Perform topological sort for execution order
-   * Sender nodes are prioritized to run first so buffers are populated
-   * before Receiver nodes read them.
+   * Adds virtual dependencies for buffer connections (Sender → Receiver)
+   * so that buffers are populated before they're read.
    * @returns {string[]} - Node IDs in execution order
    */
   topologicalSort() {
@@ -198,13 +210,41 @@ class BackendEngine {
       dependsOn.set(nodeId, new Set());
     }
     
+    // Add wire connection dependencies
     for (const conn of this.connections) {
       if (dependsOn.has(conn.target)) {
         dependsOn.get(conn.target).add(conn.source);
       }
     }
 
-    // Kahn's algorithm
+    // Add virtual buffer dependencies:
+    // - All Receivers depend on ALL Senders (ensures buffers are populated first)
+    // - This is simpler than matching by buffer name and works for all cases
+    const senderIds = [];
+    const receiverIds = [];
+    
+    for (const nodeId of nodeIds) {
+      const node = this.nodes.get(nodeId);
+      if (!node) continue;
+      const nodeType = node.type || node.constructor?.name || '';
+      if (nodeType === 'SenderNode' || nodeType.includes('Sender')) {
+        senderIds.push(nodeId);
+      } else if (nodeType === 'ReceiverNode' || nodeType.includes('Receiver')) {
+        receiverIds.push(nodeId);
+      }
+    }
+    
+    // Make every Receiver depend on every Sender (virtual edge)
+    for (const receiverId of receiverIds) {
+      const deps = dependsOn.get(receiverId);
+      if (deps) {
+        for (const senderId of senderIds) {
+          deps.add(senderId);
+        }
+      }
+    }
+
+    // Kahn's algorithm (DFS-based)
     const visit = (nodeId) => {
       if (visited.has(nodeId)) return;
       visited.add(nodeId);
@@ -221,30 +261,7 @@ class BackendEngine {
       visit(nodeId);
     }
 
-    // Post-process: Move Sender nodes to the front, Receiver nodes toward end
-    // This ensures buffers are populated before they're read
-    const senders = [];
-    const receivers = [];
-    const others = [];
-    
-    for (const nodeId of result) {
-      const node = this.nodes.get(nodeId);
-      if (!node) {
-        others.push(nodeId);
-        continue;
-      }
-      const nodeType = node.type || node.constructor?.name || '';
-      if (nodeType === 'SenderNode' || nodeType.includes('Sender')) {
-        senders.push(nodeId);
-      } else if (nodeType === 'ReceiverNode' || nodeType.includes('Receiver')) {
-        receivers.push(nodeId);
-      } else {
-        others.push(nodeId);
-      }
-    }
-    
-    // Order: Senders first, then other nodes (in topo order), then Receivers last
-    return [...senders, ...others, ...receivers];
+    return result;
   }
 
   /**
