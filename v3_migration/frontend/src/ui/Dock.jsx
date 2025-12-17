@@ -544,6 +544,34 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                     <button onClick={() => setShortcutsOpen(true)} className="dock-btn dock-btn-help">
                         ❓ Keyboard Shortcuts
                     </button>
+                    <button 
+                        onClick={() => {
+                            // Gather debug info
+                            const debugInfo = {
+                                version: appVersion || 'unknown',
+                                userAgent: navigator.userAgent,
+                                isAddon: IS_HA_ADDON,
+                                backend: connectionStatus.backend,
+                                ha: connectionStatus.ha.connected,
+                                engine: engineStatus.running,
+                                plugins: pluginStatus.loaded
+                            };
+                            const infoStr = Object.entries(debugInfo)
+                                .map(([k, v]) => `- **${k}**: ${v}`)
+                                .join('\n');
+                            
+                            // Open GitHub issue with pre-filled info
+                            const url = new URL('https://github.com/gregtee2/T2AutoTron/issues/new');
+                            url.searchParams.set('template', 'bug_report.md');
+                            url.searchParams.set('title', '[Bug]: ');
+                            url.searchParams.set('body', `## 🖥️ Environment (auto-filled)\n${infoStr}\n\n## 🐛 Bug Description\n<!-- Describe what went wrong -->\n\n`);
+                            window.open(url.toString(), '_blank');
+                        }}
+                        className="dock-btn dock-btn-bug"
+                        title="Report a bug on GitHub"
+                    >
+                        🐛 Report Bug
+                    </button>
                     {IS_HA_ADDON ? (
                         /* HA Add-on: Updates come from HA Supervisor, not git */
                         <button 

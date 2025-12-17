@@ -292,6 +292,18 @@
     cursor: wait;
 }
 
+/* Bug Report button */
+.dock-btn-bug {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.dock-btn-bug:hover {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
 /* Server Graphs Modal */
 .modal-overlay {
     position: fixed;
