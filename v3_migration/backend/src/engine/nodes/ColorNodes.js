@@ -160,10 +160,41 @@ function hsvToRgb(h, s, v) {
 /**
  * Parse time string "HH:MM" to minutes since midnight
  */
-function parseTime(timeStr) {
-    if (!timeStr) return 0;
-    const [h, m] = timeStr.split(':').map(Number);
-    return (h || 0) * 60 + (m || 0);
+/**
+ * Parse time from various formats to minutes-since-midnight
+ * @param {string|object} timeInput - Either "HH:MM" string OR { hours, minutes, period } object
+ * @param {object} props - Properties object (optional) to check for startTimeHours/Minutes/Period format
+ * @param {string} which - 'start' or 'end' to pick correct property keys
+ * @returns {number} Minutes since midnight (0-1439)
+ */
+function parseTime(timeInput, props = null, which = null) {
+    // If we have props and which, try frontend format first
+    if (props && which) {
+        const hoursKey = which === 'start' ? 'startTimeHours' : 'endTimeHours';
+        const minsKey = which === 'start' ? 'startTimeMinutes' : 'endTimeMinutes';
+        const periodKey = which === 'start' ? 'startTimePeriod' : 'endTimePeriod';
+        
+        if (props[hoursKey] !== undefined) {
+            let hours = parseInt(props[hoursKey], 10) || 0;
+            const minutes = parseInt(props[minsKey], 10) || 0;
+            const period = (props[periodKey] || 'AM').toUpperCase();
+            
+            // Convert 12-hour to 24-hour
+            if (period === 'PM' && hours < 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            
+            return hours * 60 + minutes;
+        }
+    }
+    
+    // Fall back to string format "HH:MM"
+    if (!timeInput) return 0;
+    if (typeof timeInput === 'string') {
+        const [h, m] = timeInput.split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+    }
+    
+    return 0;
 }
 
 // =========================================================================
@@ -239,8 +270,14 @@ class SplineTimelineColorNode {
             // Time mode: position based on current time within range
             const now = new Date();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
-            const startMinutes = parseTime(startTimeInput);
-            const endMinutes = parseTime(endTimeInput);
+            
+            // Try input values first (from connected nodes), then frontend properties format, then string defaults
+            const startMinutes = inputs.startTime?.[0] 
+                ? parseTime(inputs.startTime[0]) 
+                : parseTime(null, this.properties, 'start');
+            const endMinutes = inputs.endTime?.[0] 
+                ? parseTime(inputs.endTime[0]) 
+                : parseTime(null, this.properties, 'end');
             
             if (startMinutes < endMinutes) {
                 // Normal range (e.g., 06:00 - 22:00)

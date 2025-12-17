@@ -34,7 +34,18 @@ class HomeAssistantManager {
   async initialize(io, notificationEmitter, log) {
     this.io = io;
     try {
+      // Always refresh config from current environment before connecting.
+      // This prevents stale host/token if the module was loaded before dotenv
+      // or if settings were updated at runtime.
+      this.updateConfig();
+
       await log('Initializing Home Assistant...', 'info', false, 'ha:init');
+      await log(
+        `HA config: host=${this.config.host} token=${this.config.token ? 'set' : 'missing'}`,
+        'info',
+        false,
+        'ha:config'
+      );
       const response = await fetch(`${this.config.host}/api/states`, {
         headers: { Authorization: `Bearer ${this.config.token}` },
       });
@@ -139,23 +150,40 @@ class HomeAssistantManager {
     } catch (error) {
       this.isConnected = false;
       this.wsConnected = false;
-      await log(`HA initialization failed: ${error.message}`, 'error', false, 'ha:error');
+
+      // Include as much actionable detail as we can
+      const errCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+      const hint =
+        (errCode === 'ENOTFOUND' || errCode === 'EAI_AGAIN') &&
+        typeof this.config.host === 'string' &&
+        this.config.host.includes('.local')
+          ? ' (Hint: Windows sometimes cannot resolve *.local; try setting HA_HOST to a fixed IP like http://192.168.x.x:8123)'
+          : '';
+
+      await log(
+        `HA initialization failed (host=${this.config.host}, token=${this.config.token ? 'set' : 'missing'}${errCode ? `, code=${errCode}` : ''}): ${error.message}${hint}`,
+        'error',
+        false,
+        'ha:error'
+      );
       this.broadcastConnectionStatus();
       return [];
     }
   }
 
   async getState(id) {
+    // Keep config current in case settings were updated at runtime
+    this.updateConfig();
+
     const cacheKey = id;
     const cached = this.stateCache.get(cacheKey);
 
     // Check cache first
     if (cached && Date.now() < cached.expiry) {
-      await logger.log(`[CACHE HIT] Returning cached state for ${id}`, 'info', false, `ha:cache:${id}`);
+      logger.log(`[CACHE HIT] Returning cached state for HA device ${cacheKey}`, 'info', false, `ha:state:${cacheKey}`).catch(() => { });
       return { success: true, state: cached.state };
     }
 
-    // Cache miss - fetch from API
     try {
       const rawId = id.replace('ha_', '');
       const response = await fetch(`${this.config.host}/api/states/${rawId}`, {
@@ -164,14 +192,22 @@ class HomeAssistantManager {
       });
       if (!response.ok) throw new Error(`HA API error: ${response.status}: ${response.statusText}`);
       const data = await response.json();
+
+      const entityType = rawId.split('.')[0];
       const state = {
         state: data.state,
         on: data.state === 'on' || data.state === 'open' || data.state === 'playing',
-        brightness: data.attributes.brightness ? Math.round((data.attributes.brightness / 255) * 100) : (data.state === 'on' ? 100 : 0),
-        hs_color: data.attributes.hs_color || [0, 0],
-        // Include power data if available
-        power: data.attributes.power || data.attributes.current_power_w || data.attributes.load_power || null,
-        energy: data.attributes.energy || data.attributes.energy_kwh || data.attributes.total_energy_kwh || null,
+        brightness: data.attributes?.brightness !== undefined
+          ? Math.round((Number(data.attributes.brightness) / 255) * 100)
+          : (data.state === 'on' ? 100 : 0),
+        hs_color: data.attributes?.hs_color || [0, 0],
+        percentage: data.attributes?.percentage,
+        position: data.attributes?.current_position,
+        volume_level: data.attributes?.volume_level,
+        source: data.attributes?.source,
+        media_title: data.attributes?.media_title,
+        power: data.attributes?.power || data.attributes?.current_power_w || data.attributes?.load_power || null,
+        energy: data.attributes?.energy || data.attributes?.energy_kwh || data.attributes?.total_energy_kwh || null,
         attributes: data.attributes
       };
 
@@ -181,7 +217,13 @@ class HomeAssistantManager {
         expiry: Date.now() + this.STATE_CACHE_TTL
       });
 
-      await logger.log(`[CACHE MISS] Fetched state for HA device ${rawId}: on=${state.on}, brightness=${state.brightness}, hs_color=${JSON.stringify(state.hs_color)}`, 'info', false, `ha:state:${rawId}`);
+      await logger.log(
+        `[CACHE MISS] Fetched state for HA device ${rawId} (${entityType}): state=${state.state} on=${state.on} brightness=${state.brightness}`,
+        'info',
+        false,
+        `ha:state:${rawId}`
+      );
+
       return { success: true, state };
     } catch (error) {
       await logger.log(`Failed to fetch state for HA device ${id}: ${error.message}`, 'error', false, `ha:state:${id}`);
@@ -191,27 +233,80 @@ class HomeAssistantManager {
 
   async updateState(id, update) {
     try {
+      // Keep config current in case settings were updated at runtime
+      this.updateConfig();
+
       const rawId = id.replace('ha_', '');
       const entityType = rawId.split('.')[0];
       const service = entityType;
       const payload = { entity_id: rawId };
 
-      let action = update.on ? 'turn_on' : 'turn_off';
+      const coerceBoolean = (value) => {
+        if (value === true || value === false) return value;
+        if (typeof value === 'number') {
+          if (value === 1) return true;
+          if (value === 0) return false;
+        }
+        if (typeof value === 'string') {
+          const normalized = value.trim().toLowerCase();
+          if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+          if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+        }
+        return undefined;
+      };
+
+      const on = coerceBoolean(update.on);
+
+      let action;
 
       if (entityType === 'cover') {
-        action = update.on ? 'open_cover' : 'close_cover';
         if (update.position !== undefined) {
           action = 'set_cover_position';
           payload.position = update.position;
+        } else if (on === true) {
+          action = 'open_cover';
+        } else if (on === false) {
+          action = 'close_cover';
+        } else {
+          action = 'close_cover';
         }
       } else if (entityType === 'media_player') {
         if (update.volume_level !== undefined) {
           action = 'volume_set';
           payload.volume_level = update.volume_level;
+        } else if (update.source !== undefined) {
+          action = 'select_source';
+          payload.source = update.source;
+        } else if (typeof update.state === 'string') {
+          const normalized = update.state.trim().toLowerCase();
+          if (normalized === 'playing') action = 'media_play';
+          else if (normalized === 'paused') action = 'media_pause';
+          else if (normalized === 'off') action = 'turn_off';
+          else if (normalized === 'on') action = 'turn_on';
+          else action = 'turn_off';
+        } else if (on === true) {
+          action = 'turn_on';
+        } else if (on === false) {
+          action = 'turn_off';
+        } else {
+          action = 'turn_off';
+        }
+      } else {
+        if (on === true) action = 'turn_on';
+        else if (on === false) action = 'turn_off';
+        else {
+          const hasOnFields =
+            update.brightness !== undefined ||
+            !!update.hs_color ||
+            update.color_temp !== undefined ||
+            update.color_temp_kelvin !== undefined ||
+            update.transition !== undefined ||
+            (entityType === 'fan' && update.percentage !== undefined);
+          action = hasOnFields ? 'turn_on' : 'turn_off';
         }
       }
 
-      if (update.on || action === 'turn_on') {
+      if (action === 'turn_on') {
         if (update.brightness !== undefined) payload.brightness = Math.round(update.brightness); // Use 0-255 brightness
         if (update.hs_color) payload.hs_color = update.hs_color;
         if (update.color_temp) payload.color_temp = update.color_temp;
@@ -220,7 +315,12 @@ class HomeAssistantManager {
         if (update.percentage !== undefined && entityType === 'fan') payload.percentage = update.percentage;
       }
 
-      await logger.log(`Sending HA state update for ${id}: ${JSON.stringify(payload)}`, 'info', false, `ha:state:${id}`);
+      await logger.log(
+        `Sending HA state update for ${id}: service=${service}.${action} payload=${JSON.stringify(payload)}`,
+        'info',
+        false,
+        `ha:state:${id}`
+      );
       const response = await fetch(`${this.config.host}/api/services/${service}/${action}`, {
         method: 'POST',
         headers: {

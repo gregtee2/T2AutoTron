@@ -188,7 +188,11 @@ function setupEngineEventListeners() {
 /**
  * Auto-start engine with last active graph
  * Call this during server startup
- * Engine ALWAYS starts - users can stop it manually if needed
+ * 
+ * Controlled by ENGINE_AUTO_START env var:
+ * - 'true' or '1': Auto-start (default for HA addon)
+ * - 'false' or '0': Don't auto-start (user must start manually)
+ * - undefined: Auto-start only if HA addon (SUPERVISOR_TOKEN present)
  */
 async function autoStartEngine() {
   try {
@@ -199,6 +203,26 @@ async function autoStartEngine() {
     // Load builtin nodes
     await engineModule.loadBuiltinNodes();
     console.log(`[Engine] Loaded ${registry.size} node types`);
+    
+    // Check if auto-start is enabled
+    const autoStartEnv = process.env.ENGINE_AUTO_START;
+    const isHAAddon = !!process.env.SUPERVISOR_TOKEN;
+    
+    // If explicitly set, use that value. Otherwise, auto-start only in HA addon mode.
+    let shouldAutoStart = false;
+    if (autoStartEnv === 'true' || autoStartEnv === '1') {
+      shouldAutoStart = true;
+    } else if (autoStartEnv === 'false' || autoStartEnv === '0') {
+      shouldAutoStart = false;
+    } else {
+      // Default: auto-start in HA addon, don't auto-start on desktop
+      shouldAutoStart = isHAAddon;
+    }
+    
+    if (!shouldAutoStart) {
+      console.log('[Engine] Auto-start disabled (set ENGINE_AUTO_START=true to enable)');
+      return;
+    }
     
     // Try to load last active graph
     const path = require('path');
@@ -222,7 +246,7 @@ async function autoStartEngine() {
       console.log('[Engine] No last active graph found');
     }
     
-    // Always start the engine - users can stop it manually if needed
+    // Start the engine
     engine.start();
     console.log(`[Engine] Auto-started ${graphLoaded ? `with ${engine.nodes.size} nodes` : '(no graph loaded)'}`);
     

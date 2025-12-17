@@ -9,6 +9,17 @@ const registry = require('../BackendNodeRegistry');
 // Use native fetch (Node 18+) or node-fetch
 const fetch = globalThis.fetch || require('node-fetch');
 
+function coerceBoolean(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const s = value.trim().toLowerCase();
+    if (s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no' || s === 'n') return false;
+    if (s === '1' || s === 'true' || s === 'on' || s === 'yes' || s === 'y') return true;
+  }
+  return !!value;
+}
+
 /**
  * Get the API base URL (for internal calls within the same server)
  */
@@ -109,17 +120,18 @@ class KasaLightNode {
   }
 
   async data(inputs) {
-    const trigger = inputs.trigger?.[0];
+    const triggerRaw = inputs.trigger?.[0];
+    const trigger = triggerRaw !== undefined ? coerceBoolean(triggerRaw) : undefined;
     const hsv = inputs.hsv_info?.[0];
 
     // Handle trigger changes
     if (trigger !== undefined && trigger !== this.lastTrigger) {
       this.lastTrigger = trigger;
-      await this.setAllDevices(!!trigger, hsv);
+      await this.setAllDevices(trigger, hsv);
     }
 
     // Handle HSV changes while on
-    if (this.lastTrigger && hsv) {
+    if (this.lastTrigger === true && hsv) {
       const hsvChanged = !this.lastHsv ||
         Math.abs((hsv.hue || 0) - (this.lastHsv.hue || 0)) > 0.01 ||
         Math.abs((hsv.saturation || 0) - (this.lastHsv.saturation || 0)) > 0.01 ||
@@ -132,7 +144,7 @@ class KasaLightNode {
     }
 
     return { 
-      is_on: !!this.lastTrigger,
+      is_on: this.lastTrigger === true,
       device_count: this.properties.deviceIds.length
     };
   }
@@ -174,19 +186,20 @@ class KasaPlugNode {
   }
 
   async data(inputs) {
-    const trigger = inputs.trigger?.[0];
+    const triggerRaw = inputs.trigger?.[0];
+    const trigger = triggerRaw !== undefined ? coerceBoolean(triggerRaw) : undefined;
 
     if (trigger !== undefined && trigger !== this.lastTrigger) {
       this.lastTrigger = trigger;
       
       for (const deviceId of this.properties.deviceIds) {
         if (deviceId) {
-          await this.setPlugState(deviceId, !!trigger);
+          await this.setPlugState(deviceId, trigger);
         }
       }
     }
 
-    return { is_on: !!this.lastTrigger };
+    return { is_on: this.lastTrigger === true };
   }
 }
 

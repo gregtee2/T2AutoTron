@@ -114,6 +114,17 @@ function parseTimeString(hours, minutes, period) {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), parsedHours, parsedMinutes, 0);
 }
 
+/**
+ * Parse time input from connected node (string like "08:30") to Date object
+ */
+function parseTimeInput(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return null;
+  const [h, m] = timeStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+}
+
 class ColorGradientNode {
   static type = 'ColorGradientNode';
   
@@ -164,8 +175,25 @@ class ColorGradientNode {
         position = (clamped - this.properties.startValue) / (this.properties.endValue - this.properties.startValue);
       }
     } else if (this.properties.rangeMode === 'time') {
-      const startTime = parseTimeString(this.properties.startTimeHours, this.properties.startTimeMinutes, this.properties.startTimePeriod);
-      let endTime = parseTimeString(this.properties.endTimeHours, this.properties.endTimeMinutes, this.properties.endTimePeriod);
+      // Use connected inputs (startTime/endTime) if available, otherwise fall back to properties
+      const externalStart = inputs.startTime?.[0] || inputs.startTime;
+      const externalEnd = inputs.endTime?.[0] || inputs.endTime;
+      
+      let startTime, endTime;
+      
+      if (externalStart) {
+        // Use input from connected node (e.g., Sunrise/Sunset Trigger)
+        startTime = parseTimeInput(externalStart);
+      } else {
+        // Fall back to internal properties
+        startTime = parseTimeString(this.properties.startTimeHours, this.properties.startTimeMinutes, this.properties.startTimePeriod);
+      }
+      
+      if (externalEnd) {
+        endTime = parseTimeInput(externalEnd);
+      } else {
+        endTime = parseTimeString(this.properties.endTimeHours, this.properties.endTimeMinutes, this.properties.endTimePeriod);
+      }
       
       if (!startTime || !endTime) return { hsvInfo: null };
       
@@ -579,7 +607,9 @@ class LogicOperationsNode {
     let numericValue = null;
     
     for (let i = 0; i < this.properties.inputCount; i++) {
-      const val = inputs[`in${i}`];
+      // Inputs are arrays from gatherInputs() - extract first value
+      const inputArray = inputs[`in${i}`];
+      const val = Array.isArray(inputArray) ? inputArray[0] : inputArray;
       rawValues.push(val);
       if (numericValue === null && typeof val === 'number') {
         numericValue = val;

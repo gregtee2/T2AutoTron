@@ -1,0 +1,454 @@
+{
+  "success": true,
+  "outputs": {
+    "18c61864ae674e4a": {
+      "state": true,
+      "active": true
+    },
+    "8d4af06d6181b1c6": {},
+    "537324f4d766e02b": {
+      "state": false,
+      "startTime": "4:43 PM",
+      "endTime": "3:00 AM",
+      "sunrise": "6:34 AM",
+      "sunset": "4:48 PM"
+    },
+    "757c6f3bd4fd74dd": {
+      "all": false,
+      "solar": false,
+      "temp": false,
+      "humidity": false,
+      "wind": false,
+      "hourly_rain": false,
+      "event_rain": false,
+      "daily_rain": false
+    },
+    "50f4fa1dafd492f9": {
+      "result": false,
+      "inverse": true,
+      "value": null,
+      "variable": null
+    },
+    "cb4c3820c4b47079": {
+      "state": false,
+      "startTime": "4:19 PM",
+      "endTime": "10:30 PM",
+      "sunrise": "6:34 AM",
+      "sunset": "4:48 PM"
+    },
+    "d384f545fa2b7f45": {
+      "result": false,
+      "inverse": true,
+      "value": null,
+      "variable": null
+    },
+    "720bd29f88ec7e96": {
+      "state": false,
+      "active": false
+    },
+    "b774e53e008efd8a": {
+      "state": false,
+      "startTime": "4:18 PM",
+      "endTime": "2:34 AM",
+      "sunrise": "6:34 AM",
+      "sunset": "4:48 PM"
+    },
+    "4e9efb3c40202f3d": {
+      "output": false
+    },
+    "444d3a77af409b04": {},
+    "c01e165c7bfe62a5": {},
+    "be6f5545a201a498": {
+      "state": false,
+      "active": false
+    },
+    "5b0cc8a4356c0f1a": {
+      "result": false,
+      "inverse": true,
+      "value": null,
+      "variable": null
+    },
+    "079087acd1131ba1": {},
+    "8480926f954c2743": {
+      "state": true,
+      "startTime": "3:49 PM",
+      "endTime": "10:30 PM",
+      "sunrise": "6:34 AM",
+      "sunset": "4:48 PM"
+    },
+    "ccf1a34014c85926": {},
+    "d34623b94b64ad5c": {},
+    "983a98adf4480305": {
+      "state": true,
+      "active": true
+    },
+    "0cab81e8c5c154ff": {},
+    "bf71124258f2c9f4": {
+      "isInRange": true
+    },
+    "af5d78eb391594ce": {
+      "out": false
+    },
+    "3f6956273b66f32c": {
+      "hsv_out": {
+        "hue": 0.08333333333333333,
+        "saturation": 0.82,
+        "brightness": 152,
+        "transition": 0,
+        "colorTemp": 2250,
+        "mode": "temp",
+        "on": true
+      }
+    },
+    "a096aaaa5d139111": {
+      "hsv_out": {
+        "hue": 0.5388888888888889,
+        "saturation": 1,
+        "brightness": 136,
+        "transition": 0,
+        "colorTemp": 5629,
+        "mode": "color",
+        "on": true
+      }
+    },
+    "ce37567d8626a0db": {
+      "hsvInfo": {
+        "hue": 0.2888888888888889,
+        "saturation": 1,
+        "brightness": 254,
+        "rgb": {
+          "r": 68,
+          "g": 254,
+          "b": 0
+        }
+      }
+    },
+    "a3d39e49f47f28f7": {
+      "out": [
+        {
+          "hue": 0.5388888888888889,
+          "saturation": 1,
+          "brightness": 136,
+          "transition": 0,
+          "colorTemp": 5629,
+          "mode": "color",
+          "on": true
+        }
+      ]
+    },
+    "15bedae98acf174c": {},
+    "620d9422ac54e63e": {
+      "hsv_out": {
+        "hue": 0.09444444444444444,
+        "saturation": 0.89,
+        "brightness": 67,
+        "transition": 0,
+        "colorTemp": 2941,
+        "mode": "color",
+        "on": true
+      }
+    },
+    "2c3e63e9a7123804": {},
+    "57db63745a724bc3": {
+      "hsv_out": null
+    },
+    "8be42cfaab24b585": {},
+    "80cb637e8dec510c": {
+      "state": true,
+      "active": true
+    },
+    "e2f1b055323b6048": {},
+    "a3d528fc57e1ff4d": {
+      "state": false,
+      "active": false
+    },
+    "04169d0d9714a784": {},
+    "f92212978a300d5a": {
+      "hsv_out": null
+    },
+    "dd6bece03850fcd1": {},
+    "6dbc9bbdcd1943e0": {
+      "state": null,
+      "device_state": null
+    },
+    "e4a99a5458a16357": {
+      "is_on": false
+    },
+    "7b0803eadc605db8": {
+      "hsvInfo": {
+        "hue": 0.7751633986928105,
+        "saturation": 1,
+        "brightness": 68,
+        "rgb": {
+          "r": 44,
+          "g": 0,
+          "b": 68
+        }
+      }
+    },
+    "d7f72f4c35755d5d": {},
+    "e5129f50942c3bf8": {},
+    "24035c8839725684": {
+      "out": false,
+      "change": false
+    },
+    "d5004b3611dddf0f": {
+      "hsvInfo": {
+        "hue": 0,
+        "saturation": 1,
+        "brightness": 254,
+        "rgb": {
+          "r": 254,
+          "g": 0,
+          "b": 0
+        }
+      }
+    },
+    "56ee4fd527651afc": {
+      "out": [
+        {
+          "hue": 0.08333333333333333,
+          "saturation": 0.82,
+          "brightness": 152,
+          "transition": 0,
+          "colorTemp": 2250,
+          "mode": "temp",
+          "on": true
+        }
+      ]
+    },
+    "e318b65067c3608e": {},
+    "90d3eea48e12005f": {
+      "out": false,
+      "change": false
+    },
+    "6ff49671565a0255": {
+      "out": false
+    },
+    "13d7d35bcd11958e": {
+      "out": [
+        null
+      ]
+    },
+    "32214cb284b6c445": {},
+    "e82bee10d637f7bd": {
+      "out": false,
+      "change": false
+    },
+    "83837d8f043f49cf": {
+      "state": false,
+      "startTime": "4:18 PM",
+      "endTime": "10:30 PM",
+      "sunrise": "6:34 AM",
+      "sunset": "4:48 PM"
+    },
+    "d6bb910c707b1dd5": {
+      "out": false,
+      "change": false
+    },
+    "e0ea6f0875da65de": {
+      "is_on": false
+    },
+    "bb5e204a7266087a": {
+      "state": false,
+      "active": false
+    },
+    "c602674304198387": {
+      "is_on": false
+    },
+    "6602e66d9ef41f54": {
+      "out": false,
+      "change": false
+    },
+    "22ab7427bbcd0c0f": {
+      "state": false,
+      "startTime": "4:18 PM",
+      "endTime": "1:00 AM",
+      "sunrise": "6:34 AM",
+      "sunset": "4:48 PM"
+    },
+    "f65af4c70a7f6f40": {
+      "is_on": false
+    },
+    "c1c9a5b0ed01c3b7": {
+      "is_on": false
+    },
+    "9e2a30f7a17e5bd5": {
+      "out": false,
+      "change": false
+    },
+    "3fb3a20b014821a8": {
+      "change": false
+    },
+    "228368262223f1db": {
+      "is_on": false
+    },
+    "cb87122766b2be7d": {
+      "change": false
+    },
+    "771f2954e396349a": {
+      "is_on": false
+    },
+    "2769561f4d1141e5": {
+      "hsvInfo": {
+        "hue": 0.0745814307458143,
+        "saturation": 0.8588235294117648,
+        "brightness": 36,
+        "rgb": {
+          "r": 255,
+          "g": 134,
+          "b": 36
+        }
+      }
+    },
+    "23c01481261e42d1": {
+      "is_on": false
+    },
+    "ccbfbe4498e0188d": {
+      "out": false,
+      "change": false
+    },
+    "2f7d4a81e11769d4": {
+      "is_on": false
+    },
+    "9289bd97b1d582f5": {
+      "change": false
+    },
+    "8fa96b2599a3efbf": {
+      "out": false,
+      "change": false
+    },
+    "46fa426389043256": {
+      "is_on": false
+    },
+    "9ccb7efe133cf25a": {
+      "out": {
+        "hue": 0.09444444444444444,
+        "saturation": 0.89,
+        "brightness": 67,
+        "transition": 0,
+        "colorTemp": 2941,
+        "mode": "color",
+        "on": true
+      },
+      "change": false
+    },
+    "74640383197a8ca7": {
+      "is_on": false
+    },
+    "b8140146b61cbe8b": {
+      "is_on": false
+    },
+    "638e3dd2992d1984": {
+      "out": true,
+      "change": false
+    },
+    "642f583dff788b72": {
+      "is_on": true
+    },
+    "09acc1353342ccb0": {
+      "is_on": true
+    },
+    "d75099b0931e7056": {
+      "change": false
+    },
+    "f9e613cfd22bb224": {
+      "is_on": true
+    },
+    "c6a03d9be3047a22": {
+      "change": false
+    },
+    "0f7a5498635fd32f": {
+      "is_on": false
+    },
+    "4e242756c2612585": {
+      "out": {
+        "hue": 0.7751633986928105,
+        "saturation": 1,
+        "brightness": 68,
+        "rgb": {
+          "r": 44,
+          "g": 0,
+          "b": 68
+        }
+      },
+      "change": false
+    },
+    "5b71b0de41e3a529": {
+      "is_on": false
+    },
+    "b697f1460c4c6614": {
+      "out": false,
+      "change": false
+    },
+    "d5686fc3e43513d6": {
+      "result": false
+    },
+    "50ff70ef0f2acc96": {
+      "out": true,
+      "change": false
+    },
+    "6ac17d4ab201b32b": {
+      "is_on": true
+    },
+    "043a50dbfccdcd71": {
+      "change": false
+    },
+    "6b63b8e9fb86837c": {
+      "hsv_out": null
+    },
+    "39309e0384e43956": {
+      "is_on": false
+    },
+    "01446a4eb12772bd": {
+      "is_on": false
+    },
+    "9a4908a524f7808a": {
+      "is_on": false
+    },
+    "d08ef8707ab0fba4": {
+      "is_on": false
+    },
+    "48772a09399ce435": {
+      "is_on": false
+    },
+    "12a91469cc39f498": {
+      "hsv_out": null
+    },
+    "70fd8f7727f47d81": {
+      "hsv_out": null
+    },
+    "0c96213adb3281f4": {
+      "is_on": false
+    },
+    "2b4775bb8684586e": {
+      "state": null,
+      "device_state": null
+    },
+    "315ccd48fd131de3": {
+      "is_on": false
+    },
+    "18cb43271d9376b5": {
+      "state": null,
+      "device_state": null
+    },
+    "c4018a258f9c8fbd": {
+      "hsv_out": {
+        "hue": 0.07777777777777778,
+        "saturation": 0.47,
+        "brightness": 53,
+        "transition": 0,
+        "colorTemp": 3400,
+        "mode": "temp",
+        "on": true
+      }
+    },
+    "c095e7b26b0c147e": {
+      "is_on": false
+    },
+    "6d35a83f40cff6b0": {
+      "state": true
+    }
+  },
+  "tickCount": 11706
+}

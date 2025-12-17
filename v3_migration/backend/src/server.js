@@ -1,5 +1,8 @@
 const path = require('path');
 
+// Identify this server instance clearly (helps when multiple servers are accidentally running)
+console.log(`[Startup] PID=${process.pid} CWD=${process.cwd()}`);
+
 // ============================================
 // CRITICAL: Start keep-alive IMMEDIATELY to prevent premature exit
 // This must be BEFORE any async operations
@@ -21,6 +24,8 @@ console.log('[Startup] Keep-alive interval started');
 const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
 // Use absolute path relative to this file, not working directory
 const ENV_PATH = IS_HA_ADDON ? '/data/.env' : path.join(__dirname, '..', '.env');
+
+console.log(`[Startup] ENV_PATH=${ENV_PATH}`);
 
 // ALWAYS log this so we can diagnose addon detection issues
 console.log(`[Startup] IS_HA_ADDON=${IS_HA_ADDON}, SUPERVISOR_TOKEN=${process.env.SUPERVISOR_TOKEN ? 'present' : 'missing'}`);
@@ -298,7 +303,7 @@ io.on('connection', (socket) => {
 
 // Simple version endpoint - returns app version from package.json
 app.get('/api/version', (req, res) => {
-  const packageJson = require('../../package.json');
+  const packageJson = require('../package.json');
   res.json({ 
     version: packageJson.version,
     name: packageJson.name,
@@ -850,7 +855,8 @@ app.post('/api/settings/test', requireLocalOrPin, express.json(), async (req, re
   }
 });
 
-app.use(express.json());
+// Increase body limit for large graphs (107+ nodes = ~2MB)
+app.use(express.json({ limit: '5mb' }));
 app.use(require('./api/middleware/csp'));
 app.use(require('./config/cors'));
 app.use(require('./api/middleware/errorHandler'));

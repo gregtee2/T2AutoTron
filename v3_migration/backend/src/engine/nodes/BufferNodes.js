@@ -139,10 +139,11 @@ class ReceiverNode {
     engineLogger.logBufferGet(bufferName, value);
     
     // Track changes
-    const hasChanged = JSON.stringify(value) !== JSON.stringify(this.properties.lastValue);
+    const oldValue = this.properties.lastValue;
+    const hasChanged = JSON.stringify(value) !== JSON.stringify(oldValue);
     if (hasChanged) {
       this.properties.lastValue = value;
-      engineLogger.log('BUFFER-CHANGE', bufferName, { oldValue: this.properties.lastValue, newValue: value });
+      engineLogger.log('BUFFER-CHANGE', bufferName, { oldValue, newValue: value });
     }
     
     return {

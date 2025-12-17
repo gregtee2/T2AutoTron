@@ -134,9 +134,9 @@ module.exports = function (hueApi, hueLights, io) { // Added io parameter
 
             logWithTimestamp(`Setting Hue light ${id} state: ${JSON.stringify(state.getPayload())}`, 'info');
             await light.hueApi.lights.setLightState(id, state);
-            // Emit state update if io is available
+            // Emit state update if io is available (use prefixed IDs to match /api/devices)
             if (io) {
-                io.emit('device-state-update', { id, name: light.name, ...state.getPayload() });
+                io.emit('device-state-update', { id: `hue_${id}`, name: light.name, ...state.getPayload() });
             } else {
                 logWithTimestamp(`Socket.IO not available for light ${id} update`, 'warn');
             }
@@ -158,7 +158,7 @@ module.exports = function (hueApi, hueLights, io) { // Added io parameter
             }
             await light.hueApi.lights.setLightState(id, new LightState().off());
             if (io) {
-                io.emit('device-state-update', { id, name: light.name, on: false });
+                io.emit('device-state-update', { id: `hue_${id}`, name: light.name, on: false });
             }
             res.json({ success: true, message: 'Light turned off successfully' });
         } catch (error) {

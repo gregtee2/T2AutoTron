@@ -9,12 +9,12 @@ module.exports = function (io) {
   router.get('/', async (req, res) => {
     await logger.log('GET /api/lights/kasa called', 'info', false, 'kasa:fetch');
     try {
-      console.log('Calling kasaManager.getDevices...');
       const devices = kasaManager.getDevices();
-      console.log('Kasa devices:', devices);
       if (!Array.isArray(devices)) {
         throw new Error('kasaManager.getDevices() did not return an array');
       }
+
+      await logger.log(`Kasa devices available: ${devices.length}`, 'info', false, 'kasa:devices');
       const lights = devices.map(device => ({
         id: `kasa_${device.deviceId}`,
         name: device.alias,
@@ -138,7 +138,11 @@ module.exports = function (io) {
         await logger.log(`Device kasa_${id} not found in kasaManager`, 'warn', false, `kasa:warn:${id}`);
         return res.status(404).json({ success: false, message: `Device kasa_${id} not found` });
       }
-      const result = await kasaManager.controlKasaDevice(`kasa_${id}`, { on: false, transitiontime: transition });
+      const offState = { on: false };
+      if (typeof transition === 'number') {
+        offState.transitiontime = transition;
+      }
+      const result = await kasaManager.controlKasaDevice(`kasa_${id}`, offState);
       if (!result.success) {
         throw new Error(result.error || 'Failed to turn off device');
       }

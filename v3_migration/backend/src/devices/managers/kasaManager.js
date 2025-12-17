@@ -44,7 +44,7 @@ function getDeviceById(id) {
     const device = devices.get(id);
     // Only log when device not found (reduce noise)
     if (!device) {
-        logger.log('warn', `Device not found by ID ${id}`, null, `kasa:device:${id}`);
+        logger.log(`Device not found by ID ${id}`, 'warn', false, `kasa:device:${id}`);
     }
     return device;
 }
@@ -187,7 +187,7 @@ async function setupKasa(io, notificationEmitter) {
         })
             .on('device-new', async (device) => {
                 if (discoveredIds.has(device.deviceId)) {
-                    await logger.log('info', `Ignoring already discovered device: ${device.alias} (ID: ${device.deviceId})`, null, `kasa:device:${device.deviceId}`);
+                    await logger.log(`Ignoring already discovered device: ${device.alias} (ID: ${device.deviceId})`, 'info', false, `kasa:device:${device.deviceId}`);
                     return;
                 }
                 discoveredIds.add(device.deviceId);
@@ -217,12 +217,20 @@ async function setupKasa(io, notificationEmitter) {
                 await logger.log(`Emitted device-list-update with ${kasaDevices.length} devices`, 'info', false, 'kasa:devices');
             })
             .on('device-offline', (device) => {
+                const wasOffline = offlineDevices.has(device.deviceId);
                 markDeviceOffline(device.deviceId);
-                logger.log(`🔴 Device offline: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host})`, 'warn', false, `kasa:offline:${device.deviceId}`);
+                // Log only on transition to offline to avoid log floods.
+                if (!wasOffline) {
+                    logger.log(`🔴 Device offline: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host})`, 'warn', false, `kasa:offline:${device.deviceId}`);
+                }
             })
             .on('device-online', (device) => {
+                const wasOffline = offlineDevices.has(device.deviceId);
                 markDeviceOnline(device.deviceId);
-                logger.log(`🟢 Device online: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host})`, 'info', false, `kasa:online:${device.deviceId}`);
+                // Log only if this was a transition from offline to online.
+                if (wasOffline) {
+                    logger.log(`🟢 Device online: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host})`, 'info', false, `kasa:online:${device.deviceId}`);
+                }
             })
             .on('error', (err) => logger.log(`Discovery error: ${err.message}`, 'error', false, 'kasa:error'));
         
@@ -262,7 +270,7 @@ async function rescanKasaDevices(io, notificationEmitter) {
 }
 
 async function forceRescan(io, notificationEmitter) {
-    await logger.log('info', 'Forcing Kasa rescan...', null, 'kasa:force-rescan');
+    await logger.log('Forcing Kasa rescan...', 'info', false, 'kasa:force-rescan');
     return await rescanKasaDevices(io, notificationEmitter);
 }
 

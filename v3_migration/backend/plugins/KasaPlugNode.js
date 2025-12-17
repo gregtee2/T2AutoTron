@@ -147,7 +147,7 @@
             const trigger = triggerRaw ?? false;
             const risingEdge = trigger && !this.lastTriggerValue;
             const fallingEdge = !trigger && this.lastTriggerValue;
-            const mode = this.properties.triggerMode || "Toggle";
+            const mode = this.properties.triggerMode || "Follow";
 
             if (mode === "Toggle" && risingEdge) await this.onTrigger();
             else if (mode === "Follow" && (risingEdge || fallingEdge)) await this.setPlugsState(trigger);
