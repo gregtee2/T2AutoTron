@@ -2,6 +2,33 @@
 
 > **IMPORTANT FOR AI ASSISTANTS**: This document defines the plugin architecture for T2AutoTron. ALL new nodes should be created as plugins in `backend/plugins/`. Do NOT create nodes in `frontend/src/nodes/` - that folder is deprecated.
 
+## 🆕 Two-Layer Architecture (v2.1.60+)
+
+T2AutoTron now has **two execution layers**:
+
+| Layer | Location | Purpose | Runs When |
+|-------|----------|---------|-----------|
+| **Frontend Plugins** | `backend/plugins/*.js` | Visual UI in browser | Browser open |
+| **Backend Engine Nodes** | `backend/src/engine/nodes/*.js` | 24/7 automation logic | Always (server-side) |
+
+### Why Two Layers?
+
+- **Frontend plugins** render the visual node editor and handle user interaction
+- **Backend engine nodes** execute the same logic on the server, even when the browser is closed
+- This enables **24/7 automations** - your lights keep changing colors while you sleep!
+
+### Which Files to Create?
+
+| Creating... | Frontend Plugin | Backend Node | Both? |
+|-------------|-----------------|--------------|-------|
+| New automation node | ✅ Yes | ✅ Yes | Yes - both! |
+| Visual-only node (e.g., color picker preview) | ✅ Yes | ❌ No | Frontend only |
+| Server-only logic (rare) | ❌ No | ✅ Yes | Backend only |
+
+**Most new nodes need BOTH** - a frontend plugin for the visual editor AND a backend node for 24/7 execution.
+
+---
+
 ## Overview
 
 T2AutoTron uses a **plugin-based architecture** where all visual nodes are loaded dynamically at runtime from the `backend/plugins/` directory. This design allows:
@@ -484,10 +511,262 @@ Verify socket types match between nodes. Use `sockets.any` for flexible connecti
 
 When asked to create a new node:
 
-1. ✅ Create in `backend/plugins/NodeName.js`
-2. ✅ Use the IIFE pattern shown above
-3. ✅ Use `React.createElement()` not JSX
-4. ✅ Inject CSS inline
-5. ✅ Register with `window.nodeRegistry`
-6. ❌ Do NOT create in `frontend/src/nodes/`
-7. ❌ Do NOT use ES6 imports in plugins
+1. ✅ Create frontend plugin in `backend/plugins/NodeName.js`
+2. ✅ Create backend node in `backend/src/engine/nodes/` (for 24/7 execution)
+3. ✅ Use the IIFE pattern for frontend plugins
+4. ✅ Use `React.createElement()` not JSX in frontend plugins
+5. ✅ Inject CSS inline in frontend plugins
+6. ✅ Register frontend with `window.nodeRegistry`
+7. ✅ Register backend with `require('../BackendNodeRegistry').register()`
+8. ❌ Do NOT create in `frontend/src/nodes/`
+9. ❌ Do NOT use ES6 imports in frontend plugins
+
+---
+
+## Backend Engine Nodes (24/7 Execution)
+
+This section covers the **server-side node implementations** that run even when the browser is closed.
+
+### Directory Structure
+
+```
+backend/src/engine/
+├── BackendEngine.js          # Main engine - 100ms tick loop, graph processing
+├── BackendNodeRegistry.js    # Node type registry with create() factory
+├── index.js                  # Exports engine singleton + registry
+└── nodes/                    # Backend node implementations
+    ├── TimeNodes.js          # CurrentTime, TimeRange, DayOfWeek, TimeOfDay
+    ├── LogicNodes.js         # AND, OR, NOT, Compare, Switch, Threshold, Latch
+    ├── DelayNode.js          # Delay, Debounce, Retriggerable modes
+    ├── HADeviceNodes.js      # HALight, HASwitch, HASensor, HAGenericDevice
+    ├── HueLightNodes.js      # HueLight, HueGroup (direct bridge API)
+    ├── KasaLightNodes.js     # KasaLight, KasaPlug (direct local API)
+    ├── ColorNodes.js         # SplineTimelineColor, HSVToRGB, RGBToHSV
+    ├── BufferNodes.js        # BufferReader, BufferWriter (cross-node state)
+    ├── UtilityNodes.js       # Counter, Random, Display, Sender, Receiver
+    └── WeatherNodes.js       # Weather data nodes
+```
+
+### Backend Node Structure
+
+Backend nodes are **pure JavaScript classes** without React/browser dependencies:
+
+```javascript
+/**
+ * MyNode.js - Backend implementation
+ */
+const registry = require('../BackendNodeRegistry');
+
+class MyNode {
+  constructor() {
+    this.id = null;           // Set by engine when loading graph
+    this.label = 'My Node';   // Display name
+    this.properties = {       // Node state (loaded from saved graph)
+      value: 0,
+      enabled: true
+    };
+  }
+
+  /**
+   * Restore properties from saved graph
+   * Called when engine loads a graph
+   */
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+
+  /**
+   * Process inputs and return outputs
+   * Called every engine tick (~100ms)
+   * 
+   * @param {Object} inputs - Input values keyed by socket name
+   *   e.g., { trigger: [true], value: [42] }
+   * @returns {Object} - Output values keyed by socket name
+   *   e.g., { output: 84, triggered: true }
+   */
+  data(inputs) {
+    // Inputs are arrays (can have multiple connections)
+    const inputValue = inputs.value?.[0] ?? 0;
+    const trigger = inputs.trigger?.[0] ?? false;
+
+    // Process logic
+    const result = inputValue * 2;
+
+    // Return outputs (used by connected nodes)
+    return {
+      output: result,
+      triggered: trigger
+    };
+  }
+
+  /**
+   * Optional: Cleanup when node is removed
+   */
+  destroy() {
+    // Clear any timers, close connections, etc.
+  }
+}
+
+// Register with backend registry
+registry.register('MyNode', MyNode);
+
+module.exports = { MyNode };
+```
+
+### Key Differences from Frontend Plugins
+
+| Aspect | Frontend Plugin | Backend Node |
+|--------|-----------------|--------------|
+| **File location** | `backend/plugins/` | `backend/src/engine/nodes/` |
+| **Module format** | IIFE (self-executing) | CommonJS (require/module.exports) |
+| **UI rendering** | React.createElement() | None - pure logic |
+| **Dependencies** | window.* globals | require() imports |
+| **Execution** | Browser (when open) | Server (24/7) |
+| **Registry** | `window.nodeRegistry.register()` | `registry.register()` |
+
+### Accessing Device Managers
+
+Backend nodes can control devices directly:
+
+```javascript
+// Home Assistant
+const haManager = require('../../devices/managers/homeAssistantManager');
+await haManager.controlDevice('light.living_room', { on: true, brightness: 255 });
+
+// Philips Hue
+const hueManager = require('../../devices/managers/hueManager');
+await hueManager.setLightState('1', { on: true, hue: 10000, sat: 254 });
+
+// TP-Link Kasa
+const kasaManager = require('../../devices/managers/kasaManager');
+await kasaManager.setPlugState('192.168.1.100', true);
+```
+
+### Accessing AutoTronBuffer
+
+For cross-node state sharing (Sender/Receiver pattern):
+
+```javascript
+const bufferManager = require('../../devices/managers/bufferManager');
+
+// Write to buffer
+bufferManager.set('[HSV] My Color', { hue: 0.5, saturation: 1, brightness: 254 });
+
+// Read from buffer
+const value = bufferManager.get('[HSV] My Color');
+
+// List all buffers
+const keys = bufferManager.keys();
+```
+
+### Label-to-Class Mapping
+
+The backend registry maps frontend display labels to backend class names. Add your node to the mapping in `BackendNodeRegistry.js`:
+
+```javascript
+// In getByLabel() method
+const labelMappings = {
+  'My Node': 'MyNode',  // ← Add your mapping
+  'Time of Day': 'TimeOfDayNode',
+  'Timeline Color': 'SplineTimelineColorNode',
+  // ... etc
+};
+```
+
+### Testing Backend Nodes
+
+```bash
+# Run backend tests
+cd v3_migration/backend && npm test
+
+# Test specific node
+npm test -- --grep "MyNode"
+```
+
+### Example: Complete Node (Frontend + Backend)
+
+#### 1. Backend Node (`backend/src/engine/nodes/MyNodes.js`)
+
+```javascript
+const registry = require('../BackendNodeRegistry');
+
+class DoubleValueNode {
+  constructor() {
+    this.id = null;
+    this.label = 'Double Value';
+    this.properties = { multiplier: 2 };
+  }
+
+  restore(data) {
+    if (data.properties) Object.assign(this.properties, data.properties);
+  }
+
+  data(inputs) {
+    const value = inputs.value?.[0] ?? 0;
+    return { result: value * this.properties.multiplier };
+  }
+}
+
+registry.register('DoubleValueNode', DoubleValueNode);
+module.exports = { DoubleValueNode };
+```
+
+#### 2. Frontend Plugin (`backend/plugins/DoubleValueNode.js`)
+
+```javascript
+(function() {
+    if (!window.Rete || !window.React || !window.nodeRegistry) return;
+
+    const { ClassicPreset } = window.Rete;
+    const React = window.React;
+    const sockets = window.sockets;
+
+    class DoubleValueNode extends ClassicPreset.Node {
+        constructor(changeCallback) {
+            super("Double Value");
+            this.changeCallback = changeCallback;
+            this.addInput("value", new ClassicPreset.Input(sockets.number, "Value"));
+            this.addOutput("result", new ClassicPreset.Output(sockets.number, "Result"));
+            this.properties = { multiplier: 2 };
+        }
+
+        data(inputs) {
+            const value = inputs.value?.[0] ?? 0;
+            return { result: value * this.properties.multiplier };
+        }
+
+        restore(state) {
+            if (state.properties) Object.assign(this.properties, state.properties);
+        }
+    }
+
+    function DoubleValueComponent({ data, emit }) {
+        // Render node UI with sockets
+        return React.createElement('div', { className: 'node-content' },
+            React.createElement('div', { className: 'node-header' }, 'Double Value')
+            // ... socket rendering
+        );
+    }
+
+    window.nodeRegistry.register('DoubleValueNode', {
+        label: "Double Value",
+        category: "Utility",
+        nodeClass: DoubleValueNode,
+        component: DoubleValueComponent,
+        factory: (cb) => new DoubleValueNode(cb)
+    });
+})();
+```
+
+#### 3. Add Label Mapping (`BackendNodeRegistry.js`)
+
+```javascript
+const labelMappings = {
+  'Double Value': 'DoubleValueNode',  // ← Add this line
+  // ... other mappings
+};
+```
+
+Now your node works in both the visual editor AND runs 24/7 on the server!
