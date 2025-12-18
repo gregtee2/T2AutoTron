@@ -23,6 +23,7 @@
             display: flex;
             gap: 15px;
             align-items: center;
+            flex-wrap: wrap;
         }
         .config-bar input {
             background: #1a1a2e;
@@ -43,6 +44,11 @@
             font-weight: bold;
         }
         .config-bar button:hover { background: #00b8e6; }
+        .config-bar button.secondary {
+            background: #444;
+            color: #eee;
+        }
+        .config-bar button.secondary:hover { background: #555; }
         .status { 
             padding: 8px 15px; 
             border-radius: 6px; 
@@ -62,6 +68,9 @@
             border-radius: 12px;
             padding: 20px;
         }
+        .panel.full-width {
+            grid-column: 1 / -1;
+        }
         .panel-title {
             font-size: 16px;
             font-weight: 600;
@@ -69,7 +78,18 @@
             margin-bottom: 15px;
             padding-bottom: 10px;
             border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
+        .panel-title .badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: #333;
+        }
+        .panel-title .badge.warning { background: #ff9800; color: #000; }
+        .panel-title .badge.success { background: #4caf50; color: #000; }
         
         /* Engine stats */
         .stats-grid {
@@ -135,6 +155,56 @@
         .buffer-name { flex: 1; font-size: 12px; }
         .buffer-value { font-size: 11px; color: #00d4ff; font-family: monospace; }
         
+        /* Event Log */
+        .event-log { max-height: 400px; overflow-y: auto; }
+        .event-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            gap: 10px;
+            font-size: 12px;
+        }
+        .event-time { color: #666; font-family: monospace; white-space: nowrap; }
+        .event-entity { color: #00d4ff; font-weight: 500; flex-shrink: 0; }
+        .event-action { flex: 1; }
+        .event-action.on { color: #81c784; }
+        .event-action.off { color: #e57373; }
+        .event-action.trigger { color: #ffb74d; }
+        
+        /* Comparison panel */
+        .comparison-list { max-height: 500px; overflow-y: auto; }
+        .comparison-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            border-left: 4px solid #444;
+        }
+        .comparison-item.match { border-left-color: #4caf50; }
+        .comparison-item.mismatch { border-left-color: #f44336; }
+        .comparison-item.unknown { border-left-color: #ff9800; }
+        .comparison-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .comparison-entity { color: #00d4ff; font-weight: 500; }
+        .comparison-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; }
+        .comparison-status.match { background: #1b5e20; color: #81c784; }
+        .comparison-status.mismatch { background: #4a1010; color: #e57373; }
+        .comparison-status.unknown { background: #4a3000; color: #ffb74d; }
+        .comparison-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 12px;
+        }
+        .comparison-col { padding: 8px; background: #252540; border-radius: 4px; }
+        .comparison-col-title { color: #888; margin-bottom: 5px; font-size: 11px; }
+        
         .no-data { color: #666; text-align: center; padding: 20px; font-style: italic; }
         .last-update { font-size: 11px; color: #444; margin-top: 10px; text-align: right; }
         
@@ -148,15 +218,50 @@
             width: 100%;
             margin-bottom: 10px;
         }
+        
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 8px 16px;
+            background: #1a1a2e;
+            border: none;
+            color: #888;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .tab.active { background: #00d4ff; color: #000; }
+        .tab:hover:not(.active) { background: #333; }
+        
+        .hours-selector {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .hours-btn {
+            padding: 4px 10px;
+            background: #333;
+            border: none;
+            color: #888;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .hours-btn.active { background: #00d4ff; color: #000; }
     </style>
 </head>
 <body>
     <h1>🔧 T2AutoTron Debug Dashboard</h1>
-    <p class="subtitle">Real-time monitoring - No login required</p>
+    <p class="subtitle">Real-time monitoring & Event Analysis - No login required</p>
     
     <div class="config-bar">
         <input type="text" id="backendUrl" placeholder="T2AutoTron Backend URL (e.g., http://192.168.1.100:3000)">
         <button onclick="connect()">Connect</button>
+        <button class="secondary" onclick="loadEventLog()">📋 Load Event Log</button>
+        <button class="secondary" onclick="runComparison()">🔍 Compare Graph vs Reality</button>
         <span class="status loading" id="status">Not connected</span>
     </div>
     
@@ -193,8 +298,37 @@
             </div>
         </div>
         
+        <!-- Event Log -->
+        <div class="panel">
+            <div class="panel-title">
+                📋 Event Log (On/Off Only)
+                <span class="badge" id="eventCount">0 events</span>
+            </div>
+            <div class="hours-selector">
+                <button class="hours-btn active" onclick="setHours(1)">1h</button>
+                <button class="hours-btn" onclick="setHours(6)">6h</button>
+                <button class="hours-btn" onclick="setHours(12)">12h</button>
+                <button class="hours-btn" onclick="setHours(24)">24h</button>
+            </div>
+            <input type="text" class="filter-input" id="eventFilter" placeholder="Filter by entity..." oninput="renderEventLog()">
+            <div class="event-log" id="eventLog">
+                <div class="no-data">Click "Load Event Log" to fetch events</div>
+            </div>
+        </div>
+        
+        <!-- Graph vs Reality Comparison -->
+        <div class="panel">
+            <div class="panel-title">
+                🔍 Graph vs Reality
+                <span class="badge" id="comparisonBadge">--</span>
+            </div>
+            <div class="comparison-list" id="comparisonList">
+                <div class="no-data">Click "Compare Graph vs Reality" to analyze</div>
+            </div>
+        </div>
+        
         <!-- Lights -->
-        <div class="panel" style="grid-column: span 2;">
+        <div class="panel full-width">
             <div class="panel-title">💡 Light States</div>
             <input type="text" class="filter-input" id="lightFilter" placeholder="Filter lights..." oninput="renderLights()">
             <div class="light-list" id="lightList">
@@ -206,6 +340,9 @@
 
     <script>
         let data = { engine: {}, buffers: {}, lights: [] };
+        let eventLogData = [];
+        let graphData = null;
+        let selectedHours = 1;
         let refreshInterval = null;
         
         // Load saved URL
@@ -235,6 +372,13 @@
         
         function hueToRgb(hue) {
             return hsToRgb(hue * 360, 100);
+        }
+        
+        function setHours(h) {
+            selectedHours = h;
+            document.querySelectorAll('.hours-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            loadEventLog();
         }
         
         async function connect() {
@@ -278,6 +422,234 @@
                 document.getElementById('status').className = 'status error';
                 document.getElementById('status').textContent = `✗ ${err.message}`;
             }
+        }
+        
+        async function loadEventLog() {
+            const url = document.getElementById('backendUrl').value.trim();
+            if (!url) {
+                alert('Please enter the backend URL first');
+                return;
+            }
+            
+            try {
+                // Fetch device history (on/off events only)
+                const response = await fetch(`${url}/api/engine/logs/device-history?hours=${selectedHours}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Filter to only on/off events (not HSV changes)
+                    eventLogData = (result.history || []).filter(event => {
+                        const action = (event.action || '').toLowerCase();
+                        return action.includes('turn_on') || action.includes('turn_off') || 
+                               action.includes('→ true') || action.includes('→ false') ||
+                               event.category === 'TRIGGER';
+                    });
+                    renderEventLog();
+                    document.getElementById('eventCount').textContent = `${eventLogData.length} events`;
+                } else {
+                    throw new Error(result.error || 'Failed to load events');
+                }
+            } catch (err) {
+                document.getElementById('eventLog').innerHTML = `<div class="no-data">Error: ${err.message}</div>`;
+            }
+        }
+        
+        function renderEventLog() {
+            const filter = document.getElementById('eventFilter').value.toLowerCase();
+            const events = eventLogData.filter(e => 
+                !filter || (e.entity || '').toLowerCase().includes(filter) || 
+                (e.action || '').toLowerCase().includes(filter)
+            );
+            
+            if (events.length === 0) {
+                document.getElementById('eventLog').innerHTML = '<div class="no-data">No on/off events found</div>';
+                return;
+            }
+            
+            // Show most recent first
+            const html = events.slice().reverse().map(event => {
+                const time = new Date(event.time).toLocaleTimeString();
+                const entity = (event.entity || 'unknown').replace('light.', '').replace('switch.', '');
+                const action = event.action || '';
+                
+                let actionClass = '';
+                let actionText = action;
+                if (action.includes('turn_on') || action.includes('→ true')) {
+                    actionClass = 'on';
+                    actionText = '🟢 ON';
+                } else if (action.includes('turn_off') || action.includes('→ false')) {
+                    actionClass = 'off';
+                    actionText = '🔴 OFF';
+                } else if (event.category === 'TRIGGER') {
+                    actionClass = 'trigger';
+                    actionText = `⚡ ${action}`;
+                }
+                
+                return `
+                    <div class="event-item">
+                        <span class="event-time">${time}</span>
+                        <span class="event-entity">${entity}</span>
+                        <span class="event-action ${actionClass}">${actionText}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('eventLog').innerHTML = html;
+        }
+        
+        async function runComparison() {
+            const url = document.getElementById('backendUrl').value.trim();
+            if (!url) {
+                alert('Please enter the backend URL first');
+                return;
+            }
+            
+            try {
+                // Fetch graph data and event log
+                const [graphResponse, eventsResponse, buffersResponse] = await Promise.all([
+                    fetch(`${url}/api/engine/last-active`).catch(() => ({ ok: false })),
+                    fetch(`${url}/api/engine/logs/device-history?hours=${selectedHours}`),
+                    fetch(`${url}/api/debug/all`)
+                ]);
+                
+                let graphNodes = [];
+                if (graphResponse.ok) {
+                    const graphResult = await graphResponse.json();
+                    graphNodes = graphResult.nodes || [];
+                }
+                
+                const eventsResult = await eventsResponse.json();
+                const buffersResult = await buffersResponse.json();
+                
+                // Extract trigger buffers and their current values
+                const triggerBuffers = {};
+                if (buffersResult.buffers) {
+                    Object.entries(buffersResult.buffers).forEach(([name, value]) => {
+                        if (name.startsWith('[Trigger]')) {
+                            triggerBuffers[name] = value;
+                        }
+                    });
+                }
+                
+                // Extract device nodes and their configurations
+                const deviceNodes = [];
+                graphNodes.forEach(node => {
+                    const data = node.data || {};
+                    const props = data.properties || {};
+                    
+                    if (data.label === 'HA Generic Device') {
+                        (props.selectedDeviceIds || []).forEach((deviceId, i) => {
+                            deviceNodes.push({
+                                nodeId: node.id,
+                                nodeTitle: props.customTitle || data.label,
+                                deviceId: deviceId,
+                                deviceName: (props.selectedDeviceNames || [])[i] || deviceId,
+                                triggerMode: props.triggerMode || 'Follow'
+                            });
+                        });
+                    }
+                });
+                
+                // Find events for each device
+                const events = eventsResult.history || [];
+                const comparison = deviceNodes.map(node => {
+                    const entityId = node.deviceId.replace('ha_', '');
+                    const deviceEvents = events.filter(e => 
+                        e.entity && e.entity.includes(entityId.split('.')[1])
+                    );
+                    
+                    // Determine expected state based on trigger buffers
+                    // Look for any trigger buffer that might control this device
+                    let expectedState = 'unknown';
+                    let triggerSource = null;
+                    
+                    // Check if device had any on/off commands
+                    const lastOnOff = deviceEvents.filter(e => 
+                        e.action?.includes('turn_on') || e.action?.includes('turn_off')
+                    ).slice(-1)[0];
+                    
+                    const actualState = lastOnOff ? 
+                        (lastOnOff.action?.includes('turn_on') ? 'on' : 'off') : 
+                        'no events';
+                    
+                    // Get current state from lights list
+                    const light = (buffersResult.lights || []).find(l => l.id === node.deviceId);
+                    const currentState = light?.state?.on ? 'on' : 'off';
+                    
+                    return {
+                        ...node,
+                        eventCount: deviceEvents.length,
+                        lastEvent: deviceEvents.slice(-1)[0],
+                        actualState,
+                        currentState,
+                        expectedState,
+                        triggerSource
+                    };
+                });
+                
+                renderComparison(comparison, triggerBuffers);
+                
+            } catch (err) {
+                document.getElementById('comparisonList').innerHTML = `<div class="no-data">Error: ${err.message}</div>`;
+            }
+        }
+        
+        function renderComparison(comparison, triggerBuffers) {
+            if (comparison.length === 0) {
+                document.getElementById('comparisonList').innerHTML = '<div class="no-data">No device nodes found in graph</div>';
+                document.getElementById('comparisonBadge').textContent = '0 devices';
+                return;
+            }
+            
+            // Count matches/mismatches
+            let matches = 0;
+            let mismatches = 0;
+            
+            const html = comparison.map(item => {
+                // Simple status check: did we see events for this device?
+                let status = 'unknown';
+                let statusText = 'No Events';
+                
+                if (item.eventCount > 0) {
+                    status = 'match';
+                    statusText = `${item.eventCount} events`;
+                    matches++;
+                } else if (item.currentState !== 'unknown') {
+                    status = 'unknown';
+                    statusText = 'No commands logged';
+                    mismatches++;
+                }
+                
+                const lastEventTime = item.lastEvent ? new Date(item.lastEvent.time).toLocaleString() : '--';
+                const lastEventAction = item.lastEvent?.action || '--';
+                
+                return `
+                    <div class="comparison-item ${status}">
+                        <div class="comparison-header">
+                            <span class="comparison-entity">${item.nodeTitle || item.deviceName}</span>
+                            <span class="comparison-status ${status}">${statusText}</span>
+                        </div>
+                        <div class="comparison-details">
+                            <div class="comparison-col">
+                                <div class="comparison-col-title">Graph Config</div>
+                                Mode: ${item.triggerMode}<br>
+                                Entity: ${item.deviceId.replace('ha_', '')}
+                            </div>
+                            <div class="comparison-col">
+                                <div class="comparison-col-title">Actual Activity</div>
+                                Current: ${item.currentState.toUpperCase()}<br>
+                                Last: ${lastEventAction.slice(0, 30)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('comparisonList').innerHTML = html;
+            
+            const badgeClass = mismatches > 0 ? 'warning' : 'success';
+            document.getElementById('comparisonBadge').className = `badge ${badgeClass}`;
+            document.getElementById('comparisonBadge').textContent = `${matches} active, ${mismatches} idle`;
         }
         
         function renderEngine() {
