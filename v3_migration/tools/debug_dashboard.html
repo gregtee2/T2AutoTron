@@ -417,6 +417,7 @@
         <button class="secondary" onclick="loadEventLog()">📋 Events</button>
         <button class="secondary" onclick="runComparison()">🔍 Compare</button>
         <button class="secondary" onclick="exportLogs()">📥 Export</button>
+        <button class="secondary danger" onclick="clearSession()">🗑️ Clear</button>
         <div class="auto-refresh">
             <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
             <label for="autoRefresh">Auto</label>
@@ -452,7 +453,12 @@
                     <div class="stat-value" id="engineUptime">--</div>
                     <div class="stat-label">Uptime (min)</div>
                 </div>
+                <div class="stat">
+                    <div class="stat-value" id="engineRestarts">0</div>
+                    <div class="stat-label">Restarts</div>
+                </div>
             </div>
+            <div id="restartHistory" style="margin-top: 10px; font-size: 11px; color: #888;"></div>
         </div>
         
         <!-- Anomaly Detection (Real Problems) -->
@@ -556,9 +562,63 @@
         let lastBugCount = 0;
         let notificationsEnabled = false;
         
+        // Track server uptime to detect restarts
+        let lastKnownUptime = null;
+        let serverRestarts = [];
+        
         // Load saved URL
         const savedUrl = localStorage.getItem('t2debug_url');
         if (savedUrl) document.getElementById('backendUrl').value = savedUrl;
+        
+        // Load persisted data from localStorage
+        function loadPersistedData() {
+            try {
+                const saved = localStorage.getItem('t2debug_session');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Only restore if less than 4 hours old
+                    if (parsed.timestamp && Date.now() - parsed.timestamp < 4 * 60 * 60 * 1000) {
+                        eventLogData = parsed.eventLogData || [];
+                        serverRestarts = parsed.serverRestarts || [];
+                        lastKnownUptime = parsed.lastKnownUptime;
+                        console.log('Restored session data:', { events: eventLogData.length, restarts: serverRestarts.length });
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not restore session data:', e);
+            }
+        }
+        loadPersistedData();
+        
+        // Save data periodically
+        function savePersistedData() {
+            try {
+                localStorage.setItem('t2debug_session', JSON.stringify({
+                    timestamp: Date.now(),
+                    eventLogData: eventLogData.slice(-500), // Keep last 500 events
+                    serverRestarts: serverRestarts.slice(-20), // Keep last 20 restart records
+                    lastKnownUptime
+                }));
+            } catch (e) {
+                console.warn('Could not save session data:', e);
+            }
+        }
+        
+        // Detect server restart (uptime goes backwards)
+        function checkForServerRestart(newUptime) {
+            if (lastKnownUptime !== null && newUptime < lastKnownUptime) {
+                const restartEvent = {
+                    time: new Date().toISOString(),
+                    previousUptime: lastKnownUptime,
+                    newUptime: newUptime
+                };
+                serverRestarts.push(restartEvent);
+                showToast(`⚠️ Server restart detected! (was ${lastKnownUptime}min, now ${newUptime}min)`, 'info');
+                showNotification('T2 Server Restarted', `Previous uptime: ${lastKnownUptime} min`);
+                savePersistedData();
+            }
+            lastKnownUptime = newUptime;
+        }
         
         // Request notification permission
         if ('Notification' in window && Notification.permission === 'default') {
@@ -607,6 +667,18 @@
         
         function hueToRgb(hue) {
             return hsToRgb(hue * 360, 100);
+        }
+        
+        function clearSession() {
+            if (!confirm('Clear all session data (events, restart history)?')) return;
+            eventLogData = [];
+            serverRestarts = [];
+            lastKnownUptime = null;
+            localStorage.removeItem('t2debug_session');
+            document.getElementById('engineRestarts').textContent = '0';
+            document.getElementById('restartHistory').innerHTML = '';
+            document.getElementById('eventLog').innerHTML = '<div class="no-data">Session cleared</div>';
+            showToast('Session data cleared', 'success');
         }
         
         function setHours(h) {
@@ -1200,7 +1272,26 @@
             document.getElementById('engineRunning').textContent = e.running ? '🟢 ON' : '⚫ OFF';
             document.getElementById('engineNodes').textContent = e.nodeCount || 0;
             document.getElementById('engineTicks').textContent = (e.tickCount || 0).toLocaleString();
-            document.getElementById('engineUptime').textContent = Math.floor((e.uptime || 0) / 60000);
+            
+            const uptimeMinutes = Math.floor((e.uptime || 0) / 60000);
+            document.getElementById('engineUptime').textContent = uptimeMinutes;
+            
+            // Check for server restart (uptime went backwards)
+            checkForServerRestart(uptimeMinutes);
+            
+            // Show restart count and history
+            document.getElementById('engineRestarts').textContent = serverRestarts.length;
+            if (serverRestarts.length > 0) {
+                const recent = serverRestarts.slice(-3).reverse();
+                const historyHtml = recent.map(r => {
+                    const time = new Date(r.time).toLocaleTimeString();
+                    return `<div>⚠️ ${time} (was ${r.previousUptime}min)</div>`;
+                }).join('');
+                document.getElementById('restartHistory').innerHTML = historyHtml;
+            }
+            
+            // Save session data periodically
+            savePersistedData();
         }
         
         function renderBuffers() {
