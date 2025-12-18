@@ -573,11 +573,60 @@ class HAGenericDeviceNode {
       return { is_on: !!trigger };
     }
 
-    // Skip if trigger is still undefined (no connection)
+    // Handle case where trigger is undefined (no connection) but HSV is provided
+    // In this case, we should apply HSV to devices that are currently ON
+    // This matches the frontend behavior where HSV-only nodes still control colors
     if (trigger === undefined) {
-      // Only log this in verbose mode - it fires every tick for disconnected nodes
-      if (engineLogger.getLogLevel() >= 2) {
-        engineLogger.log('HA-DEVICE', 'trigger undefined, skipping', { lastTrigger: this.lastTrigger });
+      // If we have HSV input, apply it to devices that are currently ON
+      if (hsv) {
+        // Track when we last sent a command (same logic as trigger-connected nodes)
+        const now = Date.now();
+        if (!this.lastSendTime) this.lastSendTime = 0;
+        if (!this.lastSentHsv) this.lastSentHsv = null;
+        
+        const hueDiff = this.lastSentHsv ? Math.abs((hsv.hue || 0) - (this.lastSentHsv.hue || 0)) : 1;
+        const satDiff = this.lastSentHsv ? Math.abs((hsv.saturation || 0) - (this.lastSentHsv.saturation || 0)) : 1;
+        const briDiff = this.lastSentHsv ? Math.abs((hsv.brightness || 0) - (this.lastSentHsv.brightness || 0)) : 255;
+        
+        const MIN_UPDATE_INTERVAL = 5000;
+        const MIN_FAST_INTERVAL = 3000;
+        const timeSinceLastSend = now - this.lastSendTime;
+        
+        const SIGNIFICANT_HUE_CHANGE = 0.05;
+        const SIGNIFICANT_SAT_CHANGE = 0.10;
+        const SIGNIFICANT_BRI_CHANGE = 20;
+        const FORCE_UPDATE_INTERVAL = 60000;
+        
+        const hasSignificantChange = hueDiff > SIGNIFICANT_HUE_CHANGE || 
+                                     satDiff > SIGNIFICANT_SAT_CHANGE || 
+                                     briDiff > SIGNIFICANT_BRI_CHANGE;
+        const timeForForceUpdate = timeSinceLastSend > FORCE_UPDATE_INTERVAL;
+        
+        const shouldSend = !this.lastSentHsv || hasSignificantChange || timeForForceUpdate;
+        const minInterval = hasSignificantChange ? MIN_FAST_INTERVAL : MIN_UPDATE_INTERVAL;
+        
+        if (shouldSend && timeSinceLastSend >= minInterval) {
+          const reason = !this.lastSentHsv ? 'hsv_only_first' 
+                       : hasSignificantChange ? 'hsv_only_significant' 
+                       : 'hsv_only_periodic';
+          engineLogger.log('HA-HSV-ONLY', `No trigger connected, applying HSV to ON devices`, { 
+            entities: entityIds,
+            reason: reason,
+            timeSinceLastSend: Math.round(timeSinceLastSend / 1000) + 's'
+          });
+          
+          this.lastSentHsv = { ...hsv };
+          this.lastSendTime = now;
+          
+          for (const entityId of entityIds) {
+            // Only apply HSV if device is currently ON (uses deviceStates cache or assumes ON)
+            // Note: We send turn_on with color - HA will apply color if device is on, ignore if off
+            await this.controlDevice(entityId, true, hsv);
+          }
+        }
+      } else if (engineLogger.getLogLevel() >= 2) {
+        // Only log this in verbose mode - it fires every tick for disconnected nodes with no HSV
+        engineLogger.log('HA-DEVICE', 'trigger undefined, no HSV, skipping', { lastTrigger: this.lastTrigger });
       }
       return { is_on: !!this.lastTrigger };
     }
