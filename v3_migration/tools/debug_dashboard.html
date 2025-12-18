@@ -1009,7 +1009,8 @@
                             lastOnEvent,
                             lastOffEvent,
                             expectedState,  // What engine thinks it should be
-                            actualState     // What HA reports
+                            actualState,    // What HA reports
+                            hasHsvInput: device.hasHsvInput  // Is this receiving color commands?
                         };
                     });
                 } else {
