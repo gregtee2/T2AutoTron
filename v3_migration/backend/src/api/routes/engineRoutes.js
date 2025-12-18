@@ -245,8 +245,8 @@ router.get('/outputs', (req, res) => {
 /**
  * GET /api/engine/device-states
  * Returns what the engine thinks each device's state SHOULD be
- * based on current node outputs. Used by debug dashboard to compare
- * "engine expected state" vs "actual HA state".
+ * based on the tracked device states (not just trigger input).
+ * Used by debug dashboard to compare "engine expected state" vs "actual HA state".
  */
 router.get('/device-states', async (req, res) => {
   try {
@@ -268,10 +268,21 @@ router.get('/device-states', async (req, res) => {
           const entityId = deviceId.startsWith('ha_') ? deviceId.slice(3) : deviceId;
           const deviceName = props.selectedDeviceNames?.[i] || entityId;
           
-          // Determine expected state from node's output
-          // output.is_on is the result of the last data() call
+          // Get the TRACKED device state (what we last set the device to)
+          // This is more accurate than just the trigger input
+          // node.deviceStates tracks what we actually commanded
           let expectedState = 'unknown';
-          if (output.is_on !== undefined) {
+          
+          // First check deviceStates (tracks actual commands sent)
+          if (node.deviceStates && node.deviceStates[entityId] !== undefined) {
+            expectedState = node.deviceStates[entityId] ? 'on' : 'off';
+          }
+          // Fallback: if trigger is connected and truthy, device should be on
+          else if (node.lastTrigger !== undefined) {
+            expectedState = node.lastTrigger ? 'on' : 'off';
+          }
+          // Fallback: check output.is_on
+          else if (output.is_on !== undefined) {
             expectedState = output.is_on ? 'on' : 'off';
           }
           
@@ -286,6 +297,8 @@ router.get('/device-states', async (req, res) => {
             deviceName,
             expectedState,
             triggerMode,
+            lastTrigger: node.lastTrigger,
+            trackedState: node.deviceStates?.[entityId],
             lastOutput: output
           });
         });
@@ -296,7 +309,9 @@ router.get('/device-states', async (req, res) => {
         const entityId = props.deviceId.startsWith('ha_') ? props.deviceId.slice(3) : props.deviceId;
         
         let expectedState = 'unknown';
-        if (output.is_on !== undefined) {
+        if (node.deviceStates && node.deviceStates[entityId] !== undefined) {
+          expectedState = node.deviceStates[entityId] ? 'on' : 'off';
+        } else if (output.is_on !== undefined) {
           expectedState = output.is_on ? 'on' : 'off';
         }
         
@@ -307,6 +322,7 @@ router.get('/device-states', async (req, res) => {
           entityId,
           deviceName: props.deviceName || entityId,
           expectedState,
+          trackedState: node.deviceStates?.[entityId],
           lastOutput: output
         });
       }
