@@ -1133,11 +1133,35 @@ Tabbed modal with:
 | `main` | Primary development branch. All new features and fixes go here. | `stable` |
 | `stable` | Production releases. Users pull updates from this branch. | — |
 
+### ⚠️ CRITICAL: Add-on Submodule Push
+
+**The HA add-on lives in a separate repo (submodule).** When you change anything in `home-assistant-addons/` (especially `config.yaml` version bumps), you MUST:
+
+1. **Push the submodule first:**
+   ```bash
+   cd home-assistant-addons
+   git add -A
+   git commit -m "bump: vX.X.X - Description"
+   git push origin main
+   ```
+
+2. **Then update the parent repo's reference:**
+   ```bash
+   cd ..  # back to T2AutoTron root
+   git add home-assistant-addons
+   git commit -m "chore: update addon submodule to vX.X.X"
+   git push origin main
+   git push origin main:stable
+   ```
+
+**If you skip this, HA users won't see the update!** The add-on repo is what Home Assistant checks for new versions.
+
 ### Development Workflow
 
 1. **Work on `main` branch** for new features and bug fixes.
 2. **Test thoroughly** on `main` before pushing to `stable`.
 3. **Push to `stable`** when ready for user deployment: `git push origin main:stable`
+4. **If add-on was touched**, follow the submodule push steps above.
 
 ### Common Git Commands
 
