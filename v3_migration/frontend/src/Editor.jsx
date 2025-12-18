@@ -3188,10 +3188,21 @@ export function Editor() {
                 
                 // Process all nodes through the engine to propagate values
                 // This ensures HA devices sync to their trigger states after load
-                if (processImmediateRef.current) {
-                    debug('[handleImport] Running processImmediate to sync node states');
-                    processImmediateRef.current();
-                }
+                // Delay slightly to let graphLoadComplete handlers (async fetches) start
+                setTimeout(() => {
+                    if (processImmediateRef.current) {
+                        debug('[handleImport] Running processImmediate to sync node states');
+                        processImmediateRef.current();
+                    }
+                    
+                    // Run again after a longer delay to catch any slow async operations
+                    setTimeout(() => {
+                        if (processImmediateRef.current) {
+                            debug('[handleImport] Running second processImmediate for late-loading data');
+                            processImmediateRef.current();
+                        }
+                    }, 1500);
+                }, 500);
                 
                 // IMPORTANT: Save imported graph to localStorage and server for persistence
                 // This ensures the imported graph is available for auto-load on refresh
