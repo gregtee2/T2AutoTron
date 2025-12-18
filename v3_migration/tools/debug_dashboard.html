@@ -625,27 +625,35 @@
             
             const html = comparison.map(item => {
                 // THE KEY LOGIC:
-                // BUG = Device is OFF now, but we have NO OFF command logged
-                // This means something turned it off that we didn't control
+                // BUG = Device state doesn't match what we commanded
+                // If OFF but no OFF command logged = something external turned it off
+                // If ON but no ON command logged = something external turned it on
                 
                 let status = 'match';
                 let statusText = '✓ OK';
                 let statusEmoji = '✅';
                 let explanation = '';
                 
-                if (item.currentState === 'off' && !item.lastOffEvent) {
-                    // 🐛 BUG: Device is OFF but we never sent an OFF command!
+                if (item.currentState === 'off' && !item.lastOffEvent && item.eventCount > 0) {
+                    // 🐛 BUG: Device is OFF but we only sent ON commands!
                     status = 'mismatch';
                     statusText = '🐛 BUG!';
                     statusEmoji = '🐛';
                     explanation = 'Device is OFF but no OFF command was logged!';
                     bugs++;
-                } else if (item.currentState === 'on' && !item.lastOnEvent && item.eventCount === 0) {
-                    // Device is ON but we have no events - it was on before we started logging
+                } else if (item.currentState === 'on' && !item.lastOnEvent && item.eventCount > 0) {
+                    // 🐛 BUG: Device is ON but we only sent OFF commands!
+                    status = 'mismatch';
+                    statusText = '🐛 BUG!';
+                    statusEmoji = '🐛';
+                    explanation = 'Device is ON but no ON command was logged!';
+                    bugs++;
+                } else if (item.eventCount === 0) {
+                    // No events at all - device was in this state before logging window
                     status = 'unknown';
                     statusText = 'No events';
-                    statusEmoji = '❓';
-                    explanation = 'No commands logged - device state unchanged or controlled externally';
+                    statusEmoji = '💤';
+                    explanation = 'No commands logged in this time window';
                     noEvents++;
                 } else if (item.eventCount > 0) {
                     // We have events and state matches what we expect
