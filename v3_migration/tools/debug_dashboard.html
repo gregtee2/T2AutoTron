@@ -455,14 +455,25 @@
             </div>
         </div>
         
-        <!-- Anomaly Detection -->
+        <!-- Anomaly Detection (Real Problems) -->
         <div class="panel">
             <div class="panel-title">
-                ⚠️ Anomaly Detection
+                🚨 Anomalies
                 <span class="badge" id="anomalyBadge">0 issues</span>
             </div>
             <div class="anomaly-list" id="anomalyList">
                 <div class="no-data">Run comparison to detect anomalies</div>
+            </div>
+        </div>
+        
+        <!-- Activity Notes (Expected Behavior) -->
+        <div class="panel">
+            <div class="panel-title">
+                📊 Activity Notes
+                <span class="badge info" id="activityBadge">0 notes</span>
+            </div>
+            <div class="anomaly-list" id="activityList">
+                <div class="no-data">Run comparison to see activity</div>
             </div>
         </div>
         
@@ -934,8 +945,9 @@
                     };
                 });
                 
-                const anomalies = detectAnomalies(events, comparison);
+                const { anomalies, activity } = detectAnomalies(events, comparison);
                 renderAnomalies(anomalies);
+                renderActivity(activity);
                 renderComparison(comparison, triggerBuffers);
                 
             } catch (err) {
@@ -944,29 +956,30 @@
         }
         
         function detectAnomalies(events, comparison) {
-            const anomalies = [];
+            const anomalies = [];  // Real problems
+            const activity = [];   // Expected behavior, informational
             
-            // Check for rapid toggling (more than 10 toggles per device in the window)
-            const deviceToggleCounts = {};
+            // Check for high-frequency commands (color cycling, etc.)
+            const deviceCmdCounts = {};
             events.forEach(e => {
                 const entity = e.entity || 'unknown';
-                if (!deviceToggleCounts[entity]) deviceToggleCounts[entity] = 0;
-                if (e.action?.includes('turn_on') || e.action?.includes('turn_off')) {
-                    deviceToggleCounts[entity]++;
-                }
+                if (!deviceCmdCounts[entity]) deviceCmdCounts[entity] = 0;
+                deviceCmdCounts[entity]++;
             });
             
-            Object.entries(deviceToggleCounts).forEach(([device, count]) => {
-                if (count > 10) {
-                    anomalies.push({
-                        type: 'warning',
-                        title: 'Rapid Toggling',
-                        details: `${device} toggled ${count} times in ${selectedHours}h - possible automation loop?`
+            Object.entries(deviceCmdCounts).forEach(([device, count]) => {
+                const perHour = Math.round(count / selectedHours);
+                if (count > 50) {
+                    // High frequency - probably color cycling, not an anomaly
+                    activity.push({
+                        type: 'info',
+                        title: 'Active Device',
+                        details: `${device.split('.').pop()}: ${count} commands (${perHour}/hr) - likely color cycling`
                     });
                 }
             });
             
-            // Check for unexplained OFF devices
+            // Check for unexplained OFF devices (REAL ANOMALY)
             comparison.forEach(item => {
                 if (item.currentState === 'off' && !item.lastOffEvent && item.eventCount > 0) {
                     anomalies.push({
@@ -984,7 +997,7 @@
                 }
             });
             
-            // Check for long gaps in logging
+            // Check for long gaps in logging (REAL ANOMALY - engine may have stopped)
             if (events.length > 0) {
                 const sortedEvents = [...events].sort((a, b) => new Date(a.time) - new Date(b.time));
                 for (let i = 1; i < sortedEvents.length; i++) {
@@ -992,15 +1005,15 @@
                     const gapHours = gap / (1000 * 60 * 60);
                     if (gapHours > 2) {
                         anomalies.push({
-                            type: 'info',
+                            type: 'warning',
                             title: 'Logging Gap',
-                            details: `${gapHours.toFixed(1)} hour gap in logs around ${new Date(sortedEvents[i-1].time).toLocaleTimeString()}`
+                            details: `${gapHours.toFixed(1)} hour gap around ${new Date(sortedEvents[i-1].time).toLocaleTimeString()} - engine stopped?`
                         });
                     }
                 }
             }
             
-            return anomalies;
+            return { anomalies, activity };
         }
         
         function renderAnomalies(anomalies) {
@@ -1030,6 +1043,25 @@
                 showToast(`🐛 ${critical} bug(s) detected!`, 'error');
             }
             lastBugCount = critical;
+        }
+        
+        function renderActivity(activity) {
+            if (activity.length === 0) {
+                document.getElementById('activityList').innerHTML = '<div class="no-data">No notable activity ✓</div>';
+                document.getElementById('activityBadge').textContent = '0 notes';
+                return;
+            }
+            
+            document.getElementById('activityBadge').textContent = `${activity.length} notes`;
+            
+            const html = activity.map(a => `
+                <div class="anomaly-item info">
+                    <div class="anomaly-type info">📊 ${a.title}</div>
+                    <div class="anomaly-details">${a.details}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('activityList').innerHTML = html;
         }
         
         function renderComparison(comparison, triggerBuffers) {
