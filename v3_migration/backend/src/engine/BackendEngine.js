@@ -53,10 +53,34 @@ class BackendEngine {
 
   /**
    * Check if device commands should be skipped (frontend is controlling)
+   * Includes a 60-second timeout failsafe - if no heartbeat, assume frontend is gone
    * @returns {boolean}
    */
   shouldSkipDeviceCommands() {
-    return this.frontendActive;
+    if (!this.frontendActive) return false;
+    
+    // Failsafe: if frontend hasn't been seen in 60 seconds, assume it's gone
+    const FRONTEND_TIMEOUT = 60 * 1000; // 60 seconds
+    if (this.frontendLastSeen && Date.now() - this.frontendLastSeen > FRONTEND_TIMEOUT) {
+      console.log(`[BackendEngine] Frontend timeout - no heartbeat for ${Math.floor((Date.now() - this.frontendLastSeen) / 1000)}s, resuming device control`);
+      engineLogger.logEngineEvent('FRONTEND-TIMEOUT', { 
+        lastSeen: this.frontendLastSeen,
+        timeout: FRONTEND_TIMEOUT 
+      });
+      this.frontendActive = false;
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Update frontend last seen timestamp (called from heartbeat)
+   */
+  frontendHeartbeat() {
+    if (this.frontendActive) {
+      this.frontendLastSeen = Date.now();
+    }
   }
 
   /**

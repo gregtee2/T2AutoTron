@@ -861,6 +861,7 @@ router.get('/logs/device-history', (req, res) => {
       'HA-DEVICE-SKIP',     // Skipped (frontend active)
       'HA-HSV-CHANGE',      // HSV color changes sent
       'HA-HSV-ONLY',        // HSV-only commands
+      'HA-HSV-SKIP',        // HSV skipped (trigger=false)
       'TRIGGER',            // Trigger events
       'HA-DECISION'         // Decision logging
     ];

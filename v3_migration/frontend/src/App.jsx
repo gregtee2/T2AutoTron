@@ -399,11 +399,20 @@ function App() {
 
     connectSocket();
 
+    // Send heartbeat every 30 seconds to keep frontend-active status alive
+    // This prevents stale "frontend active" status if browser crashes without disconnect
+    const heartbeatInterval = setInterval(() => {
+      if (socket.connected) {
+        socket.emit('editor-heartbeat');
+      }
+    }, 30000);
+
     return () => {
       // Tell backend editor is closing before disconnecting
       if (socket.connected) {
         socket.emit('editor-inactive');
       }
+      clearInterval(heartbeatInterval);
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('reconnect', onReconnect);

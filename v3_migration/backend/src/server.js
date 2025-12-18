@@ -287,6 +287,13 @@ io.on('connection', (socket) => {
     socket.emit('editor-active-ack', { activeEditors: activeEditors.size });
   });
 
+  // Frontend sends heartbeat every 30 seconds to keep frontend-active status alive
+  socket.on('editor-heartbeat', () => {
+    if (activeEditors.has(socket.id) && backendEngine) {
+      backendEngine.frontendHeartbeat();
+    }
+  });
+
   // Frontend emits this when user explicitly wants engine to take over
   socket.on('editor-inactive', () => {
     activeEditors.delete(socket.id);

@@ -218,6 +218,44 @@
         .event-action.off { color: #e57373; }
         .event-action.trigger { color: #ffb74d; }
         
+        /* Decision Log */
+        .decision-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            border-left: 3px solid #444;
+            gap: 8px;
+            font-size: 12px;
+        }
+        .decision-item.skip { border-left-color: #ff9800; background: #2a2515; }
+        .decision-item.error { border-left-color: #f44336; background: #2a1515; }
+        .decision-item.decision { border-left-color: #2196f3; background: #152a35; }
+        .decision-item.hsv { border-left-color: #9c27b0; background: #251530; }
+        .decision-time { color: #666; font-family: monospace; white-space: nowrap; }
+        .decision-category { 
+            font-weight: bold; 
+            font-size: 10px; 
+            padding: 2px 6px; 
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        .decision-category.skip { background: #ff9800; color: #000; }
+        .decision-category.error { background: #f44336; color: #fff; }
+        .decision-category.decision { background: #2196f3; color: #fff; }
+        .decision-category.hsv { background: #9c27b0; color: #fff; }
+        .decision-entity { color: #00d4ff; font-weight: 500; }
+        .decision-message { 
+            width: 100%; 
+            color: #aaa; 
+            font-size: 11px; 
+            margin-top: 4px;
+            word-break: break-all;
+        }
+        
         /* Timeline */
         .timeline-container { margin-top: 15px; }
         .timeline-device {
@@ -243,6 +281,88 @@
         .timeline-segment.on { background: #4caf50; }
         .timeline-segment.off { background: #333; }
         .timeline-segment.gap { background: repeating-linear-gradient(45deg, #444, #444 2px, #333 2px, #333 4px); }
+        .timeline-segment.clickable { cursor: pointer; transition: filter 0.15s; }
+        .timeline-segment.clickable:hover { filter: brightness(1.3); }
+        
+        /* Event Detail Popup */
+        .event-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2a2a4a;
+            border: 2px solid #00d4ff;
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 350px;
+            max-width: 500px;
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .event-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 999;
+        }
+        .event-popup-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00d4ff;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .event-popup-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+        .event-popup-close:hover { color: #fff; }
+        .event-popup-row {
+            display: flex;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .event-popup-label {
+            color: #888;
+            width: 100px;
+            flex-shrink: 0;
+        }
+        .event-popup-value {
+            color: #eee;
+            word-break: break-all;
+        }
+        .event-popup-value.on { color: #4caf50; font-weight: bold; }
+        .event-popup-value.off { color: #f44336; font-weight: bold; }
+        .event-popup-events {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+        }
+        .event-popup-event {
+            padding: 8px;
+            border-bottom: 1px solid #333;
+            font-size: 12px;
+        }
+        .event-popup-event:last-child { border-bottom: none; }
+        .event-popup-event-time { color: #888; margin-right: 10px; }
+        .event-popup-event-action { color: #eee; }
+        .event-popup-event-action.on { color: #4caf50; }
+        .event-popup-event-action.off { color: #f44336; }
+        
         .timeline-now {
             position: absolute;
             right: 0;
@@ -542,6 +662,30 @@
             </div>
         </div>
         
+        <!-- Decision Log (Skips/Errors) -->
+        <div class="panel full-width">
+            <div class="panel-title">
+                🚦 Decision Log
+                <span class="badge" id="decisionCount">0</span>
+                <div class="panel-actions">
+                    <button onclick="renderDecisionLog()">Refresh</button>
+                </div>
+            </div>
+            <div style="font-size: 11px; color: #666; margin-bottom: 10px;">
+                Shows why commands were skipped, errors, and decision logic
+            </div>
+            <div class="decision-filters" style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="showSkips" checked onchange="renderDecisionLog()"> Skips</label>
+                <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="showErrors" checked onchange="renderDecisionLog()"> Errors</label>
+                <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="showDecisions" checked onchange="renderDecisionLog()"> Decisions</label>
+                <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="showHsvOnly" onchange="renderDecisionLog()"> HSV Only</label>
+            </div>
+            <input type="text" class="filter-input" id="decisionFilter" placeholder="Filter by entity..." oninput="renderDecisionLog()">
+            <div class="decision-log" id="decisionLog" style="max-height: 300px; overflow-y: auto;">
+                <div class="no-data">Load events to see decisions</div>
+            </div>
+        </div>
+
         <!-- Lights -->
         <div class="panel full-width">
             <div class="panel-title">💡 Light States</div>
@@ -556,6 +700,7 @@
     <script>
         let data = { engine: {}, buffers: {}, lights: [] };
         let eventLogData = [];
+        let fullLogData = []; // All events including decisions/skips
         let graphData = null;
         let selectedHours = 1;
         let refreshInterval = null;
@@ -786,7 +931,11 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    eventLogData = (result.history || []).filter(event => {
+                    // Store full log for decision panel
+                    fullLogData = result.history || [];
+                    
+                    // Filter for on/off events only (for timeline and event log)
+                    eventLogData = fullLogData.filter(event => {
                         const action = (event.action || '').toLowerCase();
                         return action.includes('turn_on') || action.includes('turn_off') || 
                                action.includes('→ true') || action.includes('→ false') ||
@@ -794,6 +943,7 @@
                     });
                     renderEventLog();
                     renderTimeline();
+                    renderDecisionLog();
                     document.getElementById('eventCount').textContent = `${eventLogData.length} events`;
                 } else {
                     throw new Error(result.error || 'Failed to load events');
@@ -870,11 +1020,96 @@
             }
         }
         
+        function renderDecisionLog() {
+            const filter = document.getElementById('decisionFilter').value.toLowerCase();
+            const showSkips = document.getElementById('showSkips').checked;
+            const showErrors = document.getElementById('showErrors').checked;
+            const showDecisions = document.getElementById('showDecisions').checked;
+            const showHsvOnly = document.getElementById('showHsvOnly').checked;
+            
+            // Filter for decision/skip/error events
+            const decisionEvents = fullLogData.filter(event => {
+                const category = event.category || '';
+                const entity = (event.entity || '').toLowerCase();
+                const action = (event.action || '').toLowerCase();
+                
+                // Filter by entity text
+                if (filter && !entity.includes(filter) && !action.includes(filter)) {
+                    return false;
+                }
+                
+                // Filter by category checkboxes
+                if (category === 'HA-DEVICE-SKIP' && showSkips) return true;
+                if (category === 'HA-HSV-SKIP' && showSkips) return true;
+                if (category === 'HA-DEVICE-ERROR' && showErrors) return true;
+                if (category === 'HA-DECISION' && showDecisions) return true;
+                if ((category === 'HA-HSV-ONLY' || category === 'HA-HSV-CHANGE') && showHsvOnly) return true;
+                
+                return false;
+            });
+            
+            document.getElementById('decisionCount').textContent = `${decisionEvents.length}`;
+            
+            if (decisionEvents.length === 0) {
+                document.getElementById('decisionLog').innerHTML = '<div class="no-data">No decision/skip/error events found</div>';
+                return;
+            }
+            
+            // Show most recent first, limit to 100
+            const html = decisionEvents.slice().reverse().slice(0, 100).map(event => {
+                const time = new Date(event.time).toLocaleTimeString();
+                const entity = (event.entity || 'unknown').replace('light.', '').replace('switch.', '');
+                const category = event.category || '';
+                const action = event.action || '';
+                
+                let categoryIcon = '❓';
+                let categoryClass = '';
+                let categoryLabel = category;
+                
+                if (category === 'HA-DEVICE-SKIP' || category === 'HA-HSV-SKIP') {
+                    categoryIcon = '⏭️';
+                    categoryClass = 'skip';
+                    categoryLabel = 'SKIP';
+                } else if (category === 'HA-DEVICE-ERROR') {
+                    categoryIcon = '❌';
+                    categoryClass = 'error';
+                    categoryLabel = 'ERROR';
+                } else if (category === 'HA-DECISION') {
+                    categoryIcon = '🤔';
+                    categoryClass = 'decision';
+                    categoryLabel = 'DECISION';
+                } else if (category === 'HA-HSV-ONLY' || category === 'HA-HSV-CHANGE') {
+                    categoryIcon = '🎨';
+                    categoryClass = 'hsv';
+                    categoryLabel = 'HSV';
+                }
+                
+                return `
+                    <div class="decision-item ${categoryClass}">
+                        <span class="decision-time">${time}</span>
+                        <span class="decision-category ${categoryClass}">${categoryIcon} ${categoryLabel}</span>
+                        <span class="decision-entity">${entity}</span>
+                        <div class="decision-message">${action}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('decisionLog').innerHTML = html;
+        }
+        
+        // Global storage for segment data (for click handlers)
+        let timelineSegmentData = {};
+        let segmentIdCounter = 0;
+        
         function renderTimeline() {
             if (eventLogData.length === 0) {
                 document.getElementById('timelineContainer').innerHTML = '<div class="no-data">No events to show</div>';
                 return;
             }
+            
+            // Reset segment data storage
+            timelineSegmentData = {};
+            segmentIdCounter = 0;
             
             // Group events by device
             const deviceEvents = {};
@@ -892,28 +1127,41 @@
                 // Sort events by time
                 events.sort((a, b) => new Date(a.time) - new Date(b.time));
                 
-                // Build timeline segments
+                // Build timeline segments with event data
                 let segments = [];
                 let lastTime = windowStart;
-                let lastState = 'off'; // Assume off at start
+                let lastState = 'off';
+                let segmentEvents = []; // Events that caused this state
                 
                 events.forEach(e => {
                     const eventTime = new Date(e.time).getTime();
                     if (eventTime < windowStart) return;
                     
-                    // Gap before this event
+                    // Gap before this event - save previous segment
                     if (eventTime > lastTime) {
                         const width = ((eventTime - lastTime) / windowMs) * 100;
                         if (width > 0.5) {
-                            segments.push({ state: lastState, width });
+                            segments.push({ 
+                                state: lastState, 
+                                width,
+                                startTime: lastTime,
+                                endTime: eventTime,
+                                events: [...segmentEvents],
+                                device
+                            });
                         }
                     }
                     
-                    // Update state
+                    // Update state based on this event
                     if (e.action?.includes('turn_on') || e.action?.includes('→ true')) {
                         lastState = 'on';
+                        segmentEvents = [e]; // Start new segment's events
                     } else if (e.action?.includes('turn_off') || e.action?.includes('→ false')) {
                         lastState = 'off';
+                        segmentEvents = [e];
+                    } else {
+                        // Other events (like HSV changes) - add to current segment
+                        segmentEvents.push(e);
                     }
                     lastTime = eventTime;
                 });
@@ -921,12 +1169,31 @@
                 // Final segment to now
                 if (lastTime < now) {
                     const width = ((now - lastTime) / windowMs) * 100;
-                    segments.push({ state: lastState, width });
+                    segments.push({ 
+                        state: lastState, 
+                        width,
+                        startTime: lastTime,
+                        endTime: now,
+                        events: [...segmentEvents],
+                        device,
+                        isCurrent: true
+                    });
                 }
                 
-                const segmentsHtml = segments.map(s => 
-                    `<div class="timeline-segment ${s.state}" style="width: ${s.width}%" title="${s.state.toUpperCase()}"></div>`
-                ).join('');
+                const segmentsHtml = segments.map(s => {
+                    const segId = `seg_${segmentIdCounter++}`;
+                    timelineSegmentData[segId] = s;
+                    
+                    const startStr = new Date(s.startTime).toLocaleTimeString();
+                    const endStr = s.isCurrent ? 'now' : new Date(s.endTime).toLocaleTimeString();
+                    const duration = formatDuration(s.endTime - s.startTime);
+                    const tooltip = `${s.state.toUpperCase()} | ${startStr} - ${endStr} (${duration}) | Click for details`;
+                    
+                    return `<div class="timeline-segment ${s.state} clickable" 
+                        style="width: ${s.width}%" 
+                        title="${tooltip}"
+                        onclick="showSegmentDetails('${segId}')"></div>`;
+                }).join('');
                 
                 return `
                     <div class="timeline-device">
@@ -941,6 +1208,95 @@
             
             document.getElementById('timelineContainer').innerHTML = html;
         }
+        
+        function formatDuration(ms) {
+            const seconds = Math.floor(ms / 1000);
+            if (seconds < 60) return `${seconds}s`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+            const hours = Math.floor(minutes / 60);
+            return `${hours}h ${minutes % 60}m`;
+        }
+        
+        function showSegmentDetails(segId) {
+            const seg = timelineSegmentData[segId];
+            if (!seg) return;
+            
+            const startStr = new Date(seg.startTime).toLocaleTimeString();
+            const endStr = seg.isCurrent ? 'now' : new Date(seg.endTime).toLocaleTimeString();
+            const duration = formatDuration(seg.endTime - seg.startTime);
+            const stateClass = seg.state === 'on' ? 'on' : 'off';
+            
+            // Build events list HTML
+            let eventsHtml = '';
+            if (seg.events && seg.events.length > 0) {
+                eventsHtml = seg.events.map(e => {
+                    const time = new Date(e.time).toLocaleTimeString();
+                    const action = e.action || 'Unknown';
+                    const isOn = action.includes('turn_on') || action.includes('→ true');
+                    const isOff = action.includes('turn_off') || action.includes('→ false');
+                    const actionClass = isOn ? 'on' : (isOff ? 'off' : '');
+                    const category = e.category || '';
+                    return `
+                        <div class="event-popup-event">
+                            <span class="event-popup-event-time">${time}</span>
+                            <span class="event-popup-event-action ${actionClass}">${action}</span>
+                            ${category ? `<span style="color:#666; margin-left:8px;">[${category}]</span>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                eventsHtml = '<div class="event-popup-event" style="color:#666;">No specific event triggered this state</div>';
+            }
+            
+            const popupHtml = `
+                <div class="event-popup-overlay" onclick="closeSegmentDetails()"></div>
+                <div class="event-popup">
+                    <div class="event-popup-title">
+                        <span>📊 ${seg.device}</span>
+                        <button class="event-popup-close" onclick="closeSegmentDetails()">✕</button>
+                    </div>
+                    <div class="event-popup-row">
+                        <span class="event-popup-label">State:</span>
+                        <span class="event-popup-value ${stateClass}">${seg.state.toUpperCase()}</span>
+                    </div>
+                    <div class="event-popup-row">
+                        <span class="event-popup-label">Duration:</span>
+                        <span class="event-popup-value">${duration}</span>
+                    </div>
+                    <div class="event-popup-row">
+                        <span class="event-popup-label">Start:</span>
+                        <span class="event-popup-value">${new Date(seg.startTime).toLocaleString()}</span>
+                    </div>
+                    <div class="event-popup-row">
+                        <span class="event-popup-label">End:</span>
+                        <span class="event-popup-value">${seg.isCurrent ? 'Still active (now)' : new Date(seg.endTime).toLocaleString()}</span>
+                    </div>
+                    <div style="margin-top: 15px; color: #888; font-size: 12px;">
+                        Events in this period (${seg.events?.length || 0}):
+                    </div>
+                    <div class="event-popup-events">
+                        ${eventsHtml}
+                    </div>
+                </div>
+            `;
+            
+            // Add popup to body
+            const popupContainer = document.createElement('div');
+            popupContainer.id = 'segmentPopup';
+            popupContainer.innerHTML = popupHtml;
+            document.body.appendChild(popupContainer);
+        }
+        
+        function closeSegmentDetails() {
+            const popup = document.getElementById('segmentPopup');
+            if (popup) popup.remove();
+        }
+        
+        // Close popup on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeSegmentDetails();
+        });
         
         async function runComparison() {
             const url = document.getElementById('backendUrl').value.trim();
