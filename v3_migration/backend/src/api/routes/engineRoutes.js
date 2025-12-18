@@ -611,4 +611,198 @@ router.get('/timers', (req, res) => {
   });
 });
 
+/**
+ * GET /api/engine/logs
+ * Retrieve engine debug logs for analysis
+ * Query params:
+ *   - lines: Number of lines to return (default: 500, max: 10000)
+ *   - filter: Category filter (e.g., "DEVICE-CMD", "TRIGGER", "BUFFER-CHANGE")
+ *   - since: ISO timestamp to filter logs after
+ */
+router.get('/logs', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  // Log file is in crashes/ folder
+  const LOG_DIR = process.env.GRAPH_SAVE_PATH ? 
+    path.join(process.env.GRAPH_SAVE_PATH, '..') :  // Docker: /data -> /data/../ = /
+    path.join(__dirname, '..', '..', '..', '..', 'crashes');
+  
+  // Also check the standard location inside backend
+  const LOG_FILE_PRIMARY = path.join(__dirname, '..', '..', '..', 'crashes', 'engine_debug.log');
+  const LOG_FILE_DOCKER = '/data/engine_debug.log';
+  
+  // Try multiple locations
+  let LOG_FILE = null;
+  if (fs.existsSync(LOG_FILE_PRIMARY)) {
+    LOG_FILE = LOG_FILE_PRIMARY;
+  } else if (fs.existsSync(LOG_FILE_DOCKER)) {
+    LOG_FILE = LOG_FILE_DOCKER;
+  } else if (fs.existsSync(path.join(LOG_DIR, 'engine_debug.log'))) {
+    LOG_FILE = path.join(LOG_DIR, 'engine_debug.log');
+  }
+  
+  if (!LOG_FILE || !fs.existsSync(LOG_FILE)) {
+    return res.json({
+      success: true,
+      logs: [],
+      message: 'No log file found. Engine may not have started yet.',
+      searchedPaths: [LOG_FILE_PRIMARY, LOG_FILE_DOCKER]
+    });
+  }
+  
+  try {
+    const maxLines = Math.min(parseInt(req.query.lines) || 500, 10000);
+    const filter = req.query.filter;
+    const since = req.query.since ? new Date(req.query.since) : null;
+    
+    // Read file and get last N lines
+    const content = fs.readFileSync(LOG_FILE, 'utf-8');
+    let lines = content.split('\n').filter(line => line.trim());
+    
+    // Apply category filter if specified
+    if (filter) {
+      const filterRegex = new RegExp(`\\[${filter}\\]`, 'i');
+      lines = lines.filter(line => filterRegex.test(line));
+    }
+    
+    // Apply timestamp filter if specified
+    if (since) {
+      lines = lines.filter(line => {
+        const match = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\]/);
+        if (match) {
+          const lineDate = new Date(match[1]);
+          return lineDate >= since;
+        }
+        return true; // Keep non-timestamped lines (headers, etc.)
+      });
+    }
+    
+    // Take last N lines
+    const result = lines.slice(-maxLines);
+    
+    // Parse into structured format for easier analysis
+    const parsed = result.map(line => {
+      const match = line.match(/^\[([^\]]+)\]\s*\[([^\]]+)\]\s*(.+?)(?:\s*\|\s*(.+))?$/);
+      if (match) {
+        return {
+          timestamp: match[1],
+          category: match[2],
+          message: match[3],
+          data: match[4] ? tryParseJson(match[4]) : null
+        };
+      }
+      return { raw: line };
+    });
+    
+    res.json({
+      success: true,
+      logFile: LOG_FILE,
+      totalLines: lines.length,
+      returnedLines: result.length,
+      filter: filter || null,
+      since: since ? since.toISOString() : null,
+      logs: parsed
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/engine/logs/device-history
+ * Get simplified device command history for debugging
+ * Query params:
+ *   - entityId: Filter by specific entity (e.g., "light.bar_lamp")
+ *   - hours: How many hours back to look (default: 24)
+ */
+router.get('/logs/device-history', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  const LOG_FILE_PRIMARY = path.join(__dirname, '..', '..', '..', 'crashes', 'engine_debug.log');
+  const LOG_FILE_DOCKER = '/data/engine_debug.log';
+  
+  let LOG_FILE = fs.existsSync(LOG_FILE_PRIMARY) ? LOG_FILE_PRIMARY : 
+                 fs.existsSync(LOG_FILE_DOCKER) ? LOG_FILE_DOCKER : null;
+  
+  if (!LOG_FILE) {
+    return res.json({
+      success: true,
+      history: [],
+      message: 'No log file found'
+    });
+  }
+  
+  try {
+    const entityFilter = req.query.entityId;
+    const hoursBack = parseInt(req.query.hours) || 24;
+    const cutoff = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+    
+    const content = fs.readFileSync(LOG_FILE, 'utf-8');
+    const lines = content.split('\n');
+    
+    const history = [];
+    
+    for (const line of lines) {
+      // Match device command lines
+      if (line.includes('[DEVICE-CMD]') || line.includes('[HA-DEVICE-SUCCESS]') || 
+          line.includes('[TRIGGER]') || line.includes('[HA-DECISION]')) {
+        const timestampMatch = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\]/);
+        if (!timestampMatch) continue;
+        
+        const timestamp = new Date(timestampMatch[1]);
+        if (timestamp < cutoff) continue;
+        
+        // Extract entity ID if present
+        const entityMatch = line.match(/((?:light|switch|sensor|climate|cover|fan|media_player)\.[a-z0-9_]+)/i);
+        const entityId = entityMatch ? entityMatch[1] : null;
+        
+        if (entityFilter && entityId && !entityId.includes(entityFilter)) continue;
+        
+        // Extract category
+        const categoryMatch = line.match(/\[([A-Z-]+)\]/g);
+        const category = categoryMatch ? categoryMatch[1]?.replace(/[\[\]]/g, '') : 'UNKNOWN';
+        
+        // Extract action/message
+        const messageMatch = line.match(/\]\s*(.+?)(?:\s*\||\s*$)/);
+        const message = messageMatch ? messageMatch[1].trim() : line;
+        
+        history.push({
+          time: timestamp.toISOString(),
+          timeLocal: timestamp.toLocaleString(),
+          category,
+          entity: entityId,
+          action: message
+        });
+      }
+    }
+    
+    res.json({
+      success: true,
+      entityFilter: entityFilter || 'all',
+      hoursBack,
+      eventCount: history.length,
+      history: history.slice(-1000) // Last 1000 events max
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Helper to try parsing JSON
+function tryParseJson(str) {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return str;
+  }
+}
+
 module.exports = router;

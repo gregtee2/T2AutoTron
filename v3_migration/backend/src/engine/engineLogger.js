@@ -10,14 +10,23 @@
  *   2 = VERBOSE - All buffer activity, every tick (huge logs!)
  * 
  * Set via ENGINE_LOG_LEVEL env var or engine.setLogLevel()
+ * 
+ * LOG LOCATION:
+ *   - HA Add-on: /data/engine_debug.log (persists across restarts)
+ *   - Local dev: crashes/engine_debug.log
+ * 
+ * API ENDPOINTS:
+ *   - GET /api/engine/logs - Retrieve parsed log entries
+ *   - GET /api/engine/logs/device-history - Device command history
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// Log to crashes folder alongside other logs
-// Path: backend/src/engine -> backend/src -> backend -> crashes (which is in v3_migration/)
-const LOG_DIR = path.join(__dirname, '..', '..', '..', 'crashes');
+// Determine log directory based on environment
+// In HA add-on, /data is a persistent volume that survives container restarts
+const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
+const LOG_DIR = IS_HA_ADDON ? '/data' : path.join(__dirname, '..', '..', '..', 'crashes');
 const LOG_FILE = path.join(LOG_DIR, 'engine_debug.log');
 const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB max
 
