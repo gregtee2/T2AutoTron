@@ -329,57 +329,10 @@
         .anomaly-type.info { color: #2196f3; }
         .anomaly-details { color: #888; }
         
-        /* Node Map */
-        .node-map {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-        .node-chip {
-            padding: 4px 10px;
-            background: #1a1a2e;
-            border-radius: 4px;
-            font-size: 10px;
-            border: 1px solid #333;
-        }
-        .node-chip.active { border-color: #4caf50; background: #1b5e20; }
-        .node-chip.error { border-color: #f44336; background: #4a1010; }
-        .node-chip.ha { border-color: #00d4ff; background: rgba(0, 212, 255, 0.1); }
-        .node-chip.timer { border-color: #ff9800; background: rgba(255, 152, 0, 0.1); }
-        .node-chip.logic { border-color: #9c27b0; background: rgba(156, 39, 176, 0.1); }
-        .node-chip.color { border-color: #e91e63; background: rgba(233, 30, 99, 0.1); }
-        .node-chip.utility { border-color: #607d8b; background: rgba(96, 125, 139, 0.1); }
-        
-        .node-category {
-            background: #1a1a2e;
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-        .node-category-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            font-size: 12px;
-            color: #888;
-        }
-        .node-category-count {
-            background: #333;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 11px;
-        }
-        .node-category-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-        }
-        .node-more {
-            font-size: 10px;
-            color: #666;
-            padding: 4px 8px;
-        }
+        /* Future enhancement: Node Map with live state indicators
+           - Show active/error/output values per node
+           - Requires backend API changes to expose node state
+        */
         
         .no-data { color: #666; text-align: center; padding: 20px; font-style: italic; }
         .last-update { font-size: 11px; color: #444; margin-top: 10px; text-align: right; }
@@ -554,17 +507,6 @@
             <input type="text" class="filter-input" id="bufferFilter" placeholder="Filter..." oninput="renderBuffers()">
             <div class="buffer-list" id="bufferList">
                 <div class="no-data">Connect to view buffers</div>
-            </div>
-        </div>
-        
-        <!-- Node Map -->
-        <div class="panel">
-            <div class="panel-title">
-                🗺️ Node Map
-                <span class="badge info" id="nodeMapBadge">0 nodes</span>
-            </div>
-            <div class="node-map" id="nodeMap">
-                <div class="no-data">Load graph to see nodes</div>
             </div>
         </div>
         
@@ -919,7 +861,6 @@
                     const graphDataObj = graphResult.graph || graphResult;
                     graphNodes = graphDataObj.nodes || [];
                     graphData = graphDataObj;
-                    renderNodeMap(graphNodes);
                 }
                 
                 const eventsResult = await eventsResponse.json();
@@ -1089,61 +1030,6 @@
                 showToast(`🐛 ${critical} bug(s) detected!`, 'error');
             }
             lastBugCount = critical;
-        }
-        
-        function renderNodeMap(nodes) {
-            if (!nodes || nodes.length === 0) {
-                document.getElementById('nodeMap').innerHTML = '<div class="no-data">No nodes in graph</div>';
-                document.getElementById('nodeMapBadge').textContent = '0 nodes';
-                return;
-            }
-            
-            document.getElementById('nodeMapBadge').textContent = `${nodes.length} nodes`;
-            
-            // Group nodes by category
-            const categories = {
-                'HA Devices': { icon: '🏠', nodes: [], class: 'ha' },
-                'Timers': { icon: '⏱️', nodes: [], class: 'timer' },
-                'Logic': { icon: '🔀', nodes: [], class: 'logic' },
-                'Color': { icon: '🎨', nodes: [], class: 'color' },
-                'Utility': { icon: '🔧', nodes: [], class: 'utility' }
-            };
-            
-            nodes.forEach(node => {
-                const label = node.label || node.data?.label || 'Unknown';
-                const customName = node.data?.properties?.customName || node.data?.properties?.customTitle;
-                const displayName = customName || label;
-                
-                if (label.includes('HA') || label.includes('Home Assistant')) {
-                    categories['HA Devices'].nodes.push(displayName);
-                } else if (label.includes('Time') || label.includes('Delay') || label.includes('Timer') || label.includes('Sunrise') || label.includes('Scheduler')) {
-                    categories['Timers'].nodes.push(displayName);
-                } else if (label.includes('AND') || label.includes('OR') || label.includes('NOT') || label.includes('Compare') || label.includes('Switch') || label.includes('Latch')) {
-                    categories['Logic'].nodes.push(displayName);
-                } else if (label.includes('Color') || label.includes('HSV') || label.includes('Timeline') || label.includes('Spline')) {
-                    categories['Color'].nodes.push(displayName);
-                } else {
-                    categories['Utility'].nodes.push(displayName);
-                }
-            });
-            
-            // Render as summary cards
-            const html = Object.entries(categories)
-                .filter(([_, cat]) => cat.nodes.length > 0)
-                .map(([name, cat]) => `
-                    <div class="node-category">
-                        <div class="node-category-header">
-                            <span>${cat.icon} ${name}</span>
-                            <span class="node-category-count">${cat.nodes.length}</span>
-                        </div>
-                        <div class="node-category-list">
-                            ${cat.nodes.slice(0, 5).map(n => `<span class="node-chip ${cat.class}" title="${n}">${n.length > 15 ? n.slice(0, 13) + '...' : n}</span>`).join('')}
-                            ${cat.nodes.length > 5 ? `<span class="node-more">+${cat.nodes.length - 5} more</span>` : ''}
-                        </div>
-                    </div>
-                `).join('');
-            
-            document.getElementById('nodeMap').innerHTML = html;
         }
         
         function renderComparison(comparison, triggerBuffers) {
