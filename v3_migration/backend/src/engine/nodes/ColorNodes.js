@@ -229,6 +229,8 @@ class SplineTimelineColorNode {
             rangeMode: 'time',           // 'numerical', 'time', 'timer'
             startTime: '06:00',
             endTime: '22:00',
+            startValue: 0,               // Numerical mode start
+            endValue: 100,               // Numerical mode end
             colorMode: 'rainbow',        // 'rainbow' or 'custom'
             colorStops: [],              // Array of { position, hue, rgb }
             points: [                    // Brightness curve
@@ -273,9 +275,17 @@ class SplineTimelineColorNode {
         
         // Calculate position based on mode
         if (this.properties.rangeMode === 'numerical') {
-            // Numerical mode: position = input value (0-1)
-            if (inputValue !== null) {
-                position = clamp(Number(inputValue) || 0, 0, 1);
+            // Numerical mode: map input value from startValue-endValue range to 0-1
+            if (inputValue !== null && inputValue !== undefined) {
+                const startVal = this.properties.startValue ?? 0;
+                const endVal = this.properties.endValue ?? 100;
+                const range = endVal - startVal;
+                if (range !== 0) {
+                    const clamped = Math.max(startVal, Math.min(endVal, Number(inputValue)));
+                    position = (clamped - startVal) / range;
+                } else {
+                    position = 0;
+                }
                 this.properties.isInRange = true;
             } else {
                 position = 0;
