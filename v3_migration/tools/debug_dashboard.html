@@ -930,6 +930,11 @@
             } catch (err) {
                 document.getElementById('status').className = 'status error';
                 document.getElementById('status').textContent = `✗ ${err.message}`;
+                
+                // Clear engine display to show disconnected state
+                document.getElementById('engineRunning').textContent = '⚪ DISCONNECTED';
+                document.getElementById('responseTime').textContent = '--';
+                document.getElementById('responseTime').className = 'response-time';
             }
         }
         

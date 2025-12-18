@@ -115,6 +115,16 @@ class HomeAssistantManager {
               // Invalidate cache on state change
               const cacheKey = `ha_${entity.entity_id}`;
               this.stateCache.delete(cacheKey);
+              
+              // Also invalidate device list cache so getDevices() returns fresh data
+              this.deviceCache = null;
+              
+              // Update the devices array with new state/attributes
+              const deviceIndex = this.devices.findIndex(d => d.entity_id === entity.entity_id);
+              if (deviceIndex >= 0) {
+                this.devices[deviceIndex].state = entity.state;
+                this.devices[deviceIndex].attributes = entity.attributes;
+              }
 
               const state = {
                 id: cacheKey,
