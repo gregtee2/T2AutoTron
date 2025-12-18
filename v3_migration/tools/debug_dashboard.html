@@ -344,9 +344,42 @@
         }
         .node-chip.active { border-color: #4caf50; background: #1b5e20; }
         .node-chip.error { border-color: #f44336; background: #4a1010; }
-        .node-chip.ha { border-color: #00d4ff; }
-        .node-chip.timer { border-color: #ff9800; }
-        .node-chip.logic { border-color: #9c27b0; }
+        .node-chip.ha { border-color: #00d4ff; background: rgba(0, 212, 255, 0.1); }
+        .node-chip.timer { border-color: #ff9800; background: rgba(255, 152, 0, 0.1); }
+        .node-chip.logic { border-color: #9c27b0; background: rgba(156, 39, 176, 0.1); }
+        .node-chip.color { border-color: #e91e63; background: rgba(233, 30, 99, 0.1); }
+        .node-chip.utility { border-color: #607d8b; background: rgba(96, 125, 139, 0.1); }
+        
+        .node-category {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .node-category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+        .node-category-count {
+            background: #333;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+        .node-category-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .node-more {
+            font-size: 10px;
+            color: #666;
+            padding: 4px 8px;
+        }
         
         .no-data { color: #666; text-align: center; padding: 20px; font-style: italic; }
         .last-update { font-size: 11px; color: #444; margin-top: 10px; text-align: right; }
@@ -729,17 +762,37 @@
         
         function renderEventLog() {
             const filter = document.getElementById('eventFilter').value.toLowerCase();
-            const events = eventLogData.filter(e => 
+            let events = eventLogData.filter(e => 
                 !filter || (e.entity || '').toLowerCase().includes(filter) || 
                 (e.action || '').toLowerCase().includes(filter)
             );
             
-            if (events.length === 0) {
+            // Deduplicate: Remove consecutive identical events for same entity
+            const dedupedEvents = [];
+            events.forEach(event => {
+                const last = dedupedEvents[dedupedEvents.length - 1];
+                const entity = event.entity || '';
+                const isOn = event.action?.includes('turn_on') || event.action?.includes('→ true');
+                const isOff = event.action?.includes('turn_off') || event.action?.includes('→ false');
+                const lastIsOn = last?.action?.includes('turn_on') || last?.action?.includes('→ true');
+                const lastIsOff = last?.action?.includes('turn_off') || last?.action?.includes('→ false');
+                
+                // Skip if same entity AND same on/off state as last event
+                if (last && last.entity === entity) {
+                    if ((isOn && lastIsOn) || (isOff && lastIsOff)) {
+                        return; // Skip duplicate
+                    }
+                }
+                dedupedEvents.push(event);
+            });
+            
+            if (dedupedEvents.length === 0) {
                 document.getElementById('eventLog').innerHTML = '<div class="no-data">No on/off events found</div>';
                 return;
             }
             
-            const html = events.slice().reverse().map(event => {
+            // Show most recent first, limit to 100
+            const html = dedupedEvents.slice().reverse().slice(0, 100).map(event => {
                 const time = new Date(event.time).toLocaleTimeString();
                 const entity = (event.entity || 'unknown').replace('light.', '').replace('switch.', '');
                 const action = event.action || '';
@@ -767,6 +820,11 @@
             }).join('');
             
             document.getElementById('eventLog').innerHTML = html;
+            
+            // Update count to show deduped vs original
+            if (dedupedEvents.length < eventLogData.length) {
+                document.getElementById('eventCount').textContent = `${dedupedEvents.length} events (${eventLogData.length - dedupedEvents.length} duplicates hidden)`;
+            }
         }
         
         function renderTimeline() {
@@ -1042,21 +1100,48 @@
             
             document.getElementById('nodeMapBadge').textContent = `${nodes.length} nodes`;
             
-            const html = nodes.map(node => {
+            // Group nodes by category
+            const categories = {
+                'HA Devices': { icon: '🏠', nodes: [], class: 'ha' },
+                'Timers': { icon: '⏱️', nodes: [], class: 'timer' },
+                'Logic': { icon: '🔀', nodes: [], class: 'logic' },
+                'Color': { icon: '🎨', nodes: [], class: 'color' },
+                'Utility': { icon: '🔧', nodes: [], class: 'utility' }
+            };
+            
+            nodes.forEach(node => {
                 const label = node.label || node.data?.label || 'Unknown';
-                let chipClass = '';
-                
-                if (label.includes('HA') || label.includes('Home Assistant')) chipClass = 'ha';
-                else if (label.includes('Time') || label.includes('Delay') || label.includes('Timer')) chipClass = 'timer';
-                else if (label.includes('AND') || label.includes('OR') || label.includes('NOT') || label.includes('Logic')) chipClass = 'logic';
-                
-                // Truncate long names
-                const shortLabel = label.length > 20 ? label.slice(0, 18) + '...' : label;
                 const customName = node.data?.properties?.customName || node.data?.properties?.customTitle;
-                const displayName = customName || shortLabel;
+                const displayName = customName || label;
                 
-                return `<div class="node-chip ${chipClass}" title="${label}">${displayName}</div>`;
-            }).join('');
+                if (label.includes('HA') || label.includes('Home Assistant')) {
+                    categories['HA Devices'].nodes.push(displayName);
+                } else if (label.includes('Time') || label.includes('Delay') || label.includes('Timer') || label.includes('Sunrise') || label.includes('Scheduler')) {
+                    categories['Timers'].nodes.push(displayName);
+                } else if (label.includes('AND') || label.includes('OR') || label.includes('NOT') || label.includes('Compare') || label.includes('Switch') || label.includes('Latch')) {
+                    categories['Logic'].nodes.push(displayName);
+                } else if (label.includes('Color') || label.includes('HSV') || label.includes('Timeline') || label.includes('Spline')) {
+                    categories['Color'].nodes.push(displayName);
+                } else {
+                    categories['Utility'].nodes.push(displayName);
+                }
+            });
+            
+            // Render as summary cards
+            const html = Object.entries(categories)
+                .filter(([_, cat]) => cat.nodes.length > 0)
+                .map(([name, cat]) => `
+                    <div class="node-category">
+                        <div class="node-category-header">
+                            <span>${cat.icon} ${name}</span>
+                            <span class="node-category-count">${cat.nodes.length}</span>
+                        </div>
+                        <div class="node-category-list">
+                            ${cat.nodes.slice(0, 5).map(n => `<span class="node-chip ${cat.class}" title="${n}">${n.length > 15 ? n.slice(0, 13) + '...' : n}</span>`).join('')}
+                            ${cat.nodes.length > 5 ? `<span class="node-more">+${cat.nodes.length - 5} more</span>` : ''}
+                        </div>
+                    </div>
+                `).join('');
             
             document.getElementById('nodeMap').innerHTML = html;
         }
