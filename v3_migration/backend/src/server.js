@@ -913,12 +913,14 @@ app.get('/api/debug/all', async (req, res) => {
       }
     } catch (e) {}
     
-    // Get lights from HA
+    // Get lights AND switches from HA (switches can be controlled by HAGenericDevice too)
     let lights = [];
+    let switches = [];
     try {
       const haManager = require('./devices/managers/homeAssistantManager');
       const devices = await haManager.getDevices();
       lights = devices.filter(d => d.id && d.id.startsWith('ha_light.'));
+      switches = devices.filter(d => d.id && d.id.startsWith('ha_switch.'));
     } catch (e) {}
     
     res.json({
@@ -926,7 +928,8 @@ app.get('/api/debug/all', async (req, res) => {
       timestamp: new Date().toISOString(),
       engine: engineStatus,
       buffers,
-      lights
+      lights,
+      switches  // Include switches for dashboard state comparison
     });
   } catch (err) {
     res.json({ success: false, error: err.message });

@@ -1361,11 +1361,15 @@
                         const lastOnEvent = onOffEvents.filter(e => e.action?.includes('turn_on')).slice(-1)[0];
                         const lastOffEvent = onOffEvents.filter(e => e.action?.includes('turn_off')).slice(-1)[0];
                         
-                        // Get actual current state from HA
-                        const light = (buffersResult.lights || []).find(l => 
-                            l.id === `ha_${device.entityId}` || l.id === device.entityId
+                        // Get actual current state from HA - check BOTH lights AND switches
+                        const allDevices = [
+                            ...(buffersResult.lights || []),
+                            ...(buffersResult.switches || [])
+                        ];
+                        const haDevice = allDevices.find(d => 
+                            d.id === `ha_${device.entityId}` || d.id === device.entityId
                         );
-                        const actualState = light?.state?.on ? 'on' : 'off';
+                        const actualState = haDevice?.state?.on ? 'on' : 'off';
                         
                         // Engine's expected state
                         const expectedState = device.expectedState || 'unknown';
@@ -1420,8 +1424,13 @@
                         const lastOnEvent = onOffEvents.filter(e => e.action?.includes('turn_on')).slice(-1)[0];
                         const lastOffEvent = onOffEvents.filter(e => e.action?.includes('turn_off')).slice(-1)[0];
                         
-                        const light = (buffersResult.lights || []).find(l => l.id === node.deviceId);
-                        const actualState = light?.state?.on ? 'on' : 'off';
+                        // Check both lights AND switches
+                        const allDevices = [
+                            ...(buffersResult.lights || []),
+                            ...(buffersResult.switches || [])
+                        ];
+                        const haDevice = allDevices.find(d => d.id === node.deviceId);
+                        const actualState = haDevice?.state?.on ? 'on' : 'off';
                         
                         return {
                             ...node,
