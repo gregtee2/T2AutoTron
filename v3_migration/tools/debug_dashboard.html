@@ -523,7 +523,10 @@
                 let graphNodes = [];
                 if (graphResponse.ok) {
                     const graphResult = await graphResponse.json();
-                    graphNodes = graphResult.nodes || [];
+                    // Graph data is inside .graph property from /api/engine/last-active
+                    const graphData = graphResult.graph || graphResult;
+                    graphNodes = graphData.nodes || [];
+                    console.log('Loaded graph with', graphNodes.length, 'nodes');
                 }
                 
                 const eventsResult = await eventsResponse.json();
@@ -544,12 +547,14 @@
                 graphNodes.forEach(node => {
                     const data = node.data || {};
                     const props = data.properties || {};
+                    // Check both node.label and data.label for compatibility
+                    const nodeLabel = node.label || data.label;
                     
-                    if (data.label === 'HA Generic Device') {
+                    if (nodeLabel === 'HA Generic Device') {
                         (props.selectedDeviceIds || []).forEach((deviceId, i) => {
                             deviceNodes.push({
                                 nodeId: node.id,
-                                nodeTitle: props.customTitle || data.label,
+                                nodeTitle: props.customTitle || nodeLabel,
                                 deviceId: deviceId,
                                 deviceName: (props.selectedDeviceNames || [])[i] || deviceId,
                                 triggerMode: props.triggerMode || 'Follow'
@@ -557,6 +562,8 @@
                         });
                     }
                 });
+                
+                console.log('Found', deviceNodes.length, 'HA devices in graph');
                 
                 // Find events for each device
                 const events = eventsResult.history || [];
