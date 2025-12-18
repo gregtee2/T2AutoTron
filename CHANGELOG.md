@@ -5,6 +5,16 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.77] - 2025-12-18
+
+### Fixed
+- **Device Timeline Empty**: Fixed `/api/engine/logs/device-history` endpoint not finding events. The endpoint was looking for old category names (`DEVICE-CMD`, `TRIGGER`) that don't exist in current logs. Now searches for actual log categories: `HA-HSV-CHANGE`, `HA-DEVICE-SKIP`, `HA-DEVICE-SUCCESS`, `HA-DEVICE-ERROR`, etc.
+
+## [2.1.76] - 2025-12-18
+
+### Fixed
+- **Update Button False Positive in Add-on**: The "Check for Updates" button in the HA add-on always showed "Updates available" even when on the latest version. Now correctly checks `data.hasUpdate` flag and displays appropriate message.
+
 ## [2.1.75] - 2025-12-18
 
 ### Fixed

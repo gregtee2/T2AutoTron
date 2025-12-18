@@ -853,38 +853,50 @@ router.get('/logs/device-history', (req, res) => {
     
     const history = [];
     
+    // Categories that indicate device activity (check actual log output to verify)
+    const deviceCategories = [
+      'DEVICE-CMD',         // logDeviceCommand() calls
+      'HA-DEVICE-SUCCESS',  // Successful HA API calls
+      'HA-DEVICE-ERROR',    // Failed HA API calls  
+      'HA-DEVICE-SKIP',     // Skipped (frontend active)
+      'HA-HSV-CHANGE',      // HSV color changes sent
+      'HA-HSV-ONLY',        // HSV-only commands
+      'TRIGGER',            // Trigger events
+      'HA-DECISION'         // Decision logging
+    ];
+    
     for (const line of lines) {
-      // Match device command lines
-      if (line.includes('[DEVICE-CMD]') || line.includes('[HA-DEVICE-SUCCESS]') || 
-          line.includes('[TRIGGER]') || line.includes('[HA-DECISION]')) {
-        const timestampMatch = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\]/);
-        if (!timestampMatch) continue;
-        
-        const timestamp = new Date(timestampMatch[1]);
-        if (timestamp < cutoff) continue;
-        
-        // Extract entity ID if present
-        const entityMatch = line.match(/((?:light|switch|sensor|climate|cover|fan|media_player)\.[a-z0-9_]+)/i);
-        const entityId = entityMatch ? entityMatch[1] : null;
-        
-        if (entityFilter && entityId && !entityId.includes(entityFilter)) continue;
-        
-        // Extract category
-        const categoryMatch = line.match(/\[([A-Z-]+)\]/g);
-        const category = categoryMatch ? categoryMatch[1]?.replace(/[\[\]]/g, '') : 'UNKNOWN';
-        
-        // Extract action/message
-        const messageMatch = line.match(/\]\s*(.+?)(?:\s*\||\s*$)/);
-        const message = messageMatch ? messageMatch[1].trim() : line;
-        
-        history.push({
-          time: timestamp.toISOString(),
-          timeLocal: timestamp.toLocaleString(),
-          category,
-          entity: entityId,
-          action: message
-        });
-      }
+      // Check if line contains any device-related category
+      const hasDeviceCategory = deviceCategories.some(cat => line.includes(`[${cat}]`));
+      if (!hasDeviceCategory) continue;
+      
+      const timestampMatch = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\]/);
+      if (!timestampMatch) continue;
+      
+      const timestamp = new Date(timestampMatch[1]);
+      if (timestamp < cutoff) continue;
+      
+      // Extract entity ID if present (in message or data)
+      const entityMatch = line.match(/((?:light|switch|sensor|climate|cover|fan|media_player)\.[a-z0-9_]+)/i);
+      const entityId = entityMatch ? entityMatch[1] : null;
+      
+      if (entityFilter && entityId && !entityId.includes(entityFilter)) continue;
+      
+      // Extract category - match the second [...] block (first is timestamp)
+      const categoryMatch = line.match(/^\[[^\]]+\]\s*\[([A-Z0-9-]+)\]/);
+      const category = categoryMatch ? categoryMatch[1] : 'UNKNOWN';
+      
+      // Extract action/message - everything after the second bracket up to pipe or end
+      const messageMatch = line.match(/^\[[^\]]+\]\s*\[[^\]]+\]\s*(.+?)(?:\s*\||\s*$)/);
+      const message = messageMatch ? messageMatch[1].trim() : line;
+      
+      history.push({
+        time: timestamp.toISOString(),
+        timeLocal: timestamp.toLocaleString(),
+        category,
+        entity: entityId,
+        action: message
+      });
     }
     
     res.json({
