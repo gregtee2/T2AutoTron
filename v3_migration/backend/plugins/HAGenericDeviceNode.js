@@ -685,8 +685,14 @@
                 if (hasDeviceCache && hasDeviceCache()) {
                     // Use cached devices
                     allDevices = getCachedDevices();
+                    if (this.properties.debug) {
+                        console.log('[HAGenericDeviceNode] Using cached devices:', allDevices.length);
+                    }
                 } else if (requestDeviceRefresh) {
                     // Request via socket and wait briefly
+                    if (this.properties.debug) {
+                        console.log('[HAGenericDeviceNode] Cache empty, requesting refresh via socket...');
+                    }
                     requestDeviceRefresh();
                     await new Promise(r => setTimeout(r, 500));
                     if (hasDeviceCache && hasDeviceCache()) {
@@ -694,8 +700,40 @@
                     }
                 }
                 
-                // Fallback to HTTP if cache is empty
+                // Fallback to direct HA HTTP endpoint if cache is empty (like HADeviceStateOutputNode does)
                 if (allDevices.length === 0) {
+                    if (this.properties.debug) {
+                        console.log('[HAGenericDeviceNode] Cache still empty, trying direct HTTP to /api/lights/ha/...');
+                    }
+                    const fetchFn = window.apiFetch || fetch;
+                    const response = await fetchFn('/api/lights/ha/', { 
+                        headers: { 'Authorization': `Bearer ${this.properties.haToken}` } 
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success && data.devices) {
+                        if (this.properties.debug) {
+                            console.log('[HAGenericDeviceNode] Got devices from /api/lights/ha/:', data.devices.length);
+                        }
+                        data.devices.forEach(d => {
+                            let deviceType = d.type;
+                            if (!deviceType && d.id?.includes('.')) {
+                                deviceType = d.id.split('.')[0].replace(/^(ha_|kasa_|hue_)/, '');
+                            }
+                            allDevices.push({
+                                ...d,
+                                type: deviceType || 'unknown',
+                                source: 'ha'
+                            });
+                        });
+                    }
+                }
+                
+                // Second fallback: try /api/devices (aggregated endpoint)
+                if (allDevices.length === 0) {
+                    if (this.properties.debug) {
+                        console.log('[HAGenericDeviceNode] Still empty, trying /api/devices...');
+                    }
                     const response = await queuedFetch('/api/devices', { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
                     const data = await response.json();
                     
@@ -723,15 +761,15 @@
                         HAGenericDeviceNode.compareNames(a.name || a.id, b.name || b.id)
                     );
                     
+                    // Always log device loading success for debugging
+                    console.log(`[HAGenericDeviceNode] ✅ Loaded ${this.devices.length} devices for dropdown`);
+                    
                     if (this.properties.debug) {
                         const typeCounts = this.devices.reduce((acc, d) => {
                             acc[d.type] = (acc[d.type] || 0) + 1;
                             return acc;
                         }, {});
-                        console.log('[HAGenericDeviceNode] Loaded devices:', {
-                            total: this.devices.length,
-                            byType: typeCounts
-                        });
+                        console.log('[HAGenericDeviceNode] Device breakdown:', typeCounts);
                     }
                     
                     this.normalizeSelectedDeviceNames();
@@ -739,11 +777,11 @@
                     this.updateDeviceSelectorOptions();
                     this.triggerUpdate();
                 } else {
-                    console.warn('[HAGenericDeviceNode] No devices loaded');
+                    console.warn('[HAGenericDeviceNode] ⚠️ No devices loaded - dropdown will be empty');
                     this.updateStatus("No devices found");
                 }
             } catch (e) {
-                console.error("[HAGenericDeviceNode] Fetch devices error:", e);
+                console.error("[HAGenericDeviceNode] ❌ Fetch devices error:", e);
                 this.updateStatus("Connection failed");
             }
         }
@@ -755,11 +793,18 @@
             this.height = this.baseHeight + (deviceCount * this.deviceRowHeight);
         }
 
-        onAddDevice() {
+        async onAddDevice() {
             const index = this.properties.selectedDeviceIds.length;
             this.properties.selectedDeviceIds.push(null);
             this.properties.selectedDeviceNames.push(null);
             const base = `device_${index}_`;
+            
+            // If devices haven't loaded yet, force fetch them BEFORE creating dropdown
+            if (!this.devices || this.devices.length === 0) {
+                console.log('[HAGenericDeviceNode] No devices loaded, fetching before creating dropdown...');
+                await this.fetchDevices(true);
+            }
+            
             this.addControl(`${base}select`, new DropdownControl(`Device ${index + 1}`, ["Select Device", ...this.getDeviceOptions()], "Select Device", (v) => this.onDeviceSelected(v, index)));
             this.addControl(`${base}indicator`, new StatusIndicatorControl({ state: "off" }));
             this.addControl(`${base}colorbar`, new ColorBarControl({ brightness: 0, hs_color: [0, 0], entityType: "light" }));
@@ -769,10 +814,8 @@
             this.updateNodeHeight();
             this.triggerUpdate();
             
-            // If devices haven't loaded yet, force fetch them now
-            if (!this.devices || this.devices.length === 0) {
-                this.fetchDevices(true);
-            }
+            // Also update dropdown options after React has time to mount
+            setTimeout(() => this.updateDeviceSelectorOptions(), 100);
         }
 
         onRemoveDevice() {
