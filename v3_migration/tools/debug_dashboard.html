@@ -1188,10 +1188,10 @@
                 document.getElementById('comparisonBadge').textContent = `🐛 ${bugs} BUGS found!`;
             } else if (ok > 0) {
                 document.getElementById('comparisonBadge').className = 'badge success';
-                document.getElementById('comparisonBadge').textContent = `✅ ${ok} OK, ${noEvents} idle`;
+                document.getElementById('comparisonBadge').textContent = `✅ ${ok} OK, ${unknown} unknown`;
             } else {
                 document.getElementById('comparisonBadge').className = 'badge';
-                document.getElementById('comparisonBadge').textContent = `${noEvents} devices, no events`;
+                document.getElementById('comparisonBadge').textContent = `${unknown} devices, engine not running`;
             }
         }
         
