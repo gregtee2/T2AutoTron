@@ -477,11 +477,14 @@
             </div>
         </div>
         
-        <!-- Graph vs Reality Comparison -->
+        <!-- Engine vs HA Comparison -->
         <div class="panel">
             <div class="panel-title">
-                🔍 Graph vs Reality
+                🔍 Engine vs HA
                 <span class="badge" id="comparisonBadge">--</span>
+            </div>
+            <div style="font-size: 11px; color: #666; margin-bottom: 10px;">
+                Compares what the automation engine thinks should be ON/OFF vs what Home Assistant reports
             </div>
             <div class="comparison-list" id="comparisonList">
                 <div class="no-data">Click "Compare" to analyze</div>
@@ -860,10 +863,12 @@
             }
             
             try {
-                const [graphResponse, eventsResponse, buffersResponse] = await Promise.all([
+                // Fetch engine's expected device states (what automation thinks should happen)
+                const [graphResponse, eventsResponse, buffersResponse, deviceStatesResponse] = await Promise.all([
                     fetch(`${url}/api/engine/last-active`).catch(() => ({ ok: false })),
                     fetch(`${url}/api/engine/logs/device-history?hours=${selectedHours}`),
-                    fetch(`${url}/api/debug/all`)
+                    fetch(`${url}/api/debug/all`),
+                    fetch(`${url}/api/engine/device-states`).catch(() => ({ ok: false }))
                 ]);
                 
                 let graphNodes = [];
@@ -877,6 +882,13 @@
                 const eventsResult = await eventsResponse.json();
                 const buffersResult = await buffersResponse.json();
                 
+                // Get engine's expected states
+                let engineDeviceStates = [];
+                if (deviceStatesResponse.ok) {
+                    const deviceStatesResult = await deviceStatesResponse.json();
+                    engineDeviceStates = deviceStatesResult.deviceStates || [];
+                }
+                
                 const triggerBuffers = {};
                 if (buffersResult.buffers) {
                     Object.entries(buffersResult.buffers).forEach(([name, value]) => {
@@ -886,64 +898,97 @@
                     });
                 }
                 
-                const deviceNodes = [];
-                graphNodes.forEach(node => {
-                    const nodeData = node.data || {};
-                    const props = nodeData.properties || {};
-                    const nodeLabel = node.label || nodeData.label;
-                    
-                    if (nodeLabel === 'HA Generic Device') {
-                        (props.selectedDeviceIds || []).forEach((deviceId, i) => {
-                            deviceNodes.push({
-                                nodeId: node.id,
-                                nodeTitle: props.customTitle || nodeLabel,
-                                deviceId: deviceId,
-                                deviceName: (props.selectedDeviceNames || [])[i] || deviceId,
-                                triggerMode: props.triggerMode || 'Follow'
-                            });
-                        });
-                    }
-                });
-                
+                // Build comparison from engine device states (preferred) or graph parsing (fallback)
                 const events = eventsResult.history || [];
-                const comparison = deviceNodes.map(node => {
-                    const entityId = node.deviceId.replace('ha_', '');
-                    const entityShort = entityId.split('.')[1];
+                let comparison = [];
+                
+                if (engineDeviceStates.length > 0) {
+                    // Use engine's device states - this knows what SHOULD be happening
+                    comparison = engineDeviceStates.map(device => {
+                        const entityShort = device.entityId.split('.')[1];
+                        
+                        const deviceEvents = events.filter(e => 
+                            e.entity && e.entity.includes(entityShort)
+                        );
+                        
+                        const onOffEvents = deviceEvents.filter(e => 
+                            e.action?.includes('turn_on') || e.action?.includes('turn_off')
+                        );
+                        
+                        const lastOnEvent = onOffEvents.filter(e => e.action?.includes('turn_on')).slice(-1)[0];
+                        const lastOffEvent = onOffEvents.filter(e => e.action?.includes('turn_off')).slice(-1)[0];
+                        
+                        // Get actual current state from HA
+                        const light = (buffersResult.lights || []).find(l => 
+                            l.id === `ha_${device.entityId}` || l.id === device.entityId
+                        );
+                        const actualState = light?.state?.on ? 'on' : 'off';
+                        
+                        // Engine's expected state
+                        const expectedState = device.expectedState || 'unknown';
+                        
+                        return {
+                            nodeId: device.nodeId,
+                            nodeTitle: device.nodeTitle || device.deviceName,
+                            deviceId: device.entityId,
+                            deviceName: device.deviceName,
+                            triggerMode: device.triggerMode,
+                            eventCount: onOffEvents.length,
+                            lastOnEvent,
+                            lastOffEvent,
+                            expectedState,  // What engine thinks it should be
+                            actualState     // What HA reports
+                        };
+                    });
+                } else {
+                    // Fallback: parse from graph (doesn't know expected state)
+                    const deviceNodes = [];
+                    graphNodes.forEach(node => {
+                        const nodeData = node.data || {};
+                        const props = nodeData.properties || {};
+                        const nodeLabel = node.label || nodeData.label;
+                        
+                        if (nodeLabel === 'HA Generic Device') {
+                            (props.selectedDeviceIds || []).forEach((deviceId, i) => {
+                                deviceNodes.push({
+                                    nodeId: node.id,
+                                    nodeTitle: props.customTitle || nodeLabel,
+                                    deviceId: deviceId,
+                                    deviceName: (props.selectedDeviceNames || [])[i] || deviceId,
+                                    triggerMode: props.triggerMode || 'Follow'
+                                });
+                            });
+                        }
+                    });
                     
-                    const deviceEvents = events.filter(e => 
-                        e.entity && e.entity.includes(entityShort)
-                    );
-                    
-                    const onOffEvents = deviceEvents.filter(e => 
-                        e.action?.includes('turn_on') || e.action?.includes('turn_off')
-                    );
-                    
-                    const lastOnEvent = onOffEvents.filter(e => e.action?.includes('turn_on')).slice(-1)[0];
-                    const lastOffEvent = onOffEvents.filter(e => e.action?.includes('turn_off')).slice(-1)[0];
-                    
-                    const light = (buffersResult.lights || []).find(l => l.id === node.deviceId);
-                    const currentState = light?.state?.on ? 'on' : 'off';
-                    
-                    let loggedState = 'unknown';
-                    if (lastOnEvent && lastOffEvent) {
-                        const onTime = new Date(lastOnEvent.time).getTime();
-                        const offTime = new Date(lastOffEvent.time).getTime();
-                        loggedState = onTime > offTime ? 'on' : 'off';
-                    } else if (lastOnEvent) {
-                        loggedState = 'on';
-                    } else if (lastOffEvent) {
-                        loggedState = 'off';
-                    }
-                    
-                    return {
-                        ...node,
-                        eventCount: onOffEvents.length,
-                        lastOnEvent,
-                        lastOffEvent,
-                        loggedState,
-                        currentState
-                    };
-                });
+                    comparison = deviceNodes.map(node => {
+                        const entityId = node.deviceId.replace('ha_', '');
+                        const entityShort = entityId.split('.')[1];
+                        
+                        const deviceEvents = events.filter(e => 
+                            e.entity && e.entity.includes(entityShort)
+                        );
+                        
+                        const onOffEvents = deviceEvents.filter(e => 
+                            e.action?.includes('turn_on') || e.action?.includes('turn_off')
+                        );
+                        
+                        const lastOnEvent = onOffEvents.filter(e => e.action?.includes('turn_on')).slice(-1)[0];
+                        const lastOffEvent = onOffEvents.filter(e => e.action?.includes('turn_off')).slice(-1)[0];
+                        
+                        const light = (buffersResult.lights || []).find(l => l.id === node.deviceId);
+                        const actualState = light?.state?.on ? 'on' : 'off';
+                        
+                        return {
+                            ...node,
+                            eventCount: onOffEvents.length,
+                            lastOnEvent,
+                            lastOffEvent,
+                            expectedState: 'unknown',  // Can't determine from graph alone
+                            actualState
+                        };
+                    });
+                }
                 
                 const { anomalies, activity } = detectAnomalies(events, comparison);
                 renderAnomalies(anomalies);
@@ -979,20 +1024,13 @@
                 }
             });
             
-            // Check for unexplained OFF devices (REAL ANOMALY)
+            // Check for engine expected vs actual state mismatch (THE KEY CHECK)
             comparison.forEach(item => {
-                if (item.currentState === 'off' && !item.lastOffEvent && item.eventCount > 0) {
+                if (item.expectedState !== 'unknown' && item.actualState !== item.expectedState) {
                     anomalies.push({
                         type: 'critical',
-                        title: 'Unexplained OFF',
-                        details: `${item.nodeTitle || item.deviceName} is OFF but no OFF command was logged`
-                    });
-                }
-                if (item.currentState === 'on' && !item.lastOnEvent && item.eventCount > 0) {
-                    anomalies.push({
-                        type: 'critical',
-                        title: 'Unexplained ON',
-                        details: `${item.nodeTitle || item.deviceName} is ON but no ON command was logged`
+                        title: 'State Mismatch',
+                        details: `${item.nodeTitle || item.deviceName}: Engine says ${item.expectedState.toUpperCase()}, HA says ${item.actualState.toUpperCase()}`
                     });
                 }
             });
@@ -1073,7 +1111,7 @@
             
             let bugs = 0;
             let ok = 0;
-            let noEvents = 0;
+            let unknown = 0;
             
             const html = comparison.map(item => {
                 let status = 'match';
@@ -1081,48 +1119,35 @@
                 let statusEmoji = '✅';
                 let explanation = '';
                 
-                if (item.currentState === 'off' && !item.lastOffEvent && item.eventCount > 0) {
-                    status = 'mismatch';
-                    statusText = '🐛 BUG!';
-                    statusEmoji = '🐛';
-                    explanation = 'Device is OFF but no OFF command was logged!';
-                    bugs++;
-                } else if (item.currentState === 'on' && !item.lastOnEvent && item.eventCount > 0) {
-                    status = 'mismatch';
-                    statusText = '🐛 BUG!';
-                    statusEmoji = '🐛';
-                    explanation = 'Device is ON but no ON command was logged!';
-                    bugs++;
-                } else if (item.eventCount === 0) {
+                const expected = item.expectedState || 'unknown';
+                const actual = item.actualState || 'unknown';
+                
+                if (expected === 'unknown') {
+                    // Engine not running or can't determine expected state
                     status = 'unknown';
-                    statusText = 'No events';
+                    statusText = 'Unknown';
                     statusEmoji = '💤';
-                    explanation = 'No commands logged in this time window';
-                    noEvents++;
-                } else if (item.eventCount > 0) {
-                    if (item.currentState === item.loggedState) {
-                        status = 'match';
-                        statusText = '✓ OK';
-                        statusEmoji = '✅';
-                        explanation = `Last logged: ${item.loggedState.toUpperCase()}, Current: ${item.currentState.toUpperCase()}`;
-                        ok++;
-                    } else {
-                        status = 'mismatch';
-                        statusText = '⚠️ Changed';
-                        statusEmoji = '⚠️';
-                        explanation = `Logged: ${item.loggedState.toUpperCase()}, but now: ${item.currentState.toUpperCase()}`;
-                        bugs++;
-                    }
+                    explanation = 'Engine not running or expected state unknown';
+                    unknown++;
+                } else if (expected !== actual) {
+                    // MISMATCH - this is a bug!
+                    status = 'mismatch';
+                    statusText = '🐛 BUG!';
+                    statusEmoji = '🐛';
+                    explanation = `Engine says ${expected.toUpperCase()}, but HA reports ${actual.toUpperCase()}`;
+                    bugs++;
                 } else {
-                    status = 'unknown';
-                    statusText = 'Idle';
-                    statusEmoji = '💤';
-                    explanation = 'No commands sent';
-                    noEvents++;
+                    // Match - all good
+                    status = 'match';
+                    statusText = '✓ Match';
+                    statusEmoji = '✅';
+                    explanation = `Expected: ${expected.toUpperCase()}, Actual: ${actual.toUpperCase()}`;
+                    ok++;
                 }
                 
                 const lastOnTime = item.lastOnEvent ? new Date(item.lastOnEvent.time).toLocaleTimeString() : '--';
                 const lastOffTime = item.lastOffEvent ? new Date(item.lastOffEvent.time).toLocaleTimeString() : '--';
+                const entityShort = (item.deviceId || '').replace('ha_', '').split('.')[1] || item.deviceId;
                 
                 return `
                     <div class="comparison-item ${status}">
@@ -1135,18 +1160,23 @@
                         </div>
                         <div class="comparison-details">
                             <div class="comparison-col">
-                                <div class="comparison-col-title">Current State</div>
-                                <span style="color: ${item.currentState === 'on' ? '#81c784' : '#e57373'}; font-weight: bold;">
-                                    ${item.currentState.toUpperCase()}
-                                </span><br>
-                                Entity: ${item.deviceId.replace('ha_', '').split('.')[1]}
+                                <div class="comparison-col-title">🧠 Engine Says</div>
+                                <span style="color: ${expected === 'on' ? '#81c784' : expected === 'off' ? '#e57373' : '#888'}; font-weight: bold;">
+                                    ${expected.toUpperCase()}
+                                </span>
                             </div>
                             <div class="comparison-col">
-                                <div class="comparison-col-title">Last Logged Commands</div>
-                                🟢 ON: ${lastOnTime}<br>
-                                🔴 OFF: ${lastOffTime}
+                                <div class="comparison-col-title">🏠 HA Reports</div>
+                                <span style="color: ${actual === 'on' ? '#81c784' : '#e57373'}; font-weight: bold;">
+                                    ${actual.toUpperCase()}
+                                </span>
+                            </div>
+                            <div class="comparison-col">
+                                <div class="comparison-col-title">📝 Last Commands</div>
+                                <span style="font-size: 10px;">🟢 ${lastOnTime}<br>🔴 ${lastOffTime}</span>
                             </div>
                         </div>
+                        <div style="font-size: 10px; color: #555; margin-top: 6px;">Entity: ${entityShort}</div>
                     </div>
                 `;
             }).join('');

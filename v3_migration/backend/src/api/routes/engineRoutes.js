@@ -243,6 +243,91 @@ router.get('/outputs', (req, res) => {
 });
 
 /**
+ * GET /api/engine/device-states
+ * Returns what the engine thinks each device's state SHOULD be
+ * based on current node outputs. Used by debug dashboard to compare
+ * "engine expected state" vs "actual HA state".
+ */
+router.get('/device-states', async (req, res) => {
+  try {
+    const { engine } = getEngine();
+    
+    const deviceStates = [];
+    
+    // Iterate over all nodes to find device-controlling nodes
+    for (const [nodeId, node] of engine.nodes) {
+      const nodeType = node.constructor?.name || node.label || 'Unknown';
+      const props = node.properties || {};
+      
+      // Get output for this node
+      const output = engine.outputs.get(nodeId) || {};
+      
+      // HAGenericDeviceNode - has selectedDeviceIds array
+      if (props.selectedDeviceIds && Array.isArray(props.selectedDeviceIds)) {
+        props.selectedDeviceIds.forEach((deviceId, i) => {
+          const entityId = deviceId.startsWith('ha_') ? deviceId.slice(3) : deviceId;
+          const deviceName = props.selectedDeviceNames?.[i] || entityId;
+          
+          // Determine expected state from node's output
+          // output.is_on is the result of the last data() call
+          let expectedState = 'unknown';
+          if (output.is_on !== undefined) {
+            expectedState = output.is_on ? 'on' : 'off';
+          }
+          
+          // Get the trigger/hsv info if available
+          const triggerMode = props.triggerMode || 'Follow';
+          
+          deviceStates.push({
+            nodeId,
+            nodeType,
+            nodeTitle: props.customTitle || props.customName || node.label,
+            entityId,
+            deviceName,
+            expectedState,
+            triggerMode,
+            lastOutput: output
+          });
+        });
+      }
+      
+      // HALightControlNode - has deviceId
+      else if (props.deviceId && (nodeType.includes('Light') || nodeType.includes('HA'))) {
+        const entityId = props.deviceId.startsWith('ha_') ? props.deviceId.slice(3) : props.deviceId;
+        
+        let expectedState = 'unknown';
+        if (output.is_on !== undefined) {
+          expectedState = output.is_on ? 'on' : 'off';
+        }
+        
+        deviceStates.push({
+          nodeId,
+          nodeType,
+          nodeTitle: props.customTitle || props.customName || node.label,
+          entityId,
+          deviceName: props.deviceName || entityId,
+          expectedState,
+          lastOutput: output
+        });
+      }
+    }
+    
+    res.json({
+      success: true,
+      deviceStates,
+      tickCount: engine.tickCount,
+      running: engine.running,
+      lastTickTime: engine.lastTickTime
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * POST /api/engine/tick
  * Force a single engine tick (for testing)
  */
