@@ -772,6 +772,20 @@
             notificationsEnabled = true;
         }
         
+        // Convert hue (0-360) to color name for human-readable display
+        function hueToColorName(hue) {
+            hue = hue % 360;
+            if (hue < 15 || hue >= 345) return 'Red';
+            if (hue < 45) return 'Orange';
+            if (hue < 75) return 'Yellow';
+            if (hue < 150) return 'Green';
+            if (hue < 195) return 'Cyan';
+            if (hue < 255) return 'Blue';
+            if (hue < 285) return 'Purple';
+            if (hue < 345) return 'Magenta';
+            return 'Red';
+        }
+        
         function showToast(message, type = 'error') {
             const existing = document.querySelector('.toast');
             if (existing) existing.remove();
@@ -1371,8 +1385,13 @@
                         );
                         const actualState = haDevice?.state?.on ? 'on' : 'off';
                         
-                        // Engine's expected state
+                        // Get actual color from HA device (if it's a light)
+                        const actualHsColor = haDevice?.state?.hs_color || null;
+                        const actualBrightness = haDevice?.state?.brightness || null;
+                        
+                        // Engine's expected state and color
                         const expectedState = device.expectedState || 'unknown';
+                        const expectedHsv = device.expectedHsv || null;
                         
                         return {
                             nodeId: device.nodeId,
@@ -1385,7 +1404,10 @@
                             lastOffEvent,
                             expectedState,  // What engine thinks it should be
                             actualState,    // What HA reports
-                            hasHsvInput: device.hasHsvInput  // Is this receiving color commands?
+                            hasHsvInput: device.hasHsvInput,  // Is this receiving color commands?
+                            expectedHsv,    // What color engine is sending
+                            actualHsColor,  // What color HA reports [h, s]
+                            actualBrightness // What brightness HA reports (0-100)
                         };
                     });
                 } else {
@@ -1496,6 +1518,31 @@
                         title: 'State Mismatch',
                         details: `${item.nodeTitle || item.deviceName}: Engine says ${item.expectedState.toUpperCase()}, HA says ${item.actualState.toUpperCase()}`
                     });
+                }
+            });
+            
+            // Check for COLOR mismatch (engine sending one color, light showing different color)
+            comparison.forEach(item => {
+                if (item.expectedHsv && item.actualHsColor) {
+                    // expectedHsv is { hue: 0-1, saturation: 0-1, brightness: 0-254 }
+                    // actualHsColor is [hue: 0-360, saturation: 0-100]
+                    const expectedHue = Math.round((item.expectedHsv.hue || 0) * 360);
+                    const actualHue = Math.round(item.actualHsColor[0] || 0);
+                    
+                    // Hue is circular (0 and 360 are the same)
+                    let hueDiff = Math.abs(expectedHue - actualHue);
+                    if (hueDiff > 180) hueDiff = 360 - hueDiff;
+                    
+                    // If hue differs by more than 30 degrees, flag it
+                    if (hueDiff > 30) {
+                        const expectedColorName = hueToColorName(expectedHue);
+                        const actualColorName = hueToColorName(actualHue);
+                        anomalies.push({
+                            type: 'critical',
+                            title: 'Color Mismatch',
+                            details: `${item.nodeTitle || item.deviceName}: Engine sending ${expectedColorName} (${expectedHue}°), light shows ${actualColorName} (${actualHue}°)`
+                        });
+                    }
                 }
             });
             

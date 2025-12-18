@@ -303,6 +303,7 @@ router.get('/device-states', async (req, res) => {
             triggerMode,
             lastTrigger: node.lastTrigger,
             hasHsvInput: !!node.lastSentHsv,
+            expectedHsv: node.lastSentHsv || null,  // What color engine is sending
             trackedState: node.deviceStates?.[entityId],
             lastOutput: output
           });
