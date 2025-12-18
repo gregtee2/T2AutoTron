@@ -1076,6 +1076,17 @@
             const anomalies = [];  // Real problems
             const activity = [];   // Expected behavior, informational
             
+            // Show HSV-active devices (color cycling)
+            comparison.forEach(item => {
+                if (item.hasHsvInput) {
+                    activity.push({
+                        type: 'info',
+                        title: 'HSV Active',
+                        details: `${item.nodeTitle || item.deviceName}: Receiving color commands`
+                    });
+                }
+            });
+            
             // Check for high-frequency commands (color cycling, etc.)
             const deviceCmdCounts = {};
             events.forEach(e => {
@@ -1090,8 +1101,8 @@
                     // High frequency - probably color cycling, not an anomaly
                     activity.push({
                         type: 'info',
-                        title: 'Active Device',
-                        details: `${device.split('.').pop()}: ${count} commands (${perHour}/hr) - likely color cycling`
+                        title: 'High Activity',
+                        details: `${device.split('.').pop()}: ${count} commands (${perHour}/hr)`
                     });
                 }
             });
