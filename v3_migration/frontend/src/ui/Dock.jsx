@@ -321,9 +321,13 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
             }
             const data = await response.json();
             
-            // Don't show update prompts in HA add-on
+            // For HA add-on, check if there's actually an update first
             if (data.isAddon) {
-                toast.info('📦 Add-on updates are available through Home Assistant → Settings → Add-ons → T2AutoTron', { duration: 6000 });
+                if (data.hasUpdate) {
+                    toast.info('📦 Add-on updates are available through Home Assistant → Settings → Add-ons → T2AutoTron', { duration: 6000 });
+                } else {
+                    toast.success(`✓ You're up to date! (v${data.currentVersion})`, 4000);
+                }
                 return;
             }
             
