@@ -5,6 +5,16 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.64] - 2025-12-17
+
+### Fixed
+- **HA Device Dropdown Empty on Graph Load (Add-on)**: Fixed race condition where device dropdowns in HAGenericDeviceNode showed no devices after loading a saved graph
+  - Added retry mechanism in `updateDeviceSelectorOptions()` - retries up to 5 times if React components haven't mounted yet
+  - Added HTTP fallback in `_onGraphLoadComplete` if socket cache is empty
+  - Removed duplicate random stagger delay that could delay device list by up to 2 seconds
+
+---
+
 ## [2.1.0-beta.20] - 2025-06-13
 
 ### Added

@@ -428,22 +428,19 @@
             // Update height based on restored devices
             this.updateNodeHeight();
             
-            // Defer API calls until after graph loading is complete
+            // Defer device state fetches until after graph loading is complete
+            // NOTE: Device LIST fetching is handled by _onGraphLoadComplete in initializeSocketIO()
+            // This block only handles per-device STATE fetches for the selected devices
             if (typeof window !== 'undefined' && window.graphLoading) {
-                // Use event listener instead of polling to avoid CPU churn
                 const onGraphLoadComplete = () => {
                     window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
-                    // Stagger API calls by random delay (0-2s) to prevent thundering herd
-                    const staggerDelay = Math.random() * 2000;
-                    setTimeout(() => {
-                        this.fetchDevices();
-                        // Further stagger individual device state fetches
-                        this.properties.selectedDeviceIds.forEach((id, index) => {
-                            if (id) {
-                                setTimeout(() => this.fetchDeviceState(id), index * 100);
-                            }
-                        });
-                    }, staggerDelay);
+                    // Stagger individual device state fetches to prevent API flood
+                    // Device list is already fetched by _onGraphLoadComplete
+                    this.properties.selectedDeviceIds.forEach((id, index) => {
+                        if (id) {
+                            setTimeout(() => this.fetchDeviceState(id), 500 + index * 100);
+                        }
+                    });
                 };
                 window.addEventListener('graphLoadComplete', onGraphLoadComplete);
                 
@@ -451,6 +448,10 @@
                 setTimeout(() => {
                     if (!window.graphLoading) {
                         window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
+                        // Also ensure devices are loaded if they weren't
+                        if (!this.devices || this.devices.length === 0) {
+                            this.fetchDevices(true);
+                        }
                     }
                 }, 10000);
             } else {
@@ -586,6 +587,10 @@
                     if (devices.length > 0) {
                         this.devices = devices;
                         this.updateDeviceSelectorOptions();
+                    } else {
+                        // Cache was empty - fall back to HTTP fetch
+                        // This ensures devices load even if socket cache isn't ready yet
+                        await this.fetchDevices(true);
                     }
                     
                     // Skip individual device state fetches during load - use cached data
@@ -830,7 +835,9 @@
             return list.map(item => item.displayName);
         }
 
-        updateDeviceSelectorOptions() {
+        updateDeviceSelectorOptions(retryCount = 0) {
+            let anyMissingUpdateFn = false;
+            
             this.properties.selectedDeviceIds.forEach((_, i) => {
                 const ctrl = this.controls[`device_${i}_select`];
                 if (!ctrl) return;
@@ -846,9 +853,22 @@
 
                 ctrl.values = ["Select Device", ...sortedOptions];
                 ctrl.value = current;
+                
                 // Trigger React re-render of the dropdown
-                if (ctrl.updateDropdown) ctrl.updateDropdown();
+                if (ctrl.updateDropdown) {
+                    ctrl.updateDropdown();
+                } else {
+                    // React component hasn't mounted yet - flag for retry
+                    anyMissingUpdateFn = true;
+                }
             });
+            
+            // If any dropdown's updateDropdown wasn't ready, retry after React has time to mount
+            // This fixes a race condition where fetchDevices completes before React useEffect runs
+            if (anyMissingUpdateFn && retryCount < 5) {
+                const delay = 100 * (retryCount + 1); // 100ms, 200ms, 300ms, 400ms, 500ms
+                setTimeout(() => this.updateDeviceSelectorOptions(retryCount + 1), delay);
+            }
         }
 
         async onDeviceSelected(name, index) {

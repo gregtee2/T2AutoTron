@@ -78,6 +78,12 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
+#### HA Device Dropdown Empty on Graph Load (2025-12-17)
+- **What broke**: In the HA add-on, loading a saved graph caused all HA Generic Device node dropdowns to show no devices. Fresh nodes worked fine.
+- **Why it broke**: Race condition - the code tried to update the dropdown BEFORE React had finished setting it up. Like trying to fill a glass that hasn't been placed on the table yet.
+- **The fix**: Added a retry mechanism - if the dropdown isn't ready, wait a bit and try again (up to 5 times). Also added a backup method to fetch devices via HTTP if the socket cache is empty.
+- **Now it works because**: The code is patient - it waits for the dropdown to be ready before filling it.
+
 #### Forecast Shows Yesterday (2025-12-17)
 - **What broke**: 5-day forecast in HA add-on was showing "yesterday" as the first day.
 - **Why it broke**: Open-Meteo returns dates as "2025-12-17" which JavaScript parses as midnight UTC. When converted to local time, it can become Dec 16 at 6pm in some timezones.

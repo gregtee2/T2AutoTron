@@ -1,4 +1,36 @@
-# Session Handoff - December 16, 2025
+# Session Handoff - December 17, 2025
+
+## Addendum (Session 6 - Device Dropdown Fix)
+
+### What changed (Session 6 - Claude Opus 4.5)
+
+#### 🔧 Fixed HA Device Dropdown Empty After Graph Load (Add-on)
+- **Symptom**: In the HA add-on, loading a saved graph caused all HA Generic Device node dropdowns to show no devices. Fresh nodes worked fine.
+- **Root Cause**: Race condition between device fetching and React component mounting:
+  1. Graph loads, dropdowns are created with empty device list
+  2. `graphLoadComplete` event fires, `fetchDevices()` runs
+  3. `updateDeviceSelectorOptions()` calls `ctrl.updateDropdown()` to refresh React
+  4. **BUT** React component's `useEffect` that sets up `updateDropdown` callback might not have run yet
+  5. Result: `ctrl.updateDropdown` is undefined, dropdown never updates
+- **Fixes**:
+  1. Added retry mechanism to `updateDeviceSelectorOptions()` - retries up to 5 times with increasing delays (100-500ms) if `updateDropdown` isn't available yet
+  2. Added HTTP fallback in `_onGraphLoadComplete` - if socket cache returns empty, falls back to HTTP fetch
+  3. Removed duplicate random 0-2s stagger delay in `restore()` that was causing unnecessary delays
+
+### 🦴 Caveman Explanation
+When loading a saved graph, the dropdown boxes for picking HA devices were empty because the code tried to fill them BEFORE the dropdown was ready to accept data. Now the code politely waits and tries again if the dropdown isn't ready yet.
+
+### Files touched (Session 6)
+- `v3_migration/backend/plugins/HAGenericDeviceNode.js` - Added retry mechanism and HTTP fallback
+- `v3_migration/backend/package.json` - Bumped to 2.1.64
+- `home-assistant-addons/t2autotron/config.yaml` - Bumped to 2.1.64
+- `CHANGELOG.md` - Added 2.1.64 entry
+
+### Version Bump
+- v2.1.63 → v2.1.64
+
+---
+
 ## Addendum (Session 5 - Bug Reporting & Documentation)
 
 ### What changed (Session 5 - Claude Opus 4.5)
