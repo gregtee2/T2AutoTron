@@ -78,6 +78,18 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
+#### Device Timeline Empty in Debug Dashboard (2025-12-18)
+- **What broke**: Debug Dashboard "Device Timeline" panel always showed "No events to show" even though the engine was running and controlling lights for hours.
+- **Why it broke**: The code was looking for the wrong event names in the log file. It searched for `[DEVICE-CMD]` and `[TRIGGER]`, but the actual logs use `[HA-HSV-CHANGE]`, `[HA-DEVICE-SKIP]`, etc. Like looking for "birthday party" entries in a calendar that only has "meeting" entries.
+- **The fix**: Updated the search to look for the actual category names that exist in the logs.
+- **Now it works because**: The timeline code looks for event names that actually exist in your logs!
+
+#### Update Button Always Shows "Updates Available" (2025-12-18)
+- **What broke**: The "Check for Updates" button in the HA add-on always showed "Updates available!" even when running the latest version.
+- **Why it broke**: The toast notification was displayed whenever `data.addOnUpdate` existed, but didn't check if there actually WAS an update.
+- **The fix**: Now checks `data.hasUpdate` flag before showing the update toast.
+- **Now it works because**: It only yells "update available" when there actually is one!
+
 #### HA Device Dropdown Empty on Graph Load (2025-12-17)
 - **What broke**: In the HA add-on, loading a saved graph caused all HA Generic Device node dropdowns to show no devices. Fresh nodes worked fine.
 - **Why it broke**: Race condition - the code tried to update the dropdown BEFORE React had finished setting it up. Like trying to fill a glass that hasn't been placed on the table yet.
@@ -963,7 +975,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.75 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.77 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -1022,6 +1034,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 20 | **GitHub Issue Templates** | v2.1.63 - Bug report and feature request templates with structured fields |
 | 21 | **Addon Landing Page** | v2.1.63 - Origin story, Node-RED comparison, "Why Share This?" section |
 | 22 | **Device States API** | v2.1.73 - `/api/engine/device-states` endpoint for comparing engine expectations vs HA reality |
+| 23 | **Dashboard Session Persistence** | v2.1.76 - Debug Dashboard saves events to localStorage (4hr expiry), survives browser refresh |
+| 24 | **Dashboard Restart Detection** | v2.1.76 - Detects server restarts (uptime backwards), shows restart history |
+| 25 | **Scroll-to-Bug Feature** | v2.1.76 - Clicking "BUGS found" badge scrolls to first mismatch with glow effect |
 
 ### 🟢 RECENTLY FIXED
 
@@ -1041,6 +1056,8 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 12 | **SaveModal import path** | v2.1.61 - Fixed `../apiConfig` → `../utils/apiBase` import that broke addon build |
 | 13 | **HA dropdown race condition** | v2.1.64-68 - Fixed dropdowns empty after graph load (RAF timing, retry logic, host_network for Kasa) |
 | 14 | **HSV-only nodes display** | v2.1.75 - Debug Dashboard correctly shows HSV-only device nodes as ON when sending color commands |
+| 15 | **Update button false positive** | v2.1.76 - "Check for Updates" in add-on always showed updates available. Now checks `hasUpdate` flag |
+| 16 | **Device timeline empty** | v2.1.77 - `/api/engine/logs/device-history` now finds actual log categories (was searching obsolete names) |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 

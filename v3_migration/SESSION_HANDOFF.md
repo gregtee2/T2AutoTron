@@ -1,62 +1,78 @@
 # Session Handoff - December 18, 2025
 
-## Addendum (Session 8 - Debug Dashboard Enhancements)
+## Addendum (Session 8 - Debug Dashboard & Bug Fixes)
 
 ### What changed (Session 8 - Claude Opus 4.5)
 
-**Current Version: 2.1.75**
+**Current Version: 2.1.77**
 
-#### 🔍 New API Endpoint: `/api/engine/device-states`
-- Returns what the backend engine thinks each device should be
-- Compares engine expected state vs actual HA state for mismatch detection
-- Checks multiple sources: `node.deviceStates`, `node.lastTrigger`, `node.lastSentHsv`, `output.is_on`
+#### 🔧 Fix 1: Update Button False Positive (v2.1.76)
+- **Symptom**: "Check for Updates" button in HA add-on always showed "Updates available!" even when on latest version
+- **Root Cause**: The toast was shown whenever `data.addOnUpdate` existed, but didn't check if there actually was an update
+- **Fix**: Now checks `data.hasUpdate` flag before showing update toast
+- **Files**: `v3_migration/frontend/src/ui/Dock.jsx`
+
+#### 🔧 Fix 2: Device Timeline Empty (v2.1.77)
+- **Symptom**: Debug Dashboard "Device Timeline" panel always showed "No events to show" despite engine running
+- **Root Cause**: `/api/engine/logs/device-history` endpoint searched for obsolete log categories (`DEVICE-CMD`, `TRIGGER`) that no longer exist in logs
+- **Fix**: Updated endpoint to search for actual log categories: `HA-HSV-CHANGE`, `HA-DEVICE-SKIP`, `HA-DEVICE-SUCCESS`, etc.
 - **Files**: `v3_migration/backend/src/api/routes/engineRoutes.js`
 
-#### 🎛️ Debug Dashboard Major Enhancements
-- **Split Anomalies/Activity Notes**: "Anomalies" panel now shows only real problems (stuck devices, stale state). "Activity Notes" shows expected behavior (color cycling, frequent updates)
-- **Engine vs HA Comparison**: New panel shows what engine expects vs what HA reports. Uses new `/api/engine/device-states` endpoint
-- **Removed Node Map**: Wasn't useful in current form (just listed node names). Left comment for future enhancement
-- **Fixed variable name bug**: Renamed `noEvents` → `unknown` in activity tracking
+#### 🎛️ Debug Dashboard Enhancements (throughout Session 8)
+- **Session Persistence**: Dashboard now saves events to localStorage (4hr expiry), survives browser refresh
+- **Server Restart Detection**: Detects when server uptime goes backwards, shows restart history count
+- **HSV Activity Tracking**: Activity Notes now show which lights are receiving HSV color commands
+- **Scroll-to-Bug**: Clicking "BUGS found" badge scrolls to first mismatch with glow highlight effect
+- **Clear Session Button**: 🗑️ button to wipe stored events and start fresh
 - **Files**: `v3_migration/tools/debug_dashboard.html`
 
-#### 🔧 HSV-Only Nodes Report as ON (v2.1.75)
-- **Symptom**: Bar Lamp showed as "OFF" in Engine vs HA panel, but lights were actually ON
-- **Root Cause**: HSV-only nodes (no trigger connected) have `lastTrigger: null`, but are sending color commands
-- **Fix**: Check `node.lastSentHsv` - if we're sending HSV color commands, device is effectively ON
-- **Scope**: REPORTING only - does not change engine behavior, just accurate dashboard display
+#### 🔍 API Endpoint: `/api/engine/device-states` (v2.1.73-75)
+- Returns what backend engine thinks each device should be (on/off)
+- Compares engine expected state vs actual HA state
+- Now includes `hasHsvInput` flag for HSV-only nodes
 - **Files**: `v3_migration/backend/src/api/routes/engineRoutes.js`
 
 ### 🦴 Caveman Summary
-1. **Dashboard Split**: Before, it yelled "ANOMALY!" when lights changed colors fast (which is normal). Now it knows the difference between real problems and expected behavior.
-2. **Engine vs HA**: New comparison shows "what the robot thinks" vs "what's actually happening" - helps find when automations get out of sync with reality.
-3. **HSV-Only Fix**: Some lights only get color commands (no on/off trigger). Dashboard was saying "this light is OFF" when it's clearly ON. Fixed the reporting.
+1. **Update button**: Was yelling "updates available!" even when there weren't any. Fixed to actually check.
+2. **Timeline empty**: Dashboard was looking for the wrong event names in the log file. Like looking for "birthday party" entries in a calendar that only has "meeting" entries.
+3. **Dashboard memory**: Before, refresh = all data lost. Now it remembers events for 4 hours.
+4. **HSV tracking**: Dashboard now knows which lights are getting color commands (not just on/off).
 
 ### Version Progression (Session 8)
 - 2.1.68 → 2.1.73 (device-states endpoint, dashboard enhancements)
 - 2.1.73 → 2.1.74 (deviceStates tracking fix)
 - 2.1.74 → 2.1.75 (HSV-only nodes report as ON)
+- 2.1.75 → 2.1.76 (Update button false positive fix)
+- 2.1.76 → 2.1.77 (Device timeline empty fix)
 
 ### Files Touched (Session 8)
-- `v3_migration/backend/src/api/routes/engineRoutes.js` - Added `/api/engine/device-states` endpoint
-- `v3_migration/tools/debug_dashboard.html` - Split anomalies/activity, engine vs HA panel
+- `v3_migration/backend/src/api/routes/engineRoutes.js` - device-states endpoint, device-history fix
+- `v3_migration/tools/debug_dashboard.html` - All dashboard enhancements
+- `v3_migration/frontend/src/ui/Dock.jsx` - Update button fix
 - `v3_migration/backend/package.json` - Version bumps
 - `home-assistant-addons/t2autotron/config.yaml` - Version bumps
+- `CHANGELOG.md` - Version entries
 
 ### Testing
-1. Update add-on to 2.1.75
+1. Update add-on to 2.1.77
 2. Open Debug Dashboard, point at T2 server
-3. Click "Run Full Comparison" → should show Engine vs HA comparison
-4. HSV-only lights (like Bar Lamp) should show as ON when receiving color commands
+3. Device Timeline should now show colored bars for device events
+4. "Check for Updates" should correctly report no updates when on latest
+5. Refresh dashboard - events should persist (localStorage)
 
-### Future Enhancement (Pinned)
-- **Node Map with Live State**: Could show node activity/output values in real-time
-- Requires new backend API to expose node execution state
-- Lower priority - dashboard is working well without it
+### Tailscale for Remote Access
+User asked about accessing HA remotely. Recommended Tailscale:
+- Free for personal use (up to 100 devices)
+- No port forwarding required
+- End-to-end encrypted VPN mesh
+- Install on HA (via add-on) + laptop/phone
+- Access HA at `http://100.x.x.x:8123` from anywhere
+- User successfully tested from Mac via Tailscale
 
 ### Notes for Next Session
-- Remote HA access question answered (recommend Tailscale - free, secure, easy)
-- Dashboard is feature-complete for debugging automation mismatches
-- All changes are reporting/display only - no engine behavior changes
+- Debug Dashboard is now fully functional for troubleshooting
+- All v2.1.7x fixes are about reporting/display accuracy
+- Engine behavior unchanged - these are observation tools
 
 ---
 
