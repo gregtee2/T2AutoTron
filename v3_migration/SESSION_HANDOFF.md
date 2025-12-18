@@ -1,5 +1,66 @@
 # Session Handoff - December 17, 2025
 
+## Addendum (Session 7 - HA Add-on Fixes)
+
+### What changed (Session 7 - Claude Opus 4.5)
+
+**Current Version: 2.1.68**
+
+#### 🔧 Fix 1: Dropdown Race Condition - Improved Retry (v2.1.65-66)
+- **Symptom**: HA device dropdowns empty after loading saved graph, populated after ~30 seconds
+- **Root Cause**: React components not mounted when `updateDeviceSelectorOptions()` called
+- **Fixes**:
+  - Added `requestAnimationFrame` double-wait before updating dropdowns
+  - Increased retries from 5 to 10, using RAF timing instead of fixed setTimeout
+  - Added 1-second retry if initial fetch returns empty
+  - Added 2-second fallback retry for slow operations
+- **Files**: `HAGenericDeviceNode.js`
+
+#### 🔧 Fix 2: Null Outputs After Graph Load (v2.1.67)
+- **Symptom**: Debug nodes showed "null" for trigger outputs immediately after loading graph
+- **Root Cause**: `processImmediate()` ran immediately after `graphLoadComplete`, but async device fetches hadn't completed yet
+- **Fix**: Added delayed engine processing:
+  - First `processImmediate()` at 500ms after graphLoadComplete
+  - Second `processImmediate()` at 1500ms to catch slow operations
+- **Files**: `Editor.jsx`
+
+#### 🔧 Fix 3: Kasa Devices Not Found (v2.1.68)
+- **Symptom**: Kasa plug nodes couldn't find devices in HA add-on (worked on desktop)
+- **Root Cause**: Docker containers are network-isolated; Kasa uses UDP broadcast for discovery
+- **Fix**: Added `host_network: true` to add-on config.yaml
+- **Files**: `home-assistant-addons/t2autotron/config.yaml`
+
+### 🦴 Caveman Summary
+1. **Dropdowns**: Code was trying to fill cups before they were on the table. Now it waits.
+2. **Null outputs**: Engine asked "what's for dinner?" while cook was still shopping. Now it waits for cook to get home.
+3. **Kasa**: Docker container was in a soundproof room, couldn't hear Kasa devices yelling. Opened the walls.
+
+### Version Progression (Session 7)
+- 2.1.64 → 2.1.65 (RAF timing for dropdown)
+- 2.1.65 → 2.1.66 (Device fetch retry logic)
+- 2.1.66 → 2.1.67 (Delayed processImmediate)
+- 2.1.67 → 2.1.68 (host_network for Kasa/Hue)
+
+### Files Touched (Session 7)
+- `v3_migration/backend/plugins/HAGenericDeviceNode.js` - Improved dropdown retry with RAF, device fetch retries
+- `v3_migration/frontend/src/Editor.jsx` - Delayed processImmediate after graph load
+- `v3_migration/backend/package.json` - Version bumps
+- `home-assistant-addons/t2autotron/config.yaml` - Added host_network: true
+- `v3_migration/backend/frontend/assets/` - Cleaned stale JS files, new builds
+
+### Testing Needed
+1. Update add-on to 2.1.68 (requires rebuild for host_network change)
+2. Load saved graph → dropdowns should populate within ~2-3 seconds
+3. Check Debug nodes → should show actual values, not null
+4. Kasa plug nodes → should discover devices on local network
+
+### Notes for Next Session
+- Context got very long this session - fresh start recommended
+- If Kasa still doesn't work, check Docker logs for UDP errors
+- Submodule workflow documented in copilot-instructions.md (push submodule first, then parent)
+
+---
+
 ## Addendum (Session 6 - Device Dropdown Fix)
 
 ### What changed (Session 6 - Claude Opus 4.5)
