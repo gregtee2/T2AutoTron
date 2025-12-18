@@ -5,6 +5,46 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.75] - 2025-12-18
+
+### Fixed
+- **HSV-Only Nodes Report as ON**: Dashboard now correctly shows HSV-only device nodes (no trigger connected) as ON when they're sending color commands. This is a display-only fix for the Debug Dashboard comparison feature.
+
+## [2.1.74] - 2025-12-18
+
+### Fixed
+- **Device States Endpoint**: `/api/engine/device-states` now uses tracked `deviceStates` object instead of just checking trigger input, providing more accurate state reporting.
+
+## [2.1.73] - 2025-12-18
+
+### Added
+- **Device States API Endpoint**: New `GET /api/engine/device-states` endpoint returns what the backend engine thinks each device should be (on/off, expected state). Enables comparison between engine expectations and actual HA state.
+- **Debug Dashboard Enhancements**:
+  - Split "Anomalies" (real problems) from "Activity Notes" (expected behavior like color cycling)
+  - New "Engine vs HA Comparison" panel shows mismatches between automation intent and reality
+  - Removed Node Map panel (not useful in current form)
+  - Fixed variable name bug (`noEvents` → `unknown`)
+
+## [2.1.68] - 2025-12-17
+
+### Fixed
+- **Kasa Device Discovery in Add-on**: Added `host_network: true` to add-on config so Kasa UDP broadcasts can reach devices on the local network (Docker containers are network-isolated by default)
+
+## [2.1.67] - 2025-12-17
+
+### Fixed
+- **Null Outputs After Graph Load**: Added delayed engine processing (500ms + 1500ms) after graph load to ensure async device fetches complete before outputs are calculated
+
+## [2.1.66] - 2025-12-17
+
+### Fixed
+- **HA Device Dropdown Timing**: Improved retry logic with RAF timing instead of fixed setTimeout, increased retries from 5 to 10, added 1-second fallback retry for slow operations
+
+## [2.1.65] - 2025-12-17
+
+### Fixed
+- **HA Device Dropdown Race Condition**: Added `requestAnimationFrame` double-wait before updating dropdowns to ensure React components are mounted
+
 ## [2.1.64] - 2025-12-17
 
 ### Fixed

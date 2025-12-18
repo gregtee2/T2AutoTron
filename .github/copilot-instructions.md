@@ -904,6 +904,7 @@ All at `/api/engine/*`:
 | `/nodes` | GET | List all nodes with current output values |
 | `/outputs` | GET | Get outputs for specific node by ID |
 | `/tick` | POST | Execute single manual tick (for debugging) |
+| `/device-states` | GET | What engine thinks each device should be (for dashboard comparison) |
 
 ### Socket.IO Events
 - `engine-status` - Emitted every 5 seconds when running (running, tickCount, nodeCount)
@@ -962,7 +963,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.63 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.75 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -1016,10 +1017,11 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 15 | **Add-on CORS Fix** | v2.1.55 - Fixed 400/404 errors in HA add-on by allowing all origins in ingress mode |
 | 16 | **Graph Loading Speed** | v2.1.58 - Deferred HA API calls during graph loading (was 2 min, now ~10s) |
 | 17 | **Color Throttling** | v2.1.58 - Increased min throttle to 3s for Zigbee lights (prevents flashing/popping) |
-| 18 | **Debug Dashboard** | v2.1.58 - Standalone HTML tool to monitor engine/buffers/lights without HA login |
+| 18 | **Debug Dashboard** | v2.1.75 - Standalone HTML tool: engine vs HA comparison, anomaly detection, color-cycling activity tracking |
 | 19 | **Report Bug Button** | v2.1.63 - 🐛 button in Control Panel opens GitHub issue with auto-filled debug info |
 | 20 | **GitHub Issue Templates** | v2.1.63 - Bug report and feature request templates with structured fields |
 | 21 | **Addon Landing Page** | v2.1.63 - Origin story, Node-RED comparison, "Why Share This?" section |
+| 22 | **Device States API** | v2.1.73 - `/api/engine/device-states` endpoint for comparing engine expectations vs HA reality |
 
 ### 🟢 RECENTLY FIXED
 
@@ -1037,6 +1039,8 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 10 | **Zigbee light flashing** | v2.1.58 - Backend HADeviceNodes throttle increased from 200ms to 3s minimum |
 | 11 | **Forecast timezone bug** | v2.1.62 - 5-day forecast was showing "yesterday" due to UTC parse issue. Fixed by using `getUTCDay()/getUTCMonth()/getUTCDate()` |
 | 12 | **SaveModal import path** | v2.1.61 - Fixed `../apiConfig` → `../utils/apiBase` import that broke addon build |
+| 13 | **HA dropdown race condition** | v2.1.64-68 - Fixed dropdowns empty after graph load (RAF timing, retry logic, host_network for Kasa) |
+| 14 | **HSV-only nodes display** | v2.1.75 - Debug Dashboard correctly shows HSV-only device nodes as ON when sending color commands |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 

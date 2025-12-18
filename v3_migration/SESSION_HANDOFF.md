@@ -1,4 +1,64 @@
-# Session Handoff - December 17, 2025
+# Session Handoff - December 18, 2025
+
+## Addendum (Session 8 - Debug Dashboard Enhancements)
+
+### What changed (Session 8 - Claude Opus 4.5)
+
+**Current Version: 2.1.75**
+
+#### 🔍 New API Endpoint: `/api/engine/device-states`
+- Returns what the backend engine thinks each device should be
+- Compares engine expected state vs actual HA state for mismatch detection
+- Checks multiple sources: `node.deviceStates`, `node.lastTrigger`, `node.lastSentHsv`, `output.is_on`
+- **Files**: `v3_migration/backend/src/api/routes/engineRoutes.js`
+
+#### 🎛️ Debug Dashboard Major Enhancements
+- **Split Anomalies/Activity Notes**: "Anomalies" panel now shows only real problems (stuck devices, stale state). "Activity Notes" shows expected behavior (color cycling, frequent updates)
+- **Engine vs HA Comparison**: New panel shows what engine expects vs what HA reports. Uses new `/api/engine/device-states` endpoint
+- **Removed Node Map**: Wasn't useful in current form (just listed node names). Left comment for future enhancement
+- **Fixed variable name bug**: Renamed `noEvents` → `unknown` in activity tracking
+- **Files**: `v3_migration/tools/debug_dashboard.html`
+
+#### 🔧 HSV-Only Nodes Report as ON (v2.1.75)
+- **Symptom**: Bar Lamp showed as "OFF" in Engine vs HA panel, but lights were actually ON
+- **Root Cause**: HSV-only nodes (no trigger connected) have `lastTrigger: null`, but are sending color commands
+- **Fix**: Check `node.lastSentHsv` - if we're sending HSV color commands, device is effectively ON
+- **Scope**: REPORTING only - does not change engine behavior, just accurate dashboard display
+- **Files**: `v3_migration/backend/src/api/routes/engineRoutes.js`
+
+### 🦴 Caveman Summary
+1. **Dashboard Split**: Before, it yelled "ANOMALY!" when lights changed colors fast (which is normal). Now it knows the difference between real problems and expected behavior.
+2. **Engine vs HA**: New comparison shows "what the robot thinks" vs "what's actually happening" - helps find when automations get out of sync with reality.
+3. **HSV-Only Fix**: Some lights only get color commands (no on/off trigger). Dashboard was saying "this light is OFF" when it's clearly ON. Fixed the reporting.
+
+### Version Progression (Session 8)
+- 2.1.68 → 2.1.73 (device-states endpoint, dashboard enhancements)
+- 2.1.73 → 2.1.74 (deviceStates tracking fix)
+- 2.1.74 → 2.1.75 (HSV-only nodes report as ON)
+
+### Files Touched (Session 8)
+- `v3_migration/backend/src/api/routes/engineRoutes.js` - Added `/api/engine/device-states` endpoint
+- `v3_migration/tools/debug_dashboard.html` - Split anomalies/activity, engine vs HA panel
+- `v3_migration/backend/package.json` - Version bumps
+- `home-assistant-addons/t2autotron/config.yaml` - Version bumps
+
+### Testing
+1. Update add-on to 2.1.75
+2. Open Debug Dashboard, point at T2 server
+3. Click "Run Full Comparison" → should show Engine vs HA comparison
+4. HSV-only lights (like Bar Lamp) should show as ON when receiving color commands
+
+### Future Enhancement (Pinned)
+- **Node Map with Live State**: Could show node activity/output values in real-time
+- Requires new backend API to expose node execution state
+- Lower priority - dashboard is working well without it
+
+### Notes for Next Session
+- Remote HA access question answered (recommend Tailscale - free, secure, easy)
+- Dashboard is feature-complete for debugging automation mismatches
+- All changes are reporting/display only - no engine behavior changes
+
+---
 
 ## Addendum (Session 7 - HA Add-on Fixes)
 
