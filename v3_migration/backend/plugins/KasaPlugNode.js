@@ -41,6 +41,8 @@
             this.plugs = [];
             this.perPlugState = {};
             this.intervalId = null;
+            this.lastTriggerValue = false;  // Initialize to false
+            this.skipInitialTrigger = true; // Skip first trigger processing after load
 
             try {
                 this.addInput("trigger", new ClassicPreset.Input(sockets.boolean || new ClassicPreset.Socket('boolean'), "Trigger"));
@@ -126,6 +128,8 @@
         restore(state) {
             if (state.properties) Object.assign(this.properties, state.properties);
             if (this.controls.trigger_mode) this.controls.trigger_mode.value = this.properties.triggerMode || "Follow";
+            this.skipInitialTrigger = true; // Reset skip flag on restore
+            this.lastTriggerValue = false;  // Reset to safe default
             this.properties.selectedPlugIds.forEach((id, index) => {
                 const base = `plug_${index}_`;
                 const name = this.properties.selectedPlugNames[index] || "Plug " + (index + 1);
@@ -145,6 +149,19 @@
             
             const triggerRaw = inputs.trigger?.[0];
             const trigger = triggerRaw ?? false;
+            
+            // Skip first trigger after load to prevent spurious state changes
+            if (this.skipInitialTrigger) {
+                this.skipInitialTrigger = false;
+                this.lastTriggerValue = trigger;  // Record current state without acting on it
+                // Return current plug states without triggering any changes
+                const selectedStates = [];
+                this.properties.selectedPlugIds.forEach((id) => {
+                    if (id) { const state = this.perPlugState[id] || null; if (state) selectedStates.push(state); }
+                });
+                return { plug_info: selectedStates.length > 0 ? selectedStates : null };
+            }
+            
             const risingEdge = trigger && !this.lastTriggerValue;
             const fallingEdge = !trigger && this.lastTriggerValue;
             const mode = this.properties.triggerMode || "Follow";
