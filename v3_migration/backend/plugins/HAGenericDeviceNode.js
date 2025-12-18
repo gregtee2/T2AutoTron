@@ -583,12 +583,18 @@
                 // Listen for graph load complete event to refresh devices and sync state
                 this._onGraphLoadComplete = async () => {
                     // Use debounced fetch to prevent API flood when multiple nodes load
-                    const devices = await fetchDevicesDebounced();
+                    let devices = await fetchDevicesDebounced();
                     if (devices.length > 0) {
                         this.devices = devices;
                     } else {
                         // Cache was empty - fall back to HTTP fetch
                         // This ensures devices load even if socket cache isn't ready yet
+                        await this.fetchDevices(true);
+                    }
+                    
+                    // If still no devices, wait a bit and try again (server might still be starting)
+                    if (!this.devices || this.devices.length === 0) {
+                        await new Promise(r => setTimeout(r, 1000));
                         await this.fetchDevices(true);
                     }
                     
@@ -598,13 +604,23 @@
                     await new Promise(resolve => {
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
-                                setTimeout(resolve, 50);
+                                setTimeout(resolve, 100); // Increased from 50ms
                             });
                         });
                     });
                     
                     // Now update the dropdown options - React should have mounted the controls
                     this.updateDeviceSelectorOptions();
+                    
+                    // If devices are STILL empty but we have saved device names, schedule another try
+                    if ((!this.devices || this.devices.length === 0) && this.properties.selectedDeviceIds.length > 0) {
+                        setTimeout(async () => {
+                            await this.fetchDevices(true);
+                            if (this.devices && this.devices.length > 0) {
+                                this.updateDeviceSelectorOptions();
+                            }
+                        }, 2000);
+                    }
                     
                     // Skip individual device state fetches during load - use cached data
                     // This prevents N*M API calls (N nodes × M devices)
