@@ -184,8 +184,16 @@
             border-left: 4px solid #444;
         }
         .comparison-item.match { border-left-color: #4caf50; }
-        .comparison-item.mismatch { border-left-color: #f44336; }
+        .comparison-item.mismatch { 
+            border-left-color: #f44336; 
+            background: #3a1515 !important;
+            animation: bugPulse 2s infinite;
+        }
         .comparison-item.unknown { border-left-color: #ff9800; }
+        @keyframes bugPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); }
+            50% { box-shadow: 0 0 8px 2px rgba(244, 67, 54, 0.6); }
+        }
         .comparison-header {
             display: flex;
             justify-content: space-between;
@@ -194,7 +202,7 @@
         .comparison-entity { color: #00d4ff; font-weight: 500; }
         .comparison-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; }
         .comparison-status.match { background: #1b5e20; color: #81c784; }
-        .comparison-status.mismatch { background: #4a1010; color: #e57373; }
+        .comparison-status.mismatch { background: #b71c1c; color: #fff; font-weight: bold; }
         .comparison-status.unknown { background: #4a3000; color: #ffb74d; }
         .comparison-details {
             display: grid;
@@ -554,36 +562,45 @@
                 const events = eventsResult.history || [];
                 const comparison = deviceNodes.map(node => {
                     const entityId = node.deviceId.replace('ha_', '');
+                    const entityShort = entityId.split('.')[1];
+                    
+                    // Find ALL events for this device (on/off commands)
                     const deviceEvents = events.filter(e => 
-                        e.entity && e.entity.includes(entityId.split('.')[1])
+                        e.entity && e.entity.includes(entityShort)
                     );
                     
-                    // Determine expected state based on trigger buffers
-                    // Look for any trigger buffer that might control this device
-                    let expectedState = 'unknown';
-                    let triggerSource = null;
-                    
-                    // Check if device had any on/off commands
-                    const lastOnOff = deviceEvents.filter(e => 
+                    // Find only ON and OFF commands
+                    const onOffEvents = deviceEvents.filter(e => 
                         e.action?.includes('turn_on') || e.action?.includes('turn_off')
-                    ).slice(-1)[0];
+                    );
                     
-                    const actualState = lastOnOff ? 
-                        (lastOnOff.action?.includes('turn_on') ? 'on' : 'off') : 
-                        'no events';
+                    const lastOnEvent = onOffEvents.filter(e => e.action?.includes('turn_on')).slice(-1)[0];
+                    const lastOffEvent = onOffEvents.filter(e => e.action?.includes('turn_off')).slice(-1)[0];
                     
                     // Get current state from lights list
                     const light = (buffersResult.lights || []).find(l => l.id === node.deviceId);
                     const currentState = light?.state?.on ? 'on' : 'off';
                     
+                    // Determine what the log says should be the state
+                    let loggedState = 'unknown';
+                    if (lastOnEvent && lastOffEvent) {
+                        // Both exist - which was more recent?
+                        const onTime = new Date(lastOnEvent.time).getTime();
+                        const offTime = new Date(lastOffEvent.time).getTime();
+                        loggedState = onTime > offTime ? 'on' : 'off';
+                    } else if (lastOnEvent) {
+                        loggedState = 'on';
+                    } else if (lastOffEvent) {
+                        loggedState = 'off';
+                    }
+                    
                     return {
                         ...node,
-                        eventCount: deviceEvents.length,
-                        lastEvent: deviceEvents.slice(-1)[0],
-                        actualState,
-                        currentState,
-                        expectedState,
-                        triggerSource
+                        eventCount: onOffEvents.length,
+                        lastOnEvent,
+                        lastOffEvent,
+                        loggedState,
+                        currentState
                     };
                 });
                 
@@ -601,44 +618,83 @@
                 return;
             }
             
-            // Count matches/mismatches
-            let matches = 0;
-            let mismatches = 0;
+            // Count issues
+            let bugs = 0;
+            let ok = 0;
+            let noEvents = 0;
             
             const html = comparison.map(item => {
-                // Simple status check: did we see events for this device?
-                let status = 'unknown';
-                let statusText = 'No Events';
+                // THE KEY LOGIC:
+                // BUG = Device is OFF now, but we have NO OFF command logged
+                // This means something turned it off that we didn't control
                 
-                if (item.eventCount > 0) {
-                    status = 'match';
-                    statusText = `${item.eventCount} events`;
-                    matches++;
-                } else if (item.currentState !== 'unknown') {
+                let status = 'match';
+                let statusText = '✓ OK';
+                let statusEmoji = '✅';
+                let explanation = '';
+                
+                if (item.currentState === 'off' && !item.lastOffEvent) {
+                    // 🐛 BUG: Device is OFF but we never sent an OFF command!
+                    status = 'mismatch';
+                    statusText = '🐛 BUG!';
+                    statusEmoji = '🐛';
+                    explanation = 'Device is OFF but no OFF command was logged!';
+                    bugs++;
+                } else if (item.currentState === 'on' && !item.lastOnEvent && item.eventCount === 0) {
+                    // Device is ON but we have no events - it was on before we started logging
                     status = 'unknown';
-                    statusText = 'No commands logged';
-                    mismatches++;
+                    statusText = 'No events';
+                    statusEmoji = '❓';
+                    explanation = 'No commands logged - device state unchanged or controlled externally';
+                    noEvents++;
+                } else if (item.eventCount > 0) {
+                    // We have events and state matches what we expect
+                    if (item.currentState === item.loggedState) {
+                        status = 'match';
+                        statusText = '✓ OK';
+                        statusEmoji = '✅';
+                        explanation = `Last logged: ${item.loggedState.toUpperCase()}, Current: ${item.currentState.toUpperCase()}`;
+                        ok++;
+                    } else {
+                        // State doesn't match last logged command - something external changed it
+                        status = 'mismatch';
+                        statusText = '⚠️ Changed';
+                        statusEmoji = '⚠️';
+                        explanation = `Logged: ${item.loggedState.toUpperCase()}, but now: ${item.currentState.toUpperCase()}`;
+                        bugs++;
+                    }
+                } else {
+                    status = 'unknown';
+                    statusText = 'Idle';
+                    statusEmoji = '💤';
+                    explanation = 'No commands sent';
+                    noEvents++;
                 }
                 
-                const lastEventTime = item.lastEvent ? new Date(item.lastEvent.time).toLocaleString() : '--';
-                const lastEventAction = item.lastEvent?.action || '--';
+                const lastOnTime = item.lastOnEvent ? new Date(item.lastOnEvent.time).toLocaleTimeString() : '--';
+                const lastOffTime = item.lastOffEvent ? new Date(item.lastOffEvent.time).toLocaleTimeString() : '--';
                 
                 return `
                     <div class="comparison-item ${status}">
                         <div class="comparison-header">
-                            <span class="comparison-entity">${item.nodeTitle || item.deviceName}</span>
+                            <span class="comparison-entity">${statusEmoji} ${item.nodeTitle || item.deviceName}</span>
                             <span class="comparison-status ${status}">${statusText}</span>
+                        </div>
+                        <div style="font-size: 11px; color: ${status === 'mismatch' ? '#ff6b6b' : '#888'}; margin-bottom: 8px;">
+                            ${explanation}
                         </div>
                         <div class="comparison-details">
                             <div class="comparison-col">
-                                <div class="comparison-col-title">Graph Config</div>
-                                Mode: ${item.triggerMode}<br>
-                                Entity: ${item.deviceId.replace('ha_', '')}
+                                <div class="comparison-col-title">Current State</div>
+                                <span style="color: ${item.currentState === 'on' ? '#81c784' : '#e57373'}; font-weight: bold;">
+                                    ${item.currentState.toUpperCase()}
+                                </span><br>
+                                Entity: ${item.deviceId.replace('ha_', '').split('.')[1]}
                             </div>
                             <div class="comparison-col">
-                                <div class="comparison-col-title">Actual Activity</div>
-                                Current: ${item.currentState.toUpperCase()}<br>
-                                Last: ${lastEventAction.slice(0, 30)}
+                                <div class="comparison-col-title">Last Logged Commands</div>
+                                🟢 ON: ${lastOnTime}<br>
+                                🔴 OFF: ${lastOffTime}
                             </div>
                         </div>
                     </div>
@@ -647,9 +703,17 @@
             
             document.getElementById('comparisonList').innerHTML = html;
             
-            const badgeClass = mismatches > 0 ? 'warning' : 'success';
-            document.getElementById('comparisonBadge').className = `badge ${badgeClass}`;
-            document.getElementById('comparisonBadge').textContent = `${matches} active, ${mismatches} idle`;
+            // Update badge
+            if (bugs > 0) {
+                document.getElementById('comparisonBadge').className = 'badge warning';
+                document.getElementById('comparisonBadge').textContent = `🐛 ${bugs} BUGS found!`;
+            } else if (ok > 0) {
+                document.getElementById('comparisonBadge').className = 'badge success';
+                document.getElementById('comparisonBadge').textContent = `✅ ${ok} OK, ${noEvents} idle`;
+            } else {
+                document.getElementById('comparisonBadge').className = 'badge';
+                document.getElementById('comparisonBadge').textContent = `${noEvents} devices, no events`;
+            }
         }
         
         function renderEngine() {
