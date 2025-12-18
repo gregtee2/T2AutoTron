@@ -268,18 +268,22 @@ router.get('/device-states', async (req, res) => {
           const entityId = deviceId.startsWith('ha_') ? deviceId.slice(3) : deviceId;
           const deviceName = props.selectedDeviceNames?.[i] || entityId;
           
-          // Get the TRACKED device state (what we last set the device to)
-          // This is more accurate than just the trigger input
-          // node.deviceStates tracks what we actually commanded
+          // Determine expected state for REPORTING purposes only
+          // This does NOT change engine behavior - just tells dashboard what we think is happening
           let expectedState = 'unknown';
           
           // First check deviceStates (tracks actual commands sent)
           if (node.deviceStates && node.deviceStates[entityId] !== undefined) {
             expectedState = node.deviceStates[entityId] ? 'on' : 'off';
           }
-          // Fallback: if trigger is connected and truthy, device should be on
-          else if (node.lastTrigger !== undefined) {
+          // If trigger is connected, use trigger state
+          else if (node.lastTrigger !== undefined && node.lastTrigger !== null) {
             expectedState = node.lastTrigger ? 'on' : 'off';
+          }
+          // HSV-only mode: if no trigger but we have lastSentHsv, device is effectively ON
+          // (we're sending color commands to it, so it must be on)
+          else if (node.lastSentHsv) {
+            expectedState = 'on';  // Reporting only - receiving HSV means it's on
           }
           // Fallback: check output.is_on
           else if (output.is_on !== undefined) {
@@ -298,6 +302,7 @@ router.get('/device-states', async (req, res) => {
             expectedState,
             triggerMode,
             lastTrigger: node.lastTrigger,
+            hasHsvInput: !!node.lastSentHsv,
             trackedState: node.deviceStates?.[entityId],
             lastOutput: output
           });
