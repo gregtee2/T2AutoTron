@@ -586,12 +586,25 @@
                     const devices = await fetchDevicesDebounced();
                     if (devices.length > 0) {
                         this.devices = devices;
-                        this.updateDeviceSelectorOptions();
                     } else {
                         // Cache was empty - fall back to HTTP fetch
                         // This ensures devices load even if socket cache isn't ready yet
                         await this.fetchDevices(true);
                     }
+                    
+                    // CRITICAL: Wait for React to finish rendering the dropdown controls
+                    // The controls were created in restore(), but React hasn't mounted them yet.
+                    // We use multiple RAF + setTimeout to ensure the React render cycle completes.
+                    await new Promise(resolve => {
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                setTimeout(resolve, 50);
+                            });
+                        });
+                    });
+                    
+                    // Now update the dropdown options - React should have mounted the controls
+                    this.updateDeviceSelectorOptions();
                     
                     // Skip individual device state fetches during load - use cached data
                     // This prevents N*M API calls (N nodes × M devices)
@@ -837,10 +850,14 @@
 
         updateDeviceSelectorOptions(retryCount = 0) {
             let anyMissingUpdateFn = false;
+            let anyControlsMissing = false;
             
             this.properties.selectedDeviceIds.forEach((_, i) => {
                 const ctrl = this.controls[`device_${i}_select`];
-                if (!ctrl) return;
+                if (!ctrl) {
+                    anyControlsMissing = true;
+                    return;
+                }
                 const current = ctrl.value || "Select Device";
                 const baseOptions = this.getDeviceOptions();
                 let sortedOptions = [...baseOptions];
@@ -863,11 +880,14 @@
                 }
             });
             
-            // If any dropdown's updateDropdown wasn't ready, retry after React has time to mount
-            // This fixes a race condition where fetchDevices completes before React useEffect runs
-            if (anyMissingUpdateFn && retryCount < 5) {
-                const delay = 100 * (retryCount + 1); // 100ms, 200ms, 300ms, 400ms, 500ms
-                setTimeout(() => this.updateDeviceSelectorOptions(retryCount + 1), delay);
+            // If any dropdown's updateDropdown wasn't ready, or controls don't exist yet,
+            // retry after React has time to mount. Use RAF + setTimeout for more reliable timing.
+            if ((anyMissingUpdateFn || anyControlsMissing) && retryCount < 10) {
+                // Use requestAnimationFrame to wait for next render cycle, then setTimeout
+                requestAnimationFrame(() => {
+                    const delay = 50 * (retryCount + 1); // 50ms, 100ms, 150ms... up to 500ms
+                    setTimeout(() => this.updateDeviceSelectorOptions(retryCount + 1), delay);
+                });
             }
         }
 
