@@ -160,6 +160,31 @@ class HADeviceStateNode {
     }
   }
 
+  /**
+   * Fetch state with retry logic
+   * @param {number} attempt - Current retry attempt (1-based)
+   * @returns {object|null} Device state or null on failure
+   */
+  async fetchStateWithRetry(attempt = 1) {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAYS = [0, 1000, 3000]; // Immediate, 1s, 3s
+    
+    const result = await this.fetchState();
+    
+    if (result !== null) {
+      return result;
+    }
+    
+    // If we have more retries, wait and try again
+    if (attempt < MAX_RETRIES) {
+      const delay = RETRY_DELAYS[attempt] || 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return this.fetchStateWithRetry(attempt + 1);
+    }
+    
+    return null;
+  }
+
   async fetchState() {
     const config = getHAConfig();
     // Check both entityId and selectedDeviceId
@@ -181,15 +206,28 @@ class HADeviceStateNode {
         headers: {
           'Authorization': `Bearer ${config.token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        // Add timeout to prevent hanging requests
+        signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
       if (!response.ok) {
-        console.error(`[HADeviceStateNode] HTTP ${response.status} for ${entityId}`);
+        // Track error type for better diagnostics
+        const errorType = response.status === 401 ? 'AUTH_FAILED' 
+                        : response.status === 404 ? 'ENTITY_NOT_FOUND'
+                        : response.status >= 500 ? 'HA_SERVER_ERROR'
+                        : 'HTTP_ERROR';
+        console.error(`[HADeviceStateNode] ${errorType}: HTTP ${response.status} for ${entityId}`);
+        this._lastErrorType = errorType;
+        this._lastErrorTime = Date.now();
         return null;
       }
 
       const data = await response.json();
+      // Clear error tracking on success
+      this._lastErrorType = null;
+      this._lastErrorTime = null;
+      
       return {
         entity_id: data.entity_id,
         state: data.state,
@@ -198,7 +236,15 @@ class HADeviceStateNode {
         last_updated: data.last_updated
       };
     } catch (error) {
-      console.error(`[HADeviceStateNode] Error fetching ${this.properties.entityId}:`, error.message);
+      // Categorize the error
+      const errorType = error.name === 'TimeoutError' ? 'TIMEOUT'
+                      : error.name === 'AbortError' ? 'ABORTED'
+                      : error.code === 'ECONNREFUSED' ? 'HA_UNREACHABLE'
+                      : error.code === 'ENOTFOUND' ? 'DNS_FAILED'
+                      : 'NETWORK_ERROR';
+      console.error(`[HADeviceStateNode] ${errorType}: ${error.message} for ${entityId}`);
+      this._lastErrorType = errorType;
+      this._lastErrorTime = Date.now();
       return null;
     }
   }
@@ -206,22 +252,51 @@ class HADeviceStateNode {
   async data(inputs) {
     const now = Date.now();
     
+    // Calculate dynamic poll interval based on failure count
+    // Normal: 5s, After failures: gradually increase to reduce load on struggling HA
+    const baseInterval = this.properties.pollInterval || 5000;
+    const failures = this._consecutiveFailures || 0;
+    const backoffMultiplier = Math.min(1 + failures * 0.5, 6); // Max 6x = 30 seconds
+    const effectiveInterval = baseInterval * backoffMultiplier;
+    
     // Poll at configured interval
-    if (now - this.lastPollTime >= this.properties.pollInterval) {
+    if (now - this.lastPollTime >= effectiveInterval) {
       this.lastPollTime = now;
-      const newState = await this.fetchState();
+      
+      // Use retry logic if we've had recent failures
+      const newState = failures > 0 
+        ? await this.fetchStateWithRetry()
+        : await this.fetchState();
       
       // Only update cachedState if we got valid data
-      // This prevents a single API failure from clearing the last known good state
       if (newState !== null) {
+        // Success! Reset failure count and log recovery if we were failing
+        if (this._consecutiveFailures > 0) {
+          console.log(`[HADeviceStateNode ${this.id?.slice(0,8) || 'unknown'}] ✅ Recovered after ${this._consecutiveFailures} failures`);
+        }
         this.cachedState = newState;
         this._consecutiveFailures = 0;
+        this._staleDataAge = null;
       } else {
-        // Track failures and log periodically (not every poll)
+        // Track failures
         this._consecutiveFailures = (this._consecutiveFailures || 0) + 1;
-        if (this._consecutiveFailures === 1 || this._consecutiveFailures % 12 === 0) {
-          // Log first failure and then every ~60 seconds (12 polls at 5s interval)
-          console.warn(`[HADeviceStateNode ${this.id?.slice(0,8) || 'unknown'}] Poll failed (${this._consecutiveFailures} consecutive), keeping last known state`);
+        
+        // Track how old our stale data is
+        if (!this._staleDataAge && this.cachedState) {
+          this._staleDataAge = now;
+        }
+        
+        // Log with context about what's wrong
+        if (this._consecutiveFailures === 1) {
+          console.warn(`[HADeviceStateNode ${this.id?.slice(0,8) || 'unknown'}] Poll failed (${this._lastErrorType || 'UNKNOWN'}), will retry with backoff`);
+        } else if (this._consecutiveFailures % 12 === 0) {
+          const staleMinutes = this._staleDataAge ? Math.floor((now - this._staleDataAge) / 60000) : 0;
+          console.warn(`[HADeviceStateNode ${this.id?.slice(0,8) || 'unknown'}] ${this._consecutiveFailures} consecutive failures (${this._lastErrorType}), stale data age: ${staleMinutes}min, next retry in ${Math.round(effectiveInterval/1000)}s`);
+        }
+        
+        // After 5 minutes of failures (60 polls at 5s), try a more aggressive recovery
+        if (this._consecutiveFailures === 60) {
+          console.error(`[HADeviceStateNode ${this.id?.slice(0,8) || 'unknown'}] ⚠️ 5 minutes of failures - possible HA connection issue. Check HA_HOST and HA_TOKEN in .env`);
         }
       }
     }
