@@ -163,6 +163,13 @@ class HADeviceStateNode {
       if (this.properties.selectedDeviceId && !this.properties.entityId) {
         this.properties.entityId = this.properties.selectedDeviceId;
       }
+      // Log what we restored for debugging
+      const entityId = this.properties.entityId || this.properties.selectedDeviceId;
+      if (entityId) {
+        console.log(`[HADeviceStateNode ${this.id?.slice(0,8) || 'new'}] Restored with entityId: ${entityId}`);
+      } else {
+        console.warn(`[HADeviceStateNode ${this.id?.slice(0,8) || 'new'}] Restored but NO entityId found in properties:`, Object.keys(data.properties));
+      }
     }
   }
 
@@ -194,7 +201,7 @@ class HADeviceStateNode {
   async fetchState() {
     const config = getHAConfig();
     // Check both entityId and selectedDeviceId
-    const entityId = this.properties.entityId || this.properties.selectedDeviceId;
+    let entityId = this.properties.entityId || this.properties.selectedDeviceId;
     if (!config.token || !entityId) {
       // Log why we're not fetching (helps debug missing config)
       if (!config.token) {
@@ -204,6 +211,11 @@ class HADeviceStateNode {
         console.warn(`[HADeviceStateNode] No entityId set (properties: ${JSON.stringify(this.properties)})`);
       }
       return null;
+    }
+
+    // Strip ha_ prefix if present (frontend stores as ha_light.xxx, HA API needs light.xxx)
+    if (entityId.startsWith('ha_')) {
+      entityId = entityId.replace('ha_', '');
     }
 
     try {
