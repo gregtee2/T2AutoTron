@@ -575,6 +575,15 @@
         const [deviceState, setDeviceState] = useState(null);
         const [renderKey, setRenderKey] = useState(0); // Force re-render of controls
 
+        // CRITICAL: Clean up socket listeners when component unmounts to prevent memory leak
+        useEffect(() => {
+            return () => {
+                if (data.destroy) {
+                    data.destroy();
+                }
+            };
+        }, [data]);
+
         useEffect(() => {
             data.changeCallback = () => {
                 setStatus(data.properties.status);

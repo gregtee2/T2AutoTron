@@ -1431,6 +1431,15 @@
         const [isEditingTitle, setIsEditingTitle] = useState(false);
         const titleInputRef = useRef(null);
 
+        // CRITICAL: Clean up socket listeners when component unmounts to prevent memory leak
+        useEffect(() => {
+            return () => {
+                if (data.destroy) {
+                    data.destroy();
+                }
+            };
+        }, [data]);
+
         useEffect(() => {
             data.changeCallback = () => {
                 setSeed(s => s + 1);

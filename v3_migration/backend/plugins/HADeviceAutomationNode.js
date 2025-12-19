@@ -572,6 +572,15 @@
         const lastValuesRef = React.useRef('{}');
         const lastStatusRef = React.useRef('');
 
+        // CRITICAL: Clean up socket listeners when component unmounts to prevent memory leak
+        useEffect(() => {
+            return () => {
+                if (data.destroy) {
+                    data.destroy();
+                }
+            };
+        }, [data]);
+
         // Sync UI with data.properties (which gets updated in data() method)
         useEffect(() => {
             // Poll for value changes since data() is pure and can't call changeCallback
