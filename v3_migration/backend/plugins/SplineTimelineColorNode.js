@@ -1686,6 +1686,31 @@
             return () => clearInterval(interval);
         }, [data]);
 
+        // Engine update interval - triggers changeCallback to reprocess graph
+        // Only runs when the node is actively producing output (time mode in range, or timer running)
+        useEffect(() => {
+            // Get the output step interval (throttle) from properties, default 1000ms
+            const stepIntervalMs = (data.properties.outputStepInterval || 1) * 1000;
+            // Minimum 200ms to prevent excessive processing
+            const effectiveInterval = Math.max(200, stepIntervalMs);
+            
+            const engineInterval = setInterval(() => {
+                const mode = data.properties.rangeMode;
+                const isInRange = data.properties.isInRange;
+                const timerRunning = mode === 'timer' && data.timerStart;
+                const timeActive = mode === 'time' && isInRange;
+                const numericalActive = mode === 'numerical'; // Always needs updates when value input changes
+                const previewActive = data.properties.previewMode;
+                
+                // Only trigger engine update when actively producing changing output
+                if (timerRunning || timeActive || previewActive) {
+                    if (data.changeCallback) data.changeCallback();
+                }
+            }, effectiveInterval);
+            
+            return () => clearInterval(engineInterval);
+        }, [data]);
+
         const triggerUpdate = useCallback(() => {
             if (data.changeCallback) data.changeCallback();
         }, [data]);
