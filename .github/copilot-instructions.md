@@ -1227,6 +1227,34 @@ Tabbed modal with:
 
 **If you skip this, HA users won't see the update!** The add-on repo is what Home Assistant checks for new versions.
 
+### ⚠️ CRITICAL: Update Addon CHANGELOG
+
+**When bumping the version, ALWAYS update `home-assistant-addons/t2autotron/CHANGELOG.md`!**
+
+This file is what HA users see in the add-on store. If you don't update it, users won't know what changed.
+
+**CHANGELOG Location:** `home-assistant-addons/t2autotron/CHANGELOG.md`
+
+**Format:**
+```markdown
+## [2.1.XX] - YYYY-MM-DD
+### Fixed
+- Brief description of bug fix
+
+### Added  
+- Brief description of new feature
+
+### Changed
+- Brief description of behavior change
+```
+
+**Checklist for every version bump:**
+1. ✅ Bump version in `backend/package.json`
+2. ✅ Bump version in `home-assistant-addons/t2autotron/config.yaml`
+3. ✅ **Add entry to `home-assistant-addons/t2autotron/CHANGELOG.md`** ← Don't forget!
+4. ✅ Build frontend (`npm run build`)
+5. ✅ Push addon submodule first, then parent repo
+
 ### Development Workflow
 
 1. **Work on `main` branch** for new features and bug fixes.

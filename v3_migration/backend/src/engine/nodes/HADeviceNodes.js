@@ -165,6 +165,13 @@ class HADeviceStateNode {
     // Check both entityId and selectedDeviceId
     const entityId = this.properties.entityId || this.properties.selectedDeviceId;
     if (!config.token || !entityId) {
+      // Log why we're not fetching (helps debug missing config)
+      if (!config.token) {
+        console.warn(`[HADeviceStateNode] No HA token configured - check HA_TOKEN in .env`);
+      }
+      if (!entityId) {
+        console.warn(`[HADeviceStateNode] No entityId set (properties: ${JSON.stringify(this.properties)})`);
+      }
       return null;
     }
 
@@ -202,7 +209,21 @@ class HADeviceStateNode {
     // Poll at configured interval
     if (now - this.lastPollTime >= this.properties.pollInterval) {
       this.lastPollTime = now;
-      this.cachedState = await this.fetchState();
+      const newState = await this.fetchState();
+      
+      // Only update cachedState if we got valid data
+      // This prevents a single API failure from clearing the last known good state
+      if (newState !== null) {
+        this.cachedState = newState;
+        this._consecutiveFailures = 0;
+      } else {
+        // Track failures and log periodically (not every poll)
+        this._consecutiveFailures = (this._consecutiveFailures || 0) + 1;
+        if (this._consecutiveFailures === 1 || this._consecutiveFailures % 12 === 0) {
+          // Log first failure and then every ~60 seconds (12 polls at 5s interval)
+          console.warn(`[HADeviceStateNode ${this.id?.slice(0,8) || 'unknown'}] Poll failed (${this._consecutiveFailures} consecutive), keeping last known state`);
+        }
+      }
     }
 
     if (!this.cachedState) {
@@ -924,12 +945,20 @@ class HADeviceAutomationNode {
     const result = {};
     
     if (!inputData) {
+      // Log warning when input goes null (but only once per null-streak)
+      if (!this._nullInputWarned) {
+        console.warn(`[HADeviceAutomationNode ${this.id?.slice(0,8) || 'unknown'}] No device_state input - returning nulls for all fields`);
+        this._nullInputWarned = true;
+      }
       // Return null for all outputs when no input
       this.outputs.forEach(outputKey => {
         result[outputKey] = null;
       });
       return result;
     }
+    
+    // Clear warning flag when we get valid input
+    this._nullInputWarned = false;
     
     // Handle both array and object formats
     let devices = [];

@@ -299,6 +299,18 @@ class BackendEngine {
     this.lastTickTime = Date.now();
     this.tickCount++;
 
+    // Periodic health log every 10 minutes (6000 ticks at 100ms)
+    if (this.tickCount % 6000 === 0) {
+      const uptimeMinutes = Math.floor((Date.now() - this.startedAt) / 60000);
+      console.log(`[BackendEngine] Health check: uptime=${uptimeMinutes}min, ticks=${this.tickCount}, nodes=${this.nodes.size}`);
+      engineLogger.logEngineEvent('HEALTH', { 
+        uptimeMinutes, 
+        tickCount: this.tickCount, 
+        nodeCount: this.nodes.size,
+        frontendActive: this.frontendActive 
+      });
+    }
+
     try {
       // Get execution order
       const sortedNodeIds = this.topologicalSort();
