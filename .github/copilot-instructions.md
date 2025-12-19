@@ -78,6 +78,12 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
+#### AND Gate 30-Second Delay (2025-01-XX)
+- **What broke**: Logic nodes (AND, OR, etc.) connected to TimeRangeNode or DayOfWeekComparisonNode took ~30 seconds (or longer) to update their output, even though they should respond instantly.
+- **Why it broke**: TimeRangeNode and DayOfWeekComparisonNode had no internal "clock". They only recalculated when the user changed a slider. Imagine an employee who only checks their inbox when you tap their shoulder - if nobody taps them, they never check.
+- **The fix**: Added `setInterval` in both nodes' `useEffect` to continuously trigger `changeCallback()`. TimeRangeNode ticks every 1 second; DayOfWeekComparisonNode ticks every 1 minute (day changes are slow).
+- **Now it works because**: The time nodes continuously "wake up" and tell the engine to re-evaluate, so downstream logic gates get fresh data every second.
+
 #### Device Timeline Empty in Debug Dashboard (2025-12-18)
 - **What broke**: Debug Dashboard "Device Timeline" panel always showed "No events to show" even though the engine was running and controlling lights for hours.
 - **Why it broke**: The code was looking for the wrong event names in the log file. It searched for `[DEVICE-CMD]` and `[TRIGGER]`, but the actual logs use `[HA-HSV-CHANGE]`, `[HA-DEVICE-SKIP]`, etc. Like looking for "birthday party" entries in a calendar that only has "meeting" entries.

@@ -238,8 +238,19 @@
         };
 
         useEffect(() => {
-            return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
-        }, []);
+            // Initial update
+            triggerEngineUpdate();
+            
+            // Check once per minute - day changes are slow, no need for 1s interval
+            const intervalId = setInterval(() => {
+                triggerEngineUpdate();
+            }, 60000); // 1 minute interval
+            
+            return () => {
+                clearInterval(intervalId);
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            };
+        }, [triggerEngineUpdate]);
 
         // Calculate current status
         const now = new Date();

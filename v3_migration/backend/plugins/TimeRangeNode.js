@@ -192,9 +192,21 @@
             }
         };
 
+        // Continuous time checking - tick every second to update isInRange
         useEffect(() => {
-            return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
-        }, []);
+            // Initial update
+            triggerEngineUpdate();
+            
+            // Tick every second to check time and propagate changes
+            const intervalId = setInterval(() => {
+                triggerEngineUpdate();
+            }, 1000); // 1 second interval
+            
+            return () => {
+                clearInterval(intervalId);
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            };
+        }, [triggerEngineUpdate]);
 
         // Calculate current status
         const now = new Date();
