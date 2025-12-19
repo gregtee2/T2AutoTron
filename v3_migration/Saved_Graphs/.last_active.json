@@ -1,37 +1,37 @@
 {
   "nodes": [
     {
-      "id": "4a02f6d667540d2c",
+      "id": "8abb7da81b102534",
       "label": "Stock Price",
       "position": {
-        "x": 16.44272979457628,
-        "y": 332.65866172199327
+        "x": 90.89178996121734,
+        "y": 338.01905197843575
       },
       "data": {
-        "id": "4a02f6d667540d2c",
+        "id": "8abb7da81b102534",
         "label": "Stock Price",
         "properties": {
-          "symbol": "BITO",
+          "symbol": "SPY",
           "refreshInterval": 60,
-          "lastPrice": 12.5,
-          "priceChange": -0.16999999999999993,
-          "changePercent": -1.3417521704814517,
-          "isUp": false,
-          "lastUpdate": "8:52:19 PM",
+          "lastPrice": 676.47,
+          "priceChange": 5.07000000000005,
+          "changePercent": 0.7551385165326259,
+          "isUp": true,
+          "lastUpdate": "8:57:07 PM",
           "status": "OK",
           "error": null
         }
       }
     },
     {
-      "id": "8b680b98f5a150ee",
+      "id": "9325bcad2a9007f9",
       "label": "Timeline Color",
       "position": {
-        "x": 760.7209860813989,
-        "y": 362.48494746559146
+        "x": 835.17004624804,
+        "y": 367.84533772203395
       },
       "data": {
-        "id": "8b680b98f5a150ee",
+        "id": "9325bcad2a9007f9",
         "label": "Timeline Color",
         "properties": {
           "points": [
@@ -62,8 +62,8 @@
           "editMode": "brightness",
           "collapsed": false,
           "rangeMode": "numerical",
-          "startValue": 0,
-          "endValue": 100,
+          "startValue": -5,
+          "endValue": 5,
           "startTimeHours": 8,
           "startTimeMinutes": 0,
           "startTimePeriod": "AM",
@@ -74,13 +74,13 @@
           "timerUnit": "hours",
           "timerLoopMode": "none",
           "outputStepInterval": 1000,
-          "colorMode": "rainbow",
+          "colorMode": "custom",
           "colorStops": [
             {
               "position": 0,
               "rgb": {
                 "r": 255,
-                "g": 100,
+                "g": 0,
                 "b": 0
               }
             },
@@ -88,35 +88,35 @@
               "position": 1,
               "rgb": {
                 "r": 0,
-                "g": 100,
-                "b": 255
+                "g": 255,
+                "b": 42
               }
             }
           ],
           "editorWidth": 360,
           "editorHeight": 180,
-          "showColorEditor": false,
+          "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0,
+          "position": 0.5755138516532626,
           "isInRange": true,
-          "outputHue": 0,
-          "outputSaturation": 0.891304347826087,
-          "outputBrightness": 0,
+          "outputHue": 0.2195121951219512,
+          "outputSaturation": 0.8367346938775511,
+          "outputBrightness": 151,
           "outputRgb": {
-            "r": 0,
-            "g": 0,
-            "b": 0
+            "r": 64,
+            "g": 87,
+            "b": 14
           }
         }
       }
     },
     {
-      "id": "e0b89517f7a0b8d2",
+      "id": "7644a11904835137",
       "label": "Debug",
       "position": {
-        "x": 407.35166535797555,
-        "y": 789.298027538574
+        "x": 480.70669020666304,
+        "y": 760.743322938456
       },
       "data": {
         "inputs": {
@@ -125,7 +125,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "2824669611177981",
+            "id": "c9c92e999090bc44",
             "control": null,
             "showControl": true
           }
@@ -137,12 +137,12 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "9e3a9012b3f1937b"
+            "id": "5903be9dba744f33"
           }
         },
         "controls": {},
         "label": "Debug",
-        "id": "e0b89517f7a0b8d2",
+        "id": "7644a11904835137",
         "width": 260,
         "properties": {
           "name": "",
@@ -151,58 +151,93 @@
           "enabled": true,
           "history": [
             {
-              "time": "8:52:40 PM",
-              "timestamp": 1766119960574,
-              "value": -1.3417521704814517,
+              "time": "8:56:07 PM",
+              "timestamp": 1766120167709,
+              "value": 0.7551385165326259,
               "type": "number"
             },
             {
-              "time": "8:52:36 PM",
-              "timestamp": 1766119956394,
-              "value": -0.16999999999999993,
-              "type": "number"
+              "time": "8:56:07 PM",
+              "timestamp": 1766120167707,
+              "value": null,
+              "type": "object"
             },
             {
-              "time": "8:52:32 PM",
-              "timestamp": 1766119952501,
-              "value": 12.5,
-              "type": "number"
+              "time": "8:56:07 PM",
+              "timestamp": 1766120167706,
+              "value": null,
+              "type": "object"
             },
             {
-              "time": "8:52:26 PM",
-              "timestamp": 1766119946134,
-              "value": false,
-              "type": "boolean"
+              "time": "8:56:07 PM",
+              "timestamp": 1766120167705,
+              "value": null,
+              "type": "object"
+            },
+            {
+              "time": "8:56:07 PM",
+              "timestamp": 1766120167704,
+              "value": null,
+              "type": "object"
+            },
+            {
+              "time": "8:56:07 PM",
+              "timestamp": 1766120167703,
+              "value": null,
+              "type": "object"
+            },
+            {
+              "time": "8:56:07 PM",
+              "timestamp": 1766120167700,
+              "value": null,
+              "type": "object"
+            },
+            {
+              "time": "8:56:07 PM",
+              "timestamp": 1766120167699,
+              "value": null,
+              "type": "object"
+            },
+            {
+              "time": "8:56:07 PM",
+              "timestamp": 1766120167698,
+              "value": null,
+              "type": "object"
+            },
+            {
+              "time": "8:56:07 PM",
+              "timestamp": 1766120167698,
+              "value": null,
+              "type": "object"
             }
           ],
-          "currentValue": -1.3417521704814517,
-          "messageCount": 4
-        },
-        "selected": false
+          "currentValue": 0.7551385165326259,
+          "messageCount": 106
+        }
       }
     }
   ],
   "connections": [
     {
-      "id": "e52c3a4aed93da46",
-      "source": "4a02f6d667540d2c",
-      "target": "e0b89517f7a0b8d2",
+      "id": "327f4613a86a12b6",
+      "source": "8abb7da81b102534",
+      "target": "7644a11904835137",
       "sourceOutput": "changePercent",
       "targetInput": "input"
     },
     {
-      "id": "cbe4410c73b13a05",
-      "source": "4a02f6d667540d2c",
-      "target": "8b680b98f5a150ee",
+      "id": "17ab45b0f7171dfe",
+      "source": "8abb7da81b102534",
+      "target": "9325bcad2a9007f9",
       "sourceOutput": "changePercent",
       "targetInput": "value"
     }
   ],
   "viewport": {
-    "x": 73.55389862060547,
-    "y": -379.4317036628724,
-    "k": 1.0255692730599857
+    "x": 492.9588455200194,
+    "y": 137.87805238962204,
+    "k": 0.4555156526671305
   },
   "autoSaved": true,
-  "timestamp": 1766119980769
+  "timestamp": 1766120287461
 }
