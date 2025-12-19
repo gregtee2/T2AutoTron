@@ -895,6 +895,12 @@ app.get('/api/debug/lights', async (req, res) => {
   }
 });
 
+// Serve debug dashboard directly from the server
+app.get('/debug', (req, res) => {
+  const dashboardPath = path.join(__dirname, 'debug_dashboard.html');
+  res.sendFile(dashboardPath);
+});
+
 app.get('/api/debug/all', async (req, res) => {
   try {
     // Get engine status

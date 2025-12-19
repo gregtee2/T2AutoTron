@@ -1,0 +1,1857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T2AutoTron Debug</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+        }
+        h1 { color: #00d4ff; margin-bottom: 5px; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
+        
+        .config-bar {
+            background: #252540;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .config-bar input {
+            background: #1a1a2e;
+            border: 1px solid #444;
+            color: #eee;
+            padding: 10px 15px;
+            border-radius: 6px;
+            width: 300px;
+            font-size: 14px;
+        }
+        .config-bar button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .config-bar button:hover { background: #00b8e6; }
+        .config-bar button.secondary {
+            background: #444;
+            color: #eee;
+        }
+        .config-bar button.secondary:hover { background: #555; }
+        .config-bar button.active {
+            background: #4caf50;
+            color: #fff;
+        }
+        .config-bar button.danger {
+            background: #f44336;
+            color: #fff;
+        }
+        .status { 
+            padding: 8px 15px; 
+            border-radius: 6px; 
+            font-size: 13px;
+        }
+        .status.connected { background: #1b5e20; color: #81c784; }
+        .status.error { background: #4a1010; color: #e57373; }
+        .status.loading { background: #333; color: #888; }
+        
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .auto-refresh select {
+            background: #333;
+            border: none;
+            color: #eee;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .panel {
+            background: #252540;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .panel.full-width {
+            grid-column: 1 / -1;
+        }
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #00d4ff;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .panel-title .badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: #333;
+        }
+        .panel-title .badge.warning { background: #ff9800; color: #000; }
+        .panel-title .badge.success { background: #4caf50; color: #000; }
+        .panel-title .badge.info { background: #2196f3; color: #fff; }
+        
+        .panel-actions {
+            display: flex;
+            gap: 5px;
+        }
+        .panel-actions button {
+            padding: 4px 10px;
+            background: #333;
+            border: none;
+            color: #888;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .panel-actions button:hover { background: #444; color: #eee; }
+        
+        /* Engine stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .stat {
+            background: #1a1a2e;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value { font-size: 24px; font-weight: bold; color: #00d4ff; }
+        .stat-label { font-size: 11px; color: #666; margin-top: 5px; }
+        
+        /* Light list */
+        .light-list { max-height: 400px; overflow-y: auto; }
+        .light-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            gap: 12px;
+        }
+        .light-color {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid #444;
+        }
+        .light-info { flex: 1; }
+        .light-name { font-size: 13px; font-weight: 500; }
+        .light-details { font-size: 11px; color: #888; margin-top: 3px; }
+        .light-state {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .light-state.on { background: #1b5e20; color: #81c784; }
+        .light-state.off { background: #333; color: #666; }
+        
+        /* Buffer list */
+        .buffer-list { max-height: 350px; overflow-y: auto; }
+        .buffer-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            gap: 10px;
+        }
+        .buffer-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #444;
+        }
+        .buffer-name { flex: 1; font-size: 12px; }
+        .buffer-value { font-size: 11px; color: #00d4ff; font-family: monospace; }
+        
+        /* Event Log */
+        .event-log { max-height: 400px; overflow-y: auto; }
+        .event-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            gap: 10px;
+            font-size: 12px;
+        }
+        .event-time { color: #666; font-family: monospace; white-space: nowrap; }
+        .event-entity { color: #00d4ff; font-weight: 500; flex-shrink: 0; }
+        .event-action { flex: 1; }
+        .event-action.on { color: #81c784; }
+        .event-action.off { color: #e57373; }
+        .event-action.trigger { color: #ffb74d; }
+        
+        /* Decision Log */
+        .decision-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            border-left: 3px solid #444;
+            gap: 8px;
+            font-size: 12px;
+        }
+        .decision-item.skip { border-left-color: #ff9800; background: #2a2515; }
+        .decision-item.error { border-left-color: #f44336; background: #2a1515; }
+        .decision-item.decision { border-left-color: #2196f3; background: #152a35; }
+        .decision-item.hsv { border-left-color: #9c27b0; background: #251530; }
+        .decision-time { color: #666; font-family: monospace; white-space: nowrap; }
+        .decision-category { 
+            font-weight: bold; 
+            font-size: 10px; 
+            padding: 2px 6px; 
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        .decision-category.skip { background: #ff9800; color: #000; }
+        .decision-category.error { background: #f44336; color: #fff; }
+        .decision-category.decision { background: #2196f3; color: #fff; }
+        .decision-category.hsv { background: #9c27b0; color: #fff; }
+        .decision-entity { color: #00d4ff; font-weight: 500; }
+        .decision-message { 
+            width: 100%; 
+            color: #aaa; 
+            font-size: 11px; 
+            margin-top: 4px;
+            word-break: break-all;
+        }
+        
+        /* Timeline */
+        .timeline-container { margin-top: 15px; }
+        .timeline-device {
+            margin-bottom: 12px;
+        }
+        .timeline-label {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .timeline-bar {
+            height: 20px;
+            background: #1a1a2e;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            position: relative;
+        }
+        .timeline-segment {
+            height: 100%;
+            min-width: 2px;
+        }
+        .timeline-segment.on { background: #4caf50; }
+        .timeline-segment.off { background: #333; }
+        .timeline-segment.gap { background: repeating-linear-gradient(45deg, #444, #444 2px, #333 2px, #333 4px); }
+        .timeline-segment.clickable { cursor: pointer; transition: filter 0.15s; }
+        .timeline-segment.clickable:hover { filter: brightness(1.3); }
+        
+        /* Event Detail Popup */
+        .event-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2a2a4a;
+            border: 2px solid #00d4ff;
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 350px;
+            max-width: 500px;
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .event-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 999;
+        }
+        .event-popup-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00d4ff;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .event-popup-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+        .event-popup-close:hover { color: #fff; }
+        .event-popup-row {
+            display: flex;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .event-popup-label {
+            color: #888;
+            width: 100px;
+            flex-shrink: 0;
+        }
+        .event-popup-value {
+            color: #eee;
+            word-break: break-all;
+        }
+        .event-popup-value.on { color: #4caf50; font-weight: bold; }
+        .event-popup-value.off { color: #f44336; font-weight: bold; }
+        .event-popup-events {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+        }
+        .event-popup-event {
+            padding: 8px;
+            border-bottom: 1px solid #333;
+            font-size: 12px;
+        }
+        .event-popup-event:last-child { border-bottom: none; }
+        .event-popup-event-time { color: #888; margin-right: 10px; }
+        .event-popup-event-action { color: #eee; }
+        .event-popup-event-action.on { color: #4caf50; }
+        .event-popup-event-action.off { color: #f44336; }
+        
+        .timeline-now {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #00d4ff;
+        }
+        .timeline-legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 10px;
+            color: #666;
+        }
+        .timeline-legend span::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+        .timeline-legend .on::before { background: #4caf50; }
+        .timeline-legend .off::before { background: #333; }
+        .timeline-legend .gap::before { background: repeating-linear-gradient(45deg, #444, #444 2px, #333 2px, #333 4px); }
+        
+        /* Comparison panel */
+        .comparison-list { max-height: 500px; overflow-y: auto; }
+        .comparison-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            border-left: 4px solid #444;
+        }
+        .comparison-item.match { border-left-color: #4caf50; }
+        .comparison-item.mismatch { 
+            border-left-color: #f44336; 
+            background: #3a1515 !important;
+            animation: bugPulse 2s infinite;
+        }
+        .comparison-item.unknown { border-left-color: #ff9800; }
+        @keyframes bugPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); }
+            50% { box-shadow: 0 0 8px 2px rgba(244, 67, 54, 0.6); }
+        }
+        .comparison-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .comparison-entity { color: #00d4ff; font-weight: 500; }
+        .comparison-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; }
+        .comparison-status.match { background: #1b5e20; color: #81c784; }
+        .comparison-status.mismatch { background: #b71c1c; color: #fff; font-weight: bold; }
+        .comparison-status.unknown { background: #4a3000; color: #ffb74d; }
+        .comparison-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 12px;
+        }
+        .comparison-col { padding: 8px; background: #252540; border-radius: 4px; }
+        .comparison-col-title { color: #888; margin-bottom: 5px; font-size: 11px; }
+        
+        /* Anomaly alerts */
+        .anomaly-list { max-height: 300px; overflow-y: auto; }
+        .anomaly-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            border-left: 3px solid #ff9800;
+            font-size: 12px;
+        }
+        .anomaly-item.critical { border-left-color: #f44336; background: #2a1515; }
+        .anomaly-item.warning { border-left-color: #ff9800; }
+        .anomaly-item.info { border-left-color: #2196f3; }
+        .anomaly-type { font-weight: bold; margin-bottom: 4px; }
+        .anomaly-type.critical { color: #f44336; }
+        .anomaly-type.warning { color: #ff9800; }
+        .anomaly-type.info { color: #2196f3; }
+        .anomaly-details { color: #888; }
+        
+        /* Future enhancement: Node Map with live state indicators
+           - Show active/error/output values per node
+           - Requires backend API changes to expose node state
+        */
+        
+        .no-data { color: #666; text-align: center; padding: 20px; font-style: italic; }
+        .last-update { font-size: 11px; color: #444; margin-top: 10px; text-align: right; }
+        
+        .filter-input {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #eee;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .hours-selector {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .hours-btn {
+            padding: 4px 10px;
+            background: #333;
+            border: none;
+            color: #888;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .hours-btn.active { background: #00d4ff; color: #000; }
+        
+        /* Response Time */
+        .response-time {
+            font-size: 10px;
+            color: #666;
+            margin-left: auto;
+        }
+        .response-time.fast { color: #4caf50; }
+        .response-time.slow { color: #ff9800; }
+        .response-time.very-slow { color: #f44336; }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .config-bar { flex-direction: column; align-items: stretch; }
+            .config-bar input { width: 100%; }
+            .config-bar button { width: 100%; }
+            .dashboard { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .comparison-details { grid-template-columns: 1fr; }
+        }
+        
+        /* Notification toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #f44336;
+            color: #fff;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+            max-width: 350px;
+        }
+        .toast.success { background: #4caf50; }
+        .toast.info { background: #2196f3; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 T2AutoTron Debug Dashboard</h1>
+    <p class="subtitle">Real-time monitoring &amp; Event Analysis - No login required</p>
+    
+    <div class="config-bar">
+        <input type="text" id="backendUrl" placeholder="Backend URL (e.g., http://192.168.1.100:3000)">
+        <button onclick="connect()">Connect</button>
+        <button class="secondary" onclick="loadEventLog()">📋 Events</button>
+        <button class="secondary" onclick="runComparison()">🔍 Compare</button>
+        <button class="secondary" onclick="exportLogs()">📥 Export</button>
+        <button class="secondary danger" onclick="clearSession()">🗑️ Clear</button>
+        <div class="auto-refresh">
+            <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
+            <label for="autoRefresh">Auto</label>
+            <select id="refreshRate" onchange="updateRefreshRate()">
+                <option value="3000">3s</option>
+                <option value="5000" selected>5s</option>
+                <option value="10000">10s</option>
+                <option value="30000">30s</option>
+            </select>
+        </div>
+        <span class="status loading" id="status">Not connected</span>
+        <span class="response-time" id="responseTime"></span>
+    </div>
+    
+    <div class="dashboard">
+        <!-- Engine Status -->
+        <div class="panel">
+            <div class="panel-title">⚙️ Engine Status</div>
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-value" id="engineRunning">--</div>
+                    <div class="stat-label">Status</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="engineNodes">--</div>
+                    <div class="stat-label">Nodes</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="engineTicks">--</div>
+                    <div class="stat-label">Ticks</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="engineUptime">--</div>
+                    <div class="stat-label">Uptime (min)</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="engineRestarts">0</div>
+                    <div class="stat-label">Restarts</div>
+                </div>
+            </div>
+            <div id="restartHistory" style="margin-top: 10px; font-size: 11px; color: #888;"></div>
+        </div>
+        
+        <!-- Anomaly Detection (Real Problems) -->
+        <div class="panel">
+            <div class="panel-title">
+                🚨 Anomalies
+                <span class="badge" id="anomalyBadge">0 issues</span>
+            </div>
+            <div class="anomaly-list" id="anomalyList">
+                <div class="no-data">Run comparison to detect anomalies</div>
+            </div>
+        </div>
+        
+        <!-- Activity Notes (Expected Behavior) -->
+        <div class="panel">
+            <div class="panel-title">
+                📊 Activity Notes
+                <span class="badge info" id="activityBadge">0 notes</span>
+            </div>
+            <div class="anomaly-list" id="activityList">
+                <div class="no-data">Run comparison to see activity</div>
+            </div>
+        </div>
+        
+        <!-- Engine vs HA Comparison -->
+        <div class="panel">
+            <div class="panel-title">
+                🔍 Engine vs HA
+                <span class="badge" id="comparisonBadge" onclick="scrollToFirstBug()" style="cursor: pointer;" title="Click to scroll to first bug">--</span>
+            </div>
+            <div style="font-size: 11px; color: #666; margin-bottom: 10px;">
+                Compares what the automation engine thinks should be ON/OFF vs what Home Assistant reports
+            </div>
+            <div class="comparison-list" id="comparisonList">
+                <div class="no-data">Click "Compare" to analyze</div>
+            </div>
+        </div>
+        
+        <!-- Device Timeline -->
+        <div class="panel">
+            <div class="panel-title">
+                📊 Device Timeline
+                <div class="panel-actions">
+                    <button onclick="loadEventLog().then(renderTimeline)">Refresh</button>
+                </div>
+            </div>
+            <div class="hours-selector">
+                <button class="hours-btn active" onclick="setHours(1)">1h</button>
+                <button class="hours-btn" onclick="setHours(6)">6h</button>
+                <button class="hours-btn" onclick="setHours(12)">12h</button>
+                <button class="hours-btn" onclick="setHours(24)">24h</button>
+            </div>
+            <div class="timeline-container" id="timelineContainer">
+                <div class="no-data">Load events to see timeline</div>
+            </div>
+            <div class="timeline-legend">
+                <span class="on">ON</span>
+                <span class="off">OFF</span>
+                <span class="gap">Gap (no data)</span>
+            </div>
+        </div>
+        
+        <!-- Buffers -->
+        <div class="panel">
+            <div class="panel-title">📦 Active Buffers</div>
+            <input type="text" class="filter-input" id="bufferFilter" placeholder="Filter..." oninput="renderBuffers()">
+            <div class="buffer-list" id="bufferList">
+                <div class="no-data">Connect to view buffers</div>
+            </div>
+        </div>
+        
+        <!-- Event Log -->
+        <div class="panel full-width">
+            <div class="panel-title">
+                📋 Event Log
+                <span class="badge" id="eventCount">0 events</span>
+            </div>
+            <input type="text" class="filter-input" id="eventFilter" placeholder="Filter by entity..." oninput="renderEventLog()">
+            <div class="event-log" id="eventLog">
+                <div class="no-data">Click "Events" to load</div>
+            </div>
+        </div>
+        
+        <!-- Decision Log (Skips/Errors) -->
+        <div class="panel full-width">
+            <div class="panel-title">
+                🚦 Decision Log
+                <span class="badge" id="decisionCount">0</span>
+                <div class="panel-actions">
+                    <button onclick="renderDecisionLog()">Refresh</button>
+                </div>
+            </div>
+            <div style="font-size: 11px; color: #666; margin-bottom: 10px;">
+                Shows why commands were skipped, errors, and decision logic
+            </div>
+            <div class="decision-filters" style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="showSkips" checked onchange="renderDecisionLog()"> Skips</label>
+                <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="showErrors" checked onchange="renderDecisionLog()"> Errors</label>
+                <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="showDecisions" checked onchange="renderDecisionLog()"> Decisions</label>
+                <label style="font-size: 12px; cursor: pointer;"><input type="checkbox" id="showHsvOnly" onchange="renderDecisionLog()"> HSV Only</label>
+            </div>
+            <input type="text" class="filter-input" id="decisionFilter" placeholder="Filter by entity..." oninput="renderDecisionLog()">
+            <div class="decision-log" id="decisionLog" style="max-height: 300px; overflow-y: auto;">
+                <div class="no-data">Load events to see decisions</div>
+            </div>
+        </div>
+
+        <!-- Lights -->
+        <div class="panel full-width">
+            <div class="panel-title">💡 Light States</div>
+            <input type="text" class="filter-input" id="lightFilter" placeholder="Filter lights..." oninput="renderLights()">
+            <div class="light-list" id="lightList">
+                <div class="no-data">Connect to view lights</div>
+            </div>
+            <div class="last-update" id="lastUpdate"></div>
+        </div>
+    </div>
+
+    <script>
+        let data = { engine: {}, buffers: {}, lights: [] };
+        let eventLogData = [];
+        let fullLogData = []; // All events including decisions/skips
+        let graphData = null;
+        let selectedHours = 1;
+        let refreshInterval = null;
+        let lastBugCount = 0;
+        let notificationsEnabled = false;
+        
+        // Track server uptime to detect restarts
+        let lastKnownUptime = null;
+        let serverRestarts = [];
+        
+        // Load saved URL
+        const savedUrl = localStorage.getItem('t2debug_url');
+        if (savedUrl) document.getElementById('backendUrl').value = savedUrl;
+        
+        // Load persisted data from localStorage
+        function loadPersistedData() {
+            try {
+                const saved = localStorage.getItem('t2debug_session');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Only restore if less than 4 hours old
+                    if (parsed.timestamp && Date.now() - parsed.timestamp < 4 * 60 * 60 * 1000) {
+                        eventLogData = parsed.eventLogData || [];
+                        serverRestarts = parsed.serverRestarts || [];
+                        lastKnownUptime = parsed.lastKnownUptime;
+                        console.log('Restored session data:', { events: eventLogData.length, restarts: serverRestarts.length });
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not restore session data:', e);
+            }
+        }
+        loadPersistedData();
+        
+        // Save data periodically
+        function savePersistedData() {
+            try {
+                localStorage.setItem('t2debug_session', JSON.stringify({
+                    timestamp: Date.now(),
+                    eventLogData: eventLogData.slice(-500), // Keep last 500 events
+                    serverRestarts: serverRestarts.slice(-20), // Keep last 20 restart records
+                    lastKnownUptime
+                }));
+            } catch (e) {
+                console.warn('Could not save session data:', e);
+            }
+        }
+        
+        // Detect server restart (uptime goes backwards)
+        function checkForServerRestart(newUptime) {
+            if (lastKnownUptime !== null && newUptime < lastKnownUptime) {
+                const restartEvent = {
+                    time: new Date().toISOString(),
+                    previousUptime: lastKnownUptime,
+                    newUptime: newUptime
+                };
+                serverRestarts.push(restartEvent);
+                showToast(`⚠️ Server restart detected! (was ${lastKnownUptime}min, now ${newUptime}min)`, 'info');
+                showNotification('T2 Server Restarted', `Previous uptime: ${lastKnownUptime} min`);
+                savePersistedData();
+            }
+            lastKnownUptime = newUptime;
+        }
+        
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(p => { notificationsEnabled = p === 'granted'; });
+        } else if (Notification.permission === 'granted') {
+            notificationsEnabled = true;
+        }
+        
+        // Convert hue (0-360) to color name for human-readable display
+        function hueToColorName(hue) {
+            hue = hue % 360;
+            if (hue < 15 || hue >= 345) return 'Red';
+            if (hue < 45) return 'Orange';
+            if (hue < 75) return 'Yellow';
+            if (hue < 150) return 'Green';
+            if (hue < 195) return 'Cyan';
+            if (hue < 255) return 'Blue';
+            if (hue < 285) return 'Purple';
+            if (hue < 345) return 'Magenta';
+            return 'Red';
+        }
+        
+        function showToast(message, type = 'error') {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+        
+        function showNotification(title, body) {
+            if (notificationsEnabled && document.hidden) {
+                new Notification(title, { body, icon: '🐛' });
+            }
+        }
+        
+        function hsToRgb(h, s) {
+            h = (h || 0) / 360;
+            s = (s || 0) / 100;
+            const v = 1;
+            let r, g, b;
+            const i = Math.floor(h * 6);
+            const f = h * 6 - i;
+            const p = v * (1 - s);
+            const q = v * (1 - f * s);
+            const t = v * (1 - (1 - f) * s);
+            switch (i % 6) {
+                case 0: r = v; g = t; b = p; break;
+                case 1: r = q; g = v; b = p; break;
+                case 2: r = p; g = v; b = t; break;
+                case 3: r = p; g = q; b = v; break;
+                case 4: r = t; g = p; b = v; break;
+                case 5: r = v; g = p; b = q; break;
+            }
+            return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+        }
+        
+        function hueToRgb(hue) {
+            return hsToRgb(hue * 360, 100);
+        }
+        
+        function clearSession() {
+            if (!confirm('Clear all session data (events, restart history)?')) return;
+            eventLogData = [];
+            serverRestarts = [];
+            lastKnownUptime = null;
+            localStorage.removeItem('t2debug_session');
+            document.getElementById('engineRestarts').textContent = '0';
+            document.getElementById('restartHistory').innerHTML = '';
+            document.getElementById('eventLog').innerHTML = '<div class="no-data">Session cleared</div>';
+            showToast('Session data cleared', 'success');
+        }
+        
+        function scrollToFirstBug() {
+            const firstBug = document.getElementById('bug-1');
+            if (firstBug) {
+                firstBug.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Flash effect to highlight it
+                firstBug.style.transition = 'box-shadow 0.3s';
+                firstBug.style.boxShadow = '0 0 20px 5px rgba(244, 67, 54, 0.8)';
+                setTimeout(() => {
+                    firstBug.style.boxShadow = '';
+                }, 2000);
+            } else {
+                showToast('No bugs to scroll to! ✅', 'success');
+            }
+        }
+        
+        function setHours(h) {
+            selectedHours = h;
+            document.querySelectorAll('.hours-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            loadEventLog();
+        }
+        
+        function toggleAutoRefresh() {
+            const enabled = document.getElementById('autoRefresh').checked;
+            if (enabled) {
+                const rate = parseInt(document.getElementById('refreshRate').value);
+                if (refreshInterval) clearInterval(refreshInterval);
+                refreshInterval = setInterval(refresh, rate);
+            } else {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            }
+        }
+        
+        function updateRefreshRate() {
+            if (document.getElementById('autoRefresh').checked) {
+                toggleAutoRefresh(); // Restart with new rate
+            }
+        }
+        
+        async function connect() {
+            const url = document.getElementById('backendUrl').value.trim();
+            if (!url) {
+                alert('Please enter the T2AutoTron backend URL');
+                return;
+            }
+            localStorage.setItem('t2debug_url', url);
+            
+            document.getElementById('status').className = 'status loading';
+            document.getElementById('status').textContent = 'Connecting...';
+            
+            await refresh();
+            
+            // Enable auto-refresh by default
+            document.getElementById('autoRefresh').checked = true;
+            toggleAutoRefresh();
+        }
+        
+        async function refresh() {
+            const url = document.getElementById('backendUrl').value.trim();
+            if (!url) return;
+            
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(`${url}/api/debug/all`);
+                data = await response.json();
+                
+                const elapsed = Math.round(performance.now() - startTime);
+                const rtEl = document.getElementById('responseTime');
+                rtEl.textContent = `${elapsed}ms`;
+                rtEl.className = 'response-time ' + (elapsed < 100 ? 'fast' : elapsed < 500 ? 'slow' : 'very-slow');
+                
+                if (data.success) {
+                    document.getElementById('status').className = 'status connected';
+                    document.getElementById('status').textContent = '✓ Connected';
+                    
+                    renderEngine();
+                    renderBuffers();
+                    renderLights();
+                    
+                    document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (err) {
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').textContent = `✗ ${err.message}`;
+                
+                // Clear engine display to show disconnected state
+                document.getElementById('engineRunning').textContent = '⚪ DISCONNECTED';
+                document.getElementById('responseTime').textContent = '--';
+                document.getElementById('responseTime').className = 'response-time';
+            }
+        }
+        
+        async function loadEventLog() {
+            const url = document.getElementById('backendUrl').value.trim();
+            if (!url) {
+                alert('Please enter the backend URL first');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${url}/api/engine/logs/device-history?hours=${selectedHours}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Store full log for decision panel
+                    fullLogData = result.history || [];
+                    
+                    // Filter for on/off events only (for timeline and event log)
+                    eventLogData = fullLogData.filter(event => {
+                        const action = (event.action || '').toLowerCase();
+                        return action.includes('turn_on') || action.includes('turn_off') || 
+                               action.includes('→ true') || action.includes('→ false') ||
+                               event.category === 'TRIGGER';
+                    });
+                    renderEventLog();
+                    renderTimeline();
+                    renderDecisionLog();
+                    document.getElementById('eventCount').textContent = `${eventLogData.length} events`;
+                } else {
+                    throw new Error(result.error || 'Failed to load events');
+                }
+            } catch (err) {
+                document.getElementById('eventLog').innerHTML = `<div class="no-data">Error: ${err.message}</div>`;
+            }
+        }
+        
+        function renderEventLog() {
+            const filter = document.getElementById('eventFilter').value.toLowerCase();
+            let events = eventLogData.filter(e => 
+                !filter || (e.entity || '').toLowerCase().includes(filter) || 
+                (e.action || '').toLowerCase().includes(filter)
+            );
+            
+            // Deduplicate: Remove consecutive identical events for same entity
+            const dedupedEvents = [];
+            events.forEach(event => {
+                const last = dedupedEvents[dedupedEvents.length - 1];
+                const entity = event.entity || '';
+                const isOn = event.action?.includes('turn_on') || event.action?.includes('→ true');
+                const isOff = event.action?.includes('turn_off') || event.action?.includes('→ false');
+                const lastIsOn = last?.action?.includes('turn_on') || last?.action?.includes('→ true');
+                const lastIsOff = last?.action?.includes('turn_off') || last?.action?.includes('→ false');
+                
+                // Skip if same entity AND same on/off state as last event
+                if (last && last.entity === entity) {
+                    if ((isOn && lastIsOn) || (isOff && lastIsOff)) {
+                        return; // Skip duplicate
+                    }
+                }
+                dedupedEvents.push(event);
+            });
+            
+            if (dedupedEvents.length === 0) {
+                document.getElementById('eventLog').innerHTML = '<div class="no-data">No on/off events found</div>';
+                return;
+            }
+            
+            // Show most recent first, limit to 100
+            const html = dedupedEvents.slice().reverse().slice(0, 100).map(event => {
+                const time = new Date(event.time).toLocaleTimeString();
+                const entity = (event.entity || 'unknown').replace('light.', '').replace('switch.', '');
+                const action = event.action || '';
+                
+                let actionClass = '';
+                let actionText = action;
+                if (action.includes('turn_on') || action.includes('→ true')) {
+                    actionClass = 'on';
+                    actionText = '🟢 ON';
+                } else if (action.includes('turn_off') || action.includes('→ false')) {
+                    actionClass = 'off';
+                    actionText = '🔴 OFF';
+                } else if (event.category === 'TRIGGER') {
+                    actionClass = 'trigger';
+                    actionText = `⚡ ${action}`;
+                }
+                
+                return `
+                    <div class="event-item">
+                        <span class="event-time">${time}</span>
+                        <span class="event-entity">${entity}</span>
+                        <span class="event-action ${actionClass}">${actionText}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('eventLog').innerHTML = html;
+            
+            // Update count to show deduped vs original
+            if (dedupedEvents.length < eventLogData.length) {
+                document.getElementById('eventCount').textContent = `${dedupedEvents.length} events (${eventLogData.length - dedupedEvents.length} duplicates hidden)`;
+            }
+        }
+        
+        function renderDecisionLog() {
+            const filter = document.getElementById('decisionFilter').value.toLowerCase();
+            const showSkips = document.getElementById('showSkips').checked;
+            const showErrors = document.getElementById('showErrors').checked;
+            const showDecisions = document.getElementById('showDecisions').checked;
+            const showHsvOnly = document.getElementById('showHsvOnly').checked;
+            
+            // Filter for decision/skip/error events
+            const decisionEvents = fullLogData.filter(event => {
+                const category = event.category || '';
+                const entity = (event.entity || '').toLowerCase();
+                const action = (event.action || '').toLowerCase();
+                
+                // Filter by entity text
+                if (filter && !entity.includes(filter) && !action.includes(filter)) {
+                    return false;
+                }
+                
+                // Filter by category checkboxes
+                if (category === 'HA-DEVICE-SKIP' && showSkips) return true;
+                if (category === 'HA-HSV-SKIP' && showSkips) return true;
+                if (category === 'HA-DEVICE-ERROR' && showErrors) return true;
+                if (category === 'HA-DECISION' && showDecisions) return true;
+                if ((category === 'HA-HSV-ONLY' || category === 'HA-HSV-CHANGE') && showHsvOnly) return true;
+                
+                return false;
+            });
+            
+            document.getElementById('decisionCount').textContent = `${decisionEvents.length}`;
+            
+            if (decisionEvents.length === 0) {
+                document.getElementById('decisionLog').innerHTML = '<div class="no-data">No decision/skip/error events found</div>';
+                return;
+            }
+            
+            // Show most recent first, limit to 100
+            const html = decisionEvents.slice().reverse().slice(0, 100).map(event => {
+                const time = new Date(event.time).toLocaleTimeString();
+                const entity = (event.entity || 'unknown').replace('light.', '').replace('switch.', '');
+                const category = event.category || '';
+                const action = event.action || '';
+                
+                let categoryIcon = '❓';
+                let categoryClass = '';
+                let categoryLabel = category;
+                
+                if (category === 'HA-DEVICE-SKIP' || category === 'HA-HSV-SKIP') {
+                    categoryIcon = '⏭️';
+                    categoryClass = 'skip';
+                    categoryLabel = 'SKIP';
+                } else if (category === 'HA-DEVICE-ERROR') {
+                    categoryIcon = '❌';
+                    categoryClass = 'error';
+                    categoryLabel = 'ERROR';
+                } else if (category === 'HA-DECISION') {
+                    categoryIcon = '🤔';
+                    categoryClass = 'decision';
+                    categoryLabel = 'DECISION';
+                } else if (category === 'HA-HSV-ONLY' || category === 'HA-HSV-CHANGE') {
+                    categoryIcon = '🎨';
+                    categoryClass = 'hsv';
+                    categoryLabel = 'HSV';
+                }
+                
+                return `
+                    <div class="decision-item ${categoryClass}">
+                        <span class="decision-time">${time}</span>
+                        <span class="decision-category ${categoryClass}">${categoryIcon} ${categoryLabel}</span>
+                        <span class="decision-entity">${entity}</span>
+                        <div class="decision-message">${action}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('decisionLog').innerHTML = html;
+        }
+        
+        // Global storage for segment data (for click handlers)
+        let timelineSegmentData = {};
+        let segmentIdCounter = 0;
+        
+        function renderTimeline() {
+            if (eventLogData.length === 0) {
+                document.getElementById('timelineContainer').innerHTML = '<div class="no-data">No events to show</div>';
+                return;
+            }
+            
+            // Reset segment data storage
+            timelineSegmentData = {};
+            segmentIdCounter = 0;
+            
+            // Group events by device
+            const deviceEvents = {};
+            eventLogData.forEach(e => {
+                const entity = (e.entity || 'unknown').replace('light.', '').replace('switch.', '');
+                if (!deviceEvents[entity]) deviceEvents[entity] = [];
+                deviceEvents[entity].push(e);
+            });
+            
+            const now = Date.now();
+            const windowStart = now - (selectedHours * 60 * 60 * 1000);
+            const windowMs = now - windowStart;
+            
+            const html = Object.entries(deviceEvents).map(([device, events]) => {
+                // Sort events by time
+                events.sort((a, b) => new Date(a.time) - new Date(b.time));
+                
+                // Build timeline segments with event data
+                let segments = [];
+                let lastTime = windowStart;
+                let lastState = 'off';
+                let segmentEvents = []; // Events that caused this state
+                
+                events.forEach(e => {
+                    const eventTime = new Date(e.time).getTime();
+                    if (eventTime < windowStart) return;
+                    
+                    // Gap before this event - save previous segment
+                    if (eventTime > lastTime) {
+                        const width = ((eventTime - lastTime) / windowMs) * 100;
+                        if (width > 0.5) {
+                            segments.push({ 
+                                state: lastState, 
+                                width,
+                                startTime: lastTime,
+                                endTime: eventTime,
+                                events: [...segmentEvents],
+                                device
+                            });
+                        }
+                    }
+                    
+                    // Update state based on this event
+                    if (e.action?.includes('turn_on') || e.action?.includes('→ true')) {
+                        lastState = 'on';
+                        segmentEvents = [e]; // Start new segment's events
+                    } else if (e.action?.includes('turn_off') || e.action?.includes('→ false')) {
+                        lastState = 'off';
+                        segmentEvents = [e];
+                    } else {
+                        // Other events (like HSV changes) - add to current segment
+                        segmentEvents.push(e);
+                    }
+                    lastTime = eventTime;
+                });
+                
+                // Final segment to now
+                if (lastTime < now) {
+                    const width = ((now - lastTime) / windowMs) * 100;
+                    segments.push({ 
+                        state: lastState, 
+                        width,
+                        startTime: lastTime,
+                        endTime: now,
+                        events: [...segmentEvents],
+                        device,
+                        isCurrent: true
+                    });
+                }
+                
+                const segmentsHtml = segments.map(s => {
+                    const segId = `seg_${segmentIdCounter++}`;
+                    timelineSegmentData[segId] = s;
+                    
+                    const startStr = new Date(s.startTime).toLocaleTimeString();
+                    const endStr = s.isCurrent ? 'now' : new Date(s.endTime).toLocaleTimeString();
+                    const duration = formatDuration(s.endTime - s.startTime);
+                    const tooltip = `${s.state.toUpperCase()} | ${startStr} - ${endStr} (${duration}) | Click for details`;
+                    
+                    return `<div class="timeline-segment ${s.state} clickable" 
+                        style="width: ${s.width}%" 
+                        title="${tooltip}"
+                        onclick="showSegmentDetails('${segId}')"></div>`;
+                }).join('');
+                
+                return `
+                    <div class="timeline-device">
+                        <div class="timeline-label">${device}</div>
+                        <div class="timeline-bar">
+                            ${segmentsHtml}
+                            <div class="timeline-now"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('timelineContainer').innerHTML = html;
+        }
+        
+        function formatDuration(ms) {
+            const seconds = Math.floor(ms / 1000);
+            if (seconds < 60) return `${seconds}s`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+            const hours = Math.floor(minutes / 60);
+            return `${hours}h ${minutes % 60}m`;
+        }
+        
+        function showSegmentDetails(segId) {
+            const seg = timelineSegmentData[segId];
+            if (!seg) return;
+            
+            const startStr = new Date(seg.startTime).toLocaleTimeString();
+            const endStr = seg.isCurrent ? 'now' : new Date(seg.endTime).toLocaleTimeString();
+            const duration = formatDuration(seg.endTime - seg.startTime);
+            const stateClass = seg.state === 'on' ? 'on' : 'off';
+            
+            // Build events list HTML
+            let eventsHtml = '';
+            if (seg.events && seg.events.length > 0) {
+                eventsHtml = seg.events.map(e => {
+                    const time = new Date(e.time).toLocaleTimeString();
+                    const action = e.action || 'Unknown';
+                    const isOn = action.includes('turn_on') || action.includes('→ true');
+                    const isOff = action.includes('turn_off') || action.includes('→ false');
+                    const actionClass = isOn ? 'on' : (isOff ? 'off' : '');
+                    const category = e.category || '';
+                    return `
+                        <div class="event-popup-event">
+                            <span class="event-popup-event-time">${time}</span>
+                            <span class="event-popup-event-action ${actionClass}">${action}</span>
+                            ${category ? `<span style="color:#666; margin-left:8px;">[${category}]</span>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                eventsHtml = '<div class="event-popup-event" style="color:#666;">No specific event triggered this state</div>';
+            }
+            
+            const popupHtml = `
+                <div class="event-popup-overlay" onclick="closeSegmentDetails()"></div>
+                <div class="event-popup">
+                    <div class="event-popup-title">
+                        <span>📊 ${seg.device}</span>
+                        <button class="event-popup-close" onclick="closeSegmentDetails()">✕</button>
+                    </div>
+                    <div class="event-popup-row">
+                        <span class="event-popup-label">State:</span>
+                        <span class="event-popup-value ${stateClass}">${seg.state.toUpperCase()}</span>
+                    </div>
+                    <div class="event-popup-row">
+                        <span class="event-popup-label">Duration:</span>
+                        <span class="event-popup-value">${duration}</span>
+                    </div>
+                    <div class="event-popup-row">
+                        <span class="event-popup-label">Start:</span>
+                        <span class="event-popup-value">${new Date(seg.startTime).toLocaleString()}</span>
+                    </div>
+                    <div class="event-popup-row">
+                        <span class="event-popup-label">End:</span>
+                        <span class="event-popup-value">${seg.isCurrent ? 'Still active (now)' : new Date(seg.endTime).toLocaleString()}</span>
+                    </div>
+                    <div style="margin-top: 15px; color: #888; font-size: 12px;">
+                        Events in this period (${seg.events?.length || 0}):
+                    </div>
+                    <div class="event-popup-events">
+                        ${eventsHtml}
+                    </div>
+                </div>
+            `;
+            
+            // Add popup to body
+            const popupContainer = document.createElement('div');
+            popupContainer.id = 'segmentPopup';
+            popupContainer.innerHTML = popupHtml;
+            document.body.appendChild(popupContainer);
+        }
+        
+        function closeSegmentDetails() {
+            const popup = document.getElementById('segmentPopup');
+            if (popup) popup.remove();
+        }
+        
+        // Close popup on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeSegmentDetails();
+        });
+        
+        async function runComparison() {
+            const url = document.getElementById('backendUrl').value.trim();
+            if (!url) {
+                alert('Please enter the backend URL first');
+                return;
+            }
+            
+            try {
+                // Fetch engine's expected device states (what automation thinks should happen)
+                const [graphResponse, eventsResponse, buffersResponse, deviceStatesResponse] = await Promise.all([
+                    fetch(`${url}/api/engine/last-active`).catch(() => ({ ok: false })),
+                    fetch(`${url}/api/engine/logs/device-history?hours=${selectedHours}`),
+                    fetch(`${url}/api/debug/all`),
+                    fetch(`${url}/api/engine/device-states`).catch(() => ({ ok: false }))
+                ]);
+                
+                let graphNodes = [];
+                if (graphResponse.ok) {
+                    const graphResult = await graphResponse.json();
+                    const graphDataObj = graphResult.graph || graphResult;
+                    graphNodes = graphDataObj.nodes || [];
+                    graphData = graphDataObj;
+                }
+                
+                const eventsResult = await eventsResponse.json();
+                const buffersResult = await buffersResponse.json();
+                
+                // Get engine's expected states
+                let engineDeviceStates = [];
+                if (deviceStatesResponse.ok) {
+                    const deviceStatesResult = await deviceStatesResponse.json();
+                    engineDeviceStates = deviceStatesResult.deviceStates || [];
+                }
+                
+                const triggerBuffers = {};
+                if (buffersResult.buffers) {
+                    Object.entries(buffersResult.buffers).forEach(([name, value]) => {
+                        if (name.startsWith('[Trigger]')) {
+                            triggerBuffers[name] = value;
+                        }
+                    });
+                }
+                
+                // Build comparison from engine device states (preferred) or graph parsing (fallback)
+                const events = eventsResult.history || [];
+                let comparison = [];
+                
+                if (engineDeviceStates.length > 0) {
+                    // Use engine's device states - this knows what SHOULD be happening
+                    comparison = engineDeviceStates.map(device => {
+                        const entityShort = device.entityId.split('.')[1];
+                        
+                        const deviceEvents = events.filter(e => 
+                            e.entity && e.entity.includes(entityShort)
+                        );
+                        
+                        const onOffEvents = deviceEvents.filter(e => 
+                            e.action?.includes('turn_on') || e.action?.includes('turn_off')
+                        );
+                        
+                        const lastOnEvent = onOffEvents.filter(e => e.action?.includes('turn_on')).slice(-1)[0];
+                        const lastOffEvent = onOffEvents.filter(e => e.action?.includes('turn_off')).slice(-1)[0];
+                        
+                        // Get actual current state from HA - check BOTH lights AND switches
+                        const allDevices = [
+                            ...(buffersResult.lights || []),
+                            ...(buffersResult.switches || [])
+                        ];
+                        const haDevice = allDevices.find(d => 
+                            d.id === `ha_${device.entityId}` || d.id === device.entityId
+                        );
+                        const actualState = haDevice?.state?.on ? 'on' : 'off';
+                        
+                        // Get actual color from HA device (if it's a light)
+                        const actualHsColor = haDevice?.state?.hs_color || null;
+                        const actualBrightness = haDevice?.state?.brightness || null;
+                        
+                        // Engine's expected state and color
+                        const expectedState = device.expectedState || 'unknown';
+                        const expectedHsv = device.expectedHsv || null;
+                        
+                        return {
+                            nodeId: device.nodeId,
+                            nodeTitle: device.nodeTitle || device.deviceName,
+                            deviceId: device.entityId,
+                            deviceName: device.deviceName,
+                            triggerMode: device.triggerMode,
+                            eventCount: onOffEvents.length,
+                            lastOnEvent,
+                            lastOffEvent,
+                            expectedState,  // What engine thinks it should be
+                            actualState,    // What HA reports
+                            hasHsvInput: device.hasHsvInput,  // Is this receiving color commands?
+                            expectedHsv,    // What color engine is sending
+                            actualHsColor,  // What color HA reports [h, s]
+                            actualBrightness // What brightness HA reports (0-100)
+                        };
+                    });
+                } else {
+                    // Fallback: parse from graph (doesn't know expected state)
+                    const deviceNodes = [];
+                    graphNodes.forEach(node => {
+                        const nodeData = node.data || {};
+                        const props = nodeData.properties || {};
+                        const nodeLabel = node.label || nodeData.label;
+                        
+                        if (nodeLabel === 'HA Generic Device') {
+                            (props.selectedDeviceIds || []).forEach((deviceId, i) => {
+                                deviceNodes.push({
+                                    nodeId: node.id,
+                                    nodeTitle: props.customTitle || nodeLabel,
+                                    deviceId: deviceId,
+                                    deviceName: (props.selectedDeviceNames || [])[i] || deviceId,
+                                    triggerMode: props.triggerMode || 'Follow'
+                                });
+                            });
+                        }
+                    });
+                    
+                    comparison = deviceNodes.map(node => {
+                        const entityId = node.deviceId.replace('ha_', '');
+                        const entityShort = entityId.split('.')[1];
+                        
+                        const deviceEvents = events.filter(e => 
+                            e.entity && e.entity.includes(entityShort)
+                        );
+                        
+                        const onOffEvents = deviceEvents.filter(e => 
+                            e.action?.includes('turn_on') || e.action?.includes('turn_off')
+                        );
+                        
+                        const lastOnEvent = onOffEvents.filter(e => e.action?.includes('turn_on')).slice(-1)[0];
+                        const lastOffEvent = onOffEvents.filter(e => e.action?.includes('turn_off')).slice(-1)[0];
+                        
+                        // Check both lights AND switches
+                        const allDevices = [
+                            ...(buffersResult.lights || []),
+                            ...(buffersResult.switches || [])
+                        ];
+                        const haDevice = allDevices.find(d => d.id === node.deviceId);
+                        const actualState = haDevice?.state?.on ? 'on' : 'off';
+                        
+                        return {
+                            ...node,
+                            eventCount: onOffEvents.length,
+                            lastOnEvent,
+                            lastOffEvent,
+                            expectedState: 'unknown',  // Can't determine from graph alone
+                            actualState
+                        };
+                    });
+                }
+                
+                const { anomalies, activity } = detectAnomalies(events, comparison);
+                renderAnomalies(anomalies);
+                renderActivity(activity);
+                renderComparison(comparison, triggerBuffers);
+                
+            } catch (err) {
+                document.getElementById('comparisonList').innerHTML = `<div class="no-data">Error: ${err.message}</div>`;
+            }
+        }
+        
+        function detectAnomalies(events, comparison) {
+            const anomalies = [];  // Real problems
+            const activity = [];   // Expected behavior, informational
+            
+            // Show HSV-active devices (color cycling)
+            comparison.forEach(item => {
+                if (item.hasHsvInput) {
+                    activity.push({
+                        type: 'info',
+                        title: 'HSV Active',
+                        details: `${item.nodeTitle || item.deviceName}: Receiving color commands`
+                    });
+                }
+            });
+            
+            // Check for high-frequency commands (color cycling, etc.)
+            const deviceCmdCounts = {};
+            events.forEach(e => {
+                const entity = e.entity || 'unknown';
+                if (!deviceCmdCounts[entity]) deviceCmdCounts[entity] = 0;
+                deviceCmdCounts[entity]++;
+            });
+            
+            Object.entries(deviceCmdCounts).forEach(([device, count]) => {
+                const perHour = Math.round(count / selectedHours);
+                if (count > 50) {
+                    // High frequency - probably color cycling, not an anomaly
+                    activity.push({
+                        type: 'info',
+                        title: 'High Activity',
+                        details: `${device.split('.').pop()}: ${count} commands (${perHour}/hr)`
+                    });
+                }
+            });
+            
+            // Check for engine expected vs actual state mismatch (THE KEY CHECK)
+            comparison.forEach(item => {
+                if (item.expectedState !== 'unknown' && item.actualState !== item.expectedState) {
+                    anomalies.push({
+                        type: 'critical',
+                        title: 'State Mismatch',
+                        details: `${item.nodeTitle || item.deviceName}: Engine says ${item.expectedState.toUpperCase()}, HA says ${item.actualState.toUpperCase()}`
+                    });
+                }
+            });
+            
+            // Check for COLOR mismatch (engine sending one color, light showing different color)
+            comparison.forEach(item => {
+                if (item.expectedHsv && item.actualHsColor) {
+                    // expectedHsv is { hue: 0-1, saturation: 0-1, brightness: 0-254 }
+                    // actualHsColor is [hue: 0-360, saturation: 0-100]
+                    const expectedHue = Math.round((item.expectedHsv.hue || 0) * 360);
+                    const actualHue = Math.round(item.actualHsColor[0] || 0);
+                    
+                    // Hue is circular (0 and 360 are the same)
+                    let hueDiff = Math.abs(expectedHue - actualHue);
+                    if (hueDiff > 180) hueDiff = 360 - hueDiff;
+                    
+                    // If hue differs by more than 30 degrees, flag it
+                    if (hueDiff > 30) {
+                        const expectedColorName = hueToColorName(expectedHue);
+                        const actualColorName = hueToColorName(actualHue);
+                        anomalies.push({
+                            type: 'critical',
+                            title: 'Color Mismatch',
+                            details: `${item.nodeTitle || item.deviceName}: Engine sending ${expectedColorName} (${expectedHue}°), light shows ${actualColorName} (${actualHue}°)`
+                        });
+                    }
+                }
+            });
+            
+            // Check for long gaps in logging (REAL ANOMALY - engine may have stopped)
+            if (events.length > 0) {
+                const sortedEvents = [...events].sort((a, b) => new Date(a.time) - new Date(b.time));
+                for (let i = 1; i < sortedEvents.length; i++) {
+                    const gap = new Date(sortedEvents[i].time) - new Date(sortedEvents[i-1].time);
+                    const gapHours = gap / (1000 * 60 * 60);
+                    if (gapHours > 2) {
+                        anomalies.push({
+                            type: 'warning',
+                            title: 'Logging Gap',
+                            details: `${gapHours.toFixed(1)} hour gap around ${new Date(sortedEvents[i-1].time).toLocaleTimeString()} - engine stopped?`
+                        });
+                    }
+                }
+            }
+            
+            return { anomalies, activity };
+        }
+        
+        function renderAnomalies(anomalies) {
+            if (anomalies.length === 0) {
+                document.getElementById('anomalyList').innerHTML = '<div class="no-data">No anomalies detected ✓</div>';
+                document.getElementById('anomalyBadge').textContent = '0 issues';
+                document.getElementById('anomalyBadge').className = 'badge success';
+                return;
+            }
+            
+            const critical = anomalies.filter(a => a.type === 'critical').length;
+            document.getElementById('anomalyBadge').textContent = `${anomalies.length} issues`;
+            document.getElementById('anomalyBadge').className = 'badge ' + (critical > 0 ? 'warning' : 'info');
+            
+            const html = anomalies.map(a => `
+                <div class="anomaly-item ${a.type}">
+                    <div class="anomaly-type ${a.type}">${a.type === 'critical' ? '🐛' : a.type === 'warning' ? '⚠️' : 'ℹ️'} ${a.title}</div>
+                    <div class="anomaly-details">${a.details}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('anomalyList').innerHTML = html;
+            
+            // Notify if new bugs detected
+            if (critical > lastBugCount) {
+                showNotification('🐛 T2AutoTron Bug Detected', `${critical} unexplained device state(s) found`);
+                showToast(`🐛 ${critical} bug(s) detected!`, 'error');
+            }
+            lastBugCount = critical;
+        }
+        
+        function renderActivity(activity) {
+            if (activity.length === 0) {
+                document.getElementById('activityList').innerHTML = '<div class="no-data">No notable activity ✓</div>';
+                document.getElementById('activityBadge').textContent = '0 notes';
+                return;
+            }
+            
+            document.getElementById('activityBadge').textContent = `${activity.length} notes`;
+            
+            const html = activity.map(a => `
+                <div class="anomaly-item info">
+                    <div class="anomaly-type info">📊 ${a.title}</div>
+                    <div class="anomaly-details">${a.details}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('activityList').innerHTML = html;
+        }
+        
+        function renderComparison(comparison, triggerBuffers) {
+            if (comparison.length === 0) {
+                document.getElementById('comparisonList').innerHTML = '<div class="no-data">No device nodes found in graph</div>';
+                document.getElementById('comparisonBadge').textContent = '0 devices';
+                return;
+            }
+            
+            let bugs = 0;
+            let ok = 0;
+            let unknown = 0;
+            
+            const html = comparison.map(item => {
+                let status = 'match';
+                let statusText = '✓ OK';
+                let statusEmoji = '✅';
+                let explanation = '';
+                
+                const expected = item.expectedState || 'unknown';
+                const actual = item.actualState || 'unknown';
+                
+                if (expected === 'unknown') {
+                    // Engine not running or can't determine expected state
+                    status = 'unknown';
+                    statusText = 'Unknown';
+                    statusEmoji = '💤';
+                    explanation = 'Engine not running or expected state unknown';
+                    unknown++;
+                } else if (expected !== actual) {
+                    // MISMATCH - this is a bug!
+                    status = 'mismatch';
+                    statusText = '🐛 BUG!';
+                    statusEmoji = '🐛';
+                    explanation = `Engine says ${expected.toUpperCase()}, but HA reports ${actual.toUpperCase()}`;
+                    bugs++;
+                } else {
+                    // Match - all good
+                    status = 'match';
+                    statusText = '✓ Match';
+                    statusEmoji = '✅';
+                    explanation = `Expected: ${expected.toUpperCase()}, Actual: ${actual.toUpperCase()}`;
+                    ok++;
+                }
+                
+                const lastOnTime = item.lastOnEvent ? new Date(item.lastOnEvent.time).toLocaleTimeString() : '--';
+                const lastOffTime = item.lastOffEvent ? new Date(item.lastOffEvent.time).toLocaleTimeString() : '--';
+                const entityShort = (item.deviceId || '').replace('ha_', '').split('.')[1] || item.deviceId;
+                const bugId = status === 'mismatch' ? `bug-${bugs}` : '';
+                
+                return `
+                    <div class="comparison-item ${status}" ${bugId ? `id="${bugId}"` : ''}>
+                        <div class="comparison-header">
+                            <span class="comparison-entity">${statusEmoji} ${item.nodeTitle || item.deviceName}</span>
+                            <span class="comparison-status ${status}">${statusText}</span>
+                        </div>
+                        <div style="font-size: 11px; color: ${status === 'mismatch' ? '#ff6b6b' : '#888'}; margin-bottom: 8px;">
+                            ${explanation}
+                        </div>
+                        <div class="comparison-details">
+                            <div class="comparison-col">
+                                <div class="comparison-col-title">🧠 Engine Says</div>
+                                <span style="color: ${expected === 'on' ? '#81c784' : expected === 'off' ? '#e57373' : '#888'}; font-weight: bold;">
+                                    ${expected.toUpperCase()}
+                                </span>
+                            </div>
+                            <div class="comparison-col">
+                                <div class="comparison-col-title">🏠 HA Reports</div>
+                                <span style="color: ${actual === 'on' ? '#81c784' : '#e57373'}; font-weight: bold;">
+                                    ${actual.toUpperCase()}
+                                </span>
+                            </div>
+                            <div class="comparison-col">
+                                <div class="comparison-col-title">📝 Last Commands</div>
+                                <span style="font-size: 10px;">🟢 ${lastOnTime}<br>🔴 ${lastOffTime}</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #555; margin-top: 6px;">Entity: ${entityShort}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('comparisonList').innerHTML = html;
+            
+            if (bugs > 0) {
+                document.getElementById('comparisonBadge').className = 'badge warning';
+                document.getElementById('comparisonBadge').textContent = `🐛 ${bugs} BUGS found!`;
+            } else if (ok > 0) {
+                document.getElementById('comparisonBadge').className = 'badge success';
+                document.getElementById('comparisonBadge').textContent = `✅ ${ok} OK, ${unknown} unknown`;
+            } else {
+                document.getElementById('comparisonBadge').className = 'badge';
+                document.getElementById('comparisonBadge').textContent = `${unknown} devices, engine not running`;
+            }
+        }
+        
+        function renderEngine() {
+            const e = data.engine || {};
+            document.getElementById('engineRunning').textContent = e.running ? '🟢 ON' : '⚫ OFF';
+            document.getElementById('engineNodes').textContent = e.nodeCount || 0;
+            document.getElementById('engineTicks').textContent = (e.tickCount || 0).toLocaleString();
+            
+            const uptimeMinutes = Math.floor((e.uptime || 0) / 60000);
+            document.getElementById('engineUptime').textContent = uptimeMinutes;
+            
+            // Check for server restart (uptime went backwards)
+            checkForServerRestart(uptimeMinutes);
+            
+            // Show restart count and history
+            document.getElementById('engineRestarts').textContent = serverRestarts.length;
+            if (serverRestarts.length > 0) {
+                const recent = serverRestarts.slice(-3).reverse();
+                const historyHtml = recent.map(r => {
+                    const time = new Date(r.time).toLocaleTimeString();
+                    return `<div>⚠️ ${time} (was ${r.previousUptime}min)</div>`;
+                }).join('');
+                document.getElementById('restartHistory').innerHTML = historyHtml;
+            }
+            
+            // Save session data periodically
+            savePersistedData();
+        }
+        
+        function renderBuffers() {
+            const filter = document.getElementById('bufferFilter').value.toLowerCase();
+            const buffers = data.buffers || {};
+            const entries = Object.entries(buffers).filter(([k]) => k.toLowerCase().includes(filter));
+            
+            if (entries.length === 0) {
+                document.getElementById('bufferList').innerHTML = '<div class="no-data">No buffers</div>';
+                return;
+            }
+            
+            const html = entries.map(([name, value]) => {
+                let displayValue = '';
+                let colorBox = '';
+                
+                if (value && typeof value === 'object' && 'hue' in value) {
+                    colorBox = `<div class="buffer-color" style="background: ${hueToRgb(value.hue)}"></div>`;
+                    displayValue = `H:${(value.hue || 0).toFixed(3)} S:${(value.saturation || 0).toFixed(2)} B:${value.brightness || 0}`;
+                } else if (typeof value === 'boolean') {
+                    colorBox = `<div class="buffer-color" style="background: ${value ? '#4caf50' : '#333'}"></div>`;
+                    displayValue = value ? 'TRUE' : 'FALSE';
+                } else if (typeof value === 'number') {
+                    displayValue = value.toFixed(2);
+                } else {
+                    displayValue = JSON.stringify(value).slice(0, 40);
+                }
+                
+                return `<div class="buffer-item">${colorBox}<div class="buffer-name">${name}</div><div class="buffer-value">${displayValue}</div></div>`;
+            }).join('');
+            
+            document.getElementById('bufferList').innerHTML = html;
+        }
+        
+        function renderLights() {
+            const filter = document.getElementById('lightFilter').value.toLowerCase();
+            const lights = (data.lights || []).filter(l => 
+                (l.id || '').toLowerCase().includes(filter) || 
+                (l.name || '').toLowerCase().includes(filter)
+            );
+            
+            if (lights.length === 0) {
+                document.getElementById('lightList').innerHTML = '<div class="no-data">No lights found</div>';
+                return;
+            }
+            
+            const html = lights.map(light => {
+                const stateObj = light.state || {};
+                const stateStr = stateObj.state || 'off';
+                const isOn = stateObj.on || stateStr === 'on';
+                
+                const hs = stateObj.hs_color || light.attributes?.hs_color || [0, 0];
+                
+                let brightness = 0;
+                if (stateObj.brightness !== undefined) {
+                    brightness = Math.round(stateObj.brightness * 2.55);
+                } else if (light.attributes?.brightness !== undefined) {
+                    brightness = light.attributes.brightness;
+                }
+                
+                const color = isOn ? hsToRgb(hs[0], hs[1]) : '#444';
+                const colorOpacity = isOn ? Math.max(0.4, brightness / 255) : 0.3;
+                const name = light.name || light.id?.replace('ha_light.', '') || 'Unknown';
+                const glowStyle = isOn ? `box-shadow: 0 0 8px ${color};` : '';
+                
+                return `
+                    <div class="light-item">
+                        <div class="light-color" style="background: ${color}; opacity: ${colorOpacity}; ${glowStyle}"></div>
+                        <div class="light-info">
+                            <div class="light-name">${name}</div>
+                            <div class="light-details">H: ${hs[0]?.toFixed(0) || '--'}° S: ${hs[1]?.toFixed(0) || '--'}% B: ${brightness || '--'}</div>
+                        </div>
+                        <div class="light-state ${isOn ? 'on' : 'off'}">${stateStr}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('lightList').innerHTML = html;
+        }
+        
+        function exportLogs() {
+            if (eventLogData.length === 0) {
+                alert('No events loaded. Click "Events" first.');
+                return;
+            }
+            
+            const exportData = {
+                exportTime: new Date().toISOString(),
+                hoursWindow: selectedHours,
+                eventCount: eventLogData.length,
+                events: eventLogData,
+                buffers: data.buffers,
+                lights: data.lights?.map(l => ({
+                    id: l.id,
+                    name: l.name,
+                    state: l.state
+                })),
+                engine: data.engine
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `t2_debug_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showToast('Logs exported!', 'success');
+        }
+        
+        // Auto-connect if URL is saved
+        if (savedUrl) {
+            setTimeout(connect, 500);
+        }
+    </script>
+</body>
+</html>
