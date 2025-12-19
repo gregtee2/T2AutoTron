@@ -307,6 +307,32 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
             toast.error('Failed to load graph');
         }
     };
+
+    // Download a specific graph from server as a file
+    const handleDownloadServerGraph = async (graphName, e) => {
+        e.stopPropagation(); // Don't trigger the load action
+        try {
+            const response = await authFetch(`/api/engine/graphs/${encodeURIComponent(graphName)}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.graph) {
+                    const blob = new Blob([JSON.stringify(data.graph, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = graphName.endsWith('.json') ? graphName : `${graphName}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success(`Downloaded: ${graphName.replace('.json', '')}`);
+                }
+            } else {
+                toast.error('Failed to download graph');
+            }
+        } catch (err) {
+            console.error('Failed to download graph:', err);
+            toast.error('Failed to download graph');
+        }
+    };
     
     // Check for updates on demand
     const handleCheckForUpdates = async () => {
@@ -451,6 +477,7 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                         <button onClick={handleOpenServerGraphs} className="dock-btn" title="Load a saved graph from the server">📁 Saved Graphs</button>
                         <button onClick={onLoadExample} className="dock-btn" title="Load a starter graph to see how things work">📚 Load Example</button>
                         <button onClick={handleImportClick} className="dock-btn">📂 Import File</button>
+                        <button onClick={onExport} className="dock-btn" title="Download current graph as JSON file to your computer">📥 Download Graph</button>
                         <button onClick={onClear} className="dock-btn">🗑️ Clear</button>
                         <button 
                             onClick={() => socket.emit(engineStatus.running ? 'stop-engine' : 'start-engine')}
@@ -658,12 +685,24 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                                         <div 
                                             key={index}
                                             className="graph-item"
-                                            onClick={() => handleLoadServerGraph(graph.name)}
                                         >
-                                            <span className="graph-name">{graph.displayName}</span>
-                                            <span className="graph-date">
-                                                {new Date(graph.modified).toLocaleDateString()}
-                                            </span>
+                                            <div 
+                                                className="graph-info"
+                                                onClick={() => handleLoadServerGraph(graph.name)}
+                                                title="Click to load this graph"
+                                            >
+                                                <span className="graph-name">{graph.displayName}</span>
+                                                <span className="graph-date">
+                                                    {new Date(graph.modified).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <button 
+                                                className="graph-download-btn"
+                                                onClick={(e) => handleDownloadServerGraph(graph.name, e)}
+                                                title="Download this graph to your computer"
+                                            >
+                                                📥
+                                            </button>
                                         </div>
                                     ))}
                                 </div>

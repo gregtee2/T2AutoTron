@@ -411,17 +411,41 @@
     border: 1px solid rgba(0, 243, 255, 0.3);
     border-radius: 8px;
     padding: 12px 15px;
-    cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
     transition: all 0.2s ease;
+    gap: 10px;
 }
 
 .graph-item:hover {
     background: rgba(0, 100, 150, 0.4);
     border-color: #00f3ff;
     box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+}
+
+.graph-info {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.graph-download-btn {
+    background: rgba(0, 150, 100, 0.3);
+    border: 1px solid rgba(0, 200, 100, 0.4);
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.graph-download-btn:hover {
+    background: rgba(0, 200, 100, 0.5);
+    border-color: #00ff88;
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
 }
 
 .graph-name {
