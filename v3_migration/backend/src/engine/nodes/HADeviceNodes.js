@@ -20,8 +20,11 @@ function getEngine() {
 // Use native fetch (Node 18+) or node-fetch
 const fetch = globalThis.fetch || require('node-fetch');
 
+// Debug mode - only log verbose info when enabled
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+
 // ============================================================================
-// HSV Update Tracker - Periodic summary logging (every 60s)
+// HSV Update Tracker - Periodic summary logging (every 60s) - only when VERBOSE
 // ============================================================================
 const hsvUpdateTracker = {
   updates: new Map(),  // entityId -> { oldHsv, newHsv, count, lastTime }
@@ -47,7 +50,8 @@ const hsvUpdateTracker = {
   
   logSummary() {
     if (this.updates.size === 0) {
-      console.log('[HSV-SUMMARY] No updates to report');
+      // Only log "no updates" in verbose mode
+      if (VERBOSE) console.log('[HSV-SUMMARY] No updates to report');
       return;
     }
     
@@ -65,15 +69,17 @@ const hsvUpdateTracker = {
       lines.push(`${shortName}: H:${oldH}→${newH} S:${newS}% B:${newB}`);
     }
     
-    // Log to console with clear visibility
-    console.log('');
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log(`[HSV-SUMMARY] ${this.updates.size} lights updated in last 60s:`);
-    for (const line of lines) {
-      console.log(`  • ${line}`);
+    // Only log to console in verbose mode
+    if (VERBOSE) {
+      console.log('');
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log(`[HSV-SUMMARY] ${this.updates.size} lights updated in last 60s:`);
+      for (const line of lines) {
+        console.log(`  • ${line}`);
+      }
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log('');
     }
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('');
     
     // Also log to file
     engineLogger.log('HSV-SUMMARY', `${this.updates.size} lights updated`, {
@@ -271,7 +277,7 @@ class HADeviceStateNode {
       // Only update cachedState if we got valid data
       if (newState !== null) {
         // Success! Reset failure count and log recovery if we were failing
-        if (this._consecutiveFailures > 0) {
+        if (this._consecutiveFailures > 0 && VERBOSE) {
           console.log(`[HADeviceStateNode ${this.id?.slice(0,8) || 'unknown'}] ✅ Recovered after ${this._consecutiveFailures} failures`);
         }
         this.cachedState = newState;
