@@ -2110,44 +2110,58 @@
 
                 // Mode-specific controls
                 rangeMode === 'numerical' && el('div', { key: 'numControls' }, [
-                    // Start Value slider
-                    el('div', { key: 'startRow', style: sliderRowStyle }, [
-                        el('span', { key: 'label', style: sliderLabelStyle }, `Start: ${startValue}`),
+                    // Start Value input (supports negative for things like stock % change)
+                    el('div', { key: 'startRow', style: { ...sliderRowStyle, gap: '8px' } }, [
+                        el('span', { key: 'label', style: { ...sliderLabelStyle, minWidth: '50px' } }, 'Start:'),
                         el('input', {
-                            key: 'slider',
-                            type: 'range',
-                            min: 0,
-                            max: 100,
+                            key: 'input',
+                            type: 'number',
+                            step: 'any',
                             value: startValue,
                             onChange: (e) => {
-                                const val = parseInt(e.target.value, 10);
+                                const val = parseFloat(e.target.value) || 0;
                                 setStartValue(val);
                                 data.properties.startValue = val;
                                 triggerUpdate();
                             },
                             onPointerDown: stopPropagation,
-                            className: 'cgn-slider',
-                            style: { flex: 1, ...getSliderStyle(startValue, 0, 100) }
+                            style: { 
+                                flex: 1, 
+                                background: '#1a1a2e', 
+                                border: '1px solid #444', 
+                                borderRadius: '4px',
+                                color: '#fff',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                width: '80px'
+                            }
                         })
                     ]),
-                    // End Value slider
-                    el('div', { key: 'endRow', style: sliderRowStyle }, [
-                        el('span', { key: 'label', style: sliderLabelStyle }, `End: ${endValue}`),
+                    // End Value input (supports negative)
+                    el('div', { key: 'endRow', style: { ...sliderRowStyle, gap: '8px' } }, [
+                        el('span', { key: 'label', style: { ...sliderLabelStyle, minWidth: '50px' } }, 'End:'),
                         el('input', {
-                            key: 'slider',
-                            type: 'range',
-                            min: 0,
-                            max: 100,
+                            key: 'input',
+                            type: 'number',
+                            step: 'any',
                             value: endValue,
                             onChange: (e) => {
-                                const val = parseInt(e.target.value, 10);
+                                const val = parseFloat(e.target.value) || 0;
                                 setEndValue(val);
                                 data.properties.endValue = val;
                                 triggerUpdate();
                             },
                             onPointerDown: stopPropagation,
-                            className: 'cgn-slider',
-                            style: { flex: 1, ...getSliderStyle(endValue, 0, 100) }
+                            style: { 
+                                flex: 1, 
+                                background: '#1a1a2e', 
+                                border: '1px solid #444', 
+                                borderRadius: '4px',
+                                color: '#fff',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                width: '80px'
+                            }
                         })
                     ])
                 ]),
