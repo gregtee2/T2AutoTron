@@ -60,40 +60,28 @@
             if (this.changeCallback) this.changeCallback();
 
             try {
-                // Yahoo Finance v8 API (unofficial but widely used)
-                const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+                // Use backend proxy to avoid CORS issues
+                // In browser: use relative URL (works with Vite proxy and production)
+                // The backend at /api/stock/:symbol fetches from Yahoo
+                const apiBase = window.apiUrl || '';
+                const url = `${apiBase}/api/stock/${encodeURIComponent(symbol)}`;
                 
                 const response = await fetch(url);
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error || `HTTP ${response.status}`);
                 }
 
                 const data = await response.json();
                 
-                if (data.chart.error) {
-                    throw new Error(data.chart.error.description || 'Unknown error');
+                if (data.error) {
+                    throw new Error(data.error);
                 }
 
-                const result = data.chart.result?.[0];
-                if (!result) {
-                    throw new Error('No data returned');
-                }
-
-                const meta = result.meta;
-                const currentPrice = meta.regularMarketPrice;
-                const previousClose = meta.previousClose || meta.chartPreviousClose;
-                
-                if (currentPrice === undefined || previousClose === undefined) {
-                    throw new Error('Price data unavailable');
-                }
-
-                const priceChange = currentPrice - previousClose;
-                const changePercent = (priceChange / previousClose) * 100;
-
-                this.properties.lastPrice = currentPrice;
-                this.properties.priceChange = priceChange;
-                this.properties.changePercent = changePercent;
-                this.properties.isUp = priceChange >= 0;
+                this.properties.lastPrice = data.price;
+                this.properties.priceChange = data.change;
+                this.properties.changePercent = data.changePercent;
+                this.properties.isUp = data.isUp;
                 this.properties.lastUpdate = new Date().toLocaleTimeString();
                 this.properties.status = 'OK';
                 this.properties.error = null;
@@ -411,7 +399,7 @@
                         }
                     }, [
                         el('span', { key: 'label', style: { color: '#aaa', fontSize: '11px', marginRight: '8px' } }, output.label),
-                        RefComponent && el(RefComponent, {
+                        el(RefComponent, {
                             key: 'socket',
                             init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }),
                             unmount: ref => emit({ type: "unmount", data: { element: ref } })

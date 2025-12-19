@@ -1609,6 +1609,14 @@
         // Initial sync on mount - critical for restoring state after copy/paste/load
         useEffect(() => {
             syncFromProperties();
+            
+            // Force initial engine process after a short delay to ensure outputs propagate
+            // This fixes the "needs a nudge" issue where nodes don't output until interacted with
+            const kickTimer = setTimeout(() => {
+                if (data.changeCallback) data.changeCallback();
+            }, 100);
+            
+            return () => clearTimeout(kickTimer);
         }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
         // Sync with node data via changeCallback

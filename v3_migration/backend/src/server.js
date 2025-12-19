@@ -880,6 +880,10 @@ app.use('/api/cameras', cameraRoutes);
 const engineRoutes = require('./api/routes/engineRoutes');
 app.use('/api/engine', engineRoutes);
 
+// Stock price routes (Yahoo Finance proxy for StockPriceNode)
+const stockRoutes = require('./api/routes/stockRoutes');
+app.use('/api/stock', stockRoutes);
+
 // ============================================
 // Debug Dashboard API - Simple read-only endpoints
 // No auth required - just for LAN monitoring
