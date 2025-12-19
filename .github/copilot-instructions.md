@@ -78,10 +78,10 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
-#### AND Gate 30-Second Delay (2025-01-XX)
+#### AND Gate 30-Second Delay (2025-12-18)
 - **What broke**: Logic nodes (AND, OR, etc.) connected to TimeRangeNode or DayOfWeekComparisonNode took ~30 seconds (or longer) to update their output, even though they should respond instantly.
 - **Why it broke**: TimeRangeNode and DayOfWeekComparisonNode had no internal "clock". They only recalculated when the user changed a slider. Imagine an employee who only checks their inbox when you tap their shoulder - if nobody taps them, they never check.
-- **The fix**: Added `setInterval` in both nodes' `useEffect` to continuously trigger `changeCallback()`. TimeRangeNode ticks every 1 second; DayOfWeekComparisonNode ticks every 1 minute (day changes are slow).
+- **The fix**: Added `setInterval` in both nodes' `useEffect` to continuously trigger `changeCallback()`. TimeRangeNode ticks every 1 second; DayOfWeekComparisonNode ticks every 1 minute (day changes are slow). **Performance fix (v2.1.91)**: Only triggers when the value actually changes, not every tick.
 - **Now it works because**: The time nodes continuously "wake up" and tell the engine to re-evaluate, so downstream logic gates get fresh data every second.
 
 #### Device Timeline Empty in Debug Dashboard (2025-12-18)
@@ -981,7 +981,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.77 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.93 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -1043,6 +1043,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 23 | **Dashboard Session Persistence** | v2.1.76 - Debug Dashboard saves events to localStorage (4hr expiry), survives browser refresh |
 | 24 | **Dashboard Restart Detection** | v2.1.76 - Detects server restarts (uptime backwards), shows restart history |
 | 25 | **Scroll-to-Bug Feature** | v2.1.76 - Clicking "BUGS found" badge scrolls to first mismatch with glow effect |
+| 26 | **Stock Price Node** | v2.1.89 - Fetches real-time stock quotes from Yahoo Finance with backend proxy |
+| 27 | **Timeline Color Negative Values** | v2.1.89 - Numerical mode supports negative ranges (e.g., -5 to +5) |
+| 28 | **Download Graph Feature** | v2.1.93 - Export graphs as JSON files for backup or transfer between devices |
 
 ### 🟢 RECENTLY FIXED
 
@@ -1064,6 +1067,11 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 14 | **HSV-only nodes display** | v2.1.75 - Debug Dashboard correctly shows HSV-only device nodes as ON when sending color commands |
 | 15 | **Update button false positive** | v2.1.76 - "Check for Updates" in add-on always showed updates available. Now checks `hasUpdate` flag |
 | 16 | **Device timeline empty** | v2.1.77 - `/api/engine/logs/device-history` now finds actual log categories (was searching obsolete names) |
+| 17 | **Memory leaks in HA nodes** | v2.1.86 - Socket listeners now cleaned up on component unmount |
+| 18 | **DelayNode memory leak** | v2.1.87 - Countdown interval now cleaned up via destroy() method |
+| 19 | **AND gate 30-second delay** | v2.1.90 - TimeRangeNode and DayOfWeekComparisonNode now tick automatically |
+| 20 | **Performance degradation** | v2.1.91 - Nodes only trigger changeCallback when values actually change (was 100+/sec) |
+| 21 | **Timeline Color broken** | v2.1.92 - Added dedicated engine interval for active output modes |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 

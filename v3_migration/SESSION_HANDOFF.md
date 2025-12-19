@@ -1,5 +1,79 @@
 # Session Handoff - December 18, 2025
 
+## Addendum (Session 10 - Performance & Download Feature)
+
+### What changed (Session 10 - Claude Opus 4.5)
+
+**Current Version: 2.1.93**
+
+#### 🔧 Fix 1: AND Gate 30-Second Delay (v2.1.90)
+- **Symptom**: Logic nodes (AND, OR, etc.) connected to TimeRangeNode or DayOfWeekComparisonNode took ~30 seconds to update
+- **Root Cause**: TimeRangeNode and DayOfWeekComparisonNode had no internal "clock" - only recalculated on slider change
+- **Fix**: Added `setInterval` to continuously trigger `changeCallback()` - TimeRangeNode every 1 second, DayOfWeekComparisonNode every 60 seconds
+- **Files**: `backend/plugins/TimeRangeNode.js`, `backend/plugins/DayOfWeekComparisonNode.js`
+
+#### 🔧 Fix 2: Memory Leak / Performance Degradation (v2.1.91)
+- **Symptom**: UI got sluggish over time, excessive CPU usage
+- **Root Cause**: TimeRangeNode, DayOfWeekComparisonNode, and SplineTimelineColorNode were triggering changeCallback every tick (100+ times/second combined) even when values hadn't changed
+- **Fixes**:
+  - TimeRangeNode: Only triggers changeCallback when `isInRange` actually changes (uses `lastIsInRangeRef`)
+  - DayOfWeekComparisonNode: Same pattern with `lastIsActiveRef`
+  - SplineTimelineColorNode: Reduced UI interval from 50ms to 200ms
+- **Files**: `backend/plugins/TimeRangeNode.js`, `backend/plugins/DayOfWeekComparisonNode.js`, `backend/plugins/SplineTimelineColorNode.js`
+
+#### 🔧 Fix 3: Timeline Color Broken After Performance Fix (v2.1.92)
+- **Symptom**: Timeline Color node stopped producing output after v2.1.91 changes
+- **Root Cause**: Node needed engine updates to output, but performance fix removed excessive changeCallback calls
+- **Fix**: Added separate engine update interval that triggers changeCallback only when actively producing output (timerRunning, timeActive, or previewActive)
+- **Files**: `backend/plugins/SplineTimelineColorNode.js`
+
+#### ✨ Feature: Download Graph (v2.1.93)
+- **Request**: User wanted to transfer graphs from Pi (addon) to Windows (desktop)
+- **Implementation**:
+  - "📥 Download Graph" button in Control Panel downloads current graph
+  - "📥" button next to each saved graph in Load Graph modal
+  - Uses Blob + createObjectURL for browser download
+- **Files**: `frontend/src/ui/Dock.jsx`, `frontend/src/ui/Dock.css`
+
+### 🦴 Caveman Summary
+1. **AND Gate Delay**: Time nodes were lazy employees - only worked when poked. Now they check their inbox every second automatically.
+2. **Memory Leak**: Those same nodes were sending 100+ "I'm still here!" messages per second. Now they only speak up when something actually changes.
+3. **Timeline Broken**: After making nodes less chatty, Timeline got too quiet and stopped working. Added a separate "work alarm" just for Timeline.
+4. **Download Feature**: You can now save your graphs as files on your computer - backup or transfer from Pi to Windows!
+
+### Version Progression (Session 10)
+- 2.1.87 → 2.1.90 (AND gate delay fix with intervals)
+- 2.1.90 → 2.1.91 (Performance fix - only trigger on change)
+- 2.1.91 → 2.1.92 (Timeline Color engine interval restored)
+- 2.1.92 → 2.1.93 (Download Graph feature)
+
+### Files Touched (Session 10)
+- `v3_migration/backend/plugins/TimeRangeNode.js` - Interval + change-only triggers
+- `v3_migration/backend/plugins/DayOfWeekComparisonNode.js` - Interval + change-only triggers  
+- `v3_migration/backend/plugins/SplineTimelineColorNode.js` - UI interval 200ms, separate engine interval
+- `v3_migration/frontend/src/ui/Dock.jsx` - Download Graph buttons + handleDownloadServerGraph
+- `v3_migration/frontend/src/ui/Dock.css` - .graph-download-btn styling
+- `v3_migration/backend/package.json` - Version bumps
+- `home-assistant-addons/t2autotron/config.yaml` - Version 2.1.93
+
+### Graph Storage Locations
+- **HA Add-on**: `/data/graphs/` (persistent Docker volume)
+- **Desktop Electron**: `Saved_Graphs/` folder in project root
+
+### Known Gap: Frontend/Backend Buffer Isolation
+- `window.AutoTronBuffer` (frontend) and backend `AutoTronBuffer` Map are NOT synced
+- Frontend editor sets buffers, backend engine has separate buffer state
+- This causes some nodes to not work correctly in headless mode
+- **Workaround**: Use device nodes directly or via HA automations for 24/7 operation
+- **Future Fix**: Sync buffers via Socket.IO when editor connects
+
+### Notes for Next Session
+- Download feature deployed and working
+- Buffer sync is a known gap, not blocking but good to document
+- Performance is stable now - nodes only trigger on actual value changes
+
+---
+
 ## Addendum (Session 9 - Memory Leaks & Dashboard Fixes)
 
 ### What changed (Session 9 - Claude Opus 4.5)
