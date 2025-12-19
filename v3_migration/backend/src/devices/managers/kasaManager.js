@@ -121,6 +121,9 @@ async function refreshDeviceStatus(device, io, notificationEmitter) {
             oldState.on !== state.on || 
             oldState.brightness !== state.brightness;
         
+        // Track ON/OFF change separately for Telegram (don't spam on brightness changes)
+        const onOffChanged = !oldState || oldState.on !== state.on;
+        
         device.state = state;
         device.energy = energy;
         // Only log state changes, not every refresh
@@ -136,8 +139,11 @@ async function refreshDeviceStatus(device, io, notificationEmitter) {
                 ...(energy && { energyUsage: energy })
             };
             io.emit('device-state-update', stateToEmit);
-            if (notificationEmitter) {
-                notificationEmitter.emit('notify', `🔄 Kasa Update: ${device.alias} is ${state.on ? 'ON' : 'OFF'}${state.brightness ? `, Brightness: ${state.brightness}` : ''}${energy ? `, Power: ${energy.power.toFixed(2)} W` : ''}`);
+            
+            // Only send Telegram on ON/OFF changes, not brightness/color changes
+            if (onOffChanged && notificationEmitter) {
+                const status = state.on ? 'ON' : 'OFF';
+                notificationEmitter.emit('notify', `🔌 *${device.alias}* turned *${status}*`);
             }
         }
     } catch (err) {

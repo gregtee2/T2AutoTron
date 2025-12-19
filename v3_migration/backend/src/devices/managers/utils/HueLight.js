@@ -90,9 +90,14 @@ class HueLight {
         };
         io.emit('device-state-update', stateToEmit);
 
-        const status = this.state.on ? 'ON' : 'OFF';
-        const message = `🔄 *Hue Light Update*\n*Name:* ${this.name}\n*Status:* ${status}\n*Brightness:* ${this.state.bri}\n*Hue:* ${this.state.hue}\n*Saturation:* ${this.state.sat}\n*Color Temp:* ${this.state.colorTemp}`;
-        notificationEmitter.emit('notify', message);
+        // Only send Telegram on ON/OFF changes, not brightness/color changes
+        // This prevents spam when colors are cycling continuously
+        const onOffChanged = this.state.on !== this.previousState.on;
+        if (onOffChanged && notificationEmitter) {
+          const status = this.state.on ? 'ON' : 'OFF';
+          const message = `💡 *${this.name}* turned *${status}*`;
+          notificationEmitter.emit('notify', message);
+        }
       }
 
       this.previousState = { ...this.state };

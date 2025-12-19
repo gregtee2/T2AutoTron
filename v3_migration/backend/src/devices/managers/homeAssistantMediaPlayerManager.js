@@ -38,7 +38,7 @@ class HomeAssistantMediaPlayerManager {
             sound_mode: device.attributes.sound_mode || null
           };
           io.emit('device-state-update', state);
-          notificationEmitter.emit('notify', `🔄 HA Media Update: ${state.name} is ${state.on ? 'ON' : 'OFF'}`);
+          // Don't spam Telegram on init - only WebSocket state_changed events trigger notifications
         });
 
         this.ws = new WebSocket(`${this.config.host.replace('http', 'ws')}/api/websocket`);

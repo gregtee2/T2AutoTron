@@ -70,44 +70,56 @@ function setupNotifications(io) {
     // Always show in UI
     io.emit('notification', message);
 
-    // Parse device updates - handle emoji prefix (🔄, etc.)
-    const match = message.match(/(?:🔄\s*)?(?:HA|Kasa|Hue)?\s*Update:\s*(.*?)\s+is\s+(ON|OFF)(?:,\s*Brightness:\s*(\d+))?/i);
-    if (!match) {
-      // Non-device: only send errors/warnings
-      if (message.includes('ERROR') || message.includes('Failed') || message.includes('WARNING')) {
-        send(message, 'system');
+    // Parse device ON/OFF messages - new simpler format: "Name turned ON/OFF"
+    const turnedMatch = message.match(/\*?(.+?)\*?\s+turned\s+\*?(ON|OFF)\*?/i);
+    if (turnedMatch) {
+      const [_, rawName, state] = turnedMatch;
+      const name = rawName.replace(/_/g, ' ').replace(/[*[\]`]/g, '').trim();
+      const deviceId = name.toLowerCase().replace(/\s+/g, '_');
+      
+      const newState = { on: state.toUpperCase() === 'ON' };
+      const oldState = deviceStates.get(deviceId);
+      
+      // Only send if this is a NEW state (not duplicate)
+      if (!oldState || oldState.on !== newState.on) {
+        send(message, deviceId);
+        deviceStates.set(deviceId, newState);
+      } else {
+        log(`Skipped duplicate ON/OFF: ${name}`, 'info');
       }
       return;
     }
+    
+    // Legacy format: "Update: Name is ON/OFF" - still parse but only for ON/OFF
+    const legacyMatch = message.match(/(?:🔄\s*)?(?:HA|Kasa|Hue)?\s*Update:\s*(.*?)\s+is\s+(ON|OFF)/i);
+    if (legacyMatch) {
+      const [_, rawName, state] = legacyMatch;
+      const name = rawName.replace(/_/g, ' ').replace(/[*[\]`]/g, '');
+      const deviceId = name.toLowerCase().replace(/\s+/g, '_');
 
-    const [_, rawName, state, bri] = match;
-    // Sanitize name for Telegram Markdown (replace _ with space, remove others)
-    const name = rawName.replace(/_/g, ' ').replace(/[*[\]`]/g, '');
+      const newState = { on: state === 'ON' };
+      const oldState = deviceStates.get(deviceId);
 
-    const brightness = bri ? parseInt(bri, 10) : null;
-    const idMatch = message.match(/ID: (\S+)/);
-    const deviceId = idMatch ? idMatch[1] : rawName;
+      // First time seen
+      if (!oldState) {
+        send(`Device online: ${name} is ${state}`, deviceId);
+        deviceStates.set(deviceId, newState);
+        return;
+      }
 
-    const newState = { on: state === 'ON', brightness };
-    const oldState = deviceStates.get(deviceId);
-
-    // First time seen
-    if (!oldState) {
-      send(`Device online: ${name} is ${state}`, deviceId);
-      deviceStates.set(deviceId, newState);
+      // Only ON/OFF change matters now (not brightness)
+      if (oldState.on !== newState.on) {
+        send(message, deviceId);
+        deviceStates.set(deviceId, newState);
+      } else {
+        log(`No ON/OFF change: ${name}`, 'info');
+      }
       return;
     }
-
-    // Real change?
-    const changed =
-      oldState.on !== newState.on ||
-      (newState.brightness !== null && oldState.brightness !== newState.brightness);
-
-    if (changed) {
-      send(message, deviceId);
-      deviceStates.set(deviceId, newState);
-    } else {
-      log(`No change: ${name}`, 'info');
+    
+    // Non-device messages: only send errors/warnings
+    if (message.includes('ERROR') || message.includes('Failed') || message.includes('WARNING')) {
+      send(message, 'system');
     }
   });
 
