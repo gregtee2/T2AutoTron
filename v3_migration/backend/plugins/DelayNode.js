@@ -273,6 +273,11 @@
             };
         }
 
+        // Clean up timers when node is deleted to prevent memory leaks
+        destroy() {
+            this._clearTimer();
+        }
+
         toJSON() {
             return { id: this.id, label: this.label, properties: this.serialize() };
         }
@@ -299,6 +304,15 @@
             'minutes': 60000,
             'hours': 3600000
         };
+
+        // CRITICAL: Clean up timers when component unmounts to prevent memory leak
+        useEffect(() => {
+            return () => {
+                if (data.destroy) {
+                    data.destroy();
+                }
+            };
+        }, [data]);
 
         const updateDelay = (value, unit) => {
             const ms = Math.round(value * UNIT_MULTIPLIERS[unit]);
