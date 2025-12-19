@@ -209,5 +209,52 @@ module.exports = function (io) {
     }
   });
 
+  // POST /service - Call any HA service (light.turn_on, switch.toggle, etc.)
+  router.post('/service', async (req, res) => {
+    const { domain, service, entity_id, data } = req.body;
+    
+    if (!domain || !service) {
+      return res.status(400).json({ success: false, error: 'Missing domain or service' });
+    }
+
+    logWithTimestamp(`Service call: ${domain}.${service} for ${entity_id || 'no entity'}`, 'info');
+
+    try {
+      const haHost = homeAssistantManager.getConfig?.()?.host || process.env.HA_HOST;
+      const haToken = homeAssistantManager.getConfig?.()?.token || process.env.HA_TOKEN;
+
+      if (!haHost || !haToken) {
+        return res.status(500).json({ success: false, error: 'HA not configured' });
+      }
+
+      const payload = {
+        ...(entity_id && { entity_id }),
+        ...data
+      };
+
+      const response = await fetch(`${haHost}/api/services/${domain}/${service}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${haToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        logWithTimestamp(`HA service call failed: ${response.status} - ${errText}`, 'error');
+        return res.status(response.status).json({ success: false, error: errText });
+      }
+
+      const result = await response.json();
+      logWithTimestamp(`Service call ${domain}.${service} succeeded`, 'info');
+      res.json({ success: true, result });
+    } catch (error) {
+      logWithTimestamp(`Service call error: ${error.message}`, 'error');
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   return router;
 };
