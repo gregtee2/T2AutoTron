@@ -337,61 +337,101 @@ export function Editor() {
         // Register engine with editor
         editor.use(engine);
 
+        // Performance monitoring - type window._t2PerfStats in console to see
+        let processCallCount = 0;
+        let processSkipCount = 0;
+        let lastPerfReset = Date.now();
+        window._t2PerfStats = () => {
+            const elapsed = (Date.now() - lastPerfReset) / 1000;
+            console.log(`[Perf] In ${elapsed.toFixed(1)}s: ${processCallCount} process calls, ${processSkipCount} skipped (${(processCallCount/elapsed).toFixed(1)}/sec)`);
+            return { calls: processCallCount, skipped: processSkipCount, perSecond: processCallCount/elapsed };
+        };
+        window._t2PerfReset = () => { processCallCount = 0; processSkipCount = 0; lastPerfReset = Date.now(); console.log('[Perf] Stats reset'); };
+
         // Debounced process to prevent excessive graph evaluation
         let processTimeout = null;
-        let processScheduled = false;
+        
+        // Calculate dynamic debounce based on node count - larger graphs need more batching time
+        const getDebounceTime = () => {
+            const nodeCount = editor?.getNodes?.()?.length || 0;
+            // Base: 16ms for <50 nodes, up to 100ms for 200+ nodes
+            if (nodeCount < 50) return 16;
+            if (nodeCount < 100) return 32;
+            if (nodeCount < 150) return 50;
+            return 100; // Very large graphs get 100ms debounce
+        };
         
         // Process all nodes through the dataflow engine (debounced version)
+        // Uses trailing-edge debounce: waits for quiet period, then processes
+        let processRunning = false;  // True while actually processing nodes
+        
         const process = async () => {
-            // If already scheduled, skip
-            if (processScheduled) return;
-            processScheduled = true;
-            
-            // Clear any pending timeout
-            if (processTimeout) {
-                clearTimeout(processTimeout);
+            // If actively processing, skip (prevents re-entry during async work)
+            if (processRunning) {
+                processSkipCount++;
+                return;
             }
             
-            // Schedule process for next frame (batches multiple rapid calls)
+            // If timeout already pending, let it handle this (debounce batching)
+            if (processTimeout) {
+                return;
+            }
+            
+            processCallCount++;
+            
+            // Schedule process after debounce delay (batches rapid calls)
+            const debounceMs = getDebounceTime();
             processTimeout = setTimeout(async () => {
-                processScheduled = false;
                 processTimeout = null;
+                processRunning = true;
                 
-                const nodes = editor.getNodes();
-                const connections = editor.getConnections();
-                // One-time debug log - press F12 and type: window._debugProcess = true
-                const shouldDebug = window._debugProcess;
-                if (shouldDebug) {
-                    console.log('[Editor] process() - nodes:', nodes.map(n => `${n.id}:${n.label}`));
-                    console.log('[Editor] process() - connections:', connections.map(c => `${c.source}:${c.sourceOutput} -> ${c.target}:${c.targetInput}`));
-                    window._debugProcess = false; // Only log once
-                }
-                engine.reset();
-                for (const node of nodes) {
-                    try {
-                        await engine.fetch(node.id);
-                    } catch (e) {
-                        // Silently ignore fetch errors (cancelled, no data method, etc.)
+                try {
+                    const nodes = editor.getNodes();
+                    const connections = editor.getConnections();
+                    // One-time debug log - press F12 and type: window._debugProcess = true
+                    const shouldDebug = window._debugProcess;
+                    if (shouldDebug) {
+                        console.log('[Editor] process() - nodes:', nodes.map(n => `${n.id}:${n.label}`));
+                        console.log('[Editor] process() - connections:', connections.map(c => `${c.source}:${c.sourceOutput} -> ${c.target}:${c.targetInput}`));
+                        window._debugProcess = false; // Only log once
                     }
+                    engine.reset();
+                    for (const node of nodes) {
+                        try {
+                            await engine.fetch(node.id);
+                        } catch (e) {
+                            // Silently ignore fetch errors (cancelled, no data method, etc.)
+                        }
+                    }
+                } finally {
+                    processRunning = false;
                 }
-            }, 16); // ~60fps - batches calls within same frame
+            }, debounceMs); // Dynamic: 16ms for small graphs, up to 100ms for large ones
         };
         
         // Immediate process for when we need synchronous graph evaluation (e.g., after load)
         const processImmediate = async () => {
+            // Prevent re-entry while already running
+            if (processRunning) return;
+            
+            // Cancel any pending debounced process
             if (processTimeout) {
                 clearTimeout(processTimeout);
                 processTimeout = null;
             }
-            processScheduled = false;
             
-            engine.reset();
-            for (const node of editor.getNodes()) {
-                try {
-                    await engine.fetch(node.id);
-                } catch (e) {
-                    // Silently ignore nodes without data() method
+            processRunning = true;
+            try {
+                engine.reset();
+                for (const node of editor.getNodes()) {
+                    try {
+                        await engine.fetch(node.id);
+                    } catch (e) {
+                        // Silently ignore nodes without data() method
+                    }
                 }
+            } finally {
+                processRunning = false;
             }
         };
 
@@ -487,6 +527,9 @@ export function Editor() {
         window._t2GetMenuItems = getMenuItems;
         window._t2Editor = editor;
         window._t2Area = area;
+        window._t2Process = process;  // Expose for debugging
+        window._t2ProcessImmediate = processImmediate;  // Expose for debugging
+        window._t2Engine = engine;  // Expose for debugging
 
         const selector = AreaExtensions.selector();
 
@@ -2741,20 +2784,14 @@ export function Editor() {
                     if (def) {
                         const updateCallback = () => {
                             // During graph load, only update the visual, skip cascading data fetch
-                            if (loadingRef.current) {
+                            if (loadingRef.current || window.graphLoading) {
                                 if (areaInstance) areaInstance.update("node", nodeData.id);
                                 return;  // Skip cascading updates during load
                             }
                             if (areaInstance) areaInstance.update("node", nodeData.id);
-                            if (engineInstance && editorInstance) {
-                                engineInstance.reset();
-                                setTimeout(() => {
-                                    editorInstance.getNodes().forEach(async (n) => {
-                                        try {
-                                            await engineInstance.fetch(n.id);
-                                        } catch (e) { }
-                                    });
-                                }, 0);
+                            // Use the shared debounced process function for efficiency
+                            if (window._t2Process) {
+                                window._t2Process();
                             }
                         };
                         // For loading, we generally use the standard update callback
@@ -3096,19 +3133,9 @@ export function Editor() {
                                 return;  // Skip cascading updates during import
                             }
                             if (areaInstance) areaInstance.update("node", nodeData.id);
-                            if (engineInstance && editorInstance) {
-                                // Skip engine processing if graph is still loading
-                                if (window.graphLoading) return;
-                                engineInstance.reset();
-                                setTimeout(() => {
-                                    // Double-check loading state when timeout fires
-                                    if (window.graphLoading) return;
-                                    editorInstance.getNodes().forEach(async (n) => {
-                                        try {
-                                            await engineInstance.fetch(n.id);
-                                        } catch (e) { }
-                                    });
-                                }, 0);
+                            // Use the shared debounced process function for efficiency
+                            if (window._t2Process) {
+                                window._t2Process();
                             }
                         };
                         node = def.factory(updateCallback);

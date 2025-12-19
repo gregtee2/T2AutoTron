@@ -5,6 +5,28 @@ All notable changes to T2AutoTron will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.97] - 2025-12-19
+
+### Fixed
+- **HAGenericDeviceNode Auto-Refresh Removed**: Removed 30-second polling interval that was making 2,400 API calls per hour with 20 nodes. Device updates now come via Socket.IO push notifications for better performance.
+- **Brightness Bar 39% Bug**: Fixed ColorBarControl and DeviceStateControl displaying 39% instead of 100% at full brightness. Issue was double normalization - backend already converts 0-255 to 0-100, but UI was dividing by 255 again.
+
+### Changed
+- **HAGenericDeviceNode HA-Only Refactor**: Simplified node to only communicate with Home Assistant. Removed ~120 lines of Kasa/Hue direct API code from `setDevicesState`, `onTrigger`, `applyHSVInput`, `fetchDeviceState`, and `handleDeviceStateUpdate`. Dedicated `KasaLightNode` and `HueLightNode` exist for direct device control.
+
+## [2.1.95] - 2025-12-18
+
+### Fixed
+- **Engine Process Race Condition**: Fixed 5-second lag on node updates. The `processScheduled` flag was being reset before async work completed, allowing overlapping engine runs with incomplete/stale data. Now the flag stays true until all nodes are processed, preventing re-entry during async work.
+- **processImmediate Re-entry**: Added `processRunning` guard to prevent overlapping immediate process calls.
+
+## [2.1.94] - 2025-12-18
+
+### Fixed
+- **KasaLightNode Memory Leak**: Added `destroy()` method to clean up socket listener and debounce timer on node removal. Socket handler now stored as named reference for proper removal.
+- **HueLightNode Memory Leak**: Added `destroy()` method to clean up debounce timer on node removal.
+- **LogicGateBasePlugin Memory Leak**: Added `destroy()` method to clean up pulse mode timeout on node removal (affects AND, OR, XOR, NOT, NAND, NOR gates).
+
 ## [2.1.77] - 2025-12-18
 
 ### Fixed

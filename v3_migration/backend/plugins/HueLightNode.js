@@ -532,6 +532,14 @@
             this.fetchDevices();
         }
 
+        destroy() {
+            // Clean up debounce timer
+            if (this.hsvDebounceTimer) {
+                clearTimeout(this.hsvDebounceTimer);
+                this.hsvDebounceTimer = null;
+            }
+        }
+
         serialize() {
             return {
                 selectedDeviceIds: this.properties.selectedDeviceIds || [],
@@ -557,7 +565,10 @@
                 setSeed(s => s + 1);
                 setCustomTitle(data.properties.customTitle || "");
             };
-            return () => { data.changeCallback = null; };
+            return () => {
+                data.changeCallback = null;
+                if (data.destroy) data.destroy();
+            };
         }, [data]);
 
         useEffect(() => {

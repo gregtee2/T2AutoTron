@@ -711,9 +711,25 @@
         let lastKnownUptime = null;
         let serverRestarts = [];
         
-        // Load saved URL
+        // Auto-detect server URL when served from backend
+        function getDefaultUrl() {
+            // If served from the backend (not file://), use same origin
+            if (window.location.protocol !== 'file:') {
+                return window.location.origin;
+            }
+            // Otherwise use saved or default
+            return localStorage.getItem('t2debug_url') || 'http://localhost:3000';
+        }
+        
+        // Load saved URL or auto-detect
         const savedUrl = localStorage.getItem('t2debug_url');
-        if (savedUrl) document.getElementById('backendUrl').value = savedUrl;
+        const detectedUrl = getDefaultUrl();
+        document.getElementById('backendUrl').value = savedUrl || detectedUrl;
+        
+        // Auto-connect if we have a URL and it's not file://
+        if (window.location.protocol !== 'file:') {
+            setTimeout(() => connect(), 500);
+        }
         
         // Load persisted data from localStorage
         function loadPersistedData() {

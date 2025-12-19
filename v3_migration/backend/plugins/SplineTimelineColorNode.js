@@ -1629,6 +1629,9 @@
             return () => { data.changeCallback = originalCallback; };
         }, [data, syncFromProperties]);
 
+        // Track previous UI values to avoid unnecessary React re-renders
+        const lastUIValuesRef = useRef({});
+
         // Periodic update for runtime state
         // Also keeps timer position updated even when node is collapsed or output disconnected
         useEffect(() => {
@@ -1674,37 +1677,96 @@
                     data.properties.isInRange = true;
                 }
                 
-                setPosition(data.properties.position || 0);
-                setIsInRange(data.properties.isInRange || false);
-                setOutputHue(data.properties.outputHue || 0);
-                setOutputSaturation(data.properties.outputSaturation || 1);
-                setOutputBrightness(data.properties.outputBrightness || 0);
-                setOutputRgb(data.properties.outputRgb || { r: 128, g: 128, b: 128 });
-                setInputStartTime(data.inputStartTime || null);
-                setInputEndTime(data.inputEndTime || null);
+                // Only update React state if values have actually changed
+                // This prevents unnecessary re-renders when 7+ Timeline nodes are running
+                const newPos = data.properties.position || 0;
+                const newRange = data.properties.isInRange || false;
+                const newHue = data.properties.outputHue || 0;
+                const newSat = data.properties.outputSaturation || 1;
+                const newBri = data.properties.outputBrightness || 0;
+                const newRgb = data.properties.outputRgb || { r: 128, g: 128, b: 128 };
+                const newStartTime = data.inputStartTime || null;
+                const newEndTime = data.inputEndTime || null;
+                
+                const last = lastUIValuesRef.current;
+                
+                // Position changes frequently during animation - use threshold
+                if (Math.abs(newPos - (last.pos || 0)) > 0.001) {
+                    setPosition(newPos);
+                    last.pos = newPos;
+                }
+                if (newRange !== last.range) {
+                    setIsInRange(newRange);
+                    last.range = newRange;
+                }
+                if (Math.abs(newHue - (last.hue || 0)) > 0.001) {
+                    setOutputHue(newHue);
+                    last.hue = newHue;
+                }
+                if (Math.abs(newSat - (last.sat || 0)) > 0.001) {
+                    setOutputSaturation(newSat);
+                    last.sat = newSat;
+                }
+                if (Math.abs(newBri - (last.bri || 0)) > 0.1) {
+                    setOutputBrightness(newBri);
+                    last.bri = newBri;
+                }
+                // RGB comparison - check each component
+                if (newRgb.r !== last.r || newRgb.g !== last.g || newRgb.b !== last.b) {
+                    setOutputRgb(newRgb);
+                    last.r = newRgb.r;
+                    last.g = newRgb.g;
+                    last.b = newRgb.b;
+                }
+                if (newStartTime !== last.startTime) {
+                    setInputStartTime(newStartTime);
+                    last.startTime = newStartTime;
+                }
+                if (newEndTime !== last.endTime) {
+                    setInputEndTime(newEndTime);
+                    last.endTime = newEndTime;
+                }
             }, 200);  // Update UI at 5fps - sufficient for playhead animation
             return () => clearInterval(interval);
         }, [data]);
 
         // Engine update interval - triggers changeCallback to reprocess graph
-        // Only runs when the node is actively producing output (time mode in range, or timer running)
+        // Only runs when the node is actively producing output AND values have changed
+        const lastEngineOutputRef = useRef(null);
+        
         useEffect(() => {
             // Get the output step interval (throttle) from properties, default 1000ms
             const stepIntervalMs = (data.properties.outputStepInterval || 1) * 1000;
-            // Minimum 200ms to prevent excessive processing
-            const effectiveInterval = Math.max(200, stepIntervalMs);
+            // Minimum 500ms to prevent excessive processing (was 200ms - too aggressive)
+            const effectiveInterval = Math.max(500, stepIntervalMs);
             
             const engineInterval = setInterval(() => {
                 const mode = data.properties.rangeMode;
                 const isInRange = data.properties.isInRange;
                 const timerRunning = mode === 'timer' && data.timerStart;
                 const timeActive = mode === 'time' && isInRange;
-                const numericalActive = mode === 'numerical'; // Always needs updates when value input changes
                 const previewActive = data.properties.previewMode;
                 
                 // Only trigger engine update when actively producing changing output
                 if (timerRunning || timeActive || previewActive) {
-                    if (data.changeCallback) data.changeCallback();
+                    // Check if output has actually changed before triggering graph reprocess
+                    const currentHsv = {
+                        hue: data.properties.outputHue,
+                        sat: data.properties.outputSaturation,
+                        bri: data.properties.outputBrightness
+                    };
+                    const last = lastEngineOutputRef.current;
+                    
+                    // Only trigger if values changed significantly
+                    const hasChanged = !last ||
+                        Math.abs((currentHsv.hue || 0) - (last.hue || 0)) > 0.005 ||
+                        Math.abs((currentHsv.sat || 0) - (last.sat || 0)) > 0.01 ||
+                        Math.abs((currentHsv.bri || 0) - (last.bri || 0)) > 1;
+                    
+                    if (hasChanged) {
+                        lastEngineOutputRef.current = { ...currentHsv };
+                        if (data.changeCallback) data.changeCallback();
+                    }
                 }
             }, effectiveInterval);
             

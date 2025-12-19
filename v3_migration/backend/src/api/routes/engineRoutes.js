@@ -830,7 +830,8 @@ router.get('/logs/device-history', (req, res) => {
   const fs = require('fs');
   const path = require('path');
   
-  const LOG_FILE_PRIMARY = path.join(__dirname, '..', '..', '..', 'crashes', 'engine_debug.log');
+  // Path: from routes/ → api/ → src/ → backend/ → v3_migration/crashes/
+  const LOG_FILE_PRIMARY = path.join(__dirname, '..', '..', '..', '..', 'crashes', 'engine_debug.log');
   const LOG_FILE_DOCKER = '/data/engine_debug.log';
   
   let LOG_FILE = fs.existsSync(LOG_FILE_PRIMARY) ? LOG_FILE_PRIMARY : 

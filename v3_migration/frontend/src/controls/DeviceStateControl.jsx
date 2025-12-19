@@ -36,7 +36,37 @@ export function DeviceStateControlComponent({ data }) {
     }
 
     const isOn = state.on || state.state === 'on';
-    const brightness = state.brightness ? Math.round((state.brightness / 255) * 100) : 0;
+
+    // DEBUG: Log what we're receiving
+    console.log('[DeviceStateControl] state:', {
+        deviceId: data.deviceId,
+        'state.brightness': state.brightness,
+        'state.attributes?.brightness': state.attributes?.brightness,
+        'state.on': state.on,
+        'state.state': state.state
+    });
+
+    // Brightness is expected to be 0-100 from backend normalization.
+    // Some sources may still provide 0-255, so normalize defensively.
+    const attrBrightness = (state.attributes && typeof state.attributes.brightness === 'number')
+        ? Number(state.attributes.brightness)
+        : null;
+
+    let brightness = 0;
+    if (attrBrightness !== null && Number.isFinite(attrBrightness) && attrBrightness > 100) {
+        // HA raw brightness (0-255)
+        brightness = Math.round((attrBrightness / 255) * 100);
+    } else if (typeof state.brightness === 'number' && Number.isFinite(state.brightness)) {
+        brightness = state.brightness > 100
+            ? Math.round((state.brightness / 255) * 100)
+            : Math.round(state.brightness);
+    } else if (attrBrightness !== null && Number.isFinite(attrBrightness)) {
+        // attributes.brightness might already be percent (0-100)
+        brightness = Math.round(attrBrightness);
+    }
+    brightness = Math.max(0, Math.min(100, brightness));
+    
+    console.log('[DeviceStateControl] computed brightness:', brightness);
     const hsColor = state.hs_color || [0, 0];
     const [hue, saturation] = hsColor;
 

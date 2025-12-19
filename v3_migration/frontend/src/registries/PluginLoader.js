@@ -67,15 +67,21 @@ export async function loadPlugins() {
         const plugins = await response.json();
         const total = plugins.length;
         
-        updateProgress({ totalCount: total, status: `Loading ${total} plugins...` });
+        // Separate infrastructure plugins (00_*) from regular plugins
+        // Infrastructure MUST load first and sequentially (they provide base classes)
+        const infraPlugins = plugins.filter(p => p.includes('/00_'));
+        const regularPlugins = plugins.filter(p => !p.includes('/00_'));
+        
+        updateProgress({ totalCount: total, status: `Loading ${infraPlugins.length} infrastructure + ${regularPlugins.length} node plugins...` });
 
         let loaded = 0;
-        for (const pluginUrl of plugins) {
+        
+        // Phase 1: Load infrastructure plugins SEQUENTIALLY (they depend on each other)
+        for (const pluginUrl of infraPlugins) {
             const pluginName = pluginUrl.split('/').pop().replace('.js', '');
             updateProgress({ status: `Loading ${pluginName}...` });
             
             try {
-                // Use apiUrl to handle HA ingress base path
                 await loadScript(apiUrl(pluginUrl));
                 loaded++;
                 updateProgress({ 
@@ -83,10 +89,32 @@ export async function loadPlugins() {
                     progress: Math.round((loaded / total) * 100)
                 });
             } catch (e) {
-                console.error(`[PluginLoader] Failed to load ${pluginUrl}`, e);
+                console.error(`[PluginLoader] Failed to load infrastructure ${pluginUrl}`, e);
                 loadingState.failedPlugins.push({ name: pluginName, error: e.message });
             }
         }
+        
+        // Phase 2: Load all regular plugins IN PARALLEL (much faster!)
+        updateProgress({ status: `Loading ${regularPlugins.length} node plugins in parallel...` });
+        
+        const regularResults = await Promise.allSettled(
+            regularPlugins.map(async (pluginUrl) => {
+                const pluginName = pluginUrl.split('/').pop().replace('.js', '');
+                try {
+                    await loadScript(apiUrl(pluginUrl));
+                    loaded++;
+                    updateProgress({ 
+                        loadedCount: loaded, 
+                        progress: Math.round((loaded / total) * 100)
+                    });
+                    return { success: true, name: pluginName };
+                } catch (e) {
+                    console.error(`[PluginLoader] Failed to load ${pluginUrl}`, e);
+                    loadingState.failedPlugins.push({ name: pluginName, error: e.message });
+                    return { success: false, name: pluginName, error: e.message };
+                }
+            })
+        );
         
         const failCount = loadingState.failedPlugins.length;
         updateProgress({ 
@@ -110,7 +138,10 @@ export async function loadPlugins() {
 function loadScript(url) {
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = url;
+        // Cache-bust plugin scripts so hotfixes (e.g. shared controls) actually load.
+        // Without this, browsers/Electron may reuse an old cached plugin and show stale UI.
+        const cacheBust = `v=${Date.now()}`;
+        script.src = url.includes('?') ? `${url}&${cacheBust}` : `${url}?${cacheBust}`;
         // Note: NOT using async=true - scripts must load sequentially
         // so infrastructure plugins (00_*) load before node plugins
         script.onload = resolve;

@@ -1,4 +1,99 @@
-# Session Handoff - December 18, 2025
+# Session Handoff - December 19, 2025
+
+## Addendum (Session 12 - HAGenericDeviceNode Refactor)
+
+### What changed (Session 12 - Claude Opus 4.5)
+
+**Current Version: 2.1.97**
+
+#### 🔧 Fix 1: HAGenericDeviceNode Auto-Refresh Removal (v2.1.97)
+- **Symptom**: Performance degradation with many device nodes, UI sluggish
+- **Root Cause**: Each HAGenericDeviceNode had a 30-second `startAutoRefresh()` interval polling the HA API. 20 nodes = 2,400 API calls per hour!
+- **Fix**: Removed `startAutoRefresh()`, `autoRefreshInterval` property, and interval cleanup. Devices update via Socket.IO push notifications instead.
+- **Files**: `backend/plugins/HAGenericDeviceNode.js`
+
+#### 🔧 Fix 2: Brightness Bar Shows 39% Instead of 100% (v2.1.97)
+- **Symptom**: Light correctly at full brightness (254), but color bar showed only 39% width and "39%" label
+- **Root Cause**: Double normalization - backend converts 0-255 → 0-100 correctly, but UI components were dividing by 255 again: `100/255*100 = 39%`
+- **Fix**: Updated `ColorBarControl` and `DeviceStateControl` in `00_SharedControlsPlugin.js` to expect 0-100 values directly
+- **Files**: `backend/plugins/00_SharedControlsPlugin.js`
+
+#### 🔧 Fix 3: HAGenericDeviceNode HA-Only Refactor (v2.1.97)
+- **Symptom**: Node was overly complex "Swiss Army knife" with 3 code paths for Kasa, Hue, and HA
+- **Root Cause**: Original design assumed direct device control. But HA integrates Kasa/Hue devices, and dedicated `KasaLightNode`/`HueLightNode` exist for direct control
+- **Fix**: Removed ~120 lines of Kasa/Hue code from 5 methods:
+  - `setDevicesState()` - Removed Kasa hsv format, Hue 0-65535 conversion, 3 API endpoints → 1
+  - `onTrigger()` - Removed Kasa toggle endpoint branch
+  - `handleDeviceStateUpdate()` - Removed Hue brightness 0-254 conversion
+  - `fetchDeviceState()` - Removed Hue direct API path
+  - `applyHSVInput()` - Removed Kasa/Hue specific payload formats
+- **Result**: Node went from ~1700 lines to ~1577 lines (123 lines removed)
+- **Files**: `backend/plugins/HAGenericDeviceNode.js`
+
+### 🦴 Caveman Summary
+1. **Auto-Refresh Removed**: Each device node was calling the HA API every 30 seconds "just to check" - like constantly asking "are you there?" on a phone call. Now they wait for HA to push updates via WebSocket.
+2. **Brightness Display Bug**: Backend says "100%" but UI was converting it again, ending up with 39%. Like a translator who translates an already-English sentence into English again.
+3. **HA-Only Refactor**: The node was a confusing Swiss Army knife trying to speak 3 languages (Kasa, Hue, HA). Now it only speaks HA format, and HA handles translation to device-specific protocols.
+
+### Brightness Scale Reference (NEW)
+| Layer | Scale | Notes |
+|-------|-------|-------|
+| HA raw brightness | 0-255 | Raw attribute from Home Assistant |
+| Backend API response | 0-100 | `homeAssistantManager.getState()` normalizes |
+| Frontend UI display | 0-100 | ColorBarControl, DeviceStateControl expect this |
+| HSV input brightness | 0-255 | Timeline/Spline nodes output 0-255 |
+| HA API payload | 0-255 | When sending commands TO HA |
+
+**Rule**: Backend normalizes to 0-100 for UI. Frontend should NOT divide by 255 again.
+
+### Files Touched (Session 12)
+- `v3_migration/backend/plugins/HAGenericDeviceNode.js` - Auto-refresh removal, HA-only refactor (123 lines removed)
+- `v3_migration/backend/plugins/00_SharedControlsPlugin.js` - Brightness normalization fix
+- `.github/copilot-instructions.md` - Updated with fixes and brightness scale documentation
+
+---
+
+## Addendum (Session 11 - Memory Leak Audit)
+
+### What changed (Session 11 - Claude Opus 4.5)
+
+**Current Version: 2.1.94**
+
+#### 🔧 Fix 1: KasaLightNode Socket Listener Leak (v2.1.94)
+- **Symptom**: UI degraded after extended use with Kasa device nodes
+- **Root Cause**: `initializeSocketIO()` registered anonymous socket listener that could never be removed
+- **Fix**: Store handler as `_onDeviceStateUpdate` reference, add `destroy()` method with `socket.off()` and debounce timer cleanup
+- **Files**: `backend/plugins/KasaLightNode.js`
+
+#### 🔧 Fix 2: HueLightNode Debounce Timer Leak (v2.1.94)
+- **Symptom**: Orphaned timeouts if node deleted mid-debounce
+- **Root Cause**: No `destroy()` method to clean up `hsvDebounceTimer`
+- **Fix**: Added `destroy()` method that clears debounce timer
+- **Files**: `backend/plugins/HueLightNode.js`
+
+#### 🔧 Fix 3: LogicGateBase PulseTimeout Leak (v2.1.94)
+- **Symptom**: Logic gates with pulse mode could leak timeouts
+- **Root Cause**: `pulseTimeout` set in `handlePulseMode()` was never cleaned on node removal
+- **Fix**: Added `destroy()` method to `BaseLogicGateNode` class (affects AND, OR, XOR, NOT, NAND, NOR gates)
+- **Files**: `backend/plugins/00_LogicGateBasePlugin.js`
+
+### 🦴 Caveman Summary
+Three types of nodes were leaving messes behind when deleted:
+1. **Kasa Lights**: Left phone lines (socket listeners) connected even after leaving the building
+2. **Hue Lights**: Left timers running even after being fired
+3. **Logic Gates**: Left their pulse countdown timers ticking even after being unplugged
+
+Now they all clean up after themselves when removed! 🧹
+
+### Files Touched (Session 11)
+- `v3_migration/backend/plugins/KasaLightNode.js` - Socket handler reference + destroy()
+- `v3_migration/backend/plugins/HueLightNode.js` - destroy() for debounce timer
+- `v3_migration/backend/plugins/00_LogicGateBasePlugin.js` - destroy() for pulseTimeout
+- `v3_migration/backend/package.json` - Version 2.1.94
+- `home-assistant-addons/t2autotron/config.yaml` - Version 2.1.94
+- `CHANGELOG.md` - Added 2.1.94 entry
+
+---
 
 ## Addendum (Session 10 - Performance & Download Feature)
 

@@ -560,10 +560,14 @@
             barColor = THEME.warning;
         }
         
-        // When device is off (or state unknown), show 0% width; when on, show brightness
-        // Also handle Hue brightness which is 0-254, not 0-255
-        const normalizedBrightness = brightness > 0 ? brightness : 0;
-        const widthPercent = isOn ? (normalizedBrightness / 255) * 100 : 0;
+        // Brightness can arrive as 0-100 (preferred) but some paths may still provide 0-255.
+        // Normalize defensively to a 0-100 percentage for display.
+        let brightnessPct = (typeof brightness === 'number' && Number.isFinite(brightness)) ? brightness : 0;
+        if (brightnessPct > 100) brightnessPct = Math.round((brightnessPct / 255) * 100);
+        brightnessPct = Math.max(0, Math.min(100, Math.round(brightnessPct)));
+        const widthPercent = isOn ? brightnessPct : 0;
+        
+        console.log('[ColorBarComponent] brightnessPct:', brightnessPct, 'isOn:', isOn, 'widthPercent:', widthPercent);
 
         return React.createElement('div', {
             style: { 
@@ -686,6 +690,16 @@
 
     function DeviceStateControlComponent({ data }) {
         const state = data.getState ? data.getState(data.deviceId) : null;
+        
+        // DEBUG: Log what we're receiving
+        console.log('[Plugin DeviceStateControl] state:', {
+            deviceId: data.deviceId,
+            'state.brightness': state?.brightness,
+            'state.attributes?.brightness': state?.attributes?.brightness,
+            'state.on': state?.on,
+            'state.state': state?.state
+        });
+        
         if (!state) {
             return React.createElement('div', { 
                 style: { 
@@ -706,7 +720,25 @@
             );
         }
         const isOn = state.on || state.state === 'on';
-        const brightness = state.brightness ? Math.round((state.brightness / 255) * 100) : 0;
+        // Some state objects include attributes.brightness already normalized (0-100),
+        // others include HA-raw (0-255). Normalize defensively.
+        const rawAttrBrightness = (state.attributes && typeof state.attributes.brightness === 'number')
+            ? Number(state.attributes.brightness)
+            : null;
+        let brightness = 0;
+        if (rawAttrBrightness !== null && Number.isFinite(rawAttrBrightness)) {
+            brightness = rawAttrBrightness > 100
+                ? Math.round((rawAttrBrightness / 255) * 100)
+                : Math.round(rawAttrBrightness);
+        } else if (typeof state.brightness === 'number' && Number.isFinite(state.brightness)) {
+            brightness = state.brightness > 100
+                ? Math.round((state.brightness / 255) * 100)
+                : Math.round(state.brightness);
+        }
+        brightness = Math.max(0, Math.min(100, brightness));
+        
+        console.log('[Plugin DeviceStateControl] computed brightness:', brightness);
+        
         const hsColor = state.hs_color || [0, 0];
         const [hue, saturation] = hsColor;
         let color = THEME.error;

@@ -278,7 +278,6 @@
                 transitionTime: 1000,
                 filterType: "All",
                 triggerMode: "Follow",
-                autoRefreshInterval: 30000,
                 customTitle: ""  // User-editable title for the node
             };
 
@@ -287,7 +286,6 @@
             this.lastHsvInfo = null;
             this.devices = [];
             this.perDeviceState = {};
-            this.intervalId = null;
             this.skipInitialTrigger = true; // Skip first trigger processing after load
 
             try {
@@ -300,7 +298,8 @@
 
             this.setupControls();
             this.initializeSocketIO();
-            this.startAutoRefresh();
+            // Note: Auto-refresh removed - devices fetched once on graph load
+            // User can reload graph if new devices are added to HA
         }
 
         // compareNames is now imported from T2HAUtils (DRY)
@@ -389,14 +388,8 @@
             });
         }
 
-        startAutoRefresh() {
-            if (this.intervalId) clearInterval(this.intervalId);
-            this.intervalId = setInterval(() => {
-                // Skip refresh during graph loading
-                if (typeof window !== 'undefined' && window.graphLoading) return;
-                this.fetchDevices();
-            }, this.properties.autoRefreshInterval);
-        }
+        // Auto-refresh removed for performance - was polling every 30s per node
+        // Devices are fetched once on graph load; reload graph to see new HA devices
 
         restore(state) {
             if (state.properties) Object.assign(this.properties, state.properties);
@@ -974,32 +967,16 @@
             try {
                 const apiInfo = this.getDeviceApiInfo(id);
                 if (!apiInfo) return;
-                if (id.startsWith('hue_')) {
-                    const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
-                    const data = await res.json();
-                    if (data.success && data.light && data.light.state) {
-                        const s = data.light.state;
-                        const hueDeg = typeof s.hue === 'number' ? (s.hue / 65535) * 360 : 0;
-                        const satPct = typeof s.sat === 'number' ? (s.sat / 254) * 100 : 0;
-                        const bri255 = typeof s.bri === 'number' ? Math.round((s.bri / 254) * 255) : 0;
-                        const mapped = {
-                            on: !!s.on,
-                            state: s.on ? 'on' : 'off',
-                            brightness: bri255,
-                            hs_color: [hueDeg, satPct]
-                        };
-                        this.perDeviceState[id] = mapped;
-                        this.updateDeviceControls(id, mapped);
-                        this.triggerUpdate();
-                    }
-                } else {
-                    const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { headers: { 'Authorization': `Bearer ${this.properties.haToken}` } });
-                    const data = await res.json();
-                    if (data.success && data.state) {
-                        this.perDeviceState[id] = data.state;
-                        this.updateDeviceControls(id, data.state);
-                        this.triggerUpdate();
-                    }
+                
+                // HA-only: All devices go through Home Assistant API
+                const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                    headers: { 'Authorization': `Bearer ${this.properties.haToken}` } 
+                });
+                const data = await res.json();
+                if (data.success && data.state) {
+                    this.perDeviceState[id] = data.state;
+                    this.updateDeviceControls(id, data.state);
+                    this.triggerUpdate();
                 }
             } catch (e) { console.error("Failed to fetch state for", id, e); }
         }
@@ -1029,98 +1006,62 @@
                 const device = this.devices.find(d => d.id === id);
                 const deviceType = device?.type || (id.includes('.') ? id.split('.')[0].replace(/^ha_/, '') : 'light');
                 const isLight = deviceType === "light" || deviceType === "bulb";
-                const isKasa = id.startsWith('kasa_');
-                const isHue = id.startsWith('hue_');
                 
-                // BUG FIX: HSV input should NOT turn on a device that is off
+                // HSV input should NOT turn on a device that is off
                 // Only the Trigger input can change device on/off state
-                // Check current device state - if off, skip this device entirely
                 const currentState = this.perDeviceState[id];
                 const isCurrentlyOn = currentState?.on || currentState?.state === 'on';
                 
                 // If device is off, don't apply HSV (and don't turn it on!)
-                if (!isCurrentlyOn) {
-                    continue; // Skip this device - it's off, HSV shouldn't turn it on
-                }
+                if (!isCurrentlyOn) continue;
                 
-                // Device is on, apply color/brightness changes but keep it on
-                let turnOn = true; // Device is already on, keep it on
+                // Parse HSV input into HA format
                 let hs_color = null;
                 let color_temp_kelvin = null;
                 let brightness = null;
+                
                 const useTemp = info.mode === 'temp' && info.colorTemp;
-                if (useTemp) color_temp_kelvin = info.colorTemp;
-                else {
+                if (useTemp) {
+                    color_temp_kelvin = info.colorTemp;
+                } else {
+                    // Convert various HSV input formats to HA's hs_color [hue_degrees, saturation_percent]
                     if (Array.isArray(info.hs_color)) hs_color = info.hs_color;
                     else if (info.h !== undefined && info.s !== undefined) hs_color = [info.h, (info.s ?? 0) * 100];
                     else if (info.hue !== undefined && info.saturation !== undefined) hs_color = [info.hue * 360, info.saturation * 100];
                 }
+                
+                // Convert brightness to HA's 0-255 scale
                 if (info.brightness !== undefined) brightness = info.brightness;
                 else if (info.v !== undefined) brightness = Math.round((info.v ?? 0) * 255);
-                // BUG FIX: Don't turn off device if brightness is 0 - just set brightness to minimum (1)
-                // HSV input should NEVER change on/off state
+                // Clamp to minimum 1 - HSV should never turn off a device
                 if (brightness === 0) brightness = 1;
                 
-                let payload;
-                if (isKasa) {
-                    // Kasa uses hsv format with hue (0-360), saturation (0-100), brightness (0-100)
-                    payload = { on: turnOn };
-                    if (turnOn && isLight && hs_color) {
-                        payload.hsv = {
-                            hue: Math.round(hs_color[0]),
-                            saturation: Math.round(hs_color[1]),
-                            brightness: brightness !== null ? Math.round((brightness / 255) * 100) : 100
-                        };
-                    }
+                // Build HA payload - HA handles all device-specific translation
+                const payload = { on: true, state: "on" };
+                if (isLight) {
+                    if (color_temp_kelvin) payload.color_temp_kelvin = color_temp_kelvin;
+                    else if (hs_color) payload.hs_color = hs_color;
+                    if (brightness !== null) payload.brightness = Math.max(1, Math.min(255, Math.round(brightness)));
                     if (transitionMs) payload.transition = transitionMs;
-                } else if (isHue) {
-                    // Hue API expects hue/sat/bri (not hs_color/brightness)
-                    const clampNum = (n, min, max) => Math.max(min, Math.min(max, n));
-                    const transitiontime = typeof transitionMs === 'number' ? Math.round(transitionMs / 100) : undefined;
-                    payload = { on: true };
-                    if (turnOn && isLight && hs_color) {
-                        const hueDeg = clampNum(hs_color[0], 0, 360);
-                        const satPct = clampNum(hs_color[1], 0, 100);
-                        const bri255 = brightness !== null ? clampNum(brightness, 1, 255) : 255;
-                        payload.hue = Math.round((hueDeg / 360) * 65535);
-                        payload.sat = Math.round((satPct / 100) * 254);
-                        payload.bri = Math.round((bri255 / 255) * 254);
-                    }
-                    if (typeof transitiontime === 'number') payload.transitiontime = transitiontime;
-                } else {
-                    // HA format
-                    payload = { on: turnOn, state: turnOn ? "on" : "off" };
-                    if (turnOn && isLight) {
-                        if (color_temp_kelvin) payload.color_temp_kelvin = color_temp_kelvin;
-                        else if (hs_color) payload.hs_color = hs_color;
-                        if (brightness !== null) payload.brightness = Math.max(0, Math.min(255, Math.round(brightness)));
-                        if (transitionMs) payload.transition = transitionMs;
-                    }
                 }
+                
                 try {
-                    // For Kasa devices, use POST to /on or /off endpoint
-                    if (isKasa) {
-                        const action = turnOn ? 'on' : 'off';
-                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
-                            method: "POST", 
-                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
-                            body: JSON.stringify(payload) 
-                        });
-                    } else if (isHue) {
-                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` },
-                            body: JSON.stringify(payload)
-                        });
-                    } else {
-                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
-                            method: "PUT", 
-                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
-                            body: JSON.stringify(payload) 
-                        });
-                    }
+                    await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                        method: "PUT", 
+                        headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
+                        body: JSON.stringify(payload) 
+                    });
+                    // Update local state (brightness as 0-100 for UI)
                     const current = this.perDeviceState[id] || {};
-                    this.perDeviceState[id] = { ...current, on: turnOn, state: turnOn ? "on" : "off", ...(hs_color ? { hs_color } : {}), ...(color_temp_kelvin ? { color_temp_kelvin } : {}), ...(brightness !== null ? { brightness } : {}) };
+                    const brightnessPercent = brightness !== null ? Math.round((brightness / 255) * 100) : current.brightness;
+                    this.perDeviceState[id] = { 
+                        ...current, 
+                        on: true, 
+                        state: "on", 
+                        ...(hs_color ? { hs_color } : {}), 
+                        ...(color_temp_kelvin ? { color_temp_kelvin } : {}), 
+                        ...(brightnessPercent !== undefined ? { brightness: brightnessPercent } : {}) 
+                    };
                     this.updateDeviceControls(id, this.perDeviceState[id]);
                 } catch (e) { console.error(`Control apply failed for ${id}`, e); }
                 
@@ -1135,9 +1076,8 @@
 
         async setDevicesState(turnOn, hsvInfo = null) {
             // Skip API calls during graph loading to prevent resource exhaustion
-            if (typeof window !== 'undefined' && window.graphLoading) {
-                return;
-            }
+            if (typeof window !== 'undefined' && window.graphLoading) return;
+            
             this.updateStatus(turnOn ? "Turning On..." : "Turning Off...");
             const ids = this.properties.selectedDeviceIds.filter(Boolean);
             if (ids.length === 0) return;
@@ -1147,7 +1087,7 @@
             let hs_color = null;
             let brightness = null;
             if (turnOn && hsvInfo && typeof hsvInfo === 'object') {
-                // Parse various HSV input formats
+                // Parse various HSV input formats to HA's hs_color format
                 if (Array.isArray(hsvInfo.hs_color)) {
                     hs_color = hsvInfo.hs_color;
                 } else if (hsvInfo.h !== undefined && hsvInfo.s !== undefined) {
@@ -1169,90 +1109,35 @@
                 ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off', nodeId));
             }
             
-            // Process devices sequentially to prevent API flood (ERR_INSUFFICIENT_RESOURCES)
+            // Process devices sequentially to prevent API flood
             for (let i = 0; i < ids.length; i++) {
                 const id = ids[i];
                 const apiInfo = this.getDeviceApiInfo(id);
                 if (!apiInfo) continue;
-                const isKasa = id.startsWith('kasa_');
-                const isHue = id.startsWith('hue_');
                 
                 const device = this.devices.find(d => d.id === id);
                 const deviceType = device?.type || (id.includes('.') ? id.split('.')[0].replace(/^ha_/, '') : 'light');
                 const isLight = deviceType === 'light' || deviceType === 'bulb';
                 
-                let payload;
-                if (isHue) {
-                    const transitiontime = typeof transitionMs === 'number' ? Math.round(transitionMs / 100) : undefined;
-                    payload = { on: !!turnOn };
-                    // Include color values when turning on a Hue light
-                    if (turnOn && isLight && hs_color) {
-                        const clampNum = (n, min, max) => Math.max(min, Math.min(max, n));
-                        const hueDeg = clampNum(hs_color[0], 0, 360);
-                        const satPct = clampNum(hs_color[1], 0, 100);
-                        payload.hue = Math.round((hueDeg / 360) * 65535);
-                        payload.sat = Math.round((satPct / 100) * 254);
-                        if (brightness !== null) {
-                            payload.bri = Math.round((brightness / 255) * 254);
-                        }
-                    }
-                    if (typeof transitiontime === 'number') payload.transitiontime = transitiontime;
-                } else if (isKasa) {
-                    // Kasa uses hsv format
-                    payload = { on: turnOn, state: turnOn ? "on" : "off" };
-                    if (turnOn && isLight && hs_color) {
-                        payload.hsv = {
-                            hue: Math.round(hs_color[0]),
-                            saturation: Math.round(hs_color[1]),
-                            brightness: brightness !== null ? Math.round((brightness / 255) * 100) : 100
-                        };
-                    }
-                    if (transitionMs) payload.transition = transitionMs;
-                } else {
-                    // HA format - include color values when turning on lights
-                    payload = { on: turnOn, state: turnOn ? "on" : "off" };
-                    if (turnOn && isLight) {
-                        if (hs_color) payload.hs_color = hs_color;
-                        if (brightness !== null) payload.brightness = brightness;
-                    }
-                    if (transitionMs) payload.transition = transitionMs;
+                // Build HA payload - HA handles all device-specific translation
+                const payload = { on: turnOn, state: turnOn ? "on" : "off" };
+                if (turnOn && isLight) {
+                    if (hs_color) payload.hs_color = hs_color;
+                    if (brightness !== null) payload.brightness = brightness;
                 }
+                if (transitionMs) payload.transition = transitionMs;
+                
                 try {
-                    if (isKasa) {
-                        // Kasa uses POST to /on or /off endpoint
-                        const action = turnOn ? 'on' : 'off';
-                        const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/${action}`, { 
-                            method: "POST", 
-                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
-                            body: JSON.stringify(payload) 
-                        });
-                        if (!res.ok) {
-                            console.error(`Set state failed for ${id} (HTTP ${res.status})`);
-                            continue;
-                        }
-                    } else if (isHue) {
-                        const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` },
-                            body: JSON.stringify(payload)
-                        });
-                        if (!res.ok) {
-                            console.error(`Set state failed for ${id} (HTTP ${res.status})`);
-                            continue;
-                        }
-                    } else {
-                        const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
-                            method: "PUT", 
-                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
-                            body: JSON.stringify(payload) 
-                        });
-                        if (!res.ok) {
-                            console.error(`Set state failed for ${id} (HTTP ${res.status})`);
-                            continue;
-                        }
+                    const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                        method: "PUT", 
+                        headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
+                        body: JSON.stringify(payload) 
+                    });
+                    if (!res.ok) {
+                        console.error(`Set state failed for ${id} (HTTP ${res.status})`);
+                        continue;
                     }
-
-                    // Don't assume success — fetch authoritative state so UI matches reality
+                    // Fetch authoritative state so UI matches reality
                     await this.fetchDeviceState(id);
                 } catch (e) { console.error(`Set state failed for ${id}`, e); }
                 
@@ -1284,26 +1169,18 @@
                 const id = ids[i];
                 const apiInfo = this.getDeviceApiInfo(id);
                 if (!apiInfo) continue;
-                const isKasa = id.startsWith('kasa_');
                 
                 const current = this.perDeviceState[id] || { on: false };
                 const newOn = !current.on;
                 const payload = { on: newOn, state: newOn ? "on" : "off" };
                 if (newOn && transitionMs) payload.transition = transitionMs;
+                
                 try {
-                    if (isKasa) {
-                        // Kasa uses POST to /on, /off, or /toggle endpoint
-                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/toggle`, { 
-                            method: "POST", 
-                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }
-                        });
-                    } else {
-                        await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
-                            method: "PUT", 
-                            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
-                            body: JSON.stringify(payload) 
-                        });
-                    }
+                    await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                        method: "PUT", 
+                        headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
+                        body: JSON.stringify(payload) 
+                    });
                     this.perDeviceState[id] = { ...this.perDeviceState[id], on: newOn, state: payload.state };
                     this.updateDeviceControls(id, this.perDeviceState[id]);
                 } catch (e) { console.error(`Toggle failed for ${id}`, e); }
@@ -1319,37 +1196,35 @@
 
         handleDeviceStateUpdate(data) {
             let id, state;
-            if (data.id) {
-                id = data.id;
-                // Hue direct updates may send {on,hue,sat,bri}
-                if (id && id.startsWith('hue_') && (data.hue !== undefined || data.sat !== undefined || data.bri !== undefined)) {
-                    const hueDeg = typeof data.hue === 'number' ? (data.hue / 65535) * 360 : 0;
-                    const satPct = typeof data.sat === 'number' ? (data.sat / 254) * 100 : 0;
-                    const bri255 = typeof data.bri === 'number' ? Math.round((data.bri / 254) * 255) : null;
-                    state = {
-                        ...data,
-                        on: !!data.on,
-                        state: data.on ? 'on' : 'off',
-                        ...(bri255 !== null ? { brightness: bri255 } : {}),
-                        hs_color: [hueDeg, satPct]
-                    };
-                } else {
-                    state = { ...data, state: data.state || (data.on ? "on" : "off") };
-                }
-            }
-            else if (data.entity_id && data.new_state) {
+            // Handle HA entity state updates (via Socket.IO from homeAssistantManager)
+            if (data.entity_id && data.new_state) {
                 id = data.entity_id;
                 const a = data.new_state.attributes || {};
-                state = { on: data.new_state.state === "on", state: data.new_state.state, brightness: a.brightness ?? 0, hs_color: a.hs_color ?? [0, 0], power: a.power || a.current_power_w || a.load_power || null, energy: a.energy || a.energy_kwh || a.total_energy_kwh || null };
+                // Normalize brightness from HA's 0-255 to 0-100 percentage (matches homeAssistantManager format)
+                const brightnessNormalized = a.brightness ? Math.round((a.brightness / 255) * 100) : 0;
+                state = { 
+                    on: data.new_state.state === "on", 
+                    state: data.new_state.state, 
+                    brightness: brightnessNormalized, 
+                    hs_color: a.hs_color ?? [0, 0], 
+                    power: a.power || a.current_power_w || a.load_power || null, 
+                    energy: a.energy || a.energy_kwh || a.total_energy_kwh || null 
+                };
             }
+            // Handle direct id-based updates (generic format)
+            else if (data.id) {
+                id = data.id;
+                state = { ...data, state: data.state || (data.on ? "on" : "off") };
+            }
+            
             if (id && this.properties.selectedDeviceIds.includes(id)) {
                 this.perDeviceState[id] = { ...this.perDeviceState[id], ...state };
                 this.updateDeviceControls(id, state);
-                this.triggerUpdate();
             }
         }
 
         updateDeviceControls(id, state) {
+            let updated = false;
             this.properties.selectedDeviceIds.forEach((devId, i) => {
                 if (devId !== id) return;
                 const base = `device_${i}_`;
@@ -1365,7 +1240,10 @@
                     on: state.on
                 };
                 if (power) power.data = { power: state.power ?? null, energy: state.energy ?? null };
+                updated = true;
             });
+            // Force React re-render to show updated state (only trigger ONCE)
+            if (updated) this.triggerUpdate();
         }
 
         // -------------------------------------------------------------------------
@@ -1396,9 +1274,6 @@
         }
 
         destroy() {
-            // Clear interval
-            if (this.intervalId) clearInterval(this.intervalId);
-            
             // Remove socket listeners to prevent memory leaks
             if (window.socket) {
                 if (this._onDeviceStateUpdate) window.socket.off("device-state-update", this._onDeviceStateUpdate);
@@ -1660,6 +1535,19 @@
                     const entityType = colorbar?.control?.data?.entityType || "light";
                     const isSwitch = entityType.includes("switch");
                     const isLight = entityType.includes("light");
+                    
+                    // Get color bar data directly for inline rendering
+                    const colorBarData = colorbar?.control?.data || {};
+                    const cbBrightness = colorBarData.brightness ?? 0;
+                    const cbHsColor = colorBarData.hs_color || [0, 0];
+                    const cbState = colorBarData.state;
+                    const cbOn = colorBarData.on;
+                    const cbIsOn = cbState === 'on' || cbOn === true;
+                    // Brightness should already be 0-100, but normalize defensively
+                    const cbWidthPercent = cbIsOn ? Math.max(0, Math.min(100, cbBrightness)) : 0;
+                    const cbBarColor = (cbHsColor && cbHsColor.length === 2 && cbHsColor[1] > 0) 
+                        ? `hsl(${cbHsColor[0]}, ${cbHsColor[1]}%, 50%)` 
+                        : '#ffaa00';
 
                     return React.createElement('div', { key: index, className: 'ha-device-item' }, [
                         select && React.createElement('div', { key: 'sel', style: { marginBottom: '5px' } }, React.createElement(RefComponent, {
@@ -1675,9 +1563,26 @@
                                 init: ref => emit({ type: "render", data: { type: "control", element: ref, payload: power.control } }),
                                 unmount: ref => emit({ type: "unmount", data: { element: ref } })
                             })),
-                            colorbar && isLight && React.createElement('div', { key: 'col', style: { flex: '1 1 auto' } }, React.createElement(RefComponent, {
-                                init: ref => emit({ type: "render", data: { type: "control", element: ref, payload: colorbar.control } }),
-                                unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                            // Render color bar inline instead of via RefComponent (fixes brightness display bug)
+                            colorbar && isLight && React.createElement('div', { 
+                                key: 'col', 
+                                style: { 
+                                    flex: '1 1 auto',
+                                    height: '8px',
+                                    backgroundColor: 'rgba(0, 20, 30, 0.6)',
+                                    borderRadius: '4px',
+                                    overflow: 'hidden',
+                                    border: '1px solid rgba(0, 243, 255, 0.2)'
+                                },
+                                onPointerDown: (e) => e.stopPropagation()
+                            }, React.createElement('div', {
+                                style: {
+                                    width: `${cbWidthPercent}%`,
+                                    height: '100%',
+                                    backgroundColor: cbBarColor,
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: cbWidthPercent > 0 ? `0 0 10px ${cbBarColor}` : 'none'
+                                }
                             }))
                         ]),
                         state && React.createElement('div', { key: 'st' }, React.createElement(RefComponent, {

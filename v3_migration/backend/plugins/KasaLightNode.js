@@ -123,7 +123,9 @@
         initializeSocketIO() {
             // Listen for real-time device state updates
             if (window.socket) {
-                window.socket.on('device-state-update', (data) => this.handleDeviceStateUpdate(data));
+                // Store bound handler so we can remove it in destroy()
+                this._onDeviceStateUpdate = (data) => this.handleDeviceStateUpdate(data);
+                window.socket.on('device-state-update', this._onDeviceStateUpdate);
             }
         }
 
@@ -596,6 +598,19 @@
             this.fetchDevices();
         }
 
+        destroy() {
+            // Clean up socket listener
+            if (window.socket && this._onDeviceStateUpdate) {
+                window.socket.off('device-state-update', this._onDeviceStateUpdate);
+                this._onDeviceStateUpdate = null;
+            }
+            // Clean up debounce timer
+            if (this.hsvDebounceTimer) {
+                clearTimeout(this.hsvDebounceTimer);
+                this.hsvDebounceTimer = null;
+            }
+        }
+
         serialize() {
             return {
                 selectedDeviceIds: this.properties.selectedDeviceIds || [],
@@ -621,7 +636,10 @@
                 setSeed(s => s + 1);
                 setCustomTitle(data.properties.customTitle || "");
             };
-            return () => { data.changeCallback = null; };
+            return () => {
+                data.changeCallback = null;
+                if (data.destroy) data.destroy();
+            };
         }, [data]);
 
         useEffect(() => {
@@ -831,6 +849,19 @@
                     const select = findControl("_select");
                     const indicator = findControl("_indicator");
                     const colorbar = findControl("_colorbar");
+                    
+                    // Get color bar data directly for inline rendering
+                    const colorBarData = colorbar?.control?.data || {};
+                    const cbBrightness = colorBarData.brightness ?? 0;
+                    const cbHsColor = colorBarData.hs_color || [0, 0];
+                    const cbState = colorBarData.state;
+                    const cbOn = colorBarData.on;
+                    const cbIsOn = cbState === 'on' || cbOn === true;
+                    // Brightness should already be 0-100, but normalize defensively
+                    const cbWidthPercent = cbIsOn ? Math.max(0, Math.min(100, cbBrightness)) : 0;
+                    const cbBarColor = (cbHsColor && cbHsColor.length === 2 && cbHsColor[1] > 0) 
+                        ? `hsl(${cbHsColor[0]}, ${cbHsColor[1]}%, 50%)` 
+                        : '#ff9800';
 
                     return React.createElement('div', { key: index, className: 'ha-device-item' }, [
                         select && React.createElement('div', { key: 'sel', style: { marginBottom: '5px' } }, React.createElement(RefComponent, {
@@ -842,9 +873,26 @@
                                 init: ref => emit({ type: "render", data: { type: "control", element: ref, payload: indicator.control } }),
                                 unmount: ref => emit({ type: "unmount", data: { element: ref } })
                             })),
-                            colorbar && React.createElement('div', { key: 'col', style: { flex: '1 1 auto' } }, React.createElement(RefComponent, {
-                                init: ref => emit({ type: "render", data: { type: "control", element: ref, payload: colorbar.control } }),
-                                unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                            // Render color bar inline instead of via RefComponent (fixes brightness display bug)
+                            colorbar && React.createElement('div', { 
+                                key: 'col', 
+                                style: { 
+                                    flex: '1 1 auto',
+                                    height: '8px',
+                                    backgroundColor: 'rgba(0, 20, 30, 0.6)',
+                                    borderRadius: '4px',
+                                    overflow: 'hidden',
+                                    border: '1px solid rgba(255, 152, 0, 0.2)'
+                                },
+                                onPointerDown: (e) => e.stopPropagation()
+                            }, React.createElement('div', {
+                                style: {
+                                    width: `${cbWidthPercent}%`,
+                                    height: '100%',
+                                    backgroundColor: cbBarColor,
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: cbWidthPercent > 0 ? `0 0 10px ${cbBarColor}` : 'none'
+                                }
                             }))
                         ])
                     ]);

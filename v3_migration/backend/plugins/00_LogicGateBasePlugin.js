@@ -250,6 +250,14 @@
             this.updateInputs(true);
         }
 
+        destroy() {
+            // Clean up pulse mode timeout
+            if (this.pulseTimeout) {
+                clearTimeout(this.pulseTimeout);
+                this.pulseTimeout = null;
+            }
+        }
+
         serialize() {
             return { ...this.properties };
         }

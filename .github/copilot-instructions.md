@@ -78,6 +78,24 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
+#### HAGenericDeviceNode HA-Only Refactor (2025-12-19)
+- **What broke**: The node was a confusing "Swiss Army knife" trying to talk directly to Kasa, Hue, AND Home Assistant. It had 3 different code paths for the same operation.
+- **Why it broke**: Original design assumed direct device control. But HA already integrates with Kasa/Hue devices, and there are dedicated `KasaLightNode` and `HueLightNode` for direct control.
+- **The fix**: Removed ~120 lines of Kasa/Hue code from `setDevicesState`, `onTrigger`, `applyHSVInput`, `fetchDeviceState`, and `handleDeviceStateUpdate`. Now the node only speaks HA format.
+- **Now it works because**: One node, one job - talk to Home Assistant. HA handles translating to each device's native language (Zigbee, Hue, Kasa, etc.).
+
+#### Brightness Bar Shows 39% Instead of 100% (2025-12-19)
+- **What broke**: Light was correctly at full brightness (254), but the color bar on the node showed only 39% and was 1/3 width.
+- **Why it broke**: The value was being divided by 255 twice - once in the backend (correct), then again in the UI (wrong). 100/255 = 39%.
+- **The fix**: Updated `ColorBarControl` and `DeviceStateControl` in `00_SharedControlsPlugin.js` to expect 0-100 values directly from the backend, not raw 0-255.
+- **Now it works because**: Backend normalizes brightness to 0-100, UI displays 0-100 directly. No double-conversion.
+
+#### HAGenericDeviceNode Auto-Refresh Removal (2025-12-19)
+- **What broke**: Performance degradation with many device nodes. UI became sluggish.
+- **Why it broke**: Each HAGenericDeviceNode had a 30-second auto-refresh interval calling the HA API. With 20 nodes = 2,400 API calls per hour just for polling!
+- **The fix**: Removed `startAutoRefresh()`, `autoRefreshInterval` property, and interval cleanup from the node. Real-time updates come via Socket.IO anyway.
+- **Now it works because**: No more wasteful polling. Devices update via WebSocket push notifications instead.
+
 #### AND Gate 30-Second Delay (2025-12-18)
 - **What broke**: Logic nodes (AND, OR, etc.) connected to TimeRangeNode or DayOfWeekComparisonNode took ~30 seconds (or longer) to update their output, even though they should respond instantly.
 - **Why it broke**: TimeRangeNode and DayOfWeekComparisonNode had no internal "clock". They only recalculated when the user changed a slider. Imagine an employee who only checks their inbox when you tap their shoulder - if nobody taps them, they never check.
@@ -463,6 +481,21 @@ All device IDs use prefixes to identify their source system:
 - `shelly_` → Shelly devices
 
 The `T2HAUtils.getDeviceApiInfo(id)` helper parses these prefixes to route API calls correctly.
+
+## Brightness Scale Normalization
+
+**IMPORTANT**: Brightness values flow through multiple layers. Here's the canonical scale at each point:
+
+| Layer | Scale | Example | Notes |
+|-------|-------|---------|-------|
+| Home Assistant raw | 0-255 | 254 | Raw `brightness` attribute from HA |
+| Hue Bridge raw | 0-254 | 254 | Hue uses 254 max, not 255 |
+| Backend API response | 0-100 | 100 | `homeAssistantManager.getState()` normalizes to percentage |
+| Frontend UI display | 0-100 | 100 | `ColorBarControl`, `DeviceStateControl` expect percentage |
+| HSV input brightness | 0-255 | 254 | Timeline/Spline nodes output 0-255 |
+| HA API payload | 0-255 | 254 | When sending commands to HA |
+
+**Key rule**: Backend normalizes everything to 0-100 for UI. Frontend components should NOT divide by 255 again.
 
 ## Plugin Development (CRITICAL)
 
@@ -1072,6 +1105,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 19 | **AND gate 30-second delay** | v2.1.90 - TimeRangeNode and DayOfWeekComparisonNode now tick automatically |
 | 20 | **Performance degradation** | v2.1.91 - Nodes only trigger changeCallback when values actually change (was 100+/sec) |
 | 21 | **Timeline Color broken** | v2.1.92 - Added dedicated engine interval for active output modes |
+| 22 | **HAGenericDeviceNode auto-refresh** | v2.1.97 - Removed 30-second polling (2400 API calls/hour with 20 nodes). Uses Socket.IO push instead. |
+| 23 | **Brightness bar 39% bug** | v2.1.97 - ColorBarControl and DeviceStateControl were dividing by 255 twice. Now expect 0-100 directly. |
+| 24 | **HAGenericDeviceNode HA-only refactor** | v2.1.97 - Removed ~120 lines of Kasa/Hue direct API code. Node now only speaks to HA (HA translates to devices). |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 

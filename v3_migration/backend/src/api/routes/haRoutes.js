@@ -7,25 +7,28 @@ const homeAssistantManager = require('../../devices/managers/homeAssistantManage
 const stateCache = new Map();
 const CACHE_TTL = 5000; // 5 seconds
 
+// Only log errors/warnings by default. Set VERBOSE_LOGGING=true for detailed output.
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+
 const logWithTimestamp = (message, level = 'info') => {
-  const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
+  // Only log info/debug when VERBOSE_LOGGING is enabled
+  if (level === 'info' && !VERBOSE) return;
+  
   const timestamp = `[${new Date().toISOString()}]`;
   let formattedMessage = `${timestamp} `;
-  if (['error'].includes(level) || (LOG_LEVEL === 'info' && ['info', 'warn'].includes(level)) || LOG_LEVEL === level) {
-    switch (level) {
-      case 'error':
-        formattedMessage += `${chalk.red('❌ ' + message)}`;
-        break;
-      case 'warn':
-        formattedMessage += `${chalk.yellow('⚠️ ' + message)}`;
-        break;
-      case 'info':
-      default:
-        formattedMessage += `${chalk.green('✅ ' + message)}`;
-        break;
-    }
-    console.log(formattedMessage);
+  switch (level) {
+    case 'error':
+      formattedMessage += `${chalk.red('❌ ' + message)}`;
+      break;
+    case 'warn':
+      formattedMessage += `${chalk.yellow('⚠️ ' + message)}`;
+      break;
+    case 'info':
+    default:
+      formattedMessage += `${chalk.green('✅ ' + message)}`;
+      break;
   }
+  console.log(formattedMessage);
 };
 
 module.exports = function (io) {
@@ -135,7 +138,7 @@ module.exports = function (io) {
         source: body.source
       };
       if (entityType === 'switch') {
-        logWithTimestamp(`Switch ${id} does not support brightness, color, transition, percentage, position, volume_level, or source, ignoring`, 'warn');
+        // Switches don't support brightness/color - silently ignore these fields
         update.brightness = undefined;
         update.hs_color = undefined;
         update.color_temp = undefined;
