@@ -193,20 +193,56 @@
         };
 
         // Continuous time checking - tick every second to update isInRange
+        // But ONLY trigger engine update when the value actually CHANGES
+        const lastIsInRangeRef = useRef(null);
+        
         useEffect(() => {
-            // Initial update
+            // Calculate initial state
+            const now = new Date();
+            const currentMinutes = timeToMinutes(now.getHours(), now.getMinutes());
+            const startMinutes = timeToMinutes(state.startHour, state.startMinute);
+            const endMinutes = timeToMinutes(state.endHour, state.endMinute);
+            let isInRange = false;
+            if (startMinutes < endMinutes) {
+                isInRange = (currentMinutes >= startMinutes) && (currentMinutes < endMinutes);
+            } else if (startMinutes > endMinutes) {
+                isInRange = (currentMinutes >= startMinutes) || (currentMinutes < endMinutes);
+            } else {
+                isInRange = true;
+            }
+            lastIsInRangeRef.current = isInRange;
+            
+            // Only trigger initial update once
             triggerEngineUpdate();
             
-            // Tick every second to check time and propagate changes
+            // Check every second, but only trigger if value changed
             const intervalId = setInterval(() => {
-                triggerEngineUpdate();
-            }, 1000); // 1 second interval
+                const now = new Date();
+                const currentMinutes = timeToMinutes(now.getHours(), now.getMinutes());
+                const startMinutes = timeToMinutes(state.startHour, state.startMinute);
+                const endMinutes = timeToMinutes(state.endHour, state.endMinute);
+                
+                let isInRange = false;
+                if (startMinutes < endMinutes) {
+                    isInRange = (currentMinutes >= startMinutes) && (currentMinutes < endMinutes);
+                } else if (startMinutes > endMinutes) {
+                    isInRange = (currentMinutes >= startMinutes) || (currentMinutes < endMinutes);
+                } else {
+                    isInRange = true;
+                }
+                
+                // Only trigger update if value actually changed
+                if (isInRange !== lastIsInRangeRef.current) {
+                    lastIsInRangeRef.current = isInRange;
+                    triggerEngineUpdate();
+                }
+            }, 1000);
             
             return () => {
                 clearInterval(intervalId);
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
             };
-        }, [triggerEngineUpdate]);
+        }, [state.startHour, state.startMinute, state.endHour, state.endMinute, triggerEngineUpdate]);
 
         // Calculate current status
         const now = new Date();

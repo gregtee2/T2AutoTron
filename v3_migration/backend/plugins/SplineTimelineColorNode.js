@@ -1682,7 +1682,7 @@
                 setOutputRgb(data.properties.outputRgb || { r: 128, g: 128, b: 128 });
                 setInputStartTime(data.inputStartTime || null);
                 setInputEndTime(data.inputEndTime || null);
-            }, 50);  // Fast update for smooth playhead animation
+            }, 200);  // Update UI at 5fps - sufficient for playhead animation
             return () => clearInterval(interval);
         }, [data]);
 

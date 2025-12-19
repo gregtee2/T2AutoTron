@@ -237,20 +237,47 @@
             }
         };
 
+        // Check if isInRange changed - only trigger update when value changes
+        const lastIsInRangeRef = useRef(null);
+        
+        const calculateIsInRange = useCallback(() => {
+            const now = new Date();
+            const currentDayOfWeek = now.getDay();
+            
+            switch (state.mode) {
+                case "all":
+                    return true;
+                case "single":
+                    return (currentDayOfWeek === state.singleDay);
+                case "range":
+                    let s = state.startDay;
+                    let e = state.endDay;
+                    if (s > e) [s, e] = [e, s];
+                    return (currentDayOfWeek >= s && currentDayOfWeek <= e);
+                default:
+                    return false;
+            }
+        }, [state.mode, state.singleDay, state.startDay, state.endDay]);
+        
         useEffect(() => {
-            // Initial update
+            // Calculate initial state
+            lastIsInRangeRef.current = calculateIsInRange();
             triggerEngineUpdate();
             
-            // Check once per minute - day changes are slow, no need for 1s interval
+            // Check once per minute, but only trigger if value changed
             const intervalId = setInterval(() => {
-                triggerEngineUpdate();
-            }, 60000); // 1 minute interval
+                const currentIsInRange = calculateIsInRange();
+                if (currentIsInRange !== lastIsInRangeRef.current) {
+                    lastIsInRangeRef.current = currentIsInRange;
+                    triggerEngineUpdate();
+                }
+            }, 60000);
             
             return () => {
                 clearInterval(intervalId);
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
             };
-        }, [triggerEngineUpdate]);
+        }, [calculateIsInRange, triggerEngineUpdate]);
 
         // Calculate current status
         const now = new Date();
