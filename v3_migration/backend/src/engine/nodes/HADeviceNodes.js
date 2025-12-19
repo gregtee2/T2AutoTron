@@ -142,6 +142,7 @@ class HADeviceStateNode {
     this.label = 'HA Device State';
     this.properties = {
       entityId: '',
+      selectedDeviceId: '',  // Frontend uses this name
       pollInterval: 5000,  // ms between polls
       lastState: null
     };
@@ -152,17 +153,23 @@ class HADeviceStateNode {
   restore(data) {
     if (data.properties) {
       Object.assign(this.properties, data.properties);
+      // Frontend uses selectedDeviceId, backend uses entityId - sync them
+      if (this.properties.selectedDeviceId && !this.properties.entityId) {
+        this.properties.entityId = this.properties.selectedDeviceId;
+      }
     }
   }
 
   async fetchState() {
     const config = getHAConfig();
-    if (!config.token || !this.properties.entityId) {
+    // Check both entityId and selectedDeviceId
+    const entityId = this.properties.entityId || this.properties.selectedDeviceId;
+    if (!config.token || !entityId) {
       return null;
     }
 
     try {
-      const url = `${config.host}/api/states/${this.properties.entityId}`;
+      const url = `${config.host}/api/states/${entityId}`;
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${config.token}`,
@@ -171,7 +178,7 @@ class HADeviceStateNode {
       });
 
       if (!response.ok) {
-        console.error(`[HADeviceStateNode] HTTP ${response.status} for ${this.properties.entityId}`);
+        console.error(`[HADeviceStateNode] HTTP ${response.status} for ${entityId}`);
         return null;
       }
 
