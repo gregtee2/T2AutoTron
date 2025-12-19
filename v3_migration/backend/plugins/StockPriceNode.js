@@ -61,10 +61,10 @@
 
             try {
                 // Use backend proxy to avoid CORS issues
-                // In browser: use relative URL (works with Vite proxy and production)
-                // The backend at /api/stock/:symbol fetches from Yahoo
-                const apiBase = window.apiUrl || '';
-                const url = `${apiBase}/api/stock/${encodeURIComponent(symbol)}`;
+                // window.apiUrl is a FUNCTION that builds the correct URL (handles HA ingress)
+                // window.apiFetch is a helper that does the same thing
+                const apiUrlFn = window.apiUrl || ((path) => path);
+                const url = apiUrlFn(`/api/stock/${encodeURIComponent(symbol)}`);
                 
                 const response = await fetch(url);
                 if (!response.ok) {
