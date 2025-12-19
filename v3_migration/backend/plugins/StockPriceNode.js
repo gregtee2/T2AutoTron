@@ -173,7 +173,7 @@
         const [lastUpdate, setLastUpdate] = useState(data.properties.lastUpdate);
         const [error, setError] = useState(data.properties.error);
 
-        const { RefComponent } = window.ReteReact || {};
+        const RefComponent = window.RefComponent;
         const { NodeHeader, HelpIcon } = window.T2Controls || {};
 
         // Clean up on unmount
@@ -266,6 +266,11 @@
             justifyContent: 'space-between',
             marginBottom: '6px'
         };
+
+        // Guard: if RefComponent not ready, show loading placeholder
+        if (!RefComponent) {
+            return el('div', { style: { padding: '20px', color: '#888' } }, 'Loading...');
+        }
 
         return el('div', { 
             className: 'stock-price-node',
