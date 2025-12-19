@@ -566,8 +566,42 @@
                 ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
                 ctx.textBaseline = 'middle';
                 
+                // Draw start and end labels
                 ctx.fillText(String(startValue), drawAreaLeft, height - 6);
                 ctx.fillText(String(endValue), drawAreaRight, height - 6);
+                
+                // Draw intermediate tick marks at nice intervals (10s, 5s, or calculated)
+                const range = endValue - startValue;
+                let interval;
+                if (range <= 20) interval = 5;
+                else if (range <= 50) interval = 10;
+                else if (range <= 100) interval = 20;
+                else interval = Math.ceil(range / 10 / 10) * 10;  // Round up to nearest 10
+                
+                // Find first marker after start
+                let firstMarker = Math.ceil(startValue / interval) * interval;
+                if (firstMarker === startValue) firstMarker += interval;
+                
+                ctx.font = '500 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.fillStyle = 'rgba(201, 209, 217, 0.7)';
+                
+                for (let markerVal = firstMarker; markerVal < endValue; markerVal += interval) {
+                    const t = (markerVal - startValue) / range;
+                    if (t <= 0.08 || t >= 0.92) continue;  // Skip if too close to edges
+                    
+                    const x = drawAreaLeft + t * drawWidth;
+                    
+                    // Draw tick mark
+                    ctx.strokeStyle = 'rgba(160, 174, 192, 0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x, drawAreaBottom);
+                    ctx.lineTo(x, drawAreaBottom + 5);
+                    ctx.stroke();
+                    
+                    // Draw value label
+                    ctx.fillText(String(markerVal), x, height - 6);
+                }
             }
 
         // Use JSON.stringify for colorStops and saturationPoints to detect deep changes
