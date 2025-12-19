@@ -270,6 +270,13 @@ class HADeviceStateNode {
   async data(inputs) {
     const now = Date.now();
     
+    // Log on first tick to confirm node is running with correct config
+    if (!this._startupLogged) {
+      this._startupLogged = true;
+      const entityId = this.properties.entityId || this.properties.selectedDeviceId;
+      console.log(`[HADeviceStateNode ${this.id?.slice(0,8) || 'new'}] 🚀 First tick - entityId: ${entityId || 'NOT SET'}`);
+    }
+    
     // Calculate dynamic poll interval based on failure count
     // Normal: 5s, After failures: gradually increase to reduce load on struggling HA
     const baseInterval = this.properties.pollInterval || 5000;
@@ -1034,6 +1041,12 @@ class HADeviceAutomationNode {
   }
 
   data(inputs) {
+    // Log on first tick to confirm node is in the engine
+    if (!this._startupLogged) {
+      this._startupLogged = true;
+      console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8) || 'new'}] 🚀 First tick - fields: [${(this.properties.selectedFields || []).join(', ')}]`);
+    }
+    
     const inputData = inputs.device_state?.[0];
     const result = {};
     
