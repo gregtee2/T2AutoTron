@@ -1,5 +1,75 @@
 # Session Handoff - December 18, 2025
 
+## Addendum (Session 9 - Memory Leaks & Dashboard Fixes)
+
+### What changed (Session 9 - Claude Opus 4.5)
+
+**Current Version: 2.1.87**
+
+#### 🧠 Agent Workflow Note
+**USE SUBAGENTS FOR RESEARCH-HEAVY TASKS** - When auditing codebase (e.g., "find all X and check if Y"), spawn a subagent instead of doing 15+ manual grep/read calls. Benefits:
+- Subagent gets its own context window, returns ~50 line summary
+- Saves ~10x tokens in main context (15,000 → 1,500)
+- Session lasts longer before context fills up
+- Cleaner conversation, structured output
+- Example: "Audit all setInterval usages for cleanup" found DelayNode bug in one call
+
+#### 🔧 Fix 1: Timeline Color Numerical Mode Backend (v2.1.82)
+- **Symptom**: Numerical mode Timeline Color node wasn't working in headless/backend mode
+- **Root Cause**: Backend SplineTimelineColorNode didn't have `startValue`/`endValue` properties or proper position mapping
+- **Fix**: Added properties, map input: `(value - start) / (end - start)`
+- **Files**: `v3_migration/backend/src/engine/nodes/ColorNodes.js`
+
+#### 🔧 Fix 2: HADeviceStateNode Property Name (v2.1.83)
+- **Symptom**: HADeviceStateNode wasn't finding devices in backend engine
+- **Root Cause**: Frontend saves `selectedDeviceId`, backend expected `entityId`
+- **Fix**: Added `selectedDeviceId` property, sync in restore()
+- **Files**: `v3_migration/backend/src/engine/nodes/HADeviceNodes.js`
+
+#### 🔧 Fix 3: Debug Dashboard Stale Cache (v2.1.84)
+- **Symptom**: Dashboard showed "Engine says ON, HA says OFF" but devices were actually ON
+- **Root Cause**: `/api/debug/all` returned cached device states, not fresh data
+- **Fix**: Endpoint now fetches directly from HA API, bypassing cache
+- **Files**: `v3_migration/backend/src/server.js`
+
+#### 🔧 Fix 4: Dashboard Served from Server (v2.1.85)
+- **Symptom**: User had stale desktop copy of debug_dashboard.html
+- **Fix**: Added `/debug` route that serves dashboard directly from server
+- **Benefit**: Always current version, no manual file updates needed
+- **Files**: `v3_migration/backend/src/server.js`, `v3_migration/backend/src/debug_dashboard.html`
+
+#### 🔧 Fix 5: Memory Leaks in HA Nodes (v2.1.86)
+- **Symptom**: UI got sluggish after hours, devices stopped toggling until restart
+- **Root Cause**: Socket listeners registered in Node class never cleaned up on unmount
+- **Fix**: Added `useEffect` cleanup that calls `data.destroy()` on component unmount
+- **Files**: `HAGenericDeviceNode.js`, `HADeviceAutomationNode.js`, `HADeviceStateOutputNode.js`
+
+#### 🔧 Fix 6: Numerical Axis Tick Marks (v2.1.86)
+- **Symptom**: Timeline Color numerical mode only showed min/max values on axis
+- **Fix**: Added intermediate tick marks at nice intervals (10s, 20s based on range)
+- **Files**: `v3_migration/backend/plugins/SplineTimelineColorNode.js`
+
+#### 🔧 Fix 7: DelayNode Memory Leak (v2.1.87)
+- **Symptom**: Found via subagent audit - countdown interval leaked if node deleted while active
+- **Root Cause**: No `destroy()` method to clean up `_countdownInterval`
+- **Fix**: Added `destroy()` method + `useEffect` cleanup
+- **Files**: `v3_migration/backend/plugins/DelayNode.js`
+
+### Version Progression (Session 9)
+- 2.1.77 → 2.1.82 (Timeline Color numerical backend)
+- 2.1.82 → 2.1.83 (HADeviceStateNode property name)
+- 2.1.83 → 2.1.84 (Fresh HA states in debug API)
+- 2.1.84 → 2.1.85 (Dashboard at /debug endpoint)
+- 2.1.85 → 2.1.86 (HA node memory leaks + axis ticks)
+- 2.1.86 → 2.1.87 (DelayNode memory leak)
+
+### Debug Dashboard Access
+**Use this URL:** `http://<your-HA-IP>:3000/debug`
+- Always serves latest version from server
+- No need for desktop copies
+
+---
+
 ## Addendum (Session 8 - Debug Dashboard & Bug Fixes)
 
 ### What changed (Session 8 - Claude Opus 4.5)
