@@ -17,7 +17,7 @@ const config = convict({
   },
   logLevel: {
     doc: 'Minimum log level',
-    format: ['debug', 'info', 'warn', 'error'],
+    format: String,  // Changed from enum to String - validate manually if needed
     default: 'info',
     env: 'LOG_LEVEL',
   },
