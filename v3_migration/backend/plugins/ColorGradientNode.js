@@ -931,7 +931,7 @@
             ]),
 
             // Status Section
-            el('div', { key: 'status', className: 'cgn-status-section', onPointerDown: stopPropagation }, [
+            el('div', { key: 'status', className: 'cgn-status-section', onPointerDown: (e) => { const t = e.target.tagName; if (t === 'INPUT' || t === 'SELECT' || t === 'BUTTON' || t === 'CANVAS') e.stopPropagation(); } }, [
                 el('div', { key: 'gradient', className: 'cgn-gradient-container' }, 
                     el('canvas', { ref: gradientCanvasRef, className: 'cgn-gradient-canvas' })
                 ),
@@ -954,7 +954,7 @@
             ]),
 
             // Controls
-            !isCollapsed ? el('div', { key: 'controls', className: 'cgn-controls', onPointerDown: stopPropagation, onWheel: stopWheelPropagation }, [
+            !isCollapsed ? el('div', { key: 'controls', className: 'cgn-controls', onPointerDown: (e) => { const t = e.target.tagName; if (t === 'INPUT' || t === 'SELECT' || t === 'BUTTON') e.stopPropagation(); }, onWheel: stopWheelPropagation }, [
                 // Direct Color Interpolation Toggle
                 el('div', { key: 'directMode', className: 'cgn-section cgn-toggle-row' }, [
                     el('label', { key: 'label', className: 'cgn-label cgn-tooltip', 'data-tooltip': "Enable to interpolate directly between two RGB colors (true gradient). When off, uses HSV hue sweep which may pass through unwanted colors." }, [

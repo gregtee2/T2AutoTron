@@ -2161,7 +2161,7 @@
             // Collapsible content
             !collapsed && el('div', { key: 'collapsible-content' }, [
                 // Controls section - using cgn-controls class
-                el('div', { key: 'controls', className: 'cgn-controls', onPointerDown: stopPropagation }, [
+                el('div', { key: 'controls', className: 'cgn-controls', onPointerDown: (e) => { const t = e.target.tagName; if (t === 'INPUT' || t === 'SELECT' || t === 'BUTTON') e.stopPropagation(); } }, [
                     // Range Mode selector with Reset button
                     el('div', { key: 'rangeSection', className: 'cgn-section' }, [
                         el('div', { key: 'modeHeader', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
@@ -2445,7 +2445,7 @@
             ]),
 
             // Color Mode - cleaner layout
-            el('div', { key: 'colorSection', style: sectionStyle, onPointerDown: stopPropagation }, [
+            el('div', { key: 'colorSection', style: sectionStyle, onPointerDown: (e) => { const t = e.target.tagName; if (t === 'INPUT' || t === 'SELECT' || t === 'BUTTON') e.stopPropagation(); } }, [
                 // Colors row with dropdown
                 el('div', { key: 'colorRow', style: sliderRowStyle }, [
                     el('span', { key: 'label', style: sliderLabelStyle }, 'Colors:'),

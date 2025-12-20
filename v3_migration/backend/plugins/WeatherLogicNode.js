@@ -162,7 +162,7 @@
                 React.createElement('div', { key: 'h', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } }, [
                     React.createElement('span', { key: 'l', className: "weather-metric-label" }, label),
                     React.createElement('label', { key: 't', className: "weather-toggle-container" }, [
-                        React.createElement('input', { key: 'i', type: "checkbox", className: "weather-toggle", checked: enabled, onChange: (e) => onToggle(e.target.checked) })
+                        React.createElement('input', { key: 'i', type: "checkbox", className: "weather-toggle", checked: enabled, onChange: (e) => onToggle(e.target.checked), onPointerDown: (e) => e.stopPropagation() })
                     ])
                 ]),
                 React.createElement('span', { key: 'v', className: "weather-metric-value" }, [
@@ -179,24 +179,24 @@
                 enabled && React.createElement('div', { key: 'ctrl', className: "weather-controls-sub" }, [
                     React.createElement('div', { key: 'inv', style: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#aaa' } }, [
                         React.createElement('label', { key: 'l', className: "weather-toggle-container", style: { transform: 'scale(0.9)', transformOrigin: 'left' } }, [
-                            React.createElement('input', { key: 'i', type: "checkbox", className: "weather-toggle", checked: invert, onChange: (e) => onInvert(e.target.checked) }),
+                            React.createElement('input', { key: 'i', type: "checkbox", className: "weather-toggle", checked: invert, onChange: (e) => onInvert(e.target.checked), onPointerDown: (e) => e.stopPropagation() }),
                             React.createElement('span', { key: 's' }, "Invert")
                         ])
                     ]),
                     ...(!singleThreshold ? [
                         React.createElement('div', { key: 'h', className: "weather-slider-container" }, [
                             React.createElement('span', { key: 'l', style: { fontSize: '11px', width: '30px' } }, "High"),
-                            React.createElement('input', { key: 'i', type: "range", className: "weather-range-input", min: min, max: max, step: step, value: high, onChange: (e) => onHighChange(Number(e.target.value)) }),
+                            React.createElement('input', { key: 'i', type: "range", className: "weather-range-input", min: min, max: max, step: step, value: high, onChange: (e) => onHighChange(Number(e.target.value)), onPointerDown: (e) => e.stopPropagation() }),
                             React.createElement('span', { key: 'v', style: { fontSize: '11px', width: '30px', textAlign: 'right' } }, high)
                         ]),
                         React.createElement('div', { key: 'l', className: "weather-slider-container" }, [
                             React.createElement('span', { key: 'l', style: { fontSize: '11px', width: '30px' } }, "Low"),
-                            React.createElement('input', { key: 'i', type: "range", className: "weather-range-input", min: min, max: max, step: step, value: low, onChange: (e) => onLowChange(Number(e.target.value)) }),
+                            React.createElement('input', { key: 'i', type: "range", className: "weather-range-input", min: min, max: max, step: step, value: low, onChange: (e) => onLowChange(Number(e.target.value)), onPointerDown: (e) => e.stopPropagation() }),
                             React.createElement('span', { key: 'v', style: { fontSize: '11px', width: '30px', textAlign: 'right' } }, low)
                         ])
                     ] : [React.createElement('div', { key: 's', className: "weather-slider-container" }, [
                         React.createElement('span', { key: 'l', style: { fontSize: '11px', width: '30px' } }, "Thresh"),
-                        React.createElement('input', { key: 'i', type: "range", className: "weather-range-input", min: min, max: max, step: step, value: singleThreshold, onChange: (e) => onSingleChange(Number(e.target.value)) }),
+                        React.createElement('input', { key: 'i', type: "range", className: "weather-range-input", min: min, max: max, step: step, value: singleThreshold, onChange: (e) => onSingleChange(Number(e.target.value)), onPointerDown: (e) => e.stopPropagation() }),
                         React.createElement('span', { key: 'v', style: { fontSize: '11px', width: '30px', textAlign: 'right' } }, singleThreshold)
                     ])])
                 ])
@@ -419,11 +419,11 @@
                 ]),
                 React.createElement('div', { key: 's', className: "weather-status-indicator", style: { background: statusColor, boxShadow: `0 0 5px ${statusColor}` } })
             ]),
-            !isCollapsed && React.createElement('div', { key: 'content', className: "weather-controls-container", onPointerDown: (e) => e.stopPropagation() }, [
+            !isCollapsed && React.createElement('div', { key: 'content', className: "weather-controls-container" }, [
                 React.createElement('div', { key: 'logic', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '5px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px' } }, [
                     React.createElement('div', { key: 'l', style: { display: 'flex', gap: '10px', alignItems: 'center' } }, [
                         React.createElement('span', { key: 's', style: { fontSize: '13px', color: '#aaa' } }, "Logic Type:"),
-                        React.createElement('select', { key: 'sel', value: state.logicType, onChange: (e) => updateProperty('logicType', e.target.value), style: { background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px', fontSize: '13px' } }, [
+                        React.createElement('select', { key: 'sel', value: state.logicType, onChange: (e) => updateProperty('logicType', e.target.value), onPointerDown: (e) => e.stopPropagation(), style: { background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px', fontSize: '13px' } }, [
                             React.createElement('option', { key: 'or', value: "OR" }, "OR (Any)"),
                             React.createElement('option', { key: 'and', value: "AND" }, "AND (All)")
                         ])

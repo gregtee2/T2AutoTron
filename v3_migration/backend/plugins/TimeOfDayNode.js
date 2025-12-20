@@ -398,7 +398,7 @@
                     React.createElement(RefComponent, { key: 'r', init: ref => emit({ type: 'render', data: { type: 'socket', element: ref, payload: output.socket, nodeId: data.id, side: 'output', key: output.key } }), unmount: ref => emit({ type: 'unmount', data: { element: ref } }) })
                 ]))
             ),
-            React.createElement('div', { key: 'c', className: 'content', onPointerDown: (e) => e.stopPropagation() }, [
+            React.createElement('div', { key: 'c', className: 'content', onPointerDown: (e) => { const tag = e.target.tagName; if (tag === 'INPUT' || tag === 'SELECT' || tag === 'BUTTON' || tag === 'TEXTAREA') e.stopPropagation(); } }, [
                 // Custom Name
                 React.createElement('div', { key: 'cn', className: 'control-row' }, [
                     React.createElement('span', { key: 'l', className: 'control-label' }, "Name"),
