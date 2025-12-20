@@ -1014,7 +1014,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.107 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.109 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -1115,6 +1115,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 24 | **HAGenericDeviceNode HA-only refactor** | v2.1.97 - Removed ~120 lines of Kasa/Hue direct API code. Node now only speaks to HA (HA translates to devices). |
 | 25 | **HADeviceAutomationNode registry bug** | v2.1.103 - Backend engine was instantiating wrong node class. Now correctly creates field-extraction node. |
 | 26 | **LOG_LEVEL crash** | v2.1.102 - Add-on no longer crashes on startup with invalid LOG_LEVEL value. |
+| 27 | **Group nav zoom centering** | v2.1.108 - Group navigation buttons now properly center viewport on the selected group. |
+| 28 | **Console log spam** | v2.1.108 - Removed debug logging from DeviceStateControl that was spamming browser console. |
+| 29 | **HueEffectNode add-on discovery** | v2.1.109 - Fixed light discovery in HA add-on. Was using raw `fetch()` instead of `window.apiFetch()`. |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 

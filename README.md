@@ -1,7 +1,7 @@
 # T2AutoTron 2.1
 
 [![License](https://img.shields.io/github/license/gregtee2/T2AutoTron?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.107--beta-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)
+[![Version](https://img.shields.io/badge/version-2.1.109--beta-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)
 [![Open in VS Code](https://img.shields.io/badge/Open%20in-VS%20Code-blue?logo=visualstudiocode&style=flat-square)](https://open.vscode.dev/gregtee2/T2AutoTron)
 
 Visual node-based smart home automation editor with a **24/7 backend engine** - your automations run even when you close the browser!

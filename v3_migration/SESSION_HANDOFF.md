@@ -1,3 +1,54 @@
+# Session Handoff - December 20, 2025
+
+## Addendum (Session 13 - Group Navigation & HueEffectNode Fixes)
+
+### What changed (Session 13 - Claude Opus 4.5)
+
+**Current Version: 2.1.109**
+
+#### ✨ Feature: Group Navigation Buttons (v2.1.107)
+- **What it does**: Adds quick-jump buttons in the Event Log header for each Backdrop group on canvas
+- **Why**: Large graphs with many groups are hard to navigate. Now you can instantly zoom to any group
+- **How it works**: 
+  - Buttons are color-coded to match backdrop colors
+  - "⊞ All" button zooms to fit entire canvas
+  - Buttons auto-update when groups are created, renamed, recolored, or deleted
+- **Files**: `App.jsx`, `App.css`, `Editor.jsx`, `BackdropNode.js`
+
+#### 🔧 Fix 1: Group Navigation Zoom Centering (v2.1.108)
+- **Symptom**: Clicking a group button didn't properly center the viewport on the group
+- **Root Cause**: `AreaExtensions.zoomAt()` doesn't know about Backdrop's custom width/height
+- **Fix**: Manual zoom calculation using backdrop position, width, height, and container dimensions
+- **Files**: `App.jsx` - `focusBackdrop()` function
+
+#### 🔧 Fix 2: Console Log Spam (v2.1.108)
+- **Symptom**: Browser console flooded with DeviceStateControl debug messages
+- **Root Cause**: Debug console.log statements left in from brightness debugging
+- **Fix**: Removed console.log statements at lines 41 and 69
+- **Files**: `frontend/src/controls/DeviceStateControl.jsx`
+
+#### 🔧 Fix 3: HueEffectNode Light Discovery in Add-on (v2.1.109)
+- **Symptom**: HueEffectNode couldn't discover Hue lights when running in HA add-on
+- **Root Cause**: Node used raw `fetch()` instead of `window.apiFetch()` which handles HA ingress URL
+- **Fix**: Replaced all 6 `fetch()` calls with `(window.apiFetch || fetch)()`
+- **Files**: `backend/plugins/HueEffectNode.js`
+
+### 🦴 Caveman Summary
+1. **Group Buttons**: Added quick-jump buttons so you can hop between groups on your canvas like bookmarks
+2. **Zoom Fix**: The jump buttons now actually land you in the center of the group, not off to the side
+3. **Console Cleanup**: Removed debug yelling that was cluttering the browser console
+4. **Hue Discovery**: Fixed the add-on phone number (URL) for discovering Hue lights
+
+### Files Touched (Session 13)
+- `v3_migration/frontend/src/App.jsx` - backdropGroups state, focusBackdrop(), refreshBackdropGroups()
+- `v3_migration/frontend/src/App.css` - .group-nav-buttons, .group-nav-btn styles
+- `v3_migration/frontend/src/Editor.jsx` - window.refreshBackdropGroups() calls
+- `v3_migration/backend/plugins/BackdropNode.js` - window.BackdropColorPalette, refresh triggers
+- `v3_migration/frontend/src/controls/DeviceStateControl.jsx` - Removed debug logging
+- `v3_migration/backend/plugins/HueEffectNode.js` - Use apiFetch for ingress compatibility
+
+---
+
 # Session Handoff - December 19, 2025
 
 ## Addendum (Session 12 - HAGenericDeviceNode Refactor)
