@@ -1,7 +1,7 @@
 # T2AutoTron 2.1
 
 [![License](https://img.shields.io/github/license/gregtee2/T2AutoTron?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.63--beta-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)
+[![Version](https://img.shields.io/badge/version-2.1.107--beta-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)
 [![Open in VS Code](https://img.shields.io/badge/Open%20in-VS%20Code-blue?logo=visualstudiocode&style=flat-square)](https://open.vscode.dev/gregtee2/T2AutoTron)
 
 Visual node-based smart home automation editor with a **24/7 backend engine** - your automations run even when you close the browser!
@@ -39,12 +39,14 @@ I'm sure there are others who'd appreciate a visual approach. But this is **beta
 - 🏠 **Native HA Integration** - Direct access to all Home Assistant entities
 - 💡 **Multi-Platform Device Support:**
   - **Home Assistant** – All entities (lights, switches, sensors, media players, etc.)
-  - **Philips Hue** – Direct bridge API (no HA required)
+  - **Philips Hue** – Direct bridge API + built-in effects (candle, fire, prism, etc.)
   - **TP-Link Kasa** – Direct local API (no HA required)
   - **Shelly** – Via Home Assistant integration
-- 🔌 **50+ Node Types** - Time, logic, color, weather, and more
+- 🔌 **55+ Node Types** - Time, logic, color, weather, Hue effects, and more
+- 🎯 **Group Navigation** - Quick-jump buttons to zoom to Backdrop groups in large graphs
 - 🔄 **Hot Plugin Updates** - Add new nodes without rebuilding
 - 💾 **Auto-Save** - Every 2 minutes to prevent work loss
+- 🔍 **Debug Dashboard** - Compare engine state vs actual device state
 
 ---
 

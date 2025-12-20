@@ -1014,7 +1014,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.93 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.107 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -1047,7 +1047,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 3 | Refactor plugins to T2Node | ⏳ Partial | Some use it, not all |
 | 4 | Event Log App filter | 🔴 Broken | App events not showing - needs investigation |
 
-### 🟢 RECENTLY ADDED (2.1.55 - 2.1.63)
+### 🟢 RECENTLY ADDED (2.1.55 - 2.1.107)
 
 | # | Feature | Notes |
 |---|---------|-------|
@@ -1079,6 +1079,11 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 26 | **Stock Price Node** | v2.1.89 - Fetches real-time stock quotes from Yahoo Finance with backend proxy |
 | 27 | **Timeline Color Negative Values** | v2.1.89 - Numerical mode supports negative ranges (e.g., -5 to +5) |
 | 28 | **Download Graph Feature** | v2.1.93 - Export graphs as JSON files for backup or transfer between devices |
+| 29 | **Debug Dashboard Button** | v2.1.104 - 🔍 button in Control Panel opens debug dashboard in new tab |
+| 30 | **Reduced API Spam** | v2.1.105 - Removed 60-second forced updates (~60 API calls/hour per light eliminated) |
+| 31 | **HueEffectNode** | v2.1.106 - Trigger built-in Hue effects (candle, fire, prism, etc.) with multi-light selection |
+| 32 | **Smart HSV Exclusion** | v2.1.106 - Effect lights auto-excluded from downstream HSV commands via metadata |
+| 33 | **Group Navigation Buttons** | v2.1.107 - Quick-jump buttons in Event Log header to zoom to Backdrop groups |
 
 ### 🟢 RECENTLY FIXED
 
@@ -1108,6 +1113,8 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 22 | **HAGenericDeviceNode auto-refresh** | v2.1.97 - Removed 30-second polling (2400 API calls/hour with 20 nodes). Uses Socket.IO push instead. |
 | 23 | **Brightness bar 39% bug** | v2.1.97 - ColorBarControl and DeviceStateControl were dividing by 255 twice. Now expect 0-100 directly. |
 | 24 | **HAGenericDeviceNode HA-only refactor** | v2.1.97 - Removed ~120 lines of Kasa/Hue direct API code. Node now only speaks to HA (HA translates to devices). |
+| 25 | **HADeviceAutomationNode registry bug** | v2.1.103 - Backend engine was instantiating wrong node class. Now correctly creates field-extraction node. |
+| 26 | **LOG_LEVEL crash** | v2.1.102 - Add-on no longer crashes on startup with invalid LOG_LEVEL value. |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 
