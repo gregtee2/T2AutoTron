@@ -1,80 +1,97 @@
 {
   "nodes": [
     {
-      "id": "b50739b43147bb36",
-      "label": "Hue Effect",
+      "id": "84e0f04a679b3bf0",
+      "label": "Backdrop",
       "position": {
-        "x": 500.98765432098764,
-        "y": 314.37037055875044
+        "x": 440.4978877703544,
+        "y": 389.5203257457875
       },
       "data": {
-        "inputs": {
-          "trigger": {
-            "socket": {
-              "name": "boolean"
-            },
-            "label": "Trigger",
-            "id": "3c4e8530f3df6f8d",
-            "control": null,
-            "showControl": true
-          },
-          "hsv_in": {
-            "socket": {
-              "name": "object"
-            },
-            "label": "HSV In",
-            "id": "0831c66c26a484e9",
-            "control": null,
-            "showControl": true
-          }
-        },
-        "outputs": {
-          "hsv_out": {
-            "socket": {
-              "name": "object"
-            },
-            "label": "HSV Out",
-            "multipleConnections": true,
-            "id": "ff09680f58fbe7ad"
-          },
-          "active": {
-            "socket": {
-              "name": "boolean"
-            },
-            "label": "Active",
-            "multipleConnections": true,
-            "id": "456105ab3d1b8fbe"
-          },
-          "applied": {
-            "socket": {
-              "name": "boolean"
-            },
-            "label": "Applied",
-            "multipleConnections": true,
-            "id": "7568413e94a5ed71"
-          }
-        },
+        "inputs": {},
+        "outputs": {},
         "controls": {},
-        "label": "Hue Effect",
-        "id": "b50739b43147bb36",
-        "width": 300,
-        "height": 360,
+        "label": "Backdrop",
+        "id": "84e0f04a679b3bf0",
+        "width": 1352.6041627289842,
+        "height": 775.0420229481839,
         "properties": {
-          "entityIds": [],
-          "effect": "candle",
-          "lastTrigger": null,
-          "lastSentEffect": null,
-          "previousStates": {}
+          "title": "Group",
+          "colorIndex": 0,
+          "customColor": null,
+          "fontSize": 16,
+          "width": 1352.6041627289842,
+          "height": 775.0420229481839,
+          "capturedNodes": [
+            "651c152be4b2c4fb"
+          ],
+          "locked": true
+        },
+        "selected": true
+      }
+    },
+    {
+      "id": "8cb007e508f4485b",
+      "label": "Backdrop",
+      "position": {
+        "x": 508.5410179318656,
+        "y": 495.36519488591625
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "8cb007e508f4485b",
+        "width": 689.8134357508815,
+        "height": 577.2128515877996,
+        "properties": {
+          "title": "Group",
+          "colorIndex": 0,
+          "customColor": null,
+          "fontSize": 16,
+          "width": 689.8134357508815,
+          "height": 577.2128515877996,
+          "capturedNodes": [
+            "651c152be4b2c4fb"
+          ],
+          "locked": true
+        },
+        "selected": false
+      }
+    },
+    {
+      "id": "651c152be4b2c4fb",
+      "label": "Delay",
+      "position": {
+        "x": 609.3456552081789,
+        "y": 559.6281511495661
+      },
+      "data": {
+        "id": "651c152be4b2c4fb",
+        "label": "Delay",
+        "properties": {
+          "delayMs": 1000,
+          "delayValue": 1,
+          "delayUnit": "seconds",
+          "mode": "delay",
+          "randomPercent": 0,
+          "isActive": false,
+          "countdown": 0,
+          "lastInputValue": false,
+          "outputValue": false,
+          "passthroughValue": null,
+          "debug": false
         }
       }
     }
   ],
   "connections": [],
   "viewport": {
-    "x": -430.07046051025395,
-    "y": -411.0940933227539,
-    "k": 1.9099376297100015
+    "x": 253.41458435058604,
+    "y": 26.871105718612768,
+    "k": 0.7936142836436575
   },
   "autoSaved": true,
-  "timestamp": 1766255959280
+  "timestamp": 1766264704060
 }

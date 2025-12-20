@@ -1,6 +1,6 @@
 {
   "name": "t2-autotron",
-  "version": "2.1.111",
+  "version": "2.1.112",
   "main": "src/frontend/electron/main.js",
   "description": "Visual node-based automation editor for smart home control (Home Assistant, Philips Hue, Kasa, Shelly)",
   "author": "T2AutoTron Contributors",

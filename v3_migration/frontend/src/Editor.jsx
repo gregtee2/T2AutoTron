@@ -1050,7 +1050,8 @@ export function Editor() {
             activeBackdropId: null,
             initialPositions: new Map(),
             isDragging: false,
-            lastBackdropPos: null
+            lastBackdropPos: null,
+            nodesBeingMoved: new Set()  // Track nodes being moved to prevent double-movement
         };
         
         // Guard to prevent infinite recursion during group moves
@@ -1095,6 +1096,7 @@ export function Editor() {
                 debug(' Resetting stuck backdrop drag');
                 backdropDragState.isDragging = false;
                 backdropDragState.activeBackdropId = null;
+                backdropDragState.nodesBeingMoved.clear();
             }
         };
         
@@ -1127,6 +1129,17 @@ export function Editor() {
                 const bWidth = backdrop.properties.width || 400;
                 const bHeight = backdrop.properties.height || 300;
 
+                // Helper to check if a node's center is inside this backdrop
+                const isInsideBackdrop = (nodePos, nodeWidth, nodeHeight) => {
+                    const nodeCenterX = nodePos.x + nodeWidth / 2;
+                    const nodeCenterY = nodePos.y + nodeHeight / 2;
+                    return nodeCenterX >= backdropPos.x && 
+                           nodeCenterX <= backdropPos.x + bWidth &&
+                           nodeCenterY >= backdropPos.y && 
+                           nodeCenterY <= backdropPos.y + bHeight;
+                };
+
+                // Check regular nodes
                 regularNodes.forEach(node => {
                     const nodeView = area.nodeViews.get(node.id);
                     if (!nodeView) return;
@@ -1143,15 +1156,26 @@ export function Editor() {
                     const nodeWidth = node.width || 180;
                     const nodeHeight = node.height || 100;
                     
-                    // Check if node center is inside backdrop bounds
-                    const nodeCenterX = nodePos.x + nodeWidth / 2;
-                    const nodeCenterY = nodePos.y + nodeHeight / 2;
-                    
-                    if (nodeCenterX >= backdropPos.x && 
-                        nodeCenterX <= backdropPos.x + bWidth &&
-                        nodeCenterY >= backdropPos.y && 
-                        nodeCenterY <= backdropPos.y + bHeight) {
+                    if (isInsideBackdrop(nodePos, nodeWidth, nodeHeight)) {
                         capturedNodes.push(node.id);
+                    }
+                });
+
+                // Also check other backdrop nodes (for nested groups)
+                // Don't capture self!
+                backdrops.forEach(otherBackdrop => {
+                    if (otherBackdrop.id === backdrop.id) return; // Skip self
+                    
+                    const otherView = area.nodeViews.get(otherBackdrop.id);
+                    if (!otherView) return;
+                    
+                    const otherPos = otherView.position;
+                    const otherWidth = otherBackdrop.properties.width || 400;
+                    const otherHeight = otherBackdrop.properties.height || 300;
+                    
+                    // Check if the other backdrop's center is inside this backdrop
+                    if (isInsideBackdrop(otherPos, otherWidth, otherHeight)) {
+                        capturedNodes.push(otherBackdrop.id);
                     }
                 });
 
@@ -1428,10 +1452,30 @@ export function Editor() {
                     if (backdropDragState.activeBackdropId !== nodeId) {
                         backdropDragState.activeBackdropId = nodeId;
                         backdropDragState.isDragging = true;
+                        backdropDragState.nodesBeingMoved.clear();
                         
                         // Update captures to get current nodes inside
                         updateBackdropCaptures();
+                        
+                        // Mark all captured nodes (including nested backdrops' children) as being moved
+                        const markNodesBeingMoved = (capturedIds) => {
+                            capturedIds.forEach(id => {
+                                backdropDragState.nodesBeingMoved.add(id);
+                                // If this is a backdrop, also mark its children
+                                const capturedNode = editor.getNode(id);
+                                if (capturedNode && capturedNode.properties.capturedNodes) {
+                                    markNodesBeingMoved(capturedNode.properties.capturedNodes);
+                                }
+                            });
+                        };
+                        markNodesBeingMoved(node.properties.capturedNodes);
                         // Debug: debug('[Backdrop] Started dragging, captured nodes:', node.properties.capturedNodes);
+                    }
+                    
+                    // If this backdrop is being moved as part of another backdrop's drag, don't move its children
+                    // (the parent backdrop is already moving them)
+                    if (backdropDragState.nodesBeingMoved.has(nodeId) && backdropDragState.activeBackdropId !== nodeId) {
+                        return context; // Let parent handle moving our children
                     }
                     
                     // Move all captured nodes by the same delta
@@ -1465,6 +1509,7 @@ export function Editor() {
                 // Debug: debug('[Backdrop] Drag ended, resetting state');
                 backdropDragState.isDragging = false;
                 backdropDragState.activeBackdropId = null;
+                backdropDragState.nodesBeingMoved.clear();
                 
                 // Reset Space+drag pan state
                 isNodeDragging = false;
