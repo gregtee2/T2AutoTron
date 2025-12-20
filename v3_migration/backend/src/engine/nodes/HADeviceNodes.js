@@ -101,6 +101,95 @@ function getHAConfig() {
   };
 }
 
+// ============================================================================
+// Bulk State Cache - Fetches ALL states once, nodes read from cache
+// This is MUCH more efficient than 30+ individual API calls!
+// ============================================================================
+const bulkStateCache = {
+  states: new Map(),        // entityId → state object
+  lastFetchTime: 0,
+  fetchPromise: null,       // Prevents duplicate fetches
+  CACHE_TTL: 2000,          // 2 seconds - fast enough for responsive updates
+  
+  /**
+   * Get state for an entity, using cached bulk fetch
+   * @param {string} entityId - e.g., "sensor.temperature" (without ha_ prefix)
+   * @returns {object|null} State object or null if not found
+   */
+  async getState(entityId) {
+    const now = Date.now();
+    
+    // If cache is stale, refresh it
+    if (now - this.lastFetchTime > this.CACHE_TTL) {
+      await this.refreshCache();
+    }
+    
+    return this.states.get(entityId) || null;
+  },
+  
+  /**
+   * Refresh the bulk state cache with ALL states from HA
+   */
+  async refreshCache() {
+    // If already fetching, wait for that fetch to complete
+    if (this.fetchPromise) {
+      return this.fetchPromise;
+    }
+    
+    const config = getHAConfig();
+    if (!config.token) {
+      return;
+    }
+    
+    // Create a promise that all waiters can share
+    this.fetchPromise = (async () => {
+      try {
+        const url = `${config.host}/api/states`;
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${config.token}`,
+            'Content-Type': 'application/json'
+          },
+          signal: AbortSignal.timeout(10000)
+        });
+        
+        if (!response.ok) {
+          console.error(`[BulkStateCache] Failed to fetch states: HTTP ${response.status}`);
+          return;
+        }
+        
+        const states = await response.json();
+        
+        // Clear and rebuild cache
+        this.states.clear();
+        for (const state of states) {
+          this.states.set(state.entity_id, {
+            entity_id: state.entity_id,
+            state: state.state,
+            attributes: state.attributes,
+            last_changed: state.last_changed,
+            last_updated: state.last_updated
+          });
+        }
+        
+        this.lastFetchTime = Date.now();
+        
+        // Log cache refresh periodically (every 30 seconds)
+        if (!this._lastLogTime || Date.now() - this._lastLogTime > 30000) {
+          this._lastLogTime = Date.now();
+          console.log(`[BulkStateCache] ✅ Cache refreshed: ${this.states.size} entities`);
+        }
+      } catch (error) {
+        console.error(`[BulkStateCache] Error fetching states: ${error.message}`);
+      } finally {
+        this.fetchPromise = null;
+      }
+    })();
+    
+    return this.fetchPromise;
+  }
+};
+
 /**
  * Extract entity ID from device ID (strips ha_ prefix if present)
  */
@@ -199,16 +288,13 @@ class HADeviceStateNode {
   }
 
   async fetchState() {
-    const config = getHAConfig();
     // Check both entityId and selectedDeviceId
     let entityId = this.properties.entityId || this.properties.selectedDeviceId;
-    if (!config.token || !entityId) {
-      // Log why we're not fetching (helps debug missing config)
-      if (!config.token) {
-        console.warn(`[HADeviceStateNode] No HA token configured - check HA_TOKEN in .env`);
-      }
-      if (!entityId) {
-        console.warn(`[HADeviceStateNode] No entityId set (properties: ${JSON.stringify(this.properties)})`);
+    if (!entityId) {
+      // Only log once per node to avoid spam
+      if (!this._missingIdLogged) {
+        this._missingIdLogged = true;
+        console.warn(`[HADeviceStateNode ${this.id?.slice(0,8)}] No entityId set`);
       }
       return null;
     }
@@ -218,53 +304,24 @@ class HADeviceStateNode {
       entityId = entityId.replace('ha_', '');
     }
 
-    try {
-      const url = `${config.host}/api/states/${entityId}`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${config.token}`,
-          'Content-Type': 'application/json'
-        },
-        // Add timeout to prevent hanging requests
-        signal: AbortSignal.timeout(10000) // 10 second timeout
-      });
-
-      if (!response.ok) {
-        // Track error type for better diagnostics
-        const errorType = response.status === 401 ? 'AUTH_FAILED' 
-                        : response.status === 404 ? 'ENTITY_NOT_FOUND'
-                        : response.status >= 500 ? 'HA_SERVER_ERROR'
-                        : 'HTTP_ERROR';
-        console.error(`[HADeviceStateNode] ${errorType}: HTTP ${response.status} for ${entityId}`);
-        this._lastErrorType = errorType;
-        this._lastErrorTime = Date.now();
-        return null;
+    // Use bulk cache instead of individual API call - MUCH faster with many nodes!
+    const state = await bulkStateCache.getState(entityId);
+    
+    if (!state) {
+      // Only log entity not found once per entity
+      if (!this._notFoundLogged) {
+        this._notFoundLogged = true;
+        console.warn(`[HADeviceStateNode ${this.id?.slice(0,8)}] Entity ${entityId} not found in cache`);
       }
-
-      const data = await response.json();
-      // Clear error tracking on success
-      this._lastErrorType = null;
-      this._lastErrorTime = null;
-      
-      return {
-        entity_id: data.entity_id,
-        state: data.state,
-        attributes: data.attributes,
-        last_changed: data.last_changed,
-        last_updated: data.last_updated
-      };
-    } catch (error) {
-      // Categorize the error
-      const errorType = error.name === 'TimeoutError' ? 'TIMEOUT'
-                      : error.name === 'AbortError' ? 'ABORTED'
-                      : error.code === 'ECONNREFUSED' ? 'HA_UNREACHABLE'
-                      : error.code === 'ENOTFOUND' ? 'DNS_FAILED'
-                      : 'NETWORK_ERROR';
-      console.error(`[HADeviceStateNode] ${errorType}: ${error.message} for ${entityId}`);
-      this._lastErrorType = errorType;
-      this._lastErrorTime = Date.now();
       return null;
     }
+    
+    // Clear error tracking on success
+    this._lastErrorType = null;
+    this._lastErrorTime = null;
+    this._notFoundLogged = false;  // Reset so we log again if it disappears
+    
+    return state;
   }
 
   async data(inputs) {
@@ -333,6 +390,13 @@ class HADeviceStateNode {
     // Extract common values
     const state = this.cachedState.state;
     const isOn = state === 'on' || state === 'playing' || state === 'home';
+    
+    // Log output periodically to trace data flow (every 30 seconds)
+    if (!this._lastOutputLog || Date.now() - this._lastOutputLog > 30000) {
+      this._lastOutputLog = Date.now();
+      const entityId = this.properties.entityId || this.properties.selectedDeviceId;
+      console.log(`[HADeviceStateNode ${this.id?.slice(0,8)}] 📤 Output: entity=${entityId}, state=${state}`);
+    }
     
     return {
       state: state,
@@ -932,9 +996,29 @@ class HADeviceAutomationNode {
     };
     this.inputs = ['device_state'];
     // Outputs are dynamic based on selectedFields
-    this.outputs = this.properties.selectedFields
+    this._updateOutputs();
+  }
+  
+  /**
+   * Update the outputs array based on selectedFields
+   */
+  _updateOutputs() {
+    this.outputs = (this.properties.selectedFields || [])
       .filter(f => f && f !== 'Select Field')
       .map(f => `out_${f}`);
+  }
+  
+  /**
+   * Restore properties from saved graph and recompute outputs
+   */
+  restore(data) {
+    console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8)}] restore() called with:`, JSON.stringify(data?.properties || {}).slice(0,200));
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+      // CRITICAL: Recompute outputs after restore since constructor runs before this
+      this._updateOutputs();
+      console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8)}] Restored with fields: [${(this.properties.selectedFields || []).join(', ')}], outputs: [${this.outputs?.join(', ')}]`);
+    }
   }
 
   /**
@@ -1044,7 +1128,8 @@ class HADeviceAutomationNode {
     // Log on first tick to confirm node is in the engine
     if (!this._startupLogged) {
       this._startupLogged = true;
-      console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8) || 'new'}] 🚀 First tick - fields: [${(this.properties.selectedFields || []).join(', ')}]`);
+      console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8) || 'new'}] 🚀 First tick - fields: [${(this.properties.selectedFields || []).join(', ')}], outputs: [${(this.outputs || []).join(', ')}]`);
+      console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8) || 'new'}] 🚀 Has input: ${!!inputs.device_state?.[0]}, type: ${typeof inputs.device_state?.[0]}`);
     }
     
     const inputData = inputs.device_state?.[0];
@@ -1100,6 +1185,12 @@ class HADeviceAutomationNode {
       this.properties.lastOutputValues[field] = value;
     });
     
+    // Log output periodically to trace data flow (every 30 seconds)
+    if (!this._lastOutputLog || Date.now() - this._lastOutputLog > 30000) {
+      this._lastOutputLog = Date.now();
+      console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8)}] 📤 Output: ${JSON.stringify(result)}`);
+    }
+    
     // Ensure all dynamic outputs have a value
     this.outputs.forEach(outputKey => {
       if (result[outputKey] === undefined) {
@@ -1109,21 +1200,38 @@ class HADeviceAutomationNode {
     
     return result;
   }
-  
-  restore(state) {
-    if (state.properties) {
-      Object.assign(this.properties, state.properties);
-      // Rebuild outputs array from selectedFields
-      this.outputs = (this.properties.selectedFields || [])
-        .filter(f => f && f !== 'Select Field')
-        .map(f => `out_${f}`);
+}
+
+/**
+ * HADeviceStateDisplayNode - Pass-through display node (UI-only visualization)
+ * Just passes device_state input to output without modification
+ */
+class HADeviceStateDisplayNode {
+  constructor() {
+    this.id = null;
+    this.label = 'HA Device State Display';
+    this.properties = {};
+    this.inputs = ['device_state'];
+    this.outputs = ['device_state'];
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
     }
+  }
+
+  data(inputs) {
+    // Pure passthrough - just forward the input to output
+    const inputData = inputs.device_state?.[0];
+    return { device_state: inputData || null };
   }
 }
 
 // Register nodes
 registry.register('HADeviceStateNode', HADeviceStateNode);
 registry.register('HADeviceStateOutputNode', HADeviceStateNode);  // Alias
+registry.register('HADeviceStateDisplayNode', HADeviceStateDisplayNode);  // Passthrough display
 registry.register('HAServiceCallNode', HAServiceCallNode);
 registry.register('HALightControlNode', HALightControlNode);
 registry.register('HAGenericDeviceNode', HAGenericDeviceNode);
@@ -1135,5 +1243,6 @@ module.exports = {
   HALightControlNode,
   HAGenericDeviceNode,
   HADeviceAutomationNode,
+  HADeviceStateDisplayNode,
   getHAConfig
 };

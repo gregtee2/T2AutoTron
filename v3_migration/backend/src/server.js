@@ -413,6 +413,13 @@ app.get('/sandbox', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend', 'Index.html_Proposal', 'Index.html'));
 });
 
+// Debug Dashboard - accessible at /debug from any environment
+// Local: http://localhost:3000/debug
+// Add-on: http://[ha-url]/api/hassio_ingress/[token]/debug
+app.get('/debug', (req, res) => {
+  res.sendFile(path.join(__dirname, 'debug_dashboard.html'));
+});
+
 
 
 // Endpoint to list custom node files
@@ -1138,11 +1145,11 @@ let shuttingDown = false;
 
 process.on('SIGINT', async () => {
   console.log('[SIGINT] Received SIGINT signal');
-  // In VS Code terminal, SIGINT can be sent unexpectedly
-  // Only shut down if this is a real user-initiated Ctrl+C
+  
+  // Second Ctrl+C = force exit immediately
   if (shuttingDown) {
-    console.log('[SIGINT] Already shutting down, ignoring');
-    return;
+    console.log('[SIGINT] Force exiting...');
+    process.exit(1);
   }
   
   // If server has been running less than 30 seconds, ignore SIGINT
@@ -1154,12 +1161,18 @@ process.on('SIGINT', async () => {
   }
   
   shuttingDown = true;
-  console.log('[SIGINT] Initiating graceful shutdown...');
+  console.log('[SIGINT] Initiating graceful shutdown... (press Ctrl+C again to force exit)');
   await logger.log('Shutting down server', 'info', false, 'shutdown');
   server.close(async () => {
     await mongoose.connection.close();
     process.exit(0);
   });
+  
+  // Force exit after 5 seconds if graceful shutdown hangs
+  setTimeout(() => {
+    console.log('[SIGINT] Graceful shutdown timed out, force exiting...');
+    process.exit(1);
+  }, 5000);
 });
 
 process.on('uncaughtException', (err) => {

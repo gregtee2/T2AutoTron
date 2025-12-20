@@ -6,7 +6,8 @@ const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
 module.exports = cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, curl, or same-origin requests from HA ingress)
-    if (!origin) return callback(null, true);
+    // Also allow 'null' string which browsers send for file:// URLs
+    if (!origin || origin === 'null') return callback(null, true);
     
     // In add-on mode, allow all origins (ingress handles security)
     if (IS_HA_ADDON) return callback(null, true);

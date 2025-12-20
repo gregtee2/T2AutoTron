@@ -1,84 +1,174 @@
 {
   "nodes": [
     {
-      "id": "06e4228ecbd11af9",
-      "label": "HA Generic Device",
+      "id": "117c0c4d4ab1b285",
+      "label": "HA Device Automation",
       "position": {
-        "x": 703.1111107343509,
-        "y": 2.4197528980396186
+        "x": 725.3735932599702,
+        "y": 920.5437086704007
       },
       "data": {
-        "id": "06e4228ecbd11af9",
-        "label": "HA Generic Device",
+        "id": "117c0c4d4ab1b285",
+        "label": "HA Device Automation",
         "properties": {
-          "selectedDeviceIds": [
-            "ha_switch.dads_shark"
-          ],
-          "selectedDeviceNames": [
-            "Dads Shark"
-          ],
-          "status": "Toggled 1 device(s)",
-          "haConnected": true,
-          "haWsConnected": true,
+          "status": "Fields: value",
           "debug": false,
-          "haToken": "",
-          "transitionTime": 1000,
-          "filterType": "Switch",
-          "triggerMode": "Follow",
-          "autoRefreshInterval": 30000,
-          "customTitle": ""
+          "lastEntityType": "sensor",
+          "selectedFields": [
+            "value"
+          ],
+          "lastOutputValues": {
+            "value": 72.71
+          },
+          "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
         }
       }
     },
     {
-      "id": "c0fc4dbf742dc4a5",
-      "label": "Time of Day",
+      "id": "b3009593d8f91beb",
+      "label": "HA Device State Output",
       "position": {
-        "x": -91.9506176607108,
-        "y": -17.333333521713428
+        "x": 239.1851856875321,
+        "y": 735.55531905971
       },
       "data": {
-        "id": "c0fc4dbf742dc4a5",
-        "label": "Time of Day",
+        "id": "b3009593d8f91beb",
+        "label": "HA Device State Output",
         "properties": {
-          "customName": "",
-          "start_hour": 6,
-          "start_minute": 22,
-          "start_ampm": "PM",
-          "start_enabled": true,
-          "stop_hour": 6,
-          "stop_minute": 0,
-          "stop_ampm": "PM",
-          "stop_enabled": true,
-          "cycle_hour": 4,
-          "cycle_minute": 45,
-          "cycle_ampm": "AM",
-          "cycle_duration": 10,
-          "cycle_enabled": false,
-          "timezone": "America/Los_Angeles",
-          "next_on_date": "2025-12-14T02:22:00.000Z",
-          "next_off_date": "2025-12-15T02:00:00.000Z",
-          "next_cycle_date": null,
-          "currentState": false,
-          "status": "Initializing...",
+          "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
+          "selectedDeviceName": "Sunshine terrace  Feels like",
+          "status": "✅ Sunshine terrace  Feels like: 72.71",
           "debug": false,
-          "pulseMode": false
+          "haToken": "",
+          "filterType": "Sensor",
+          "letterFilter": "All Letters"
+        }
+      }
+    },
+    {
+      "id": "b78b1040f5a1afb0",
+      "label": "Timeline Color",
+      "position": {
+        "x": 1317.921299730212,
+        "y": 295.7146779336392
+      },
+      "data": {
+        "id": "b78b1040f5a1afb0",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0.26893281510643363,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 0.7218048466596311,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "numerical",
+          "startValue": 32,
+          "endValue": 100,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "timerLoopMode": "none",
+          "outputStepInterval": 5000,
+          "colorMode": "custom",
+          "colorStops": [
+            {
+              "position": 0.11,
+              "rgb": {
+                "r": 166,
+                "g": 0,
+                "b": 255
+              }
+            },
+            {
+              "position": 0.36,
+              "rgb": {
+                "r": 23,
+                "g": 126,
+                "b": 222
+              }
+            },
+            {
+              "position": 0.53,
+              "rgb": {
+                "r": 21,
+                "g": 188,
+                "b": 63
+              }
+            },
+            {
+              "position": 0.82,
+              "rgb": {
+                "r": 255,
+                "g": 115,
+                "b": 0
+              }
+            }
+          ],
+          "editorWidth": 360,
+          "editorHeight": 180,
+          "showColorEditor": true,
+          "previewMode": false,
+          "previewPosition": 0.043893880635679956,
+          "position": 0.5986764705882353,
+          "isInRange": true,
+          "outputHue": 0.2953929539295393,
+          "outputSaturation": 0.7192982456140351,
+          "outputBrightness": 140,
+          "outputRgb": {
+            "r": 42,
+            "g": 94,
+            "b": 26
+          }
         }
       }
     }
   ],
   "connections": [
     {
-      "id": "1b87323b54efe450",
-      "source": "c0fc4dbf742dc4a5",
-      "target": "06e4228ecbd11af9",
-      "sourceOutput": "state",
-      "targetInput": "trigger"
+      "id": "657fb0f2a269a6c3",
+      "source": "b3009593d8f91beb",
+      "target": "117c0c4d4ab1b285",
+      "sourceOutput": "device_state",
+      "targetInput": "device_state"
+    },
+    {
+      "id": "4dae43a786d83c96",
+      "source": "117c0c4d4ab1b285",
+      "target": "b78b1040f5a1afb0",
+      "sourceOutput": "out_value",
+      "targetInput": "value"
     }
   ],
   "viewport": {
-    "x": 140.9800003051758,
-    "y": 89.5400001525879,
-    "k": 0.81
+    "x": 154.2931854248047,
+    "y": 27.31609544754032,
+    "k": 0.5314410000000002
   }
 }
