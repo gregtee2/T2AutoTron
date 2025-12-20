@@ -240,6 +240,21 @@ body {
   transform: translateY(0);
 }
 
+/* "All" button - zoom to entire graph */
+.group-nav-btn.group-nav-all {
+  background: rgba(0, 200, 255, 0.15);
+  border: 1px solid rgba(0, 200, 255, 0.5);
+  border-left-width: 3px;
+  color: #00c8ff;
+  font-weight: 600;
+}
+
+.group-nav-btn.group-nav-all:hover {
+  background: rgba(0, 200, 255, 0.3);
+  border-color: #00c8ff;
+  color: #fff;
+}
+
 .panel-content {
   flex: 1;
   overflow-y: auto;

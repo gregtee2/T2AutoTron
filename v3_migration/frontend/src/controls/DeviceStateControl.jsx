@@ -37,15 +37,6 @@ export function DeviceStateControlComponent({ data }) {
 
     const isOn = state.on || state.state === 'on';
 
-    // DEBUG: Log what we're receiving
-    console.log('[DeviceStateControl] state:', {
-        deviceId: data.deviceId,
-        'state.brightness': state.brightness,
-        'state.attributes?.brightness': state.attributes?.brightness,
-        'state.on': state.on,
-        'state.state': state.state
-    });
-
     // Brightness is expected to be 0-100 from backend normalization.
     // Some sources may still provide 0-255, so normalize defensively.
     const attrBrightness = (state.attributes && typeof state.attributes.brightness === 'number')
@@ -66,7 +57,6 @@ export function DeviceStateControlComponent({ data }) {
     }
     brightness = Math.max(0, Math.min(100, brightness));
     
-    console.log('[DeviceStateControl] computed brightness:', brightness);
     const hsColor = state.hs_color || [0, 0];
     const [hue, saturation] = hsColor;
 

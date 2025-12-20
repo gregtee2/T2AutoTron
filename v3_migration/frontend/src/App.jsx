@@ -192,7 +192,12 @@ function App() {
     
     const nodes = editor.getNodes();
     const backdrops = nodes
-      .filter(n => n.label === 'Backdrop' || n.constructor?.name === 'BackdropNode')
+      .filter(n => {
+        // Check multiple ways to identify a BackdropNode
+        return n.label === 'Backdrop' || 
+               n.constructor?.name === 'BackdropNode' ||
+               (n.properties?.width !== undefined && n.properties?.height !== undefined && n.properties?.title !== undefined);
+      })
       .map(n => ({
         id: n.id,
         title: n.properties?.title || 'Group',
@@ -215,9 +220,13 @@ function App() {
     // Also expose refresh function for manual updates (e.g., when backdrop is created/deleted)
     window.refreshBackdropGroups = refreshBackdropGroups;
     
+    // Initial refresh after a short delay (in case graph is already loaded)
+    const initialRefresh = setTimeout(refreshBackdropGroups, 500);
+    
     return () => {
       window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
       delete window.refreshBackdropGroups;
+      clearTimeout(initialRefresh);
     };
   }, [refreshBackdropGroups]);
 
@@ -609,10 +618,38 @@ function App() {
     }
     
     try {
-      // Import AreaExtensions dynamically to use zoomAt
-      const { AreaExtensions } = await import('rete-area-plugin');
-      // Use scale 0.9 to add padding around the backdrop
-      await AreaExtensions.zoomAt(area, [backdrop], { scale: 0.9 });
+      // Get backdrop position and dimensions
+      const nodeView = area.nodeViews.get(backdropId);
+      if (!nodeView) {
+        console.warn('[focusBackdrop] Node view not found');
+        return;
+      }
+      
+      const pos = nodeView.position;
+      const width = backdrop.properties?.width || backdrop.width || 400;
+      const height = backdrop.properties?.height || backdrop.height || 300;
+      
+      // Calculate center of backdrop
+      const centerX = pos.x + width / 2;
+      const centerY = pos.y + height / 2;
+      
+      // Get container dimensions
+      const container = area.container;
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+      
+      // Calculate zoom to fit backdrop with padding (0.85 = 15% padding)
+      const scaleX = (containerWidth * 0.85) / width;
+      const scaleY = (containerHeight * 0.85) / height;
+      const scale = Math.min(scaleX, scaleY, 1.5); // Cap at 1.5x zoom
+      
+      // Calculate translation to center backdrop
+      const tx = containerWidth / 2 - centerX * scale;
+      const ty = containerHeight / 2 - centerY * scale;
+      
+      // Apply transform
+      await area.area.zoom(scale, 0, 0);
+      await area.area.translate(tx, ty);
     } catch (err) {
       console.warn('[focusBackdrop] Failed to zoom to backdrop:', err);
     }
@@ -693,22 +730,27 @@ function App() {
         <div className="panel event-log-panel">
           <div className="panel-header">
             <span className="panel-title">Event Log</span>
-            {/* Backdrop group navigation buttons */}
-            {backdropGroups.length > 0 && (
-              <div className="group-nav-buttons" title="Click to zoom to group">
-                {backdropGroups.map(group => (
-                  <button
-                    key={group.id}
-                    className="group-nav-btn"
-                    style={{ borderColor: group.color }}
-                    onClick={() => focusBackdrop(group.id)}
-                    title={`Zoom to "${group.title}" group`}
-                  >
-                    {group.title}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Group navigation: All button + Backdrop groups */}
+            <div className="group-nav-buttons">
+              <button
+                className="group-nav-btn group-nav-all"
+                onClick={zoomExtents}
+                title="Zoom to fit all nodes (F key)"
+              >
+                ⊞ All
+              </button>
+              {backdropGroups.map(group => (
+                <button
+                  key={group.id}
+                  className="group-nav-btn"
+                  style={{ borderColor: group.color }}
+                  onClick={() => focusBackdrop(group.id)}
+                  title={`Zoom to "${group.title}" group`}
+                >
+                  {group.title}
+                </button>
+              ))}
+            </div>
             <div className="panel-controls">
               <div className="filter-buttons">
                 <button className={`filter-btn ${eventLogFilter === 'all' ? 'active' : ''}`} onClick={() => { setEventLogFilter('all'); localStorage.setItem('eventLogFilter', 'all'); }}>All</button>
@@ -762,7 +804,7 @@ function App() {
           </div>
         </div>
         <div className="panel upcoming-events-panel">
-          <div className="panel-header clickable-header" onClick={zoomExtents} title="Click to zoom to fit all nodes">
+          <div className="panel-header">
             <span className="panel-title">Upcoming Events</span>
           </div>
           <div className="panel-content">
