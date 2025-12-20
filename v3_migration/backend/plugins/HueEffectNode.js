@@ -123,9 +123,10 @@
             // Capture state for each light
             this.properties.previousStates = {};
             
+            const fetchFn = window.apiFetch || fetch;
             for (const entityId of entityIds) {
                 try {
-                    const stateResponse = await fetch(`/api/lights/ha/${entityId.replace('ha_', '')}/state`);
+                    const stateResponse = await fetchFn(`/api/lights/ha/${entityId.replace('ha_', '')}/state`);
                     if (stateResponse.ok) {
                         const response = await stateResponse.json();
                         const state = response.state || response;
@@ -163,10 +164,11 @@
             console.log(`[HueEffectNode] Sending effect "${effect}" to ${entityIds.length} lights`);
 
             // Send to all lights in parallel
+            const fetchFn = window.apiFetch || fetch;
             const results = await Promise.all(
                 entityIds.map(async (entityId) => {
                     try {
-                        const response = await fetch('/api/lights/ha/service', {
+                        const response = await fetchFn('/api/lights/ha/service', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -223,8 +225,9 @@
                         }
 
                         // If light was off, turn it off
+                        const fetchFn = window.apiFetch || fetch;
                         if (!prev.on) {
-                            await fetch('/api/lights/ha/service', {
+                            await fetchFn('/api/lights/ha/service', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
@@ -237,7 +240,7 @@
                         }
 
                         // Restore state
-                        await fetch('/api/lights/ha/service', {
+                        await fetchFn('/api/lights/ha/service', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -289,8 +292,9 @@
         // Fetch HA lights and filter to only those that support effects
         useEffect(() => {
             const fetchDevices = async () => {
+                const fetchFn = window.apiFetch || fetch;
                 try {
-                    const response = await fetch('/api/devices');
+                    const response = await fetchFn('/api/devices');
                     const devData = await response.json();
                     
                     // Get all HA lights
@@ -312,7 +316,7 @@
                         const results = await Promise.all(
                             batch.map(async (light) => {
                                 try {
-                                    const stateRes = await fetch(`/api/lights/ha/${light.id.replace('ha_', '')}/state`);
+                                    const stateRes = await fetchFn(`/api/lights/ha/${light.id.replace('ha_', '')}/state`);
                                     if (stateRes.ok) {
                                         const result = await stateRes.json();
                                         const attrs = (result.state || result).attributes || {};
