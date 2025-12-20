@@ -825,6 +825,52 @@ app.post('/api/settings/test', requireLocalOrPin, express.json(), async (req, re
         break;
       }
       
+      case 'ambient': {
+        // Test Ambient Weather API
+        const mac = getSetting('AMBIENT_MAC_ADDRESS') || process.env.AMBIENT_MAC_ADDRESS;
+        const apiKey = getSetting('AMBIENT_API_KEY') || process.env.AMBIENT_API_KEY;
+        const appKey = getSetting('AMBIENT_APPLICATION_KEY') || process.env.AMBIENT_APPLICATION_KEY;
+        
+        if (!mac || !apiKey || !appKey) {
+          const missing = [];
+          if (!mac) missing.push('MAC Address');
+          if (!apiKey) missing.push('API Key');
+          if (!appKey) missing.push('Application Key');
+          result = { success: false, message: `Missing: ${missing.join(', ')}` };
+          break;
+        }
+        
+        try {
+          const response = await fetch(
+            `https://rt.ambientweather.net/v1/devices/${mac}?apiKey=${apiKey}&applicationKey=${appKey}`,
+            { timeout: 10000, headers: { 'User-Agent': 'T2AutoTron/1.0' } }
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.length > 0) {
+              const latest = data[0];
+              result = { 
+                success: true, 
+                message: 'Ambient Weather connected!',
+                details: `Temp: ${latest.tempf?.toFixed(1) || 'N/A'}°F, Humidity: ${latest.humidity || 'N/A'}%`
+              };
+            } else {
+              result = { success: false, message: 'No data returned from weather station' };
+            }
+          } else if (response.status === 401) {
+            result = { success: false, message: 'Invalid API key or Application key' };
+          } else if (response.status === 404) {
+            result = { success: false, message: 'Device not found - check MAC address' };
+          } else {
+            result = { success: false, message: `HTTP ${response.status}: ${response.statusText}` };
+          }
+        } catch (err) {
+          result = { success: false, message: `Connection failed: ${err.message}` };
+        }
+        break;
+      }
+      
       case 'telegram': {
         // Test Telegram Bot
         const botToken = getSetting('TELEGRAM_BOT_TOKEN') || process.env.TELEGRAM_BOT_TOKEN;

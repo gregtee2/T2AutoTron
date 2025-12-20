@@ -40,6 +40,7 @@ const SETTINGS_CONFIG = [
     {
         category: 'Ambient Weather',
         icon: '🌡️',
+        testable: 'ambient',
         settings: [
             { key: 'AMBIENT_API_KEY', label: 'Ambient Weather API Key', placeholder: 'Your API key', type: 'password', isSecret: true },
             { key: 'AMBIENT_APPLICATION_KEY', label: 'Application Key', placeholder: 'Your app key', type: 'password', isSecret: true },
