@@ -202,7 +202,7 @@
                 ])
             ]),
             React.createElement('div', { key: 'sock', style: { display: "flex", alignItems: "center", justifyContent: 'center', width: '40px' } }, [
-                React.createElement(RefComponent, { 
+                output && output.socket && React.createElement(RefComponent, { 
                     init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: nodeId, side: "output", key: socketKey } }), 
                     unmount: ref => emit({ type: "unmount", data: { element: ref } }) 
                 })
@@ -383,6 +383,14 @@
             const index = Math.round(angle / 22.5) % 16;
             return directions[index];
         };
+
+        // Defensive check: if outputs aren't ready yet, show loading state
+        if (!data.outputs || !data.outputs.all || !data.outputs.solar) {
+            return React.createElement('div', { 
+                className: "weather-node-tron", 
+                style: { padding: '20px', textAlign: 'center', color: '#ffb74d' } 
+            }, '⏳ Loading Weather Logic...');
+        }
 
         return React.createElement('div', { className: "weather-node-tron" }, [
             React.createElement('div', { key: 'h', className: "weather-node-header" }, [
