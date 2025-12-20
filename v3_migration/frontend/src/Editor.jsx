@@ -265,6 +265,11 @@ export function Editor() {
             const editorX = (center.x - transform.x) / transform.k;
             const editorY = (center.y - transform.y) / transform.k;
             await area.translate(node.id, { x: editorX, y: editorY });
+            
+            // Refresh group navigation buttons (in case a Backdrop was created)
+            if (label === 'Backdrop' && window.refreshBackdropGroups) {
+                window.refreshBackdropGroups();
+            }
         } catch (err) {
             console.warn('[Favorites] Fallback create failed:', err);
         }
@@ -498,6 +503,11 @@ export function Editor() {
                         const editorX = (position.x - transform.x) / transform.k;
                         const editorY = (position.y - transform.y) / transform.k;
                         await area.translate(node.id, { x: editorX, y: editorY });
+                        
+                        // Refresh group navigation buttons (in case a Backdrop was created)
+                        if (def.label === 'Backdrop' && window.refreshBackdropGroups) {
+                            window.refreshBackdropGroups();
+                        }
                     }
                 });
             });
@@ -1901,6 +1911,9 @@ export function Editor() {
                         // Also remove from our tracking
                         lassoSelectedNodesRef.current.delete(nodeId);
                     }
+                    
+                    // Refresh group navigation buttons (in case a Backdrop was deleted)
+                    if (window.refreshBackdropGroups) window.refreshBackdropGroups();
                 }
             }
             
@@ -1990,6 +2003,9 @@ export function Editor() {
                         }
                         
                         debug(' Undo complete - restored', undoAction.nodes.length, 'nodes');
+                        
+                        // Refresh group navigation buttons (in case a Backdrop was restored)
+                        if (window.refreshBackdropGroups) window.refreshBackdropGroups();
                     } finally {
                         programmaticMoveRef.current = false;
                         area?.updateBackdropCaptures?.();

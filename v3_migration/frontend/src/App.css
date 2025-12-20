@@ -199,6 +199,47 @@ body {
   text-align: center;
 }
 
+/* Group Navigation Buttons - quick zoom to Backdrop groups */
+.group-nav-buttons {
+  display: flex;
+  gap: 4px;
+  margin: 0 8px;
+  padding: 0 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  flex-wrap: wrap;
+  max-width: 40%;
+  overflow: hidden;
+}
+
+.group-nav-btn {
+  background: rgba(60, 60, 80, 0.6);
+  border: 1px solid #888;
+  border-left-width: 3px;
+  color: #ddd;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.group-nav-btn:hover {
+  background: rgba(80, 80, 100, 0.8);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.group-nav-btn:active {
+  transform: translateY(0);
+}
+
 .panel-content {
   flex: 1;
   overflow-y: auto;

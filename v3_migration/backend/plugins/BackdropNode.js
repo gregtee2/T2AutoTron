@@ -61,6 +61,9 @@
         { name: 'Charcoal', value: 'rgba(35, 35, 40, 0.4)', border: '#555566' },
     ];
 
+    // Expose for App.jsx group navigation buttons
+    window.BackdropColorPalette = COLOR_PALETTE;
+
     // Helper to create RGBA values from hex color
     function hexToRgba(hex, alpha = 0.4) {
         const r = parseInt(hex.slice(1, 3), 16);
@@ -237,12 +240,16 @@
         const handleTitleBlur = () => {
             setIsEditing(false);
             if (data.changeCallback) data.changeCallback();
+            // Notify App.jsx to update group navigation buttons
+            if (window.refreshBackdropGroups) window.refreshBackdropGroups();
         };
 
         const handleTitleKeyDown = (e) => {
             if (e.key === 'Enter') {
                 setIsEditing(false);
                 if (data.changeCallback) data.changeCallback();
+                // Notify App.jsx to update group navigation buttons
+                if (window.refreshBackdropGroups) window.refreshBackdropGroups();
             }
             if (e.key === 'Escape') {
                 setTitle(data.properties.title);
@@ -257,6 +264,8 @@
             data.properties.customColor = null;
             setShowColorPicker(false);
             if (data.changeCallback) data.changeCallback();
+            // Notify App.jsx to update group navigation buttons
+            if (window.refreshBackdropGroups) window.refreshBackdropGroups();
         };
 
         const handleCustomColorChange = (e) => {
@@ -265,6 +274,8 @@
             data.properties.customColor = hex;
             // Don't close picker - let user adjust
             if (data.changeCallback) data.changeCallback();
+            // Notify App.jsx to update group navigation buttons (debounced via React state)
+            if (window.refreshBackdropGroups) window.refreshBackdropGroups();
         };
 
         const handleFontSizeChange = (e) => {

@@ -169,6 +169,8 @@ function App() {
   const [countdownTicker, setCountdownTicker] = useState(0);
   // Event log filter: 'all', 'app', 'ha'
   const [eventLogFilter, setEventLogFilter] = useState(() => localStorage.getItem('eventLogFilter') || 'all');
+  // Backdrop groups for quick navigation buttons
+  const [backdropGroups, setBackdropGroups] = useState([]);
   const eventLogRef = useRef(null);
   const resizeRef = useRef(null);
   const authStateRef = useRef({ authenticated: false, invalidPinNotified: false });
@@ -182,6 +184,42 @@ function App() {
     }, 30000); // 30 seconds
     return () => clearInterval(intervalId);
   }, []);
+
+  // Refresh backdrop groups from editor (for quick navigation buttons)
+  const refreshBackdropGroups = useCallback(() => {
+    const editor = window._t2Editor;
+    if (!editor) return;
+    
+    const nodes = editor.getNodes();
+    const backdrops = nodes
+      .filter(n => n.label === 'Backdrop' || n.constructor?.name === 'BackdropNode')
+      .map(n => ({
+        id: n.id,
+        title: n.properties?.title || 'Group',
+        color: n.properties?.customColor || 
+          (window.BackdropColorPalette?.[n.properties?.colorIndex]?.border || '#888')
+      }))
+      .sort((a, b) => a.title.localeCompare(b.title));
+    
+    setBackdropGroups(backdrops);
+  }, []);
+
+  // Listen for graph load/change events to refresh backdrop groups
+  useEffect(() => {
+    const onGraphLoadComplete = () => {
+      // Delay slightly to ensure nodes are fully rendered
+      setTimeout(refreshBackdropGroups, 200);
+    };
+    
+    window.addEventListener('graphLoadComplete', onGraphLoadComplete);
+    // Also expose refresh function for manual updates (e.g., when backdrop is created/deleted)
+    window.refreshBackdropGroups = refreshBackdropGroups;
+    
+    return () => {
+      window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
+      delete window.refreshBackdropGroups;
+    };
+  }, [refreshBackdropGroups]);
 
   // Subscribe to plugin loading progress
   useEffect(() => {
@@ -552,6 +590,34 @@ function App() {
     }
   }, []);
 
+  // Focus on a backdrop group (zoom to fit the backdrop in view)
+  const focusBackdrop = useCallback(async (backdropId) => {
+    if (!backdropId) return;
+    
+    const area = window._t2Area;
+    const editor = window._t2Editor;
+    
+    if (!area || !editor) {
+      console.warn('[focusBackdrop] Editor not ready');
+      return;
+    }
+    
+    const backdrop = editor.getNode(backdropId);
+    if (!backdrop) {
+      console.warn('[focusBackdrop] Backdrop not found:', backdropId);
+      return;
+    }
+    
+    try {
+      // Import AreaExtensions dynamically to use zoomAt
+      const { AreaExtensions } = await import('rete-area-plugin');
+      // Use scale 0.9 to add padding around the backdrop
+      await AreaExtensions.zoomAt(area, [backdrop], { scale: 0.9 });
+    } catch (err) {
+      console.warn('[focusBackdrop] Failed to zoom to backdrop:', err);
+    }
+  }, []);
+
   // Zoom to fit all nodes in the viewport (zoom extents)
   const zoomExtents = useCallback(async () => {
     const area = window._t2Area;
@@ -627,6 +693,22 @@ function App() {
         <div className="panel event-log-panel">
           <div className="panel-header">
             <span className="panel-title">Event Log</span>
+            {/* Backdrop group navigation buttons */}
+            {backdropGroups.length > 0 && (
+              <div className="group-nav-buttons" title="Click to zoom to group">
+                {backdropGroups.map(group => (
+                  <button
+                    key={group.id}
+                    className="group-nav-btn"
+                    style={{ borderColor: group.color }}
+                    onClick={() => focusBackdrop(group.id)}
+                    title={`Zoom to "${group.title}" group`}
+                  >
+                    {group.title}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="panel-controls">
               <div className="filter-buttons">
                 <button className={`filter-btn ${eventLogFilter === 'all' ? 'active' : ''}`} onClick={() => { setEventLogFilter('all'); localStorage.setItem('eventLogFilter', 'all'); }}>All</button>
