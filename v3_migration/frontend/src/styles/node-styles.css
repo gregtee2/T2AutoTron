@@ -2741,3 +2741,250 @@
   border-color: rgba(255, 204, 0, 0.3);
   background: rgba(255, 204, 0, 0.05);
 }
+
+/* ============================================================================
+   HUE EFFECT NODE - Trigger Hue light effects (candle, fire, etc.)
+   ============================================================================ */
+
+.hue-effect-node {
+  background: var(--node-ha-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--node-ha-color, #00f3ff);
+  box-shadow: 0 0 15px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.2), 
+              inset 0 0 20px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0f7ff);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.hue-effect-node:hover {
+  box-shadow: 0 0 25px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.4), 
+              inset 0 0 30px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.1);
+}
+
+/* Header */
+.hue-effect-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 15px;
+  background: linear-gradient(90deg, rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.1), transparent);
+  border-bottom: 1px solid rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.3);
+}
+
+.hue-effect-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--node-ha-color, #00f3ff);
+  text-shadow: 0 0 8px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.6);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hue-effect-title-icon {
+  font-size: 16px;
+}
+
+/* IO Container - sockets section */
+.hue-effect-io {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background: rgba(0, 20, 30, 0.4);
+}
+
+.hue-effect-inputs,
+.hue-effect-outputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hue-effect-outputs {
+  align-items: flex-end;
+}
+
+.hue-effect-socket-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hue-effect-socket-row.output {
+  justify-content: flex-end;
+}
+
+.hue-effect-socket-label {
+  font-size: 10px;
+  color: #8899aa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Controls Container */
+.hue-effect-controls {
+  padding: 12px 15px;
+  border-top: 1px solid rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.2);
+  background: rgba(0, 30, 40, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Control Rows */
+.hue-effect-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hue-effect-label {
+  font-size: 11px;
+  color: #8899aa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 55px;
+}
+
+/* Collapsible Light Selector */
+.hue-effect-light-toggle {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.3);
+  background: rgba(0, 40, 50, 0.5);
+  color: #e0f7ff;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.hue-effect-light-toggle:hover {
+  border-color: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.5);
+  background: rgba(0, 50, 60, 0.6);
+}
+
+.hue-effect-light-toggle .arrow {
+  font-size: 10px;
+  color: #8899aa;
+}
+
+/* Light List (collapsible checkboxes) */
+.hue-effect-light-list {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+  border-radius: 4px;
+  background: rgba(0, 30, 40, 0.6);
+  border: 1px solid transparent;
+}
+
+.hue-effect-light-list.expanded {
+  max-height: 160px;
+  overflow-y: auto;
+  border-color: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.2);
+}
+
+.hue-effect-light-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hue-effect-light-list::-webkit-scrollbar-track {
+  background: rgba(0, 20, 30, 0.3);
+  border-radius: 3px;
+}
+
+.hue-effect-light-list::-webkit-scrollbar-thumb {
+  background: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.4);
+  border-radius: 3px;
+}
+
+.hue-effect-light-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #aabbcc;
+  transition: background 0.15s ease;
+}
+
+.hue-effect-light-item:hover {
+  background: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.1);
+}
+
+.hue-effect-light-item.selected {
+  background: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.15);
+  color: #e0f7ff;
+}
+
+.hue-effect-light-item input[type="checkbox"] {
+  accent-color: var(--node-ha-color, #00f3ff);
+  width: 14px;
+  height: 14px;
+}
+
+/* Select Dropdown */
+.hue-effect-select {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.3);
+  background: rgba(0, 40, 50, 0.5);
+  color: #e0f7ff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hue-effect-select:hover,
+.hue-effect-select:focus {
+  border-color: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.5);
+  outline: none;
+}
+
+.hue-effect-select option {
+  background: #1a2a35;
+  color: #e0f7ff;
+}
+
+/* Test Button */
+.hue-effect-test-btn {
+  padding: 10px 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.4);
+  background: linear-gradient(180deg, rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.2), rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.1));
+  color: var(--node-ha-color, #00f3ff);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hue-effect-test-btn:hover {
+  background: linear-gradient(180deg, rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.3), rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.15));
+  box-shadow: 0 0 10px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.3);
+}
+
+.hue-effect-test-btn:active {
+  transform: scale(0.98);
+}
+
+.hue-effect-test-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

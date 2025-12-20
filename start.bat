@@ -25,6 +25,11 @@ if not exist "%BACKEND_DIR%\node_modules" (
     exit /b 1
 )
 
+REM Kill any existing Node.js processes on port 3000
+echo  Killing any existing Node.js processes...
+taskkill /IM node.exe /F >nul 2>&1
+timeout /t 2 /nobreak >nul
+
 echo  Starting backend server...
 echo  Backend dir: %BACKEND_DIR%
 start "T2AutoTron Backend" /D "%BACKEND_DIR%" cmd /k npm start

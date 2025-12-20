@@ -986,7 +986,22 @@
             // Skip API calls during graph loading
             if (typeof window !== 'undefined' && window.graphLoading) return;
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
-            const ids = this.properties.selectedDeviceIds.filter(Boolean);
+            
+            // Check for device exclusions from upstream HueEffectNodes
+            const excludeDevices = info._excludeDevices || [];
+            
+            // Filter out any devices that are currently under effect control
+            const ids = this.properties.selectedDeviceIds.filter(id => {
+                if (!id) return false;
+                if (excludeDevices.includes(id)) {
+                    if (this.properties.debug) {
+                        console.log(`[HAGenericDeviceNode] Skipping ${id} - under effect control`);
+                    }
+                    return false;
+                }
+                return true;
+            });
+            
             if (ids.length === 0) return;
             this.updateStatus("Applying control...");
             
