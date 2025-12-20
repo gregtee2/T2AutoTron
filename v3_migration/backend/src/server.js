@@ -406,6 +406,7 @@ app.get('/', async (req, res) => {
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use('/custom_nodes', express.static(path.join(__dirname, '../frontend/custom_nodes')));
 app.use('/plugins', express.static(path.join(__dirname, '../plugins')));
+app.use('/tools', express.static(path.join(__dirname, '../../tools')));
 
 
 // Sandbox route for testing refactored index.html

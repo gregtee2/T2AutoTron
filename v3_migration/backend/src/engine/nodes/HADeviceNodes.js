@@ -787,20 +787,22 @@ class HAGenericDeviceNode {
         const SIGNIFICANT_HUE_CHANGE = 0.05;
         const SIGNIFICANT_SAT_CHANGE = 0.10;
         const SIGNIFICANT_BRI_CHANGE = 20;
-        const FORCE_UPDATE_INTERVAL = 60000;
+        // REMOVED 2025-12-20: Force update every 60s was causing unnecessary API spam.
+        // The v3 engine is reliable and timeline colors change frequently anyway.
+        // If lights get out of sync after power outage, the next natural color change fixes it.
+        // TO RESTORE: Uncomment these lines and add timeForForceUpdate to shouldSend
+        // const FORCE_UPDATE_INTERVAL = 60000;
+        // const timeForForceUpdate = timeSinceLastSend > FORCE_UPDATE_INTERVAL;
         
         const hasSignificantChange = hueDiff > SIGNIFICANT_HUE_CHANGE || 
                                      satDiff > SIGNIFICANT_SAT_CHANGE || 
                                      briDiff > SIGNIFICANT_BRI_CHANGE;
-        const timeForForceUpdate = timeSinceLastSend > FORCE_UPDATE_INTERVAL;
         
-        const shouldSend = !this.lastSentHsv || hasSignificantChange || timeForForceUpdate;
+        const shouldSend = !this.lastSentHsv || hasSignificantChange;
         const minInterval = hasSignificantChange ? MIN_FAST_INTERVAL : MIN_UPDATE_INTERVAL;
         
         if (shouldSend && timeSinceLastSend >= minInterval) {
-          const reason = !this.lastSentHsv ? 'hsv_only_first' 
-                       : hasSignificantChange ? 'hsv_only_significant' 
-                       : 'hsv_only_periodic';
+          const reason = !this.lastSentHsv ? 'hsv_only_first' : 'hsv_only_significant';
           engineLogger.log('HA-HSV-ONLY', `No trigger connected, applying HSV to ON devices`, { 
             entities: entityIds,
             reason: reason,
@@ -920,7 +922,12 @@ class HAGenericDeviceNode {
       const SIGNIFICANT_SAT_CHANGE = 0.10;    // 10% saturation 
       const SIGNIFICANT_BRI_CHANGE = 20;      // ~8% brightness
       const SMALL_CHANGE_INTERVAL = 30000;    // Send every 30s if small changes accumulating
-      const FORCE_UPDATE_INTERVAL = 60000;    // Force update every 60s regardless of change
+      // REMOVED 2025-12-20: Force update every 60s was causing unnecessary API spam (60+ calls/hr per device).
+      // This was a workaround for v2.0 LiteGraph reliability issues - not needed in v3 Rete engine.
+      // Timeline colors change frequently, so any power-outage drift self-corrects quickly.
+      // TO RESTORE: Uncomment these lines and add timeForForceUpdate to shouldSend
+      // const FORCE_UPDATE_INTERVAL = 60000;
+      // const timeForForceUpdate = timeSinceLastSend > FORCE_UPDATE_INTERVAL;
       
       const hasSignificantChange = hueDiff > SIGNIFICANT_HUE_CHANGE || 
                                    satDiff > SIGNIFICANT_SAT_CHANGE || 
@@ -928,10 +935,9 @@ class HAGenericDeviceNode {
       
       const hasSmallChange = hueDiff > 0.001 || satDiff > 0.001 || briDiff > 0.5;
       const timeForSmallUpdate = hasSmallChange && timeSinceLastSend > SMALL_CHANGE_INTERVAL;
-      const timeForForceUpdate = timeSinceLastSend > FORCE_UPDATE_INTERVAL;  // Force every 60s
       
-      // First send ever, or significant change, or periodic small change update, or forced periodic
-      const shouldSend = !this.lastSentHsv || hasSignificantChange || timeForSmallUpdate || timeForForceUpdate;
+      // First send ever, or significant change, or periodic small change update
+      const shouldSend = !this.lastSentHsv || hasSignificantChange || timeForSmallUpdate;
       
       // Significant changes can update faster but still need 3s minimum to avoid Zigbee flooding
       // Small/periodic changes use MIN_UPDATE_INTERVAL (5s) for smooth operation
@@ -940,8 +946,7 @@ class HAGenericDeviceNode {
       if (shouldSend && timeSinceLastSend >= minInterval) {
         const reason = !this.lastSentHsv ? 'first_send' 
                      : hasSignificantChange ? 'significant' 
-                     : timeForSmallUpdate ? 'periodic_small' 
-                     : 'forced_60s';
+                     : 'periodic_small';
         engineLogger.log('HA-HSV-CHANGE', `HSV changed, sending command`, { 
           entities: entityIds,
           reason: reason,

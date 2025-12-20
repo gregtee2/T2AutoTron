@@ -613,6 +613,17 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                     >
                         🐛 Report Bug
                     </button>
+                    <button 
+                        onClick={() => {
+                            // Open debug dashboard - works for both local and add-on
+                            const dashboardUrl = `${window.location.origin}/tools/debug_dashboard.html`;
+                            window.open(dashboardUrl, '_blank');
+                        }}
+                        className="dock-btn"
+                        title="Open Debug Dashboard in new tab"
+                    >
+                        🔍 Debug Dashboard
+                    </button>
                     {IS_HA_ADDON ? (
                         /* HA Add-on: Updates come from HA Supervisor, not git */
                         <button 
