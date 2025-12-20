@@ -1162,7 +1162,8 @@ export function Editor() {
                 });
 
                 // Also check other backdrop nodes (for nested groups)
-                // Don't capture self!
+                // Only capture backdrops that are SMALLER than this one
+                // (a small backdrop can't contain a larger one)
                 backdrops.forEach(otherBackdrop => {
                     if (otherBackdrop.id === backdrop.id) return; // Skip self
                     
@@ -1172,6 +1173,12 @@ export function Editor() {
                     const otherPos = otherView.position;
                     const otherWidth = otherBackdrop.properties.width || 400;
                     const otherHeight = otherBackdrop.properties.height || 300;
+                    
+                    // Only capture if the other backdrop is smaller than this one
+                    // A child can't contain its parent!
+                    if (otherWidth >= bWidth || otherHeight >= bHeight) {
+                        return; // Skip - other backdrop is same size or larger
+                    }
                     
                     // Check if the other backdrop's center is inside this backdrop
                     if (isInsideBackdrop(otherPos, otherWidth, otherHeight)) {
@@ -1448,7 +1455,15 @@ export function Editor() {
                         };
                     }
                     
-                    // If we just started dragging this backdrop, update captures first
+                    // IMPORTANT: Check if this backdrop is being moved as part of another backdrop's drag
+                    // BEFORE we try to initialize. If parent is moving us, just let it happen.
+                    if (backdropDragState.isDragging && 
+                        backdropDragState.nodesBeingMoved.has(nodeId) && 
+                        backdropDragState.activeBackdropId !== nodeId) {
+                        return context; // Let parent handle moving us and our children
+                    }
+                    
+                    // If we just started dragging this backdrop directly, update captures first
                     if (backdropDragState.activeBackdropId !== nodeId) {
                         backdropDragState.activeBackdropId = nodeId;
                         backdropDragState.isDragging = true;
@@ -1470,12 +1485,6 @@ export function Editor() {
                         };
                         markNodesBeingMoved(node.properties.capturedNodes);
                         // Debug: debug('[Backdrop] Started dragging, captured nodes:', node.properties.capturedNodes);
-                    }
-                    
-                    // If this backdrop is being moved as part of another backdrop's drag, don't move its children
-                    // (the parent backdrop is already moving them)
-                    if (backdropDragState.nodesBeingMoved.has(nodeId) && backdropDragState.activeBackdropId !== nodeId) {
-                        return context; // Let parent handle moving our children
                     }
                     
                     // Move all captured nodes by the same delta
