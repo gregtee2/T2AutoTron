@@ -105,7 +105,7 @@
             if (data.changeCallback) data.changeCallback();
         }, [data]);
 
-        // Subscribe to buffer updates
+        // Subscribe to buffer updates and fetch initial value
         useEffect(() => {
             if (!window.AutoTronBuffer) return;
 
@@ -116,6 +116,12 @@
 
             // Initial list
             updateList();
+            
+            // Fetch initial value for selected buffer
+            if (selectedBuffer) {
+                const val = window.AutoTronBuffer.get(selectedBuffer);
+                setCurrentValue(val);
+            }
 
             // Subscribe to changes
             const unsubscribe = window.AutoTronBuffer.subscribe((key) => {
@@ -129,6 +135,24 @@
 
             return unsubscribe;
         }, [selectedBuffer, triggerUpdate]);
+        
+        // Also poll the value periodically to catch any missed updates
+        useEffect(() => {
+            if (!selectedBuffer || !window.AutoTronBuffer) return;
+            
+            const interval = setInterval(() => {
+                const val = window.AutoTronBuffer.get(selectedBuffer);
+                setCurrentValue(prev => {
+                    // Only update if value actually changed
+                    if (JSON.stringify(prev) !== JSON.stringify(val)) {
+                        return val;
+                    }
+                    return prev;
+                });
+            }, 500); // Check every 500ms
+            
+            return () => clearInterval(interval);
+        }, [selectedBuffer]);
 
         // Handle selection change
         const handleSelect = (e) => {
