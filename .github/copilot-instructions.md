@@ -729,17 +729,43 @@ data(inputs) {
 
 #### 8. Save/Load (Serialization)
 ```javascript
-// Required for graph persistence
-restore(state) {
-    if (state.properties) {
-        Object.assign(this.properties, state.properties);
-    }
-    // Re-populate dropdowns after restore!
-    this.updateDeviceDropdown();
-}
+// Required for graph persistence - use this EXACT pattern!
+// The restore() receives { properties: {...} } from the serialized node
 
 serialize() {
-    return { ...this.properties };
+    return {
+        myValue: this.properties.myValue,
+        myOption: this.properties.myOption
+        // List explicit properties, not spread (for clarity)
+    };
+}
+
+toJSON() {
+    return {
+        id: this.id,
+        label: this.label,
+        properties: this.serialize()
+    };
+}
+
+restore(state) {
+    // Handle both patterns: state.properties (from copy/paste) or state directly
+    const props = state.properties || state;
+    if (props) {
+        Object.assign(this.properties, props);
+    }
+    
+    // Sync dropdown control values with restored properties
+    const myControl = this.controls.my_dropdown;
+    if (myControl && this.properties.myValue) {
+        myControl.value = this.properties.myValue;
+        // Note: updateDropdown() is called after options are populated
+    }
+    
+    // Defer fetches to avoid race conditions during graph load
+    setTimeout(() => {
+        this.fetchData();
+    }, 500);
 }
 ```
 

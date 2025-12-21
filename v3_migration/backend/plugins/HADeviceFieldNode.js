@@ -213,6 +213,11 @@
                         ["light", "switch", "binary_sensor", "sensor", "media_player", "weather", "fan", "cover", "device_tracker", "person"].includes(d.type)
                     );
                     this.updateDeviceDropdown();
+                    
+                    // If we have a restored device, also update the field dropdown
+                    if (this.properties.deviceId) {
+                        this.updateFieldDropdown();
+                    }
                 }
             } catch (err) {
                 console.error('[HADeviceFieldNode] Error fetching devices:', err);
@@ -450,20 +455,54 @@
         }
 
         serialize() {
-            return { ...this.properties };
+            return {
+                deviceId: this.properties.deviceId,
+                deviceName: this.properties.deviceName,
+                field: this.properties.field,
+                lastValue: this.properties.lastValue,
+                filterType: this.properties.filterType,
+                letterFilter: this.properties.letterFilter
+            };
+        }
+
+        toJSON() {
+            return {
+                id: this.id,
+                label: this.label,
+                properties: this.serialize()
+            };
         }
 
         restore(state) {
-            if (state) {
-                Object.assign(this.properties, state);
-                // Defer device fetch to avoid race conditions during graph load
-                setTimeout(() => {
-                    this.fetchDevices();
-                    if (this.properties.deviceId) {
-                        this.fetchDeviceState(this.properties.deviceId);
-                    }
-                }, 500);
+            // Match HADeviceAutomationNode pattern - state contains { properties: {...} }
+            const props = state.properties || state;
+            if (props) {
+                Object.assign(this.properties, props);
             }
+            
+            // Restore filter dropdowns immediately
+            const filterControl = this.controls.filter_type;
+            if (filterControl && this.properties.filterType) {
+                filterControl.value = this.properties.filterType;
+            }
+            
+            const letterControl = this.controls.letter_filter;
+            if (letterControl && this.properties.letterFilter) {
+                letterControl.value = this.properties.letterFilter;
+            }
+            
+            const fieldControl = this.controls.field_select;
+            if (fieldControl && this.properties.field) {
+                fieldControl.value = this.properties.field;
+            }
+
+            // Defer device fetch to avoid race conditions during graph load
+            setTimeout(() => {
+                this.fetchDevices();
+                if (this.properties.deviceId) {
+                    this.fetchDeviceState(this.properties.deviceId);
+                }
+            }, 500);
         }
     }
 

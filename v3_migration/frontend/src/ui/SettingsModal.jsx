@@ -48,6 +48,17 @@ const SETTINGS_CONFIG = [
         ]
     },
     {
+        category: 'Forecast Panel',
+        icon: '📊',
+        description: 'Configure HA sensors to display live weather data on the forecast panel (optional)',
+        settings: [
+            { key: 'FORECAST_TEMP_SENSOR', label: 'Temperature Sensor', placeholder: 'Select sensor...', type: 'sensor-select', hint: 'HA sensor for current temperature' },
+            { key: 'FORECAST_WIND_SENSOR', label: 'Wind Speed Sensor', placeholder: 'Select sensor...', type: 'sensor-select', hint: 'HA sensor for wind speed' },
+            { key: 'FORECAST_WIND_DIR_SENSOR', label: 'Wind Direction Sensor', placeholder: 'Select sensor...', type: 'sensor-select', hint: 'HA sensor for wind direction' },
+            { key: 'FORECAST_RAIN_SENSOR', label: 'Rain Rate Sensor', placeholder: 'Select sensor...', type: 'sensor-select', hint: 'HA sensor for rain rate' }
+        ]
+    },
+    {
         category: 'Philips Hue',
         icon: '💡',
         testable: 'hue',
@@ -115,6 +126,9 @@ export function SettingsModal({ isOpen, onClose }) {
     const [expandedCategories, setExpandedCategories] = useState({});
     const [testResults, setTestResults] = useState({});
     const [testing, setTesting] = useState({});
+    const [haSensors, setHaSensors] = useState([]); // HA sensors for forecast panel dropdown
+    const [sensorsLoading, setSensorsLoading] = useState(false);
+    const sensorsFetchedRef = useRef(false); // Track if we've fetched sensors
     const fileInputRef = useRef(null);
 
     // Local (client-side) PIN auth
@@ -219,8 +233,104 @@ export function SettingsModal({ isOpen, onClose }) {
             setRememberPin(getPinRememberPreference());
             setHasStoredPin(!!getStoredPin());
             setPinInput('');
+            
+            // Pre-fetch HA sensors for the Forecast Panel dropdown
+            if (!sensorsFetchedRef.current) {
+                sensorsFetchedRef.current = true;
+                
+                // Fetch sensors via HTTP
+                (async () => {
+                    console.log('[SettingsModal] Fetching HA sensors via HTTP...');
+                    setSensorsLoading(true);
+                    
+                    try {
+                        const response = await authFetch('/api/lights/ha/');
+                        console.log('[SettingsModal] Response status:', response.status);
+                        
+                        if (!response.ok) {
+                            console.warn('[SettingsModal] Failed to fetch HA devices:', response.status);
+                            setSensorsLoading(false);
+                            return;
+                        }
+                        
+                        const devices = await response.json();
+                        console.log('[SettingsModal] HA devices received:', devices?.length);
+                        
+                        if (!devices || !Array.isArray(devices)) {
+                            console.warn('[SettingsModal] No devices array received');
+                            setSensorsLoading(false);
+                            return;
+                        }
+                        
+                        // Filter to only sensors
+                        const sensors = devices
+                            .filter(d => {
+                                const id = d.id || d.entity_id || '';
+                                return id.includes('sensor.');
+                            })
+                            .map(d => ({
+                                id: (d.id || d.entity_id || '').replace('ha_', ''),
+                                name: d.name || d.friendly_name || d.id || d.entity_id
+                            }))
+                            .sort((a, b) => a.name.localeCompare(b.name));
+                        
+                        console.log('[SettingsModal] Filtered sensors:', sensors.length);
+                        setHaSensors(sensors);
+                        setSensorsLoading(false);
+                    } catch (err) {
+                        console.warn('[SettingsModal] Error fetching HA sensors:', err);
+                        setSensorsLoading(false);
+                    }
+                })();
+            }
+        } else {
+            // Reset fetch flag when modal closes
+            sensorsFetchedRef.current = false;
         }
     }, [isOpen]);
+    
+    // Fetch HA sensors via HTTP API (same approach as HADeviceFieldNode)
+    const fetchHaSensorsViaHttp = async () => {
+        console.log('[SettingsModal] Fetching HA sensors via HTTP...');
+        setSensorsLoading(true);
+        
+        try {
+            const response = await authFetch('/api/lights/ha/');
+            if (!response.ok) {
+                console.warn('[SettingsModal] Failed to fetch HA devices:', response.status);
+                setSensorsLoading(false);
+                return;
+            }
+            
+            const devices = await response.json();
+            console.log('[SettingsModal] HA devices received:', devices?.length);
+            
+            if (!devices || !Array.isArray(devices)) {
+                console.warn('[SettingsModal] No devices array received');
+                setSensorsLoading(false);
+                return;
+            }
+            
+            // Filter to only sensors
+            const sensors = devices
+                .filter(d => {
+                    const id = d.id || d.entity_id || '';
+                    return id.includes('sensor.');
+                })
+                .map(d => ({
+                    id: (d.id || d.entity_id || '').replace('ha_', ''),
+                    name: d.name || d.friendly_name || d.id || d.entity_id
+                }))
+                .sort((a, b) => a.name.localeCompare(b.name));
+            
+            console.log('[SettingsModal] Filtered sensors:', sensors.length);
+            setHaSensors(sensors);
+            setSensorsLoading(false);
+        } catch (err) {
+            console.warn('[SettingsModal] Error fetching HA sensors:', err);
+            setSensorsLoading(false);
+        }
+    };
 
     const fetchSettings = async () => {
         setLoading(true);
@@ -632,6 +742,11 @@ export function SettingsModal({ isOpen, onClose }) {
             ...prev,
             [category]: !prev[category]
         }));
+        
+        // Fetch HA sensors when Forecast Panel is expanded (if not already loaded)
+        if (category === 'Forecast Panel' && !expandedCategories[category] && haSensors.length === 0) {
+            fetchHaSensorsViaHttp();
+        }
     };
 
     const toggleShowSecret = (key) => {
@@ -1622,6 +1737,18 @@ export function SettingsModal({ isOpen, onClose }) {
                                                             <option value="">Select...</option>
                                                             {setting.options.map(opt => (
                                                                 <option key={opt} value={opt}>{opt}</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : setting.type === 'sensor-select' ? (
+                                                        <select
+                                                            className="settings-input"
+                                                            value={settings[setting.key] || ''}
+                                                            onChange={e => handleChange(setting.key, e.target.value)}
+                                                            disabled={sensorsLoading}
+                                                        >
+                                                            <option value="">{sensorsLoading ? 'Loading sensors...' : 'None (disabled)'}</option>
+                                                            {haSensors.map(sensor => (
+                                                                <option key={sensor.id} value={sensor.id}>{sensor.name}</option>
                                                             ))}
                                                         </select>
                                                     ) : (

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { socket } from '../socket';
+import { apiUrl } from '../utils/apiBase';
+import { authFetch } from '../auth/authClient';
 import './ForecastPanel.css';
 
 export function ForecastPanel({ dockSlotRef }) {
@@ -12,7 +14,80 @@ export function ForecastPanel({ dockSlotRef }) {
     const [activeDevices, setActiveDevices] = useState(new Map());
     const [panelWidth, setPanelWidth] = useState(() => parseInt(localStorage.getItem('forecastPanelWidth')) || 320);
     const [devicesHeight, setDevicesHeight] = useState(() => parseInt(localStorage.getItem('devicesOnHeight')) || 200);
+    const [stationData, setStationData] = useState(null); // Live weather station data
+    const [sensorConfig, setSensorConfig] = useState(null); // Configured HA sensors for forecast
     const resizeRef = useRef(null);
+
+    // Fetch sensor config from settings on mount
+    useEffect(() => {
+        const fetchSensorConfig = async () => {
+            try {
+                const res = await authFetch(apiUrl('/api/settings'));
+                if (res.ok) {
+                    const data = await res.json();
+                    const config = {
+                        tempSensor: data.FORECAST_TEMP_SENSOR || null,
+                        windSensor: data.FORECAST_WIND_SENSOR || null,
+                        windDirSensor: data.FORECAST_WIND_DIR_SENSOR || null,
+                        rainSensor: data.FORECAST_RAIN_SENSOR || null
+                    };
+                    // Only set if at least one sensor is configured
+                    if (config.tempSensor || config.windSensor || config.windDirSensor || config.rainSensor) {
+                        setSensorConfig(config);
+                        // Fetch initial values for configured sensors
+                        fetchSensorValues(config);
+                    }
+                }
+            } catch (err) {
+                console.warn('Could not fetch forecast sensor config:', err);
+            }
+        };
+        fetchSensorConfig();
+    }, []);
+
+    // Fetch current values from configured HA sensors
+    const fetchSensorValues = async (config) => {
+        if (!config) return;
+        
+        const newData = { source: 'ha-sensors' };
+        
+        try {
+            if (config.tempSensor) {
+                const res = await authFetch(apiUrl(`/api/lights/ha/${config.tempSensor}/state`));
+                if (res.ok) {
+                    const data = await res.json();
+                    newData.temp = parseFloat(data.state);
+                }
+            }
+            if (config.windSensor) {
+                const res = await authFetch(apiUrl(`/api/lights/ha/${config.windSensor}/state`));
+                if (res.ok) {
+                    const data = await res.json();
+                    newData.windSpeed = parseFloat(data.state);
+                }
+            }
+            if (config.windDirSensor) {
+                const res = await authFetch(apiUrl(`/api/lights/ha/${config.windDirSensor}/state`));
+                if (res.ok) {
+                    const data = await res.json();
+                    newData.windDir = parseFloat(data.state);
+                }
+            }
+            if (config.rainSensor) {
+                const res = await authFetch(apiUrl(`/api/lights/ha/${config.rainSensor}/state`));
+                if (res.ok) {
+                    const data = await res.json();
+                    newData.rainRate = parseFloat(data.state);
+                }
+            }
+            
+            if (newData.temp !== undefined) {
+                setStationData(prev => ({ ...prev, ...newData }));
+            }
+        } catch (err) {
+            console.warn('Error fetching sensor values:', err);
+        }
+    };
 
     useEffect(() => {
         if (!socket) return;
@@ -37,10 +112,61 @@ export function ForecastPanel({ dockSlotRef }) {
             setForecastData(data);
         });
         
-        // Listen for device state updates to track active devices
+        // Listen for live weather station data (Ambient Weather or Open-Meteo) - fallback if no HA sensors configured
+        const onWeatherUpdate = (data) => {
+            // Skip if we're using HA sensors (check current state, not just config)
+            setStationData(prev => {
+                // If already using HA sensors, don't overwrite with weather-update
+                if (prev?.source === 'ha-sensors') return prev;
+                // Also skip if we have sensor config (it will load shortly)
+                if (sensorConfig?.tempSensor) return prev;
+                
+                return {
+                    temp: data.tempf,
+                    humidity: data.humidity,
+                    windSpeed: data.windspeedmph,
+                    windDir: data.winddir,
+                    rainRate: data.hourlyrainin,
+                    dailyRain: data.dailyrainin,
+                    source: data._source || 'ambient'
+                };
+            });
+        };
+        socket.on('weather-update', onWeatherUpdate);
+        if (!sensorConfig?.tempSensor) {
+            socket.emit('request-weather-update'); // Only request if not using HA sensors
+        }
+        
+        // Listen for device state updates to track active devices AND configured weather sensors
         const onDeviceStateUpdate = (data) => {
             const { id, state, on, name } = data;
             if (!id) return;
+            
+            // Check if this is one of our configured weather sensors
+            if (sensorConfig) {
+                const entityId = id.replace('ha_', '');
+                if (entityId === sensorConfig.tempSensor) {
+                    const value = parseFloat(state);
+                    if (!isNaN(value)) {
+                        setStationData(prev => ({ ...prev, temp: value, source: 'ha-sensors' }));
+                    }
+                } else if (entityId === sensorConfig.windSensor) {
+                    const value = parseFloat(state);
+                    if (!isNaN(value)) {
+                        setStationData(prev => ({ ...prev, windSpeed: value }));
+                    }
+                } else if (entityId === sensorConfig.windDirSensor) {
+                    const value = parseFloat(state);
+                    if (!isNaN(value)) {
+                        setStationData(prev => ({ ...prev, windDir: value }));
+                    }
+                } else if (entityId === sensorConfig.rainSensor) {
+                    const value = parseFloat(state);
+                    if (!isNaN(value)) {
+                        setStationData(prev => ({ ...prev, rainRate: value }));
+                    }
+                }
+            }
             
             const currentOn = on !== undefined ? on : (state === 'on' || state === 'playing' || state === 'open');
             const deviceName = name || data.friendly_name || data.attributes?.friendly_name || 
@@ -73,12 +199,26 @@ export function ForecastPanel({ dockSlotRef }) {
             socket.off('disconnect', onDisconnect);
             socket.off('ha-connection-status', onHaStatus);
             socket.off('forecast-update');
+            socket.off('weather-update', onWeatherUpdate);
             socket.off('device-state-update', onDeviceStateUpdate);
         };
-    }, []);
+    }, [sensorConfig]); // Re-run when sensor config loads
 
     const refreshForecast = () => {
         socket?.emit('request-forecast');
+        if (sensorConfig?.tempSensor) {
+            fetchSensorValues(sensorConfig);
+        } else {
+            socket?.emit('request-weather-update');
+        }
+    };
+
+    // Convert wind direction degrees to cardinal direction
+    const getCardinalDirection = (degrees) => {
+        if (degrees == null) return '';
+        const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+        const index = Math.round(degrees / 22.5) % 16;
+        return directions[index];
     };
 
     const getWeatherIcon = (condition) => {
@@ -264,8 +404,10 @@ export function ForecastPanel({ dockSlotRef }) {
         // Show the 5-day overview
         return forecastData.slice(0, 5).map((day, i) => {
             const dateInfo = formatDate(day.date || day.day);
+            const isToday = i === 0;
+            
             return (
-                <div key={i} className="forecast-card" onClick={() => setSelectedDay(i)}>
+                <div key={i} className={`forecast-card ${isToday && stationData ? 'forecast-card-today' : ''}`} onClick={() => setSelectedDay(i)}>
                     <div className="forecast-row-top">
                         <div className="forecast-date">
                             <span className="date-day">{dateInfo.day}</span>
@@ -273,6 +415,27 @@ export function ForecastPanel({ dockSlotRef }) {
                         </div>
                         <div className="forecast-icon">{getWeatherIcon(day.conditions || day.condition)}</div>
                     </div>
+                    
+                    {/* Show live station data on today's tile */}
+                    {isToday && stationData && (
+                        <div className="station-data">
+                            <div className="station-current-temp">
+                                {Math.round(stationData.temp)}°
+                                <span className="station-label">now</span>
+                            </div>
+                            <div className="station-details">
+                                <span className="station-detail" title="Wind">
+                                    🌬️ {Math.round(stationData.windSpeed || 0)} mph {getCardinalDirection(stationData.windDir)}
+                                </span>
+                                {(stationData.rainRate > 0) && (
+                                    <span className="station-detail station-rain" title="Rain Rate">
+                                        🌧️ {stationData.rainRate.toFixed(2)}"/hr
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    
                     <div className="forecast-row-bottom">
                         <span className="temp-low">{day.low}°</span>
                         <span className="temp-high">{day.high}°</span>
