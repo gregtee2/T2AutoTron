@@ -107,18 +107,61 @@ const THEME_PRESETS = {
 };
 
 // Theme settings configuration (stored in localStorage, not server)
-const THEME_SETTINGS = [
-    { key: 'primary', label: 'Primary Accent Color', type: 'color', default: '#5fb3b3' },
-    { key: 'background', label: 'Node Background', type: 'color', default: '#1e2428' },
-    { key: 'surface', label: 'Node Surface', type: 'color', default: '#2a3238' },
-    { key: 'surfaceLight', label: 'Elevated Surface', type: 'color', default: '#343d44' },
-    { key: 'text', label: 'Text Color', type: 'color', default: '#c5cdd3' },
-    { key: 'textMuted', label: 'Muted Text', type: 'color', default: '#8a959e' },
-    { key: 'success', label: 'Success Color', type: 'color', default: '#5faa7d' },
-    { key: 'warning', label: 'Warning Color', type: 'color', default: '#d4a054' },
-    { key: 'error', label: 'Error Color', type: 'color', default: '#c75f5f' },
-    { key: 'borderOpacity', label: 'Border Opacity (%)', type: 'range', min: 0, max: 100, default: 25 }
-];
+// Organized into categories for better UX
+const THEME_SETTINGS_CATEGORIES = {
+    'Core Colors': {
+        icon: '🎨',
+        settings: [
+            { key: 'primary', label: 'Primary Accent', type: 'color', default: '#5fb3b3' },
+            { key: 'background', label: 'Background', type: 'color', default: '#1e2428' },
+            { key: 'surface', label: 'Surface', type: 'color', default: '#2a3238' },
+            { key: 'surfaceLight', label: 'Elevated Surface', type: 'color', default: '#343d44' },
+            { key: 'text', label: 'Text', type: 'color', default: '#c5cdd3' },
+            { key: 'textMuted', label: 'Muted Text', type: 'color', default: '#8a959e' },
+        ]
+    },
+    'Status Colors': {
+        icon: '🚦',
+        settings: [
+            { key: 'success', label: 'Success', type: 'color', default: '#5faa7d' },
+            { key: 'warning', label: 'Warning', type: 'color', default: '#d4a054' },
+            { key: 'error', label: 'Error', type: 'color', default: '#c75f5f' },
+        ]
+    },
+    'Socket Colors': {
+        icon: '🔌',
+        settings: [
+            { key: 'socketBoolean', label: 'Boolean', type: 'color', default: '#10b981', cssVar: 'socket-boolean-color' },
+            { key: 'socketNumber', label: 'Number', type: 'color', default: '#3b82f6', cssVar: 'socket-number-color' },
+            { key: 'socketString', label: 'String', type: 'color', default: '#f59e0b', cssVar: 'socket-string-color' },
+            { key: 'socketHsv', label: 'HSV/Color', type: 'color', default: '#8b5cf6', cssVar: 'socket-hsv-color' },
+            { key: 'socketObject', label: 'Object', type: 'color', default: '#6366f1', cssVar: 'socket-object-color' },
+            { key: 'socketLight', label: 'Light/Device', type: 'color', default: '#eab308', cssVar: 'socket-light-color' },
+        ]
+    },
+    'Node Glow Colors': {
+        icon: '✨',
+        settings: [
+            { key: 'nodeHa', label: 'Home Assistant', type: 'color', default: '#00d4ff', cssVar: 'node-ha-glow' },
+            { key: 'nodeLogic', label: 'Logic', type: 'color', default: '#8b5cf6', cssVar: 'node-logic-glow' },
+            { key: 'nodeTimer', label: 'Timer/Event', type: 'color', default: '#f59e0b', cssVar: 'node-timer-glow' },
+            { key: 'nodeColor', label: 'Color', type: 'color', default: '#ec4899', cssVar: 'node-color-glow' },
+            { key: 'nodeUtility', label: 'Utility', type: 'color', default: '#14b8a6', cssVar: 'node-utility-glow' },
+            { key: 'nodeDevice', label: 'Direct Device', type: 'color', default: '#22c55e', cssVar: 'node-device-glow' },
+        ]
+    },
+    'Editor': {
+        icon: '📐',
+        settings: [
+            { key: 'borderOpacity', label: 'Border Opacity', type: 'range', min: 0, max: 100, default: 25 },
+            { key: 'glowIntensity', label: 'Glow Intensity', type: 'range', min: 0, max: 100, default: 50 },
+            { key: 'gridOpacity', label: 'Grid Opacity', type: 'range', min: 0, max: 100, default: 30 },
+        ]
+    }
+};
+
+// Flatten for backward compatibility
+const THEME_SETTINGS = Object.values(THEME_SETTINGS_CATEGORIES).flatMap(cat => cat.settings);
 
 // Define the settings structure with metadata
 const SETTINGS_CONFIG = [
@@ -264,6 +307,18 @@ export function SettingsModal({ isOpen, onClose }) {
             return 'tron';
         }
     });
+    
+    // Custom user themes (stored in localStorage)
+    const [customThemes, setCustomThemes] = useState(() => {
+        try {
+            const stored = localStorage.getItem('t2-custom-themes');
+            return stored ? JSON.parse(stored) : {};
+        } catch {
+            return {};
+        }
+    });
+    const [saveThemeModalOpen, setSaveThemeModalOpen] = useState(false);
+    const [newThemeName, setNewThemeName] = useState('');
     
     // Category theme settings state
     const DEFAULT_CATEGORY_THEMES = {
@@ -654,11 +709,58 @@ export function SettingsModal({ isOpen, onClose }) {
         }
     };
     
-    // Theme settings handlers
+    // Helper function to apply a single theme setting to CSS variables
+    const applyThemeCssVar = (key, value) => {
+        const settingConfig = THEME_SETTINGS.find(s => s.key === key);
+        const root = document.documentElement;
+        
+        if (key === 'borderOpacity') {
+            root.style.setProperty('--node-border-opacity', value / 100);
+        } else if (key === 'glowIntensity') {
+            root.style.setProperty('--node-glow-intensity', value / 100);
+        } else if (key === 'gridOpacity') {
+            root.style.setProperty('--editor-grid-opacity', value / 100);
+        } else if (settingConfig?.cssVar) {
+            const cssVar = settingConfig.cssVar;
+            root.style.setProperty(`--${cssVar}`, value);
+            if (typeof value === 'string' && value.startsWith('#')) {
+                const r = parseInt(value.slice(1, 3), 16);
+                const g = parseInt(value.slice(3, 5), 16);
+                const b = parseInt(value.slice(5, 7), 16);
+                root.style.setProperty(`--${cssVar.replace('-color', '-rgb').replace('-glow', '-rgb')}`, `${r}, ${g}, ${b}`);
+                const darkR = Math.max(0, r - 40);
+                const darkG = Math.max(0, g - 40);
+                const darkB = Math.max(0, b - 40);
+                root.style.setProperty(`--${cssVar.replace('-color', '-dark').replace('-glow', '-dark')}`, `rgb(${darkR}, ${darkG}, ${darkB})`);
+                const borderR = Math.min(255, r + 40);
+                const borderG = Math.min(255, g + 40);
+                const borderB = Math.min(255, b + 40);
+                root.style.setProperty(`--${cssVar.replace('-color', '-border').replace('-glow', '-border')}`, `rgb(${borderR}, ${borderG}, ${borderB})`);
+            }
+        } else {
+            root.style.setProperty(`--theme-${key}`, value);
+            if (typeof value === 'string' && value.startsWith('#')) {
+                const r = parseInt(value.slice(1, 3), 16);
+                const g = parseInt(value.slice(3, 5), 16);
+                const b = parseInt(value.slice(5, 7), 16);
+                root.style.setProperty(`--theme-${key}-rgb`, `${r}, ${g}, ${b}`);
+            }
+        }
+    };
+    
+    // Theme settings handlers - apply immediately to CSS variables
     const handleThemeChange = (key, value) => {
         setThemeSettings(prev => ({ ...prev, [key]: value }));
         setThemeChanged(true);
         setActivePreset('custom'); // User is customizing
+        
+        // Apply immediately using the shared helper
+        applyThemeCssVar(key, value);
+        
+        // Save to localStorage for persistence
+        const newSettings = { ...themeSettings, [key]: value };
+        localStorage.setItem('t2theme-overrides', JSON.stringify(newSettings));
+        localStorage.setItem('t2theme-preset', 'custom');
     };
     
     // Apply a theme preset instantly (no refresh needed)
@@ -666,25 +768,9 @@ export function SettingsModal({ isOpen, onClose }) {
         const preset = THEME_PRESETS[presetKey];
         if (!preset) return;
         
-        const root = document.documentElement;
-        
-        // Apply each color as a CSS variable
+        // Apply each color using the shared helper
         Object.entries(preset.colors).forEach(([key, value]) => {
-            if (key === 'borderOpacity') {
-                root.style.setProperty('--node-border-opacity', value / 100);
-            } else {
-                // Set the main color
-                root.style.setProperty(`--theme-${key}`, value);
-                
-                // Also set RGB version for rgba() usage
-                const hex = value;
-                if (hex.startsWith('#')) {
-                    const r = parseInt(hex.slice(1, 3), 16);
-                    const g = parseInt(hex.slice(3, 5), 16);
-                    const b = parseInt(hex.slice(5, 7), 16);
-                    root.style.setProperty(`--theme-${key}-rgb`, `${r}, ${g}, ${b}`);
-                }
-            }
+            applyThemeCssVar(key, value);
         });
         
         // Update shared controls THEME if available
@@ -703,6 +789,93 @@ export function SettingsModal({ isOpen, onClose }) {
         
         setSuccess(`Theme "${preset.name}" applied!`);
         setTimeout(() => setSuccess(null), 3000);
+    };
+    
+    // Apply a custom user theme
+    const applyCustomTheme = (themeKey) => {
+        const theme = customThemes[themeKey];
+        if (!theme) return;
+        
+        // Apply each color using the shared helper
+        Object.entries(theme.colors).forEach(([key, value]) => {
+            applyThemeCssVar(key, value);
+        });
+        
+        if (window.T2Controls?.THEME) {
+            Object.assign(window.T2Controls.THEME, theme.colors);
+        }
+        
+        localStorage.setItem('t2theme-preset', `custom:${themeKey}`);
+        localStorage.setItem('t2theme-overrides', JSON.stringify(theme.colors));
+        
+        setThemeSettings(theme.colors);
+        setActivePreset(`custom:${themeKey}`);
+        setThemeChanged(false);
+        
+        setSuccess(`Theme "${theme.name}" applied!`);
+        setTimeout(() => setSuccess(null), 3000);
+    };
+    
+    // Save current theme settings as a new custom theme
+    const handleSaveCustomTheme = () => {
+        if (!newThemeName.trim()) {
+            setError('Please enter a theme name');
+            return;
+        }
+        
+        const themeKey = newThemeName.trim().toLowerCase().replace(/\s+/g, '-');
+        
+        // Check if name conflicts with built-in presets
+        if (THEME_PRESETS[themeKey]) {
+            setError('Cannot use a built-in theme name');
+            return;
+        }
+        
+        const newTheme = {
+            name: newThemeName.trim(),
+            colors: { ...themeSettings }
+        };
+        
+        const updatedThemes = { ...customThemes, [themeKey]: newTheme };
+        setCustomThemes(updatedThemes);
+        
+        try {
+            localStorage.setItem('t2-custom-themes', JSON.stringify(updatedThemes));
+            localStorage.setItem('t2theme-preset', `custom:${themeKey}`);
+            setActivePreset(`custom:${themeKey}`);
+            setSaveThemeModalOpen(false);
+            setNewThemeName('');
+            setThemeChanged(false);
+            setSuccess(`Custom theme "${newThemeName.trim()}" saved!`);
+            setTimeout(() => setSuccess(null), 3000);
+        } catch (err) {
+            setError('Failed to save custom theme: ' + err.message);
+        }
+    };
+    
+    // Delete a custom theme
+    const handleDeleteCustomTheme = (themeKey, event) => {
+        event.stopPropagation();
+        const themeName = customThemes[themeKey]?.name || themeKey;
+        
+        if (!window.confirm(`Delete custom theme "${themeName}"?`)) return;
+        
+        const { [themeKey]: removed, ...remaining } = customThemes;
+        setCustomThemes(remaining);
+        
+        try {
+            localStorage.setItem('t2-custom-themes', JSON.stringify(remaining));
+            
+            // If the deleted theme was active, switch to Tron
+            if (activePreset === `custom:${themeKey}`) {
+                applyThemePreset('tron');
+            }
+            
+            setSuccess(`Theme "${themeName}" deleted`);
+            setTimeout(() => setSuccess(null), 3000);
+        } catch (err) {
+            setError('Failed to delete theme: ' + err.message);
+        }
     };
     
     const handleApplyTheme = () => {
@@ -1324,7 +1497,7 @@ export function SettingsModal({ isOpen, onClose }) {
                                             border: '1px solid rgba(95, 179, 179, 0.2)'
                                         }}>
                                             <label className="settings-label" style={{ fontSize: '12px', marginBottom: '8px', display: 'block' }}>
-                                                🎭 Theme Presets
+                                                🎭 Built-in Themes
                                             </label>
                                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                                 {Object.entries(THEME_PRESETS).map(([key, preset]) => (
@@ -1364,15 +1537,82 @@ export function SettingsModal({ isOpen, onClose }) {
                                                     </button>
                                                 ))}
                                             </div>
+                                            
+                                            {/* Custom User Themes Section */}
+                                            {Object.keys(customThemes).length > 0 && (
+                                                <>
+                                                    <label className="settings-label" style={{ fontSize: '12px', marginTop: '16px', marginBottom: '8px', display: 'block' }}>
+                                                        💾 Your Saved Themes
+                                                    </label>
+                                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                        {Object.entries(customThemes).map(([key, theme]) => (
+                                                            <button
+                                                                key={key}
+                                                                onClick={() => applyCustomTheme(key)}
+                                                                style={{
+                                                                    padding: '8px 14px',
+                                                                    borderRadius: '6px',
+                                                                    border: activePreset === `custom:${key}`
+                                                                        ? `2px solid ${theme.colors.primary}` 
+                                                                        : '1px solid rgba(255,255,255,0.2)',
+                                                                    background: activePreset === `custom:${key}`
+                                                                        ? `linear-gradient(135deg, ${theme.colors.surface}, ${theme.colors.background})`
+                                                                        : theme.colors.surface,
+                                                                    color: theme.colors.text,
+                                                                    cursor: 'pointer',
+                                                                    transition: 'all 0.2s',
+                                                                    fontSize: '11px',
+                                                                    fontWeight: activePreset === `custom:${key}` ? '600' : '400',
+                                                                    boxShadow: activePreset === `custom:${key}`
+                                                                        ? `0 0 12px ${theme.colors.primary}40`
+                                                                        : 'none',
+                                                                    position: 'relative',
+                                                                    paddingRight: '28px'
+                                                                }}
+                                                                title={`Custom theme: ${theme.name}`}
+                                                            >
+                                                                <span style={{ 
+                                                                    display: 'inline-block',
+                                                                    width: '10px',
+                                                                    height: '10px',
+                                                                    borderRadius: '50%',
+                                                                    background: theme.colors.primary,
+                                                                    marginRight: '6px',
+                                                                    boxShadow: `0 0 6px ${theme.colors.primary}`
+                                                                }} />
+                                                                {theme.name}
+                                                                <span 
+                                                                    onClick={(e) => handleDeleteCustomTheme(key, e)}
+                                                                    style={{
+                                                                        position: 'absolute',
+                                                                        right: '6px',
+                                                                        top: '50%',
+                                                                        transform: 'translateY(-50%)',
+                                                                        fontSize: '12px',
+                                                                        opacity: 0.6,
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                    title="Delete this theme"
+                                                                >
+                                                                    ✕
+                                                                </span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </>
+                                            )}
+                                            
                                             <div style={{ 
                                                 marginTop: '8px', 
                                                 fontSize: '10px', 
                                                 color: '#8a959e',
                                                 fontStyle: 'italic'
                                             }}>
-                                                {activePreset !== 'custom' && THEME_PRESETS[activePreset] 
-                                                    ? THEME_PRESETS[activePreset].description 
-                                                    : 'Custom theme - you\'ve modified individual colors'}
+                                                {activePreset.startsWith('custom:') && customThemes[activePreset.replace('custom:', '')]
+                                                    ? `Custom theme: ${customThemes[activePreset.replace('custom:', '')].name}`
+                                                    : activePreset !== 'custom' && THEME_PRESETS[activePreset] 
+                                                        ? THEME_PRESETS[activePreset].description 
+                                                        : 'Custom theme - you\'ve modified individual colors'}
                                             </div>
                                         </div>
                                         
@@ -1387,70 +1627,94 @@ export function SettingsModal({ isOpen, onClose }) {
                                             💡 Click a preset to apply instantly, or customize individual colors below.
                                         </div>
                                         
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                            {THEME_SETTINGS.map(setting => (
-                                                <div key={setting.key} className="settings-field" style={{ marginBottom: '8px' }}>
-                                                    <label className="settings-label" style={{ fontSize: '10px' }}>
-                                                        {setting.label}
-                                                    </label>
-                                                    {setting.type === 'color' ? (
-                                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                            <input
-                                                                type="color"
-                                                                value={themeSettings[setting.key] || setting.default}
-                                                                onChange={e => handleThemeChange(setting.key, e.target.value)}
-                                                                style={{ 
-                                                                    width: '40px', 
-                                                                    height: '30px', 
-                                                                    border: 'none',
-                                                                    borderRadius: '4px',
-                                                                    cursor: 'pointer',
-                                                                    background: 'transparent'
-                                                                }}
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                value={themeSettings[setting.key] || setting.default}
-                                                                onChange={e => handleThemeChange(setting.key, e.target.value)}
-                                                                className="settings-input"
-                                                                style={{ flex: 1, fontFamily: 'monospace', fontSize: '11px' }}
-                                                            />
-                                                        </div>
-                                                    ) : setting.type === 'range' ? (
-                                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                            <input
-                                                                type="range"
-                                                                min={setting.min}
-                                                                max={setting.max}
-                                                                value={themeSettings[setting.key] || setting.default}
-                                                                onChange={e => handleThemeChange(setting.key, parseInt(e.target.value))}
-                                                                style={{ flex: 1 }}
-                                                            />
-                                                            <span style={{ 
-                                                                minWidth: '35px', 
-                                                                textAlign: 'right',
-                                                                color: '#c5cdd3',
-                                                                fontSize: '12px'
-                                                            }}>
-                                                                {themeSettings[setting.key] || setting.default}%
-                                                            </span>
-                                                        </div>
-                                                    ) : null}
+                                        {/* Categorized theme settings */}
+                                        {Object.entries(THEME_SETTINGS_CATEGORIES).map(([categoryName, category]) => (
+                                            <div key={categoryName} style={{ marginBottom: '16px' }}>
+                                                <div style={{ 
+                                                    fontSize: '11px', 
+                                                    fontWeight: '600', 
+                                                    color: themeSettings.primary || '#5fb3b3',
+                                                    marginBottom: '8px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px'
+                                                }}>
+                                                    <span>{category.icon}</span>
+                                                    <span>{categoryName}</span>
                                                 </div>
-                                            ))}
-                                        </div>
+                                                <div style={{ 
+                                                    display: 'grid', 
+                                                    gridTemplateColumns: 'repeat(3, 1fr)', 
+                                                    gap: '8px',
+                                                    padding: '8px',
+                                                    background: 'rgba(0,0,0,0.2)',
+                                                    borderRadius: '6px'
+                                                }}>
+                                                    {category.settings.map(setting => (
+                                                        <div key={setting.key} className="settings-field" style={{ marginBottom: '4px' }}>
+                                                            <label className="settings-label" style={{ fontSize: '9px', marginBottom: '4px' }}>
+                                                                {setting.label}
+                                                            </label>
+                                                            {setting.type === 'color' ? (
+                                                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                                    <input
+                                                                        type="color"
+                                                                        value={themeSettings[setting.key] || setting.default}
+                                                                        onChange={e => handleThemeChange(setting.key, e.target.value)}
+                                                                        style={{ 
+                                                                            width: '32px', 
+                                                                            height: '24px', 
+                                                                            border: 'none',
+                                                                            borderRadius: '4px',
+                                                                            cursor: 'pointer',
+                                                                            background: 'transparent'
+                                                                        }}
+                                                                    />
+                                                                    <input
+                                                                        type="text"
+                                                                        value={themeSettings[setting.key] || setting.default}
+                                                                        onChange={e => handleThemeChange(setting.key, e.target.value)}
+                                                                        className="settings-input"
+                                                                        style={{ flex: 1, fontFamily: 'monospace', fontSize: '9px', padding: '4px' }}
+                                                                    />
+                                                                </div>
+                                                            ) : setting.type === 'range' ? (
+                                                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                                    <input
+                                                                        type="range"
+                                                                        min={setting.min}
+                                                                        max={setting.max}
+                                                                        value={themeSettings[setting.key] ?? setting.default}
+                                                                        onChange={e => handleThemeChange(setting.key, parseInt(e.target.value))}
+                                                                        style={{ flex: 1 }}
+                                                                    />
+                                                                    <span style={{ 
+                                                                        minWidth: '28px', 
+                                                                        textAlign: 'right',
+                                                                        color: '#c5cdd3',
+                                                                        fontSize: '10px'
+                                                                    }}>
+                                                                        {themeSettings[setting.key] ?? setting.default}%
+                                                                    </span>
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
                                         
                                         {/* Preview swatch */}
                                         <div style={{ 
-                                            marginTop: '12px', 
+                                            marginTop: '16px', 
                                             padding: '12px', 
-                                            background: themeSettings.background,
+                                            background: themeSettings.background || '#1e2428',
                                             borderRadius: '8px',
                                             border: `1px solid rgba(95, 179, 179, ${(themeSettings.borderOpacity || 25) / 100})`
                                         }}>
                                             <div style={{ 
                                                 fontSize: '10px', 
-                                                color: themeSettings.textMuted,
+                                                color: themeSettings.textMuted || '#8a959e',
                                                 marginBottom: '8px'
                                             }}>
                                                 PREVIEW
@@ -1506,6 +1770,18 @@ export function SettingsModal({ isOpen, onClose }) {
                                             </button>
                                             <button
                                                 className="settings-btn-small"
+                                                onClick={() => setSaveThemeModalOpen(true)}
+                                                style={{ 
+                                                    background: 'rgba(95, 140, 220, 0.15)',
+                                                    borderColor: 'rgba(95, 140, 220, 0.5)',
+                                                    color: '#5f8adc'
+                                                }}
+                                                title="Save current colors as a named custom theme"
+                                            >
+                                                ⭐ Save as Custom Theme
+                                            </button>
+                                            <button
+                                                className="settings-btn-small"
                                                 onClick={handleApplyTheme}
                                                 style={{ 
                                                     background: 'rgba(95, 170, 125, 0.15)',
@@ -1513,9 +1789,108 @@ export function SettingsModal({ isOpen, onClose }) {
                                                     color: '#5faa7d'
                                                 }}
                                             >
-                                                💾 Save Theme
+                                                💾 Apply Changes
                                             </button>
                                         </div>
+                                        
+                                        {/* Save Custom Theme Modal */}
+                                        {saveThemeModalOpen && (
+                                            <div style={{
+                                                position: 'fixed',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                background: 'rgba(0,0,0,0.7)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                zIndex: 10000
+                                            }}>
+                                                <div style={{
+                                                    background: 'var(--theme-surface, #2a3238)',
+                                                    padding: '24px',
+                                                    borderRadius: '12px',
+                                                    border: '1px solid rgba(95, 179, 179, 0.3)',
+                                                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                                                    minWidth: '300px'
+                                                }}>
+                                                    <h3 style={{ 
+                                                        margin: '0 0 16px 0', 
+                                                        color: 'var(--theme-text, #c5cdd3)',
+                                                        fontSize: '16px'
+                                                    }}>
+                                                        ⭐ Save Custom Theme
+                                                    </h3>
+                                                    <p style={{ 
+                                                        margin: '0 0 16px 0', 
+                                                        color: 'var(--theme-textMuted, #8a959e)',
+                                                        fontSize: '12px'
+                                                    }}>
+                                                        Give your theme a name to save it for later use.
+                                                    </p>
+                                                    <input
+                                                        type="text"
+                                                        value={newThemeName}
+                                                        onChange={(e) => setNewThemeName(e.target.value)}
+                                                        placeholder="My Awesome Theme"
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '10px 12px',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid rgba(95, 179, 179, 0.3)',
+                                                            background: 'var(--theme-background, #1e2428)',
+                                                            color: 'var(--theme-text, #c5cdd3)',
+                                                            fontSize: '14px',
+                                                            marginBottom: '16px',
+                                                            boxSizing: 'border-box'
+                                                        }}
+                                                        autoFocus
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') handleSaveCustomTheme();
+                                                            if (e.key === 'Escape') {
+                                                                setSaveThemeModalOpen(false);
+                                                                setNewThemeName('');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSaveThemeModalOpen(false);
+                                                                setNewThemeName('');
+                                                            }}
+                                                            style={{
+                                                                padding: '8px 16px',
+                                                                borderRadius: '6px',
+                                                                border: '1px solid rgba(255,255,255,0.2)',
+                                                                background: 'transparent',
+                                                                color: 'var(--theme-text, #c5cdd3)',
+                                                                cursor: 'pointer',
+                                                                fontSize: '12px'
+                                                            }}
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                        <button
+                                                            onClick={handleSaveCustomTheme}
+                                                            style={{
+                                                                padding: '8px 16px',
+                                                                borderRadius: '6px',
+                                                                border: '1px solid rgba(95, 179, 179, 0.5)',
+                                                                background: 'rgba(95, 179, 179, 0.2)',
+                                                                color: '#5fb3b3',
+                                                                cursor: 'pointer',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600'
+                                                            }}
+                                                        >
+                                                            💾 Save Theme
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

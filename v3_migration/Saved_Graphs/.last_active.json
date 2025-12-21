@@ -1,52 +1,374 @@
 {
   "nodes": [
     {
-      "id": "b5b7f53d156c8bc9",
-      "label": "HA Device Field",
+      "id": "fa941e5a487333cf",
+      "label": "Delay",
       "position": {
-        "x": 203.16206869115518,
-        "y": 212.77177550216496
+        "x": 55.96146522500814,
+        "y": 175.28451812071248
       },
       "data": {
-        "id": "b5b7f53d156c8bc9",
-        "label": "HA Device Field",
+        "id": "fa941e5a487333cf",
+        "label": "Delay",
         "properties": {
-          "deviceId": "ha_sensor.sunshine_terrace_feels_like",
-          "deviceName": "Sunshine terrace  Feels like",
-          "field": "state",
-          "lastValue": "49.1",
-          "filterType": "Sensor",
-          "letterFilter": "STU"
+          "delayMs": 1000,
+          "delayValue": 1,
+          "delayUnit": "seconds",
+          "mode": "delay",
+          "randomPercent": 0,
+          "isActive": false,
+          "countdown": 0,
+          "debug": false
         }
       }
     },
     {
-      "id": "85c8447b58939f84",
-      "label": "HA Device Field",
+      "id": "97300d532d6ab0b2",
+      "label": "Stock Price",
       "position": {
-        "x": 746.1636635493104,
-        "y": 387.90994172497074
+        "x": 1033.7835900132313,
+        "y": 196.92664732241116
       },
       "data": {
-        "id": "85c8447b58939f84",
-        "label": "HA Device Field",
+        "id": "97300d532d6ab0b2",
+        "label": "Stock Price",
         "properties": {
-          "deviceId": "ha_sensor.sunshine_terrace_feels_like",
-          "deviceName": "Sunshine terrace  Feels like",
-          "field": "state",
-          "lastValue": "49.1",
-          "filterType": "Sensor",
-          "letterFilter": "STU"
+          "symbol": "SPY",
+          "refreshInterval": 60,
+          "lastPrice": 680.59,
+          "priceChange": 6.113000000000056,
+          "changePercent": 0.9063318689888694,
+          "isUp": true,
+          "lastUpdate": "8:21:38 AM",
+          "status": "OK",
+          "error": null
+        }
+      }
+    },
+    {
+      "id": "107cb03c25be5311",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": 1412.0987654320986,
+        "y": 98.32098784270107
+      },
+      "data": {
+        "id": "107cb03c25be5311",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 165,
+          "green": 33,
+          "blue": 19,
+          "hueShift": 6,
+          "saturation": 88,
+          "brightness": 165,
+          "colorTemp": 2438,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "color"
+        }
+      }
+    },
+    {
+      "id": "d40ab7e79df022c5",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 474.0570832559647,
+        "y": 128.10298811765375
+      },
+      "data": {
+        "id": "d40ab7e79df022c5",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [],
+          "selectedDeviceNames": [],
+          "status": "Loaded 899 devices",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "All",
+          "triggerMode": "Follow",
+          "customTitle": ""
+        }
+      }
+    },
+    {
+      "id": "80c84fdac9823ce9",
+      "label": "HSV Control",
+      "position": {
+        "x": 494.8564794825838,
+        "y": 877.6512553249474
+      },
+      "data": {
+        "id": "80c84fdac9823ce9",
+        "label": "HSV Control",
+        "properties": {
+          "hueShift": 10,
+          "saturation": 20,
+          "brightness": 128,
+          "transitionTime": 0,
+          "enableCommand": false,
+          "autoTriggerInterval": 5000,
+          "showColorOptions": true,
+          "whiteAdjust": 4000
+        }
+      }
+    },
+    {
+      "id": "42c9b403da397178",
+      "label": "Stepped Color Gradient",
+      "position": {
+        "x": 976.7919569071337,
+        "y": 775.2038933574534
+      },
+      "data": {
+        "inputs": {
+          "value": {
+            "socket": {
+              "name": "number"
+            },
+            "label": "Value",
+            "id": "32243d8241755a05",
+            "control": null,
+            "showControl": true
+          },
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "756811d6de79c09f",
+            "control": null,
+            "showControl": true
+          },
+          "timerDuration": {
+            "socket": {
+              "name": "number"
+            },
+            "label": "Timer Duration",
+            "id": "3f588e1d9a3265d4",
+            "control": null,
+            "showControl": true
+          },
+          "startTime": {
+            "socket": {
+              "name": "string"
+            },
+            "label": "Start Time",
+            "id": "08b4f31ad1120138",
+            "control": null,
+            "showControl": true
+          },
+          "endTime": {
+            "socket": {
+              "name": "string"
+            },
+            "label": "End Time",
+            "id": "08c12f080182a6f5",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "hsvInfo": {
+            "socket": {
+              "name": "hsv_info"
+            },
+            "label": "HSV Info",
+            "multipleConnections": true,
+            "id": "a602adfc4f110135"
+          }
+        },
+        "controls": {},
+        "label": "Stepped Color Gradient",
+        "id": "42c9b403da397178",
+        "width": 460,
+        "height": 680,
+        "properties": {
+          "colorMode": "custom",
+          "predefinedWedge": "warm-to-cool",
+          "directMode": false,
+          "colorBias": 0.5,
+          "fromColor": {
+            "r": 255,
+            "g": 0,
+            "b": 0
+          },
+          "toColor": {
+            "r": 0,
+            "g": 0,
+            "b": 255
+          },
+          "fromBrightness": 254,
+          "toBrightness": 254,
+          "startHue": 0,
+          "startSaturation": 100,
+          "startBrightness": 100,
+          "endHue": 240,
+          "endSaturation": 80,
+          "endBrightness": 90,
+          "rangeMode": "numerical",
+          "startValue": 20,
+          "endValue": 30,
+          "startTimeHours": 10,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 2,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "timeSteps": 60,
+          "useBrightnessOverride": false,
+          "brightnessOverride": 254,
+          "debug": false
+        },
+        "colorMode": "custom",
+        "predefinedWedge": "warm-to-cool",
+        "directMode": false,
+        "colorBias": 0.5,
+        "fromColor": {
+          "r": 255,
+          "g": 0,
+          "b": 0
+        },
+        "toColor": {
+          "r": 0,
+          "g": 0,
+          "b": 255
+        },
+        "fromBrightness": 254,
+        "toBrightness": 254,
+        "startHue": 0,
+        "startSaturation": 100,
+        "startBrightness": 100,
+        "endHue": 240,
+        "endSaturation": 80,
+        "endBrightness": 90,
+        "rangeMode": "numerical",
+        "startValue": 20,
+        "endValue": 30,
+        "startTimeHours": 10,
+        "startTimeMinutes": 0,
+        "startTimePeriod": "AM",
+        "endTimeHours": 2,
+        "endTimeMinutes": 0,
+        "endTimePeriod": "PM",
+        "timerDurationValue": 1,
+        "timerUnit": "hours",
+        "timeSteps": 60,
+        "useBrightnessOverride": false,
+        "brightnessOverride": 254,
+        "debug": false,
+        "timerStart": null,
+        "currentStep": 0,
+        "lastTimeStep": null,
+        "position": 0,
+        "isInRange": false,
+        "lastColor": null,
+        "selected": false
+      }
+    },
+    {
+      "id": "f5be98a696903ad2",
+      "label": "Timeline Color",
+      "position": {
+        "x": 2049.5673788565796,
+        "y": 356.83065642070426
+      },
+      "data": {
+        "id": "f5be98a696903ad2",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "numerical",
+          "startValue": 0,
+          "endValue": 100,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "timerLoopMode": "none",
+          "outputStepInterval": 1000,
+          "colorMode": "rainbow",
+          "colorStops": [
+            {
+              "position": 0,
+              "rgb": {
+                "r": 255,
+                "g": 100,
+                "b": 0
+              }
+            },
+            {
+              "position": 1,
+              "rgb": {
+                "r": 0,
+                "g": 100,
+                "b": 255
+              }
+            }
+          ],
+          "editorWidth": 360,
+          "editorHeight": 180,
+          "showColorEditor": false,
+          "previewMode": false,
+          "previewPosition": 0,
+          "position": 0,
+          "isInRange": false,
+          "outputHue": 0,
+          "outputSaturation": 0.891304347826087,
+          "outputBrightness": 0,
+          "outputRgb": {
+            "r": 0,
+            "g": 0,
+            "b": 0
+          }
         }
       }
     }
   ],
   "connections": [],
   "viewport": {
-    "x": -25.242450714111378,
-    "y": -112.35621099472044,
-    "k": 1.3646368758706253
+    "x": 328.37803192138654,
+    "y": 117.6683525562288,
+    "k": 0.5050555698618752
   },
   "autoSaved": true,
-  "timestamp": 1766328816171
+  "timestamp": 1766334149319
 }
