@@ -1,11 +1,111 @@
 {
-  "nodes": [],
-  "connections": [],
+  "nodes": [
+    {
+      "id": "d978d098816a553f",
+      "label": "HA Device State Output",
+      "position": {
+        "x": 349.92338416097573,
+        "y": 240.47333297369545
+      },
+      "data": {
+        "id": "d978d098816a553f",
+        "label": "HA Device State Output",
+        "properties": {
+          "selectedDeviceId": "person.greg_teegarden",
+          "selectedDeviceName": "greg teegarden",
+          "status": "✅ greg teegarden: home",
+          "debug": false,
+          "haToken": "",
+          "filterType": "Person",
+          "letterFilter": "All Letters"
+        }
+      }
+    },
+    {
+      "id": "550008498f69482b",
+      "label": "HA Device Automation",
+      "position": {
+        "x": 1011.1385476278506,
+        "y": 375.27572045764475
+      },
+      "data": {
+        "id": "550008498f69482b",
+        "label": "HA Device Automation",
+        "properties": {
+          "status": "Fields: state",
+          "debug": false,
+          "lastEntityType": "person",
+          "selectedFields": [
+            "state"
+          ],
+          "lastOutputValues": {
+            "state": false
+          },
+          "lastInputDeviceId": "person.greg_teegarden"
+        }
+      }
+    },
+    {
+      "id": "ecc5e76f701443f3",
+      "label": "Display",
+      "position": {
+        "x": 1009.0637643138732,
+        "y": 700.6891477289699
+      },
+      "data": {
+        "id": "ecc5e76f701443f3",
+        "label": "Display",
+        "width": 492,
+        "height": 601,
+        "properties": {
+          "value": {
+            "lights": [
+              {
+                "light_id": "person.greg_teegarden",
+                "entity_id": "person.greg_teegarden",
+                "name": "greg teegarden",
+                "status": "Off",
+                "state": "home",
+                "entity_type": "person",
+                "entityType": "person",
+                "attributes": {
+                  "zone": "home",
+                  "latitude": null,
+                  "longitude": null,
+                  "is_home": true
+                },
+                "hue": 0,
+                "saturation": 0,
+                "brightness": 0
+              }
+            ],
+            "status": "✅ greg teegarden: home"
+          }
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "338fe40e399b4276",
+      "source": "d978d098816a553f",
+      "target": "550008498f69482b",
+      "sourceOutput": "device_state",
+      "targetInput": "device_state"
+    },
+    {
+      "id": "de78aee5d9306d26",
+      "source": "d978d098816a553f",
+      "target": "ecc5e76f701443f3",
+      "sourceOutput": "device_state",
+      "targetInput": "input"
+    }
+  ],
   "viewport": {
-    "x": 0,
-    "y": 0,
-    "k": 1
+    "x": -139.0384094238281,
+    "y": -235.03706340789785,
+    "k": 0.8221655227352777
   },
   "autoSaved": true,
-  "timestamp": 1766267240473
+  "timestamp": 1766277643128
 }

@@ -308,6 +308,9 @@
                         if (status === "open") return true;
                         if (status === "closed") return false;
                         return status || null;
+                    } else if (entityType === "device_tracker" || entityType === "person") {
+                        // Return the actual zone string ("home", "not_home", "work", etc.)
+                        return device.zone || device.state || null;
                     } else {
                         const status = (device.status || device.state)?.toLowerCase?.();
                         if (status === "on") return true;
@@ -329,6 +332,11 @@
                 case "zone":
                 case "condition":
                     return device[field] !== undefined ? device[field] : device.attributes?.[field] || null;
+                case "is_home":
+                    // For device_tracker/person, return boolean for presence detection
+                    if (device.is_home !== undefined) return device.is_home;
+                    const zone = device.zone || device.state;
+                    return zone?.toLowerCase?.() === "home";
                 case "value":
                     // For sensors, value is the main reading - return as number if possible
                     if (device.value !== undefined) {

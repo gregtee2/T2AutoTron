@@ -53,7 +53,7 @@ class HomeAssistantManager {
       const states = await response.json();
       this.devices = states.filter(s => {
         const domain = s.entity_id.split('.')[0];
-        return ['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather'].includes(domain);
+        return ['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather', 'device_tracker', 'person'].includes(domain);
       });
 
       this.isConnected = true;

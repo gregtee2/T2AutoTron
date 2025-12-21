@@ -13,7 +13,9 @@
         "Media Player": "media_player",
         "Weather": "weather",
         "Fan": "fan",
-        "Cover": "cover"
+        "Cover": "cover",
+        "Device Tracker": "device_tracker",
+        "Person": "person"
     };
 
     // -------------------------------------------------------------------------
@@ -44,7 +46,8 @@
         binary_sensor: ["state", "battery"],
         sensor: ["value", "unit", "temperature", "pressure", "battery_level"],
         weather: ["temperature", "humidity", "condition", "pressure", "wind_speed"],
-        device_tracker: ["state", "zone", "latitude", "longitude"],
+        device_tracker: ["state", "zone", "is_home", "latitude", "longitude"],
+        person: ["state", "zone", "is_home"],
         unknown: ["state"]
     };
 

@@ -91,7 +91,7 @@
         setupControls() {
             this.addControl("filter_type", new DropdownControl(
                 "Filter Devices",
-                ["All", "Light", "Switch", "Sensor", "Binary Sensor", "Media Player", "Fan", "Cover", "Weather"],
+                ["All", "Light", "Switch", "Sensor", "Binary Sensor", "Media Player", "Fan", "Cover", "Weather", "Device Tracker", "Person"],
                 "All",
                 (v) => { 
                     this.properties.filterType = v;
@@ -183,7 +183,7 @@
                 
                 if (data.success && data.devices) {
                     this.devices = data.devices
-                        .filter(d => ["light", "switch", "binary_sensor", "sensor", "media_player", "weather", "fan", "cover"].includes(d.type))
+                        .filter(d => ["light", "switch", "binary_sensor", "sensor", "media_player", "weather", "fan", "cover", "device_tracker", "person"].includes(d.type))
                         .map(d => {
                             const entityType = d.type;
                             let state = "unknown", attributes = {};
@@ -217,6 +217,16 @@
                                 case "cover":
                                     state = d.state.on ? "open" : "closed";
                                     attributes = { position: d.state.position || 0 };
+                                    break;
+                                case "device_tracker":
+                                case "person":
+                                    // State is typically "home", "not_home", or a zone name
+                                    state = d.state.state || "unknown";
+                                    attributes = { 
+                                        zone: d.state.state || "unknown",
+                                        latitude: d.state.latitude || null,
+                                        longitude: d.state.longitude || null
+                                    };
                                     break;
                             }
                             
@@ -375,6 +385,18 @@
                             stateValue = data.state.on ? "open" : "closed";
                             attributes = { position: data.state.position || 0 };
                             break;
+                        case "device_tracker":
+                        case "person":
+                            // State is typically "home", "not_home", or a zone name
+                            stateValue = data.state.state || data.state || "unknown";
+                            attributes = { 
+                                zone: data.state.state || data.state || "unknown",
+                                latitude: data.state.latitude || null,
+                                longitude: data.state.longitude || null,
+                                // For automations: is_home is true when state is "home"
+                                is_home: (data.state.state || data.state) === "home"
+                            };
+                            break;
                         case "light":
                         case "switch":
                         default:
@@ -404,16 +426,36 @@
             if (deviceId !== this.properties.selectedDeviceId) return;
             
             const entityType = deviceId.split(".")[0];
-            this.perDeviceState[deviceId] = {
-                state: entityType === "sensor" ? data.value || data.state || "unknown"
-                    : entityType === "binary_sensor" ? (data.on || data.state === "on" ? "on" : "off")
-                    : entityType === "media_player" ? data.state || "off"
-                    : (data.on || data.state === "on" ? "on" : "off"),
-                attributes: entityType === "sensor" ? { unit: data.unit || "" }
-                    : entityType === "binary_sensor" ? { battery: data.battery_level || "unknown" }
-                    : entityType === "media_player" ? { volume_level: data.volume_level || 0, source: data.source || null }
-                    : { brightness: data.brightness || 0, hs_color: data.hs_color || [0, 0] }
-            };
+            let stateValue, attributes;
+            
+            switch (entityType) {
+                case "sensor":
+                    stateValue = data.value || data.state || "unknown";
+                    attributes = { unit: data.unit || "" };
+                    break;
+                case "binary_sensor":
+                    stateValue = data.on || data.state === "on" ? "on" : "off";
+                    attributes = { battery: data.battery_level || "unknown" };
+                    break;
+                case "media_player":
+                    stateValue = data.state || "off";
+                    attributes = { volume_level: data.volume_level || 0, source: data.source || null };
+                    break;
+                case "device_tracker":
+                case "person":
+                    // State is typically "home", "not_home", or a zone name
+                    stateValue = data.state || "unknown";
+                    attributes = { 
+                        zone: data.state || "unknown",
+                        is_home: data.state === "home"
+                    };
+                    break;
+                default:
+                    stateValue = data.on || data.state === "on" ? "on" : "off";
+                    attributes = { brightness: data.brightness || 0, hs_color: data.hs_color || [0, 0] };
+            }
+            
+            this.perDeviceState[deviceId] = { state: stateValue, attributes };
             
             this.properties.status = `✅ ${this.properties.selectedDeviceName}: ${this.perDeviceState[deviceId].state}`;
             if (this.changeCallback) this.changeCallback();
@@ -443,6 +485,9 @@
                 statusText = state.state === "on" ? "Open" : "Closed";
             } else if (entityType === "cover") {
                 statusText = state.state === "open" ? "On" : "Off";
+            } else if (entityType === "device_tracker" || entityType === "person") {
+                // For device_tracker/person, state is a zone name like "home", "not_home", "work"
+                statusText = state.state === "home" ? "Home" : state.state || "Away";
             } else {
                 statusText = state.state === "on" ? "On" : "Off";
             }
@@ -479,6 +524,12 @@
                 deviceData.status = state.state === "on" ? "Open" : "Closed";
             } else if (entityType === "weather") {
                 deviceData.temperature = deviceData.attributes.temperature || null;
+            } else if (entityType === "device_tracker" || entityType === "person") {
+                // Zone/presence data
+                deviceData.zone = state.state || "unknown";
+                deviceData.is_home = state.state === "home";
+                deviceData.latitude = deviceData.attributes.latitude || null;
+                deviceData.longitude = deviceData.attributes.longitude || null;
             }
 
             const outputData = { lights: [deviceData], status: this.properties.status };
