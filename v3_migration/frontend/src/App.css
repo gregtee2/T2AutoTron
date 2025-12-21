@@ -1,3 +1,30 @@
+/* ============================================================================
+   CSS VARIABLES - Theme system
+   These are updated dynamically when themes are applied
+   ============================================================================ */
+:root {
+  /* Theme colors - defaults (Tron theme) */
+  --theme-primary: #5fb3b3;
+  --theme-primary-rgb: 95, 179, 179;
+  --theme-background: #1e2428;
+  --theme-background-rgb: 30, 36, 40;
+  --theme-surface: #2a3238;
+  --theme-surface-rgb: 42, 50, 56;
+  --theme-surfaceLight: #343d44;
+  --theme-surfaceLight-rgb: 52, 61, 68;
+  --theme-text: #c5cdd3;
+  --theme-text-rgb: 197, 205, 211;
+  --theme-textMuted: #8a959e;
+  --theme-textMuted-rgb: 138, 149, 158;
+  --theme-success: #5faa7d;
+  --theme-success-rgb: 95, 170, 125;
+  --theme-warning: #d4a054;
+  --theme-warning-rgb: 212, 160, 84;
+  --theme-error: #c75f5f;
+  --theme-error-rgb: 199, 95, 95;
+  --node-border-opacity: 0.25;
+}
+
 #root {
   margin: 0;
   padding: 0;
@@ -24,7 +51,7 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: #1e1e1e;
+  background-color: var(--theme-background, #1e1e1e);
   /* Dark background for editor */
 }
 
@@ -47,7 +74,7 @@ body {
    ============================================ */
 .resize-handle {
   height: 6px;
-  background: linear-gradient(180deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.2));
+  background: linear-gradient(180deg, rgba(var(--theme-primary-rgb), 0.1), rgba(var(--theme-primary-rgb), 0.2));
   cursor: ns-resize;
   display: flex;
   align-items: center;
@@ -56,18 +83,18 @@ body {
 }
 
 .resize-handle:hover {
-  background: linear-gradient(180deg, rgba(0, 243, 255, 0.2), rgba(0, 243, 255, 0.4));
+  background: linear-gradient(180deg, rgba(var(--theme-primary-rgb), 0.2), rgba(var(--theme-primary-rgb), 0.4));
 }
 
 .resize-handle-grip {
   width: 40px;
   height: 3px;
-  background: rgba(0, 243, 255, 0.5);
+  background: rgba(var(--theme-primary-rgb), 0.5);
   border-radius: 2px;
 }
 
 .resize-handle:hover .resize-handle-grip {
-  background: rgba(0, 243, 255, 0.8);
+  background: rgba(var(--theme-primary-rgb), 0.8);
 }
 
 /* ============================================
@@ -78,7 +105,7 @@ body {
   min-height: 80px;
   max-height: 400px;
   background: rgba(10, 15, 25, 0.95);
-  border-top: 1px solid #00f3ff;
+  border-top: 1px solid var(--theme-primary);
   z-index: 100;
   width: 100%;
   overflow-x: auto;
@@ -90,7 +117,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-right: 1px solid rgba(0, 243, 255, 0.3);
+  border-right: 1px solid rgba(var(--theme-primary-rgb), 0.3);
 }
 
 .panel:last-child {
@@ -102,12 +129,12 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(0, 150, 200, 0.1));
-  border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+  background: linear-gradient(135deg, rgba(var(--theme-primary-rgb), 0.15), rgba(var(--theme-primary-rgb), 0.1));
+  border-bottom: 1px solid rgba(var(--theme-primary-rgb), 0.3);
 }
 
 .panel-title {
-  color: #00f3ff;
+  color: var(--theme-primary);
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;

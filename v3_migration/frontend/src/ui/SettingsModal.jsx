@@ -4,6 +4,108 @@ import './SettingsModal.css';
 import { DiscoveryPanel } from './DiscoveryPanel';
 import { authFetch, clearStoredPin, getPinRememberPreference, getStoredPin, setStoredPin } from '../auth/authClient';
 
+// =============================================================================
+// THEME PRESETS - Full UI themes that apply instantly
+// =============================================================================
+const THEME_PRESETS = {
+    tron: {
+        name: 'Tron (Default)',
+        description: 'Cyan neon on dark - the classic T2 look',
+        colors: {
+            primary: '#5fb3b3',
+            background: '#1e2428',
+            surface: '#2a3238',
+            surfaceLight: '#343d44',
+            text: '#c5cdd3',
+            textMuted: '#8a959e',
+            success: '#5faa7d',
+            warning: '#d4a054',
+            error: '#c75f5f',
+            borderOpacity: 25
+        }
+    },
+    midnight: {
+        name: 'Midnight Purple',
+        description: 'Deep purple with pink accents',
+        colors: {
+            primary: '#b388ff',
+            background: '#1a1a2e',
+            surface: '#25253a',
+            surfaceLight: '#32324a',
+            text: '#e0d6ff',
+            textMuted: '#9990b8',
+            success: '#69f0ae',
+            warning: '#ffab40',
+            error: '#ff5252',
+            borderOpacity: 30
+        }
+    },
+    forest: {
+        name: 'Forest',
+        description: 'Natural greens with earth tones',
+        colors: {
+            primary: '#81c784',
+            background: '#1b2420',
+            surface: '#263530',
+            surfaceLight: '#324540',
+            text: '#d5e8d4',
+            textMuted: '#8aa888',
+            success: '#4caf50',
+            warning: '#ffb74d',
+            error: '#e57373',
+            borderOpacity: 25
+        }
+    },
+    ember: {
+        name: 'Ember',
+        description: 'Warm orange and red firelight',
+        colors: {
+            primary: '#ff7043',
+            background: '#1f1510',
+            surface: '#2d2018',
+            surfaceLight: '#3d2d22',
+            text: '#ffe0cc',
+            textMuted: '#b08060',
+            success: '#aed581',
+            warning: '#ffc107',
+            error: '#ff5722',
+            borderOpacity: 30
+        }
+    },
+    arctic: {
+        name: 'Arctic',
+        description: 'Cool blues with icy highlights',
+        colors: {
+            primary: '#4fc3f7',
+            background: '#0d1b2a',
+            surface: '#1b2838',
+            surfaceLight: '#283848',
+            text: '#e3f2fd',
+            textMuted: '#78a5c8',
+            success: '#26a69a',
+            warning: '#ffca28',
+            error: '#ef5350',
+            borderOpacity: 25
+        }
+    },
+    monochrome: {
+        name: 'Monochrome',
+        description: 'Clean grayscale - easy on the eyes',
+        colors: {
+            primary: '#90a4ae',
+            background: '#1a1a1a',
+            surface: '#252525',
+            surfaceLight: '#333333',
+            text: '#e0e0e0',
+            textMuted: '#888888',
+            success: '#a5d6a7',
+            warning: '#ffe082',
+            error: '#ef9a9a',
+            borderOpacity: 20
+        }
+    }
+};
+
 // Theme settings configuration (stored in localStorage, not server)
 const THEME_SETTINGS = [
     { key: 'primary', label: 'Primary Accent Color', type: 'color', default: '#5fb3b3' },
@@ -153,6 +255,15 @@ export function SettingsModal({ isOpen, onClose }) {
         }
     });
     const [themeChanged, setThemeChanged] = useState(false);
+    
+    // Active theme preset (detected from current settings or explicitly set)
+    const [activePreset, setActivePreset] = useState(() => {
+        try {
+            return localStorage.getItem('t2theme-preset') || 'tron';
+        } catch {
+            return 'tron';
+        }
+    });
     
     // Category theme settings state
     const DEFAULT_CATEGORY_THEMES = {
@@ -547,11 +658,58 @@ export function SettingsModal({ isOpen, onClose }) {
     const handleThemeChange = (key, value) => {
         setThemeSettings(prev => ({ ...prev, [key]: value }));
         setThemeChanged(true);
+        setActivePreset('custom'); // User is customizing
+    };
+    
+    // Apply a theme preset instantly (no refresh needed)
+    const applyThemePreset = (presetKey) => {
+        const preset = THEME_PRESETS[presetKey];
+        if (!preset) return;
+        
+        const root = document.documentElement;
+        
+        // Apply each color as a CSS variable
+        Object.entries(preset.colors).forEach(([key, value]) => {
+            if (key === 'borderOpacity') {
+                root.style.setProperty('--node-border-opacity', value / 100);
+            } else {
+                // Set the main color
+                root.style.setProperty(`--theme-${key}`, value);
+                
+                // Also set RGB version for rgba() usage
+                const hex = value;
+                if (hex.startsWith('#')) {
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    root.style.setProperty(`--theme-${key}-rgb`, `${r}, ${g}, ${b}`);
+                }
+            }
+        });
+        
+        // Update shared controls THEME if available
+        if (window.T2Controls?.THEME) {
+            Object.assign(window.T2Controls.THEME, preset.colors);
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('t2theme-preset', presetKey);
+        localStorage.setItem('t2theme-overrides', JSON.stringify(preset.colors));
+        
+        // Update state
+        setThemeSettings(preset.colors);
+        setActivePreset(presetKey);
+        setThemeChanged(false);
+        
+        setSuccess(`Theme "${preset.name}" applied!`);
+        setTimeout(() => setSuccess(null), 3000);
     };
     
     const handleApplyTheme = () => {
         try {
             localStorage.setItem('t2theme-overrides', JSON.stringify(themeSettings));
+            localStorage.setItem('t2theme-preset', 'custom');
+            setActivePreset('custom');
             setSuccess('Theme saved! Refresh the page to apply changes.');
             setThemeChanged(false);
             setTimeout(() => setSuccess(null), 5000);
@@ -561,11 +719,10 @@ export function SettingsModal({ isOpen, onClose }) {
     };
     
     const handleResetTheme = () => {
-        const defaults = {};
-        THEME_SETTINGS.forEach(s => { defaults[s.key] = s.default; });
-        setThemeSettings(defaults);
+        // Reset to Tron (default) preset
+        applyThemePreset('tron');
         localStorage.removeItem('t2theme-overrides');
-        setSuccess('Theme reset to defaults! Refresh the page to apply.');
+        localStorage.removeItem('t2theme-preset');
         setThemeChanged(false);
         setTimeout(() => setSuccess(null), 5000);
     };
@@ -1158,6 +1315,67 @@ export function SettingsModal({ isOpen, onClose }) {
                                 
                                 {expandedCategories['Theme'] && (
                                     <div className="settings-category-content">
+                                        {/* Theme Presets Dropdown */}
+                                        <div style={{ 
+                                            marginBottom: '16px',
+                                            padding: '12px',
+                                            background: 'rgba(95, 179, 179, 0.08)',
+                                            borderRadius: '8px',
+                                            border: '1px solid rgba(95, 179, 179, 0.2)'
+                                        }}>
+                                            <label className="settings-label" style={{ fontSize: '12px', marginBottom: '8px', display: 'block' }}>
+                                                🎭 Theme Presets
+                                            </label>
+                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                {Object.entries(THEME_PRESETS).map(([key, preset]) => (
+                                                    <button
+                                                        key={key}
+                                                        onClick={() => applyThemePreset(key)}
+                                                        style={{
+                                                            padding: '8px 14px',
+                                                            borderRadius: '6px',
+                                                            border: activePreset === key 
+                                                                ? `2px solid ${preset.colors.primary}` 
+                                                                : '1px solid rgba(255,255,255,0.2)',
+                                                            background: activePreset === key 
+                                                                ? `linear-gradient(135deg, ${preset.colors.surface}, ${preset.colors.background})`
+                                                                : preset.colors.surface,
+                                                            color: preset.colors.text,
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            fontSize: '11px',
+                                                            fontWeight: activePreset === key ? '600' : '400',
+                                                            boxShadow: activePreset === key 
+                                                                ? `0 0 12px ${preset.colors.primary}40`
+                                                                : 'none'
+                                                        }}
+                                                        title={preset.description}
+                                                    >
+                                                        <span style={{ 
+                                                            display: 'inline-block',
+                                                            width: '10px',
+                                                            height: '10px',
+                                                            borderRadius: '50%',
+                                                            background: preset.colors.primary,
+                                                            marginRight: '6px',
+                                                            boxShadow: `0 0 6px ${preset.colors.primary}`
+                                                        }} />
+                                                        {preset.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <div style={{ 
+                                                marginTop: '8px', 
+                                                fontSize: '10px', 
+                                                color: '#8a959e',
+                                                fontStyle: 'italic'
+                                            }}>
+                                                {activePreset !== 'custom' && THEME_PRESETS[activePreset] 
+                                                    ? THEME_PRESETS[activePreset].description 
+                                                    : 'Custom theme - you\'ve modified individual colors'}
+                                            </div>
+                                        </div>
+                                        
                                         <div className="settings-info" style={{ 
                                             fontSize: '11px', 
                                             color: '#8a959e', 
@@ -1166,7 +1384,7 @@ export function SettingsModal({ isOpen, onClose }) {
                                             background: 'rgba(95, 179, 179, 0.1)',
                                             borderRadius: '4px'
                                         }}>
-                                            💡 Theme settings are stored locally. Refresh the page after saving to apply changes.
+                                            💡 Click a preset to apply instantly, or customize individual colors below.
                                         </div>
                                         
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

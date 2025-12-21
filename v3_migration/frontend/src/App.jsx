@@ -146,10 +146,41 @@ const applySocketColorsFromStorage = () => {
 // Apply on module load (before React renders)
 applyCategoryColorsFromStorage();
 applySocketColorsFromStorage();
+applyThemeFromStorage();
+
+// Apply theme preset or custom theme from storage
+function applyThemeFromStorage() {
+  const hexToRgb = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r}, ${g}, ${b}`;
+  };
+  
+  try {
+    const stored = localStorage.getItem('t2theme-overrides');
+    if (stored) {
+      const colors = JSON.parse(stored);
+      const root = document.documentElement;
+      
+      Object.entries(colors).forEach(([key, value]) => {
+        if (key === 'borderOpacity') {
+          root.style.setProperty('--node-border-opacity', value / 100);
+        } else if (typeof value === 'string' && value.startsWith('#')) {
+          root.style.setProperty(`--theme-${key}`, value);
+          root.style.setProperty(`--theme-${key}-rgb`, hexToRgb(value));
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('Failed to apply stored theme:', err);
+  }
+}
 
 // Expose for Settings modal to call after saving
 window.applyCategoryColors = applyCategoryColorsFromStorage;
 window.applySocketColors = applySocketColorsFromStorage;
+window.applyTheme = applyThemeFromStorage;
 
 // Track commands sent by nodes (to distinguish app-triggered vs HA-triggered changes)
 const pendingCommands = new Map(); // deviceId -> { nodeTitle, action, timestamp }
