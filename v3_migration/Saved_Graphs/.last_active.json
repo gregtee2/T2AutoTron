@@ -1,14 +1,14 @@
 {
   "nodes": [
     {
-      "id": "d978d098816a553f",
+      "id": "2ae817c4d4a3ef84",
       "label": "HA Device State Output",
       "position": {
-        "x": 349.92338416097573,
-        "y": 240.47333297369545
+        "x": 663.5422408531817,
+        "y": 344.2197752768608
       },
       "data": {
-        "id": "d978d098816a553f",
+        "id": "2ae817c4d4a3ef84",
         "label": "HA Device State Output",
         "properties": {
           "selectedDeviceId": "person.greg_teegarden",
@@ -22,14 +22,14 @@
       }
     },
     {
-      "id": "550008498f69482b",
+      "id": "f094ab3ac7a6efbe",
       "label": "HA Device Automation",
       "position": {
-        "x": 1011.1385476278506,
-        "y": 375.27572045764475
+        "x": 1195.2906510394764,
+        "y": 429.2234575012049
       },
       "data": {
-        "id": "550008498f69482b",
+        "id": "f094ab3ac7a6efbe",
         "label": "HA Device Automation",
         "properties": {
           "status": "Fields: state",
@@ -39,73 +39,100 @@
             "state"
           ],
           "lastOutputValues": {
-            "state": false
+            "state": "home",
+            "zone": "home",
+            "is_home": true
           },
           "lastInputDeviceId": "person.greg_teegarden"
         }
       }
     },
     {
-      "id": "ecc5e76f701443f3",
-      "label": "Display",
+      "id": "31ca580205bcdab9",
+      "label": "Comparison",
       "position": {
-        "x": 1009.0637643138732,
-        "y": 700.6891477289699
+        "x": 1511.0339667156804,
+        "y": 765.1747145484347
       },
       "data": {
-        "id": "ecc5e76f701443f3",
-        "label": "Display",
-        "width": 492,
-        "height": 601,
+        "id": "31ca580205bcdab9",
+        "label": "Comparison",
         "properties": {
-          "value": {
-            "lights": [
-              {
-                "light_id": "person.greg_teegarden",
-                "entity_id": "person.greg_teegarden",
-                "name": "greg teegarden",
-                "status": "Off",
-                "state": "home",
-                "entity_type": "person",
-                "entityType": "person",
-                "attributes": {
-                  "zone": "home",
-                  "latitude": null,
-                  "longitude": null,
-                  "is_home": true
-                },
-                "hue": 0,
-                "saturation": 0,
-                "brightness": 0
-              }
-            ],
-            "status": "✅ greg teegarden: home"
-          }
+          "operator": "=",
+          "compareValue": "home"
+        }
+      }
+    },
+    {
+      "id": "947358311b8afcfe",
+      "label": "Display",
+      "position": {
+        "x": 1813.6235243851238,
+        "y": 642.1620766821649
+      },
+      "data": {
+        "id": "947358311b8afcfe",
+        "label": "Display",
+        "width": 262,
+        "height": 223,
+        "properties": {
+          "value": "home"
+        }
+      }
+    },
+    {
+      "id": "7735d6e71bd2a861",
+      "label": "Display",
+      "position": {
+        "x": 1836.8740421392215,
+        "y": 906.4856751139861
+      },
+      "data": {
+        "id": "7735d6e71bd2a861",
+        "label": "Display",
+        "width": 200,
+        "height": 150,
+        "properties": {
+          "value": false
         }
       }
     }
   ],
   "connections": [
     {
-      "id": "338fe40e399b4276",
-      "source": "d978d098816a553f",
-      "target": "550008498f69482b",
+      "id": "ecc71009b9a0b838",
+      "source": "2ae817c4d4a3ef84",
+      "target": "f094ab3ac7a6efbe",
       "sourceOutput": "device_state",
       "targetInput": "device_state"
     },
     {
-      "id": "de78aee5d9306d26",
-      "source": "d978d098816a553f",
-      "target": "ecc5e76f701443f3",
-      "sourceOutput": "device_state",
+      "id": "a2b5a9011b9ea765",
+      "source": "f094ab3ac7a6efbe",
+      "target": "31ca580205bcdab9",
+      "sourceOutput": "out_is_home",
+      "targetInput": "in"
+    },
+    {
+      "id": "ac266d99c78c175c",
+      "source": "f094ab3ac7a6efbe",
+      "target": "947358311b8afcfe",
+      "sourceOutput": "out_state",
+      "targetInput": "input"
+    },
+    {
+      "id": "ca21e1f399c2722f",
+      "source": "31ca580205bcdab9",
+      "target": "7735d6e71bd2a861",
+      "sourceOutput": "result",
       "targetInput": "input"
     }
   ],
   "viewport": {
-    "x": -139.0384094238281,
-    "y": -235.03706340789785,
-    "k": 0.8221655227352777
+    "x": -378.3048194885255,
+    "y": -225.84238967895521,
+    "k": 0.9463386054844009
   },
   "autoSaved": true,
-  "timestamp": 1766277643128
+  "timestamp": 1766278056391
 }

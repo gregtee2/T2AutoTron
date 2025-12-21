@@ -69,13 +69,19 @@
                 "Operator", 
                 ["=", "<", ">", "<=", ">=", "!="], 
                 "=", 
-                (val) => { this.properties.operator = val; }
+                (val) => { 
+                    this.properties.operator = val; 
+                    if (this.changeCallback) this.changeCallback();
+                }
             ));
 
             this.addControl("value", new InputControl(
                 "Compare Value", 
                 "", 
-                (val) => { this.properties.compareValue = val; }
+                (val) => { 
+                    this.properties.compareValue = val; 
+                    if (this.changeCallback) this.changeCallback();
+                }
             ));
         }
 
