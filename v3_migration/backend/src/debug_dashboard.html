@@ -1543,8 +1543,9 @@
             });
             
             // Check for COLOR mismatch (engine sending one color, light showing different color)
+            // ONLY flag if the light is actually ON - if light is OFF, HSV commands are harmless/ignored
             comparison.forEach(item => {
-                if (item.expectedHsv && item.actualHsColor) {
+                if (item.expectedHsv && item.actualHsColor && item.actualState === 'on') {
                     // expectedHsv is { hue: 0-1, saturation: 0-1, brightness: 0-254 }
                     // actualHsColor is [hue: 0-360, saturation: 0-100]
                     const expectedHue = Math.round((item.expectedHsv.hue || 0) * 360);

@@ -1,0 +1,2139 @@
+{
+  "exportTime": "2025-12-21T12:56:54.443Z",
+  "hoursWindow": 1,
+  "eventCount": 164,
+  "events": [
+    {
+      "time": "2025-12-20T19:35:00.946Z",
+      "timeLocal": "12/20/2025, 11:35:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:35:01.011Z",
+      "timeLocal": "12/20/2025, 11:35:01 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:35:01.011Z",
+      "timeLocal": "12/20/2025, 11:35:01 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:35:01.126Z",
+      "timeLocal": "12/20/2025, 11:35:01 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:35:19.568Z",
+      "timeLocal": "12/20/2025, 11:35:19 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:35:19.701Z",
+      "timeLocal": "12/20/2025, 11:35:19 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:37:19.701Z",
+      "timeLocal": "12/20/2025, 11:37:19 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:37:19.854Z",
+      "timeLocal": "12/20/2025, 11:37:19 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:38:00.351Z",
+      "timeLocal": "12/20/2025, 11:38:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:38:00.419Z",
+      "timeLocal": "12/20/2025, 11:38:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:38:00.420Z",
+      "timeLocal": "12/20/2025, 11:38:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:38:00.531Z",
+      "timeLocal": "12/20/2025, 11:38:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:38:19.770Z",
+      "timeLocal": "12/20/2025, 11:38:19 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:38:19.920Z",
+      "timeLocal": "12/20/2025, 11:38:19 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:39:19.835Z",
+      "timeLocal": "12/20/2025, 11:39:19 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:39:19.981Z",
+      "timeLocal": "12/20/2025, 11:39:19 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:41:00.642Z",
+      "timeLocal": "12/20/2025, 11:41:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:41:00.724Z",
+      "timeLocal": "12/20/2025, 11:41:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:41:00.724Z",
+      "timeLocal": "12/20/2025, 11:41:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:41:00.822Z",
+      "timeLocal": "12/20/2025, 11:41:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:41:24.973Z",
+      "timeLocal": "12/20/2025, 11:41:24 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:41:25.619Z",
+      "timeLocal": "12/20/2025, 11:41:25 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:43:00.075Z",
+      "timeLocal": "12/20/2025, 11:43:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:43:00.133Z",
+      "timeLocal": "12/20/2025, 11:43:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:43:00.133Z",
+      "timeLocal": "12/20/2025, 11:43:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:43:00.221Z",
+      "timeLocal": "12/20/2025, 11:43:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:44:25.178Z",
+      "timeLocal": "12/20/2025, 11:44:25 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:44:25.824Z",
+      "timeLocal": "12/20/2025, 11:44:25 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:45:30.255Z",
+      "timeLocal": "12/20/2025, 11:45:30 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:45:30.427Z",
+      "timeLocal": "12/20/2025, 11:45:30 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:46:00.789Z",
+      "timeLocal": "12/20/2025, 11:46:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:46:00.845Z",
+      "timeLocal": "12/20/2025, 11:46:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:46:00.845Z",
+      "timeLocal": "12/20/2025, 11:46:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:46:00.935Z",
+      "timeLocal": "12/20/2025, 11:46:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:47:00.957Z",
+      "timeLocal": "12/20/2025, 11:47:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:47:01.021Z",
+      "timeLocal": "12/20/2025, 11:47:01 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:47:01.021Z",
+      "timeLocal": "12/20/2025, 11:47:01 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:47:01.143Z",
+      "timeLocal": "12/20/2025, 11:47:01 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:48:00.128Z",
+      "timeLocal": "12/20/2025, 11:48:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:48:00.180Z",
+      "timeLocal": "12/20/2025, 11:48:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:48:00.181Z",
+      "timeLocal": "12/20/2025, 11:48:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:48:00.270Z",
+      "timeLocal": "12/20/2025, 11:48:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:49:00.210Z",
+      "timeLocal": "12/20/2025, 11:49:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:49:00.259Z",
+      "timeLocal": "12/20/2025, 11:49:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:49:00.260Z",
+      "timeLocal": "12/20/2025, 11:49:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:49:00.354Z",
+      "timeLocal": "12/20/2025, 11:49:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:49:30.638Z",
+      "timeLocal": "12/20/2025, 11:49:30 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:49:30.790Z",
+      "timeLocal": "12/20/2025, 11:49:30 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:50:30.712Z",
+      "timeLocal": "12/20/2025, 11:50:30 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:50:30.871Z",
+      "timeLocal": "12/20/2025, 11:50:30 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:52:00.525Z",
+      "timeLocal": "12/20/2025, 11:52:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:52:00.584Z",
+      "timeLocal": "12/20/2025, 11:52:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:52:00.584Z",
+      "timeLocal": "12/20/2025, 11:52:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:52:00.691Z",
+      "timeLocal": "12/20/2025, 11:52:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:53:35.928Z",
+      "timeLocal": "12/20/2025, 11:53:35 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:53:36.095Z",
+      "timeLocal": "12/20/2025, 11:53:36 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:54:00.051Z",
+      "timeLocal": "12/20/2025, 11:54:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:54:00.120Z",
+      "timeLocal": "12/20/2025, 11:54:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:54:00.120Z",
+      "timeLocal": "12/20/2025, 11:54:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:54:00.267Z",
+      "timeLocal": "12/20/2025, 11:54:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:55:36.059Z",
+      "timeLocal": "12/20/2025, 11:55:36 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:55:36.215Z",
+      "timeLocal": "12/20/2025, 11:55:36 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:56:41.128Z",
+      "timeLocal": "12/20/2025, 11:56:41 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:56:41.295Z",
+      "timeLocal": "12/20/2025, 11:56:41 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:57:00.046Z",
+      "timeLocal": "12/20/2025, 11:57:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:57:00.101Z",
+      "timeLocal": "12/20/2025, 11:57:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:57:00.101Z",
+      "timeLocal": "12/20/2025, 11:57:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:57:00.194Z",
+      "timeLocal": "12/20/2025, 11:57:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T19:57:41.207Z",
+      "timeLocal": "12/20/2025, 11:57:41 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:57:41.365Z",
+      "timeLocal": "12/20/2025, 11:57:41 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T19:59:00.196Z",
+      "timeLocal": "12/20/2025, 11:59:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:59:00.263Z",
+      "timeLocal": "12/20/2025, 11:59:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T19:59:00.263Z",
+      "timeLocal": "12/20/2025, 11:59:00 AM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T19:59:00.387Z",
+      "timeLocal": "12/20/2025, 11:59:00 AM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:00:00.072Z",
+      "timeLocal": "12/20/2025, 12:00:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:00:00.122Z",
+      "timeLocal": "12/20/2025, 12:00:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:00:00.122Z",
+      "timeLocal": "12/20/2025, 12:00:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:00:00.205Z",
+      "timeLocal": "12/20/2025, 12:00:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:00:41.413Z",
+      "timeLocal": "12/20/2025, 12:00:41 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:00:41.568Z",
+      "timeLocal": "12/20/2025, 12:00:41 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:01:46.492Z",
+      "timeLocal": "12/20/2025, 12:01:46 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:01:46.700Z",
+      "timeLocal": "12/20/2025, 12:01:46 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:03:00.075Z",
+      "timeLocal": "12/20/2025, 12:03:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:03:00.163Z",
+      "timeLocal": "12/20/2025, 12:03:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:03:00.163Z",
+      "timeLocal": "12/20/2025, 12:03:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:03:00.247Z",
+      "timeLocal": "12/20/2025, 12:03:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:03:46.640Z",
+      "timeLocal": "12/20/2025, 12:03:46 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:03:46.805Z",
+      "timeLocal": "12/20/2025, 12:03:46 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:05:00.028Z",
+      "timeLocal": "12/20/2025, 12:05:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:05:00.082Z",
+      "timeLocal": "12/20/2025, 12:05:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:05:00.082Z",
+      "timeLocal": "12/20/2025, 12:05:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:05:00.170Z",
+      "timeLocal": "12/20/2025, 12:05:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:05:46.784Z",
+      "timeLocal": "12/20/2025, 12:05:46 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:05:46.934Z",
+      "timeLocal": "12/20/2025, 12:05:46 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:08:00.039Z",
+      "timeLocal": "12/20/2025, 12:08:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:08:00.096Z",
+      "timeLocal": "12/20/2025, 12:08:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:08:00.096Z",
+      "timeLocal": "12/20/2025, 12:08:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:08:00.187Z",
+      "timeLocal": "12/20/2025, 12:08:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:09:52.076Z",
+      "timeLocal": "12/20/2025, 12:09:52 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:09:52.248Z",
+      "timeLocal": "12/20/2025, 12:09:52 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:10:52.152Z",
+      "timeLocal": "12/20/2025, 12:10:52 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:10:52.307Z",
+      "timeLocal": "12/20/2025, 12:10:52 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:11:00.062Z",
+      "timeLocal": "12/20/2025, 12:11:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:11:00.125Z",
+      "timeLocal": "12/20/2025, 12:11:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:11:00.125Z",
+      "timeLocal": "12/20/2025, 12:11:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:11:00.238Z",
+      "timeLocal": "12/20/2025, 12:11:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:12:57.108Z",
+      "timeLocal": "12/20/2025, 12:12:57 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:12:57.292Z",
+      "timeLocal": "12/20/2025, 12:12:57 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:14:00.066Z",
+      "timeLocal": "12/20/2025, 12:14:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:14:00.113Z",
+      "timeLocal": "12/20/2025, 12:14:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:14:00.113Z",
+      "timeLocal": "12/20/2025, 12:14:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:14:00.206Z",
+      "timeLocal": "12/20/2025, 12:14:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:15:00.140Z",
+      "timeLocal": "12/20/2025, 12:15:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:15:00.187Z",
+      "timeLocal": "12/20/2025, 12:15:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:15:00.187Z",
+      "timeLocal": "12/20/2025, 12:15:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:15:00.276Z",
+      "timeLocal": "12/20/2025, 12:15:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:17:00.079Z",
+      "timeLocal": "12/20/2025, 12:17:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:17:00.137Z",
+      "timeLocal": "12/20/2025, 12:17:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:17:00.137Z",
+      "timeLocal": "12/20/2025, 12:17:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:17:00.222Z",
+      "timeLocal": "12/20/2025, 12:17:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:19:00.009Z",
+      "timeLocal": "12/20/2025, 12:19:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:19:00.159Z",
+      "timeLocal": "12/20/2025, 12:19:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:19:00.159Z",
+      "timeLocal": "12/20/2025, 12:19:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:19:00.255Z",
+      "timeLocal": "12/20/2025, 12:19:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:19:02.613Z",
+      "timeLocal": "12/20/2025, 12:19:02 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:19:02.672Z",
+      "timeLocal": "12/20/2025, 12:19:02 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:20:02.688Z",
+      "timeLocal": "12/20/2025, 12:20:02 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:20:02.742Z",
+      "timeLocal": "12/20/2025, 12:20:02 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:21:02.751Z",
+      "timeLocal": "12/20/2025, 12:21:02 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:21:02.807Z",
+      "timeLocal": "12/20/2025, 12:21:02 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:22:00.024Z",
+      "timeLocal": "12/20/2025, 12:22:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:22:00.172Z",
+      "timeLocal": "12/20/2025, 12:22:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:22:00.172Z",
+      "timeLocal": "12/20/2025, 12:22:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:22:00.303Z",
+      "timeLocal": "12/20/2025, 12:22:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:24:07.985Z",
+      "timeLocal": "12/20/2025, 12:24:07 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:24:08.045Z",
+      "timeLocal": "12/20/2025, 12:24:08 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:25:00.034Z",
+      "timeLocal": "12/20/2025, 12:25:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:25:00.199Z",
+      "timeLocal": "12/20/2025, 12:25:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:25:00.199Z",
+      "timeLocal": "12/20/2025, 12:25:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:25:00.288Z",
+      "timeLocal": "12/20/2025, 12:25:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:25:07.962Z",
+      "timeLocal": "12/20/2025, 12:25:07 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:25:08.025Z",
+      "timeLocal": "12/20/2025, 12:25:08 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:26:08.032Z",
+      "timeLocal": "12/20/2025, 12:26:08 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:26:08.093Z",
+      "timeLocal": "12/20/2025, 12:26:08 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:27:08.120Z",
+      "timeLocal": "12/20/2025, 12:27:08 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:27:08.183Z",
+      "timeLocal": "12/20/2025, 12:27:08 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:28:00.061Z",
+      "timeLocal": "12/20/2025, 12:28:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:28:00.207Z",
+      "timeLocal": "12/20/2025, 12:28:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:28:00.207Z",
+      "timeLocal": "12/20/2025, 12:28:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:28:00.291Z",
+      "timeLocal": "12/20/2025, 12:28:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:28:08.192Z",
+      "timeLocal": "12/20/2025, 12:28:08 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:28:08.260Z",
+      "timeLocal": "12/20/2025, 12:28:08 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:29:13.274Z",
+      "timeLocal": "12/20/2025, 12:29:13 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:29:13.332Z",
+      "timeLocal": "12/20/2025, 12:29:13 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:30:00.013Z",
+      "timeLocal": "12/20/2025, 12:30:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:30:00.178Z",
+      "timeLocal": "12/20/2025, 12:30:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:30:00.178Z",
+      "timeLocal": "12/20/2025, 12:30:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:30:00.280Z",
+      "timeLocal": "12/20/2025, 12:30:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    },
+    {
+      "time": "2025-12-20T20:30:13.343Z",
+      "timeLocal": "12/20/2025, 12:30:13 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:30:13.392Z",
+      "timeLocal": "12/20/2025, 12:30:13 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.bar_lamp",
+      "action": "light.bar_lamp turn_on"
+    },
+    {
+      "time": "2025-12-20T20:33:00.091Z",
+      "timeLocal": "12/20/2025, 12:33:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:33:00.246Z",
+      "timeLocal": "12/20/2025, 12:33:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.downstairs_fire_extinguisher",
+      "action": "light.downstairs_fire_extinguisher turn_on"
+    },
+    {
+      "time": "2025-12-20T20:33:00.246Z",
+      "timeLocal": "12/20/2025, 12:33:00 PM",
+      "category": "DEVICE-CMD",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg: light.turn_on"
+    },
+    {
+      "time": "2025-12-20T20:33:00.349Z",
+      "timeLocal": "12/20/2025, 12:33:00 PM",
+      "category": "HA-DEVICE-SUCCESS",
+      "entity": "light.hue_color_leg_lamg",
+      "action": "light.hue_color_leg_lamg turn_on"
+    }
+  ],
+  "buffers": {
+    "[Trigger]10pm Off": true,
+    "[Trigger]Bathroom Light On/Off": false,
+    "[Trigger]KitchenCounterLights": false,
+    "[Trigger]House Lights ON/Off": false,
+    "[Trigger]9:30 On": false,
+    "[HSV]Sconce Bottom Light": {
+      "hue": 0.04361370716510903,
+      "saturation": 1,
+      "brightness": 254,
+      "rgb": {
+        "r": 213,
+        "g": 56,
+        "b": 0
+      }
+    },
+    "[HSV]Bar Warm": {
+      "hue": 0.09444444444444444,
+      "saturation": 0.89,
+      "brightness": 127,
+      "transition": 0,
+      "colorTemp": 2631,
+      "mode": "color",
+      "on": true
+    },
+    "[Unknown]Bar Cool": null,
+    "[Trigger]Office ON/Off": false,
+    "[HSV]Office Colors": {
+      "hue": 0.5947712418300654,
+      "saturation": 1,
+      "brightness": 117,
+      "rgb": {
+        "r": 0,
+        "g": 50,
+        "b": 117
+      }
+    },
+    "[Unknown]Dinning Room Table": null,
+    "[HSV]Temps": {
+      "hue": 0.6961904761904761,
+      "saturation": 0.7352941176470588,
+      "brightness": 90,
+      "rgb": {
+        "r": 33,
+        "g": 22,
+        "b": 84
+      }
+    },
+    "[Trigger]Sunset": false,
+    "[Trigger]Home": true,
+    "[HSV]Sconce Top Lights": {
+      "hue": 0.3231981981981982,
+      "saturation": 0.751269035532995,
+      "brightness": 254,
+      "rgb": {
+        "r": 58,
+        "g": 196,
+        "b": 49
+      }
+    },
+    "[Unknown]Bathroom_to_office_color": null,
+    "[Trigger]1AM Off": false
+  },
+  "lights": [
+    {
+      "id": "ha_light.smart_rgbtw_bulb",
+      "name": "Stairwell Light",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_lamp_north",
+      "name": "Living Room Lamp North",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.back_door_sconce_upper",
+      "name": "Back door sconce upper ",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.house_front_sconce_upper_east",
+      "name": "House front sconce upper east",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_ceiling_6",
+      "name": "Living room ceiling 6",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.bar_lamp",
+      "name": "Bar Lamp",
+      "state": {
+        "state": "on",
+        "on": true,
+        "brightness": 35,
+        "hs_color": [
+          251.087,
+          72.157
+        ]
+      }
+    },
+    {
+      "id": "ha_light.kitchen_bar_spot_2",
+      "name": "Kitchen Bar Spot 2",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_ceiling_2",
+      "name": "Living room ceiling 3",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.kitchen_bar_spot_3",
+      "name": "Kitchen Bar Spot 3",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.hue_color_leg_lamg",
+      "name": "Hue color Leg Lamg ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.kitchen_bar_spot_1",
+      "name": "Kitchen Bar Spot 1",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.bar_undermount_strip",
+      "name": "Bar Undermount Strip",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.downstairs_fire_extinguisher",
+      "name": "Downstairs Fire Extinguisher",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_ceiling_1",
+      "name": "Living room ceiling 1",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_ceiling_3",
+      "name": "Living room ceiling 2",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_ceiling_5",
+      "name": "Living room ceiling 5",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.kitchen_bar_spot_4",
+      "name": "Kitchen Bar Spot 4",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_lamp_south",
+      "name": "Living Room Lamp South",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_wall_washer_south",
+      "name": "Living room wall washer south ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_wall_washer_north",
+      "name": "Living room wall washer North ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.hue_bloom_master_bath",
+      "name": "Hue bloom Master Bath ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_ceiling_4",
+      "name": "Living room ceiling 4",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.bathroom",
+      "name": "Bathroom",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.kitchen",
+      "name": "Kitchen",
+      "state": {
+        "state": "on",
+        "on": true,
+        "brightness": 35,
+        "hs_color": [
+          251.087,
+          72.157
+        ]
+      }
+    },
+    {
+      "id": "ha_light.office",
+      "name": "Office",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room",
+      "name": "Living room",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.hanging_pendants",
+      "name": "Hanging Pendants",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.back_door",
+      "name": "Back Door",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.downstairs_hallway",
+      "name": "Downstairs Hallway",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.house_front",
+      "name": "House Front",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.front_door",
+      "name": "Front door",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.front_west_upper_sconce",
+      "name": "Front West Upper Sconce ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.front_west_lower_sconce",
+      "name": "Front West Lower Sconce ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.front_middle_upper_sconce",
+      "name": "Front Middle Upper Sconce ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.kitchen_cabinet_top",
+      "name": "kitchen Cabinet Top",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.kitchen_sink_light",
+      "name": "kitchen Sink Light ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_chandelier",
+      "name": "Living Room Chandelier ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.laundry_room",
+      "name": "Laundry Room",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.front_east_lower_sconce",
+      "name": "Front East Lower Sconce ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.dining_room",
+      "name": "Dining Room ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.front_east_upper_sconce",
+      "name": "Front East Upper Sconce ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.kitchen_cabinet_bottom",
+      "name": "Kitchen Cabinet Bottom ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.basement_right",
+      "name": "Basement Right",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.basement_left",
+      "name": "Basement Left",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.back_door_sconce_upper_2",
+      "name": "Back Door Sconce Upper ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.front_middle_lower_sconce",
+      "name": "Front Middle Lower Sconce ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.house_back_lower_sconce",
+      "name": "House Back Lower Sconce ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.osram_lightify_br_rgbw",
+      "name": "OSRAM LIGHTIFY BR RGBW",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.front_door_light_2",
+      "name": "FD_Light",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_table_north",
+      "name": "Living Room Table North",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_table_south_2",
+      "name": "Living Room Table South",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.osram_lightify_flex_outdoor_rgbw",
+      "name": "Master Bedroom Wall Light",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.third_reality_inc_3rcb01057z",
+      "name": "Third Reality, Inc 3RCB01057Z",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.third_reality_inc_3rcb01057z_2",
+      "name": "Living Room Table North",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.living_room_table_south",
+      "name": "Living Room Table South ",
+      "state": {
+        "state": "off",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.laundry_room_2",
+      "name": "Laundry Room",
+      "state": {
+        "state": "on",
+        "on": true,
+        "brightness": 21,
+        "hs_color": [
+          28,
+          47.059
+        ]
+      }
+    },
+    {
+      "id": "ha_light.outletlinc_dimmer_1a_ac_42",
+      "name": "Living Room Floor Lamp Left",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.outletlinc_dimmer_1a_ad_d6",
+      "name": "Mster Bedroom Greg's Dresser",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.outletlinc_dimmer_1a_ae_00",
+      "name": "Chicken Coop Light",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.outletlinc_dimmer_1a_ae_9a",
+      "name": "Master Bedroom Aldina's Dresser",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.outletlinc_dimmer_1a_ad_e6",
+      "name": "Living Room Floor Lamp Right",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.switchlinc_dimmer_0c_fd_8e",
+      "name": "SwitchLinc Dimmer 0C.FD.8E",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.switchlinc_dimmer_24_8a_fa",
+      "name": "Fireplace Downlights",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.switchlinc_dimmer_48_24_c1",
+      "name": "SwitchLinc Dimmer 48.24.C1",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "ha_light.lamplinc_dimmer_47_e0_24",
+      "name": "LampLinc Dimmer 47.E0.24",
+      "state": {
+        "state": "unavailable",
+        "on": false,
+        "brightness": 0,
+        "hs_color": [
+          0,
+          0
+        ]
+      }
+    }
+  ],
+  "engine": {
+    "running": true,
+    "nodeCount": 140,
+    "connectionCount": 129,
+    "tickCount": 340857,
+    "tickRate": 100,
+    "lastTickTime": 1766321812298,
+    "graphPath": "/data/graphs/.last_active.json",
+    "startedAt": 1766287679303,
+    "uptime": 34133066,
+    "registeredNodeTypes": [
+      "AllInOneColorNode",
+      "ColorGradientNode",
+      "ComparisonNode",
+      "ConditionalIntegerOutputNode",
+      "ConditionalSwitchNode",
+      "DateComparisonNode",
+      "DayOfWeekComparisonNode",
+      "IntegerSelectorNode",
+      "Integer Selector",
+      "LogicConditionNode",
+      "LogicOperationsNode",
+      "PushbuttonNode",
+      "Toggle",
+      "SenderNode",
+      "ReceiverNode",
+      "HSVModifierNode",
+      "SplineTimelineColorNode",
+      "HSVToRGBNode",
+      "RGBToHSVNode",
+      "ColorMixerNode",
+      "DelayNode",
+      "TriggerNode",
+      "InjectNode",
+      "HADeviceStateNode",
+      "HADeviceStateOutputNode",
+      "HADeviceStateDisplayNode",
+      "HAServiceCallNode",
+      "HALightControlNode",
+      "HAGenericDeviceNode",
+      "HADeviceAutomationNode",
+      "HueLightNode",
+      "KasaLightNode",
+      "KasaPlugNode",
+      "ANDNode",
+      "ORNode",
+      "NOTNode",
+      "XORNode",
+      "CompareNode",
+      "SwitchNode",
+      "ANDGateNode",
+      "ORGateNode",
+      "NOTGateNode",
+      "XORGateNode",
+      "StockPriceNode",
+      "SunriseSunsetNode",
+      "TimeOfDayNode",
+      "TimeRangeNode",
+      "CounterNode",
+      "RandomNode",
+      "StateMachineNode",
+      "SwitchRouterNode",
+      "HysteresisNode",
+      "ChangeNode",
+      "FilterNode",
+      "SmoothNode",
+      "CombineNode",
+      "SplineCurveNode",
+      "WatchdogNode",
+      "WeatherLogicNode"
+    ],
+    "frontendActive": false,
+    "frontendLastSeen": 1766291570898
+  }
+}
