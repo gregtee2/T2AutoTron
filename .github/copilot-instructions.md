@@ -27,6 +27,12 @@ Eliminating duplicate code between frontend plugins (47 files) and backend engin
 - AI agent time ≠ human time (200 human hours ≈ 6-10 agent hours)
 - Frontend UI stays mostly the same - just how nodes are defined changes
 
+### ⚠️ Server Management Rules
+- **NEVER start the server** when you want the user to test something - they manage their own server
+- Only start a server if YOU need to run an internal test and verify output yourself
+- Starting servers when the user is already running one creates chaos (port conflicts, multiple instances)
+- After making changes, just tell the user "restart your server and test" - don't do it for them
+
 ---
 
 ## 🦴 Caveman Explanations (IMPORTANT - READ THIS FIRST)
@@ -606,6 +612,159 @@ const allBuffers = window.AutoTronBuffer.keys(); // Returns array of all buffer 
 - `[Object] Name` → Generic objects
 
 Buffers persist across graph execution cycles, enabling state sharing between disconnected nodes.
+
+### ⚠️ Critical Plugin Development Patterns (MUST READ)
+
+These patterns are **non-obvious** and will cause bugs if not followed. Learned from debugging sessions.
+
+#### 1. DropdownControl Usage
+```javascript
+// ❌ WRONG - .options doesn't exist
+control.options = ['Option1', 'Option2'];
+
+// ✅ CORRECT - Use .values property
+const { DropdownControl } = window.T2Controls;
+const dropdown = new DropdownControl(['Option1', 'Option2'], 'defaultValue', (val) => {
+    this.properties.selectedValue = val;
+    if (this.changeCallback) this.changeCallback();
+});
+this.addControl('my_dropdown', dropdown);
+
+// To update dropdown options later:
+dropdown.values = ['NewOption1', 'NewOption2', 'NewOption3'];
+dropdown.updateDropdown();  // REQUIRED to refresh UI!
+```
+
+#### 2. Accessing Controls in Node Class
+```javascript
+// ❌ WRONG - controls is NOT a Map with .get()
+const dropdown = this.controls.get('device_select');
+
+// ✅ CORRECT - controls are direct properties
+const dropdown = this.controls.device_select;
+dropdown.values = newOptions;
+dropdown.updateDropdown();
+```
+
+#### 3. React Component Control Rendering
+```javascript
+// ❌ WRONG - using key string lookup
+Object.entries(data.controls).map(([key, control]) => {
+    return React.createElement(Presets.classic.Control, {
+        key: key  // This doesn't work!
+    });
+});
+
+// ✅ CORRECT - pass the actual control object as payload
+Object.entries(data.controls).map(([key, control]) => {
+    return React.createElement(Presets.classic.Control, {
+        key: key,
+        payload: control  // Pass the control object!
+    });
+});
+```
+
+#### 4. Socket Creation in Constructor
+```javascript
+constructor(changeCallback) {
+    super("My Node");
+    this.changeCallback = changeCallback;
+    
+    // Add sockets BEFORE controls
+    this.addInput('trigger', new ClassicPreset.Input(sockets.boolean, 'Trigger'));
+    this.addOutput('value', new ClassicPreset.Output(sockets.any, 'Value'));
+    
+    // Then add controls
+    this.setupControls();
+}
+```
+
+#### 5. API Endpoints for HA Devices
+```javascript
+// ❌ WRONG - this endpoint doesn't exist
+fetch('/api/ha/states/' + entityId)
+
+// ✅ CORRECT - use the lights API with ha type
+fetch('/api/lights/ha/' + entityId + '/state')
+
+// For device lists via socket:
+window.socket.emit('request-ha-devices');
+window.socket.on('ha-devices', (devices) => { /* devices array */ });
+```
+
+#### 6. Socket Event Listeners (Memory Leaks)
+```javascript
+// ❌ WRONG - listeners never cleaned up
+useEffect(() => {
+    window.socket.on('device-state-update', handleUpdate);
+}, []);
+
+// ✅ CORRECT - clean up on unmount
+useEffect(() => {
+    const handleUpdate = (update) => { /* ... */ };
+    window.socket.on('device-state-update', handleUpdate);
+    
+    return () => {
+        window.socket.off('device-state-update', handleUpdate);
+    };
+}, []);
+```
+
+#### 7. Triggering Graph Re-evaluation
+```javascript
+// When a control value changes and should trigger downstream nodes:
+if (this.changeCallback) this.changeCallback();
+
+// ❌ WRONG - calling changeCallback inside data() method
+data(inputs) {
+    if (this.changeCallback) this.changeCallback(); // Causes reset loop!
+    return { value: this.properties.value };
+}
+
+// ✅ CORRECT - data() should be pure, return only
+data(inputs) {
+    return { value: this.properties.value };
+}
+```
+
+#### 8. Save/Load (Serialization)
+```javascript
+// Required for graph persistence
+restore(state) {
+    if (state.properties) {
+        Object.assign(this.properties, state.properties);
+    }
+    // Re-populate dropdowns after restore!
+    this.updateDeviceDropdown();
+}
+
+serialize() {
+    return { ...this.properties };
+}
+```
+
+#### 9. Pointer Events on Interactive Controls
+```javascript
+// Interactive elements need stopPropagation or node will drag
+React.createElement('select', {
+    onPointerDown: (e) => e.stopPropagation(),  // Prevents node drag
+    onChange: (e) => { /* handle change */ }
+})
+
+// BUT: Never stopPropagation on socket containers (breaks wire connections)
+```
+
+#### 10. Device ID Prefixes
+```javascript
+// Always use prefixed IDs
+const haDeviceId = 'ha_light.living_room';     // Home Assistant
+const kasaId = 'kasa_192.168.1.100';           // Kasa
+const hueId = 'hue_1';                          // Hue
+
+// Parse with T2HAUtils
+const { type, entityId } = window.T2HAUtils?.getDeviceApiInfo(deviceId) || {};
+// type = 'ha', entityId = 'light.living_room'
+```
 
 ## Node Design Philosophy (Node-RED Style)
 
