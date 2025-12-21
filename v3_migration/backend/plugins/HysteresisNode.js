@@ -340,35 +340,60 @@
                 React.createElement('span', { key: 'value' }, `Value: ${lastValue !== null ? lastValue.toFixed(1) : '—'}`)
             ]),
 
-            // Socket containers
-            React.createElement('div', { key: 'inputs', className: 'socket-inputs' },
-                Object.entries(data.inputs).map(([key, input]) =>
-                    React.createElement('div', { key, className: 'input-socket', 'data-testid': `input-${key}` },
-                        React.createElement(RefComponent, {
-                            init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'input', key, nodeId: data.id, element: ref, payload: input.socket } }),
-                            unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
-                        }),
-                        React.createElement('span', { 
-                            className: 'socket-label',
-                            style: { marginLeft: '8px', fontSize: '11px', color: THEME.textMuted }
-                        }, input.label || key)
+            // Socket containers - inputs on left, outputs on right
+            React.createElement('div', { 
+                key: 'sockets', 
+                style: { 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    marginTop: '8px',
+                    marginLeft: '-12px',
+                    marginRight: '-12px',
+                    paddingLeft: '4px',
+                    paddingRight: '4px'
+                } 
+            }, [
+                // Inputs (left side)
+                React.createElement('div', { key: 'inputs', style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+                    Object.entries(data.inputs).map(([key, input]) =>
+                        React.createElement('div', { 
+                            key, 
+                            style: { display: 'flex', alignItems: 'center' },
+                            'data-testid': `input-${key}` 
+                        }, [
+                            React.createElement(RefComponent, {
+                                key: 'socket',
+                                init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'input', key, nodeId: data.id, element: ref, payload: input.socket } }),
+                                unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
+                            }),
+                            React.createElement('span', { 
+                                key: 'label',
+                                style: { marginLeft: '8px', fontSize: '11px', color: THEME.textMuted }
+                            }, input.label || key)
+                        ])
+                    )
+                ),
+                // Outputs (right side)
+                React.createElement('div', { key: 'outputs', style: { display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' } },
+                    Object.entries(data.outputs).map(([key, output]) =>
+                        React.createElement('div', { 
+                            key, 
+                            style: { display: 'flex', alignItems: 'center' },
+                            'data-testid': `output-${key}` 
+                        }, [
+                            React.createElement('span', {
+                                key: 'label',
+                                style: { marginRight: '8px', fontSize: '11px', color: THEME.textMuted }
+                            }, output.label || key),
+                            React.createElement(RefComponent, {
+                                key: 'socket',
+                                init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'output', key, nodeId: data.id, element: ref, payload: output.socket } }),
+                                unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
+                            })
+                        ])
                     )
                 )
-            ),
-            React.createElement('div', { key: 'outputs', className: 'socket-outputs' },
-                Object.entries(data.outputs).map(([key, output]) =>
-                    React.createElement('div', { key, className: 'output-socket', 'data-testid': `output-${key}`, style: { textAlign: 'right' } },
-                        React.createElement('span', {
-                            className: 'socket-label',
-                            style: { marginRight: '8px', fontSize: '11px', color: THEME.textMuted }
-                        }, output.label || key),
-                        React.createElement(RefComponent, {
-                            init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'output', key, nodeId: data.id, element: ref, payload: output.socket } }),
-                            unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
-                        })
-                    )
-                )
-            )
+            ])
         ]);
     }
 
