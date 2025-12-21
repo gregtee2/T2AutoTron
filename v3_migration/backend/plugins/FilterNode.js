@@ -410,31 +410,37 @@
                 }, 'Reset')
             ),
 
-            // Sockets - iterate over data.inputs and data.outputs for proper rendering
-            React.createElement('div', { style: socketContainerStyle },
-                // Inputs
-                React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
-                    Object.entries(data.inputs).map(([key, input]) =>
-                        React.createElement('div', { key, style: socketRowStyle },
-                            React.createElement(RefComponent, {
-                                init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'input', key, nodeId: data.id, element: ref, payload: input.socket } }),
-                                unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
-                            }),
-                            React.createElement('span', { style: { fontSize: '10px', color: THEME.text } }, input.label || key)
-                        )
-                    )
-                ),
-                // Outputs
-                React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' } },
-                    Object.entries(data.outputs).map(([key, output]) =>
-                        React.createElement('div', { key, style: socketRowStyle },
-                            React.createElement('span', { style: { fontSize: '10px', color: THEME.text } }, output.label || key),
-                            React.createElement(RefComponent, {
-                                init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'output', key, nodeId: data.id, element: ref, payload: output.socket } }),
-                                unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
-                            })
-                        )
-                    )
+            // Sockets - use io-container and socket-row for proper layout
+            React.createElement('div', { className: 'io-container', style: { marginTop: '8px' } },
+                Object.entries(data.inputs).map(([key, input]) =>
+                    React.createElement('div', { 
+                        key, 
+                        className: 'socket-row',
+                        style: { display: 'flex', alignItems: 'center', marginBottom: '4px' }
+                    }, [
+                        React.createElement(RefComponent, {
+                            key: 'socket',
+                            init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'input', key, nodeId: data.id, element: ref, payload: input.socket } }),
+                            unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
+                        }),
+                        React.createElement('span', { key: 'label', className: 'socket-label' }, input.label || key)
+                    ])
+                )
+            ),
+            React.createElement('div', { className: 'io-container' },
+                Object.entries(data.outputs).map(([key, output]) =>
+                    React.createElement('div', { 
+                        key, 
+                        className: 'socket-row',
+                        style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }
+                    }, [
+                        React.createElement('span', { key: 'label', className: 'socket-label' }, output.label || key),
+                        React.createElement(RefComponent, {
+                            key: 'socket',
+                            init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'output', key, nodeId: data.id, element: ref, payload: output.socket } }),
+                            unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
+                        })
+                    ])
                 )
             )
         );
