@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "8088ec15efdae91f",
+      "id": "8b659d2346456ded",
       "label": "HA Lock Control",
       "position": {
-        "x": 484.89131424411903,
-        "y": 245.83356073875296
+        "x": 397.22010770517534,
+        "y": 106.90860370745163
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "22a6f65c8fa5cece",
+            "id": "0ae8c67b6584dbab",
             "control": null,
             "showControl": true
           }
@@ -26,7 +26,7 @@
             },
             "label": "State",
             "multipleConnections": true,
-            "id": "b080b0401dd5458f"
+            "id": "651fd6a145b206ce"
           },
           "is_locked": {
             "socket": {
@@ -34,41 +34,62 @@
             },
             "label": "Is Locked",
             "multipleConnections": true,
-            "id": "8c402daa06a43182"
+            "id": "621100bc4066ff62"
           }
         },
         "controls": {
           "search": {
-            "id": "f80ae03ed131998c",
+            "id": "118e527f63f30757",
             "label": "🔍 Search",
             "value": "",
             "placeholder": "Type to filter locks...",
             "type": "text"
           },
           "device_select": {
-            "id": "486aa426b9efa7ef",
+            "id": "471c4e21cabcb2e6",
             "label": "Lock",
             "values": [
               "— Select Lock —",
+              "Aura Reach",
               "Aura Reach"
             ],
             "value": "Aura Reach"
           }
         },
         "label": "HA Lock Control",
-        "id": "8088ec15efdae91f",
+        "id": "8b659d2346456ded",
         "width": 280,
         "height": 220,
         "properties": {
           "deviceId": "ha_lock.aura_reach",
           "deviceName": "Aura Reach",
           "searchText": "",
-          "currentState": "unlocked",
-          "lastTrigger": false
+          "currentState": "unavailable",
+          "lastTrigger": null
         },
         "devices": [
           {
             "id": "ha_lock.aura_reach",
+            "name": "Aura Reach",
+            "type": "lock",
+            "state": {
+              "state": "unavailable",
+              "on": false,
+              "brightness": 0,
+              "hs_color": [
+                0,
+                0
+              ],
+              "power": null,
+              "energy": null
+            },
+            "attributes": {
+              "friendly_name": "Aura Reach",
+              "supported_features": 0
+            }
+          },
+          {
+            "id": "ha_lock.aura_reach_2",
             "name": "Aura Reach",
             "type": "lock",
             "state": {
@@ -83,7 +104,7 @@
               "energy": null
             },
             "attributes": {
-              "changed_by": "Remote",
+              "changed_by": "Unknown",
               "friendly_name": "Aura Reach",
               "supported_features": 0
             }
@@ -91,63 +112,14 @@
         ],
         "selected": false
       }
-    },
-    {
-      "id": "8793d582c97b1abc",
-      "label": "Toggle",
-      "position": {
-        "x": 214.2935332166626,
-        "y": 326.0609184760442
-      },
-      "data": {
-        "id": "8793d582c97b1abc",
-        "label": "Toggle",
-        "properties": {
-          "state": false,
-          "pulseMode": false,
-          "lastCommand": false
-        }
-      }
-    },
-    {
-      "id": "f8308be8945669a6",
-      "label": "Display",
-      "position": {
-        "x": 713.4515964673134,
-        "y": 679.421734475066
-      },
-      "data": {
-        "id": "f8308be8945669a6",
-        "label": "Display",
-        "width": 200,
-        "height": 150,
-        "properties": {
-          "value": false
-        }
-      }
     }
   ],
-  "connections": [
-    {
-      "id": "7f040aa8b16aba11",
-      "source": "8793d582c97b1abc",
-      "target": "8088ec15efdae91f",
-      "sourceOutput": "state",
-      "targetInput": "trigger"
-    },
-    {
-      "id": "ea1a31689835e55c",
-      "source": "8088ec15efdae91f",
-      "target": "f8308be8945669a6",
-      "sourceOutput": "is_locked",
-      "targetInput": "input"
-    }
-  ],
+  "connections": [],
   "viewport": {
-    "x": -208.37042922973626,
-    "y": -254.9891369581222,
-    "k": 1.3923445320585912
+    "x": -196.57612762451174,
+    "y": -94.18662178516388,
+    "k": 2.0799220787541923
   },
   "autoSaved": true,
-  "timestamp": 1766353938279
+  "timestamp": 1766356469493
 }

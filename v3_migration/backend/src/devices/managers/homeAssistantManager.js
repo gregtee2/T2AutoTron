@@ -119,11 +119,19 @@ class HomeAssistantManager {
               // Also invalidate device list cache so getDevices() returns fresh data
               this.deviceCache = null;
               
-              // Update the devices array with new state/attributes
+              // Update the devices array with new state/attributes, or ADD if new entity
               const deviceIndex = this.devices.findIndex(d => d.entity_id === entity.entity_id);
               if (deviceIndex >= 0) {
                 this.devices[deviceIndex].state = entity.state;
                 this.devices[deviceIndex].attributes = entity.attributes;
+              } else {
+                // NEW ENTITY - add it to the devices array
+                this.devices.push({
+                  entity_id: entity.entity_id,
+                  state: entity.state,
+                  attributes: entity.attributes
+                });
+                log(`New HA entity discovered: ${entity.entity_id}`, 'info', false, 'ha:new-entity');
               }
 
               const state = {
