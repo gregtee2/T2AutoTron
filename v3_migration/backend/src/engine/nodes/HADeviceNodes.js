@@ -1233,6 +1233,87 @@ class HADeviceStateDisplayNode {
   }
 }
 
+/**
+ * HALockNode - Backend engine node for controlling locks
+ * Sends lock/unlock commands when trigger input changes
+ */
+class HALockNode {
+  constructor() {
+    this.id = null;
+    this.label = 'HA Lock Control';
+    this.properties = {
+      deviceId: '',
+      deviceName: '',
+      currentState: 'unknown',
+      lastTrigger: null
+    };
+    this.inputs = ['trigger'];
+    this.outputs = ['state', 'is_locked'];
+    this.lastCommandTime = 0;
+    this.MIN_COMMAND_INTERVAL = 1000; // 1 second throttle
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+
+  async sendLockCommand(action) {
+    if (!this.properties.deviceId) return;
+    
+    // Throttle commands
+    const now = Date.now();
+    if (now - this.lastCommandTime < this.MIN_COMMAND_INTERVAL) return;
+    this.lastCommandTime = now;
+
+    const entityId = this.properties.deviceId.replace('ha_', '');
+    const service = action === 'lock' ? 'lock' : 'unlock';
+    const config = getHAConfig();
+
+    try {
+      const response = await fetch(`${config.host}/api/services/lock/${service}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ entity_id: entityId })
+      });
+
+      if (response.ok) {
+        this.properties.currentState = action === 'lock' ? 'locked' : 'unlocked';
+        engineLogger.log('LOCK-CMD', entityId, { service, success: true });
+      } else {
+        engineLogger.log('LOCK-CMD', entityId, { service, success: false, status: response.status });
+      }
+    } catch (err) {
+      engineLogger.log('LOCK-CMD', entityId, { service, success: false, error: err.message });
+    }
+  }
+
+  async data(inputs) {
+    const triggerInput = inputs.trigger?.[0];
+
+    // If trigger changed, send lock/unlock command
+    if (triggerInput !== undefined && triggerInput !== this.properties.lastTrigger) {
+      this.properties.lastTrigger = triggerInput;
+      
+      if (this.properties.deviceId) {
+        // true = unlock, false = lock
+        await this.sendLockCommand(triggerInput ? 'unlock' : 'lock');
+      }
+    }
+
+    const isLocked = this.properties.currentState === 'locked';
+
+    return {
+      state: this.properties.currentState,
+      is_locked: isLocked
+    };
+  }
+}
+
 // Register nodes
 registry.register('HADeviceStateNode', HADeviceStateNode);
 registry.register('HADeviceStateOutputNode', HADeviceStateNode);  // Alias
@@ -1241,6 +1322,7 @@ registry.register('HAServiceCallNode', HAServiceCallNode);
 registry.register('HALightControlNode', HALightControlNode);
 registry.register('HAGenericDeviceNode', HAGenericDeviceNode);
 registry.register('HADeviceAutomationNode', HADeviceAutomationNode);
+registry.register('HALockNode', HALockNode);
 
 module.exports = { 
   HADeviceStateNode, 
@@ -1249,5 +1331,6 @@ module.exports = {
   HAGenericDeviceNode,
   HADeviceAutomationNode,
   HADeviceStateDisplayNode,
+  HALockNode,
   getHAConfig
 };

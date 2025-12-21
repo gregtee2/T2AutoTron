@@ -1,3 +1,49 @@
+# Session Handoff - December 21, 2025
+
+## Addendum (Session 14 - HA Lock Control Node)
+
+### What changed (Session 14 - Claude Opus 4.5)
+
+**Current Version: 2.1.121**
+
+#### ✨ Feature: HA Lock Control Node (v2.1.121)
+- **What it does**: New node for controlling smart locks (Kwikset, Schlage, August, etc.) via Home Assistant
+- **Features**:
+  - 🔐 Lock/🔓 Unlock buttons directly on the node
+  - Device dropdown filtered to lock entities only
+  - Search field to quickly find locks
+  - Visual status display (🔒 LOCKED / 🔓 UNLOCKED) with color coding
+  - Trigger input: `true` = unlock, `false` = lock
+  - Outputs: `state` (text), `is_locked` (boolean for logic gates)
+- **Backend engine support**: HALockNode added to HADeviceNodes.js for headless automation
+- **Files**: `backend/plugins/HALockNode.js`, `backend/src/engine/nodes/HADeviceNodes.js`
+
+#### ✨ Feature: Extended Device Domain Support (v2.1.121)
+- **Lock domain**: Added to homeAssistantManager.js fetch filter and WebSocket filter
+- **Climate domain**: Added for thermostat entities
+- **Vacuum domain**: Added for robot vacuum entities  
+- **Camera domain**: Added for camera entities
+- **HA Device Field Node**: Added lock/vacuum/camera to FIELD_OPTIONS with appropriate fields
+- **Files**: `backend/src/devices/managers/homeAssistantManager.js`, `backend/plugins/HADeviceFieldNode.js`
+
+#### ✨ Feature: Device Search in HA Device Field Node (v2.1.121)
+- **What it does**: Added search text input to filter devices by name or entity ID
+- **Uses**: InputControl from 00_SharedControlsPlugin.js
+- **Files**: `backend/plugins/HADeviceFieldNode.js`
+
+### 🦴 Caveman Summary
+1. **Lock Control Node**: You asked "how do I control my lock?" - the Device Field node was read-only (like a thermometer). Now there's a Lock Control node that can actually lock/unlock (like a thermostat).
+2. **More Device Types**: Added support for locks, thermostats, vacuums, and cameras in the device pickers.
+3. **Device Search**: Type to filter - no more scrolling through 200 devices to find your lock.
+
+### Files Touched (Session 14)
+- `v3_migration/backend/plugins/HALockNode.js` (NEW) - Lock control frontend plugin
+- `v3_migration/backend/src/engine/nodes/HADeviceNodes.js` - Added HALockNode backend class
+- `v3_migration/backend/src/devices/managers/homeAssistantManager.js` - Added lock/climate/vacuum/camera domains
+- `v3_migration/backend/plugins/HADeviceFieldNode.js` - Added search, new domains, new FIELD_OPTIONS
+
+---
+
 # Session Handoff - December 20, 2025
 
 ## Addendum (Session 13 - Group Navigation & HueEffectNode Fixes)

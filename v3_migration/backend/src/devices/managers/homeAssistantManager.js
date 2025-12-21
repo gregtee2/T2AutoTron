@@ -53,7 +53,7 @@ class HomeAssistantManager {
       const states = await response.json();
       this.devices = states.filter(s => {
         const domain = s.entity_id.split('.')[0];
-        return ['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather', 'device_tracker', 'person'].includes(domain);
+        return ['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather', 'device_tracker', 'person', 'lock', 'climate', 'vacuum', 'camera'].includes(domain);
       });
 
       this.isConnected = true;
@@ -110,7 +110,7 @@ class HomeAssistantManager {
               const entity = msg.event.data.new_state;
               if (!entity) return;
               const domain = entity.entity_id.split('.')[0];
-              if (!['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather'].includes(domain)) return;
+              if (!['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather', 'device_tracker', 'person', 'lock', 'climate', 'vacuum', 'camera'].includes(domain)) return;
 
               // Invalidate cache on state change
               const cacheKey = `ha_${entity.entity_id}`;

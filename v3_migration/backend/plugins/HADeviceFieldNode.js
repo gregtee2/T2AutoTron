@@ -25,7 +25,7 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // Get shared controls and utilities
-    const { DropdownControl, HelpIcon } = window.T2Controls;
+    const { DropdownControl, InputControl, HelpIcon } = window.T2Controls;
     const { filterTypeMap, filterDevices } = window.T2HAUtils;
 
     // Field options by domain
@@ -83,6 +83,20 @@
             { value: 'temperature', label: 'Temperature' },
             { value: 'humidity', label: 'Humidity' }
         ],
+        lock: [
+            { value: 'state', label: 'State (locked/unlocked)' },
+            { value: 'is_locked', label: 'Is Locked (true/false)' },
+            { value: 'is_unlocked', label: 'Is Unlocked (true/false)' }
+        ],
+        vacuum: [
+            { value: 'state', label: 'State (cleaning/docked/idle)' },
+            { value: 'battery_level', label: 'Battery Level' },
+            { value: 'is_cleaning', label: 'Is Cleaning (true/false)' }
+        ],
+        camera: [
+            { value: 'state', label: 'State (idle/recording)' },
+            { value: 'is_recording', label: 'Is Recording (true/false)' }
+        ],
         default: [
             { value: 'state', label: 'State' }
         ]
@@ -112,7 +126,8 @@
                 field: 'state',
                 lastValue: null,
                 filterType: 'All',
-                letterFilter: 'All Letters'
+                letterFilter: 'All Letters',
+                searchText: ''
             };
 
             this.devices = [];
@@ -131,7 +146,7 @@
             // Filter dropdown
             this.addControl("filter_type", new DropdownControl(
                 "Filter",
-                ["All", "Light", "Switch", "Sensor", "Binary Sensor", "Media Player", "Fan", "Cover", "Weather", "Device Tracker", "Person"],
+                ["All", "Light", "Switch", "Sensor", "Binary Sensor", "Media Player", "Fan", "Cover", "Weather", "Device Tracker", "Person", "Lock", "Climate", "Vacuum", "Camera"],
                 "All",
                 (v) => { 
                     this.properties.filterType = v;
@@ -150,6 +165,17 @@
                     this.updateDeviceDropdown();
                     if (this.changeCallback) this.changeCallback();
                 }
+            ));
+
+            // Search field
+            this.addControl("search", new InputControl(
+                "🔍 Search",
+                "",
+                (v) => {
+                    this.properties.searchText = v;
+                    this.updateDeviceDropdown();
+                },
+                { placeholder: "Type to filter devices..." }
             ));
 
             // Device dropdown
@@ -210,7 +236,7 @@
                 
                 if (data.success && data.devices) {
                     this.devices = data.devices.filter(d => 
-                        ["light", "switch", "binary_sensor", "sensor", "media_player", "weather", "fan", "cover", "device_tracker", "person"].includes(d.type)
+                        ["light", "switch", "binary_sensor", "sensor", "media_player", "weather", "fan", "cover", "device_tracker", "person", "lock", "climate", "vacuum", "camera"].includes(d.type)
                     );
                     this.updateDeviceDropdown();
                     
@@ -240,7 +266,11 @@
                 'Cover': 'cover',
                 'Weather': 'weather',
                 'Device Tracker': 'device_tracker',
-                'Person': 'person'
+                'Person': 'person',
+                'Lock': 'lock',
+                'Climate': 'climate',
+                'Vacuum': 'vacuum',
+                'Camera': 'camera'
             };
             
             const typeFilter = filterMap[this.properties.filterType];
@@ -267,6 +297,16 @@
                 filtered = filtered.filter(d => {
                     const name = (d.friendly_name || d.name || d.id || '').toUpperCase();
                     return letterRange.some(letter => name.startsWith(letter));
+                });
+            }
+
+            // Apply search text filter
+            const searchText = (this.properties.searchText || '').toLowerCase().trim();
+            if (searchText) {
+                filtered = filtered.filter(d => {
+                    const name = (d.friendly_name || d.name || d.id || '').toLowerCase();
+                    const entityId = (d.entity_id || d.id || '').toLowerCase();
+                    return name.includes(searchText) || entityId.includes(searchText);
                 });
             }
 
