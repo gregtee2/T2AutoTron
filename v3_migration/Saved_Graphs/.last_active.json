@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "8b659d2346456ded",
+      "id": "c172a2de65b57404",
       "label": "HA Lock Control",
       "position": {
-        "x": 397.22010770517534,
-        "y": 106.90860370745163
+        "x": 518.3338631780019,
+        "y": 222.9376538362325
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "0ae8c67b6584dbab",
+            "id": "02b75b8c2357641b",
             "control": null,
             "showControl": true
           }
@@ -26,7 +26,7 @@
             },
             "label": "State",
             "multipleConnections": true,
-            "id": "651fd6a145b206ce"
+            "id": "d823e36d6ae2d9de"
           },
           "is_locked": {
             "socket": {
@@ -34,19 +34,19 @@
             },
             "label": "Is Locked",
             "multipleConnections": true,
-            "id": "621100bc4066ff62"
+            "id": "683f4c80f6be8351"
           }
         },
         "controls": {
           "search": {
-            "id": "118e527f63f30757",
+            "id": "2e1dea25e154c6b5",
             "label": "🔍 Search",
             "value": "",
             "placeholder": "Type to filter locks...",
             "type": "text"
           },
           "device_select": {
-            "id": "471c4e21cabcb2e6",
+            "id": "cc4b2f90cbf1f980",
             "label": "Lock",
             "values": [
               "— Select Lock —",
@@ -57,14 +57,14 @@
           }
         },
         "label": "HA Lock Control",
-        "id": "8b659d2346456ded",
+        "id": "c172a2de65b57404",
         "width": 280,
         "height": 220,
         "properties": {
           "deviceId": "ha_lock.aura_reach",
           "deviceName": "Aura Reach",
           "searchText": "",
-          "currentState": "unavailable",
+          "currentState": "locked",
           "lastTrigger": null
         },
         "devices": [
@@ -93,7 +93,7 @@
             "name": "Aura Reach",
             "type": "lock",
             "state": {
-              "state": "unlocked",
+              "state": "locked",
               "on": false,
               "brightness": 0,
               "hs_color": [
@@ -104,22 +104,22 @@
               "energy": null
             },
             "attributes": {
-              "changed_by": "Unknown",
+              "changed_by": "Remote",
               "friendly_name": "Aura Reach",
               "supported_features": 0
             }
           }
         ],
-        "selected": false
+        "selected": true
       }
     }
   ],
   "connections": [],
   "viewport": {
-    "x": -196.57612762451174,
-    "y": -94.18662178516388,
-    "k": 2.0799220787541923
+    "x": -406.9853500366212,
+    "y": -262.79701414108274,
+    "k": 1.9099376297100015
   },
   "autoSaved": true,
-  "timestamp": 1766356469493
+  "timestamp": 1766357148233
 }
