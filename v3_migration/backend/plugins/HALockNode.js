@@ -49,7 +49,8 @@
                 deviceName: '',
                 searchText: '',
                 currentState: 'unknown',
-                lastTrigger: null
+                lastTrigger: null,
+                triggerInitialized: false  // Skip first value to prevent false triggers on load
             };
 
             this.devices = [];
@@ -245,12 +246,20 @@
             // Handle trigger input
             const triggerInput = inputs.trigger?.[0];
             
-            if (triggerInput !== undefined && triggerInput !== this.properties.lastTrigger) {
-                this.properties.lastTrigger = triggerInput;
-                
-                if (this.properties.deviceId) {
-                    // true = unlock, false = lock
-                    this.sendLockCommand(triggerInput ? 'unlock' : 'lock');
+            // Edge detection: only act when value CHANGES, not on first load
+            if (triggerInput !== undefined) {
+                if (!this.properties.triggerInitialized) {
+                    // First time seeing a value - just store it, don't act
+                    this.properties.triggerInitialized = true;
+                    this.properties.lastTrigger = triggerInput;
+                } else if (triggerInput !== this.properties.lastTrigger) {
+                    // Value actually changed - act on it
+                    this.properties.lastTrigger = triggerInput;
+                    
+                    if (this.properties.deviceId) {
+                        // true = unlock, false = lock
+                        this.sendLockCommand(triggerInput ? 'unlock' : 'lock');
+                    }
                 }
             }
 
@@ -276,6 +285,10 @@
             if (props) {
                 Object.assign(this.properties, props);
             }
+
+            // Reset trigger detection to ignore first value after restore
+            this.properties.triggerInitialized = false;
+            this.properties.lastTrigger = null;
 
             // Restore dropdown value
             const control = this.controls.device_select;
