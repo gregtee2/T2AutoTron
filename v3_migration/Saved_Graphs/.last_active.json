@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "eb224c46272594cb",
+      "id": "b6bd02decbb30efa",
       "label": "HA Lock Control",
       "position": {
-        "x": 661.4814814814815,
-        "y": 229.18518537356528
+        "x": 867.2903137674178,
+        "y": 400.7901236451701
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "145a0563e552e16b",
+            "id": "40c8527fee4f6805",
             "control": null,
             "showControl": true
           }
@@ -26,7 +26,7 @@
             },
             "label": "State",
             "multipleConnections": true,
-            "id": "953a344abc52d81a"
+            "id": "9a84fe0126529631"
           },
           "is_locked": {
             "socket": {
@@ -34,19 +34,19 @@
             },
             "label": "Is Locked",
             "multipleConnections": true,
-            "id": "d5df854dcb99cf36"
+            "id": "7e54c2382cbb5e07"
           }
         },
         "controls": {
           "search": {
-            "id": "ec4bc6ba5bd5066d",
+            "id": "2e5a301e67094db3",
             "label": "🔍 Search",
             "value": "",
             "placeholder": "Type to filter locks...",
             "type": "text"
           },
           "device_select": {
-            "id": "07fbbe219a910dc3",
+            "id": "b8a38d671766977f",
             "label": "Lock",
             "values": [
               "— Select Lock —",
@@ -56,14 +56,14 @@
           }
         },
         "label": "HA Lock Control",
-        "id": "eb224c46272594cb",
+        "id": "b6bd02decbb30efa",
         "width": 280,
         "height": 220,
         "properties": {
           "deviceId": "ha_lock.aura_lock",
           "deviceName": "Sunshine Terrace Door Lock",
           "searchText": "",
-          "currentState": "locked",
+          "currentState": "unlocked",
           "lastTrigger": false,
           "triggerInitialized": true
         },
@@ -89,16 +89,15 @@
               "supported_features": 0
             }
           }
-        ],
-        "selected": false
+        ]
       }
     },
     {
-      "id": "b5a8fe82547f99ad",
+      "id": "72f33003d4962a8c",
       "label": "Inject",
       "position": {
-        "x": 168.7819793535936,
-        "y": 280.32850831496273
+        "x": 410.8641975308642,
+        "y": 461.6063494909234
       },
       "data": {
         "inputs": {},
@@ -109,12 +108,12 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "8c1a9ed7906d955c"
+            "id": "63ca631fbf1779fb"
           }
         },
         "controls": {},
         "label": "Inject",
-        "id": "b5a8fe82547f99ad",
+        "id": "72f33003d4962a8c",
         "width": 220,
         "properties": {
           "payloadType": "boolean",
@@ -122,8 +121,10 @@
           "repeatMs": 0,
           "onceDelay": 0,
           "name": "",
+          "pulseMode": true,
+          "pulseDurationMs": 500,
           "scheduleEnabled": true,
-          "scheduleTime": "14:16",
+          "scheduleTime": "14:22",
           "scheduleDays": [
             true,
             true,
@@ -133,28 +134,29 @@
             true,
             true
           ],
-          "lastTriggerTime": null,
-          "triggerCount": 0,
+          "lastTriggerTime": 1766442060246,
+          "triggerCount": 1,
           "isRepeating": false,
           "onceTriggered": false,
-          "nextScheduledTime": 1766441760000,
+          "nextScheduledTime": 1766442120000,
+          "isPulsing": false,
           "debug": false
         },
         "_repeatTimer": null,
         "_onceTimer": null,
         "_scheduleTimer": null,
-        "_scheduleCheckInterval": null,
-        "_shouldOutput": false,
-        "_initialized": true,
-        "selected": false
+        "_scheduleCheckInterval": 25,
+        "_pulseTimer": null,
+        "_shouldOutput": true,
+        "_initialized": true
       }
     },
     {
-      "id": "a5cf0c72ad7e1420",
+      "id": "152055858a7e348d",
       "label": "Debug",
       "position": {
-        "x": 687.2847521035621,
-        "y": 624.506834001045
+        "x": 859.2384242242531,
+        "y": 795.3056970306202
       },
       "data": {
         "inputs": {
@@ -163,7 +165,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "9c87ad3a8c108f26",
+            "id": "0dce42b5645d5186",
             "control": null,
             "showControl": true
           }
@@ -175,12 +177,12 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "4f08b1c527e71a2d"
+            "id": "ecf14b996b49c342"
           }
         },
         "controls": {},
         "label": "Debug",
-        "id": "a5cf0c72ad7e1420",
+        "id": "152055858a7e348d",
         "width": 260,
         "properties": {
           "name": "",
@@ -189,76 +191,39 @@
           "enabled": true,
           "history": [
             {
-              "time": "2:15:25 PM",
-              "timestamp": 1766441725719,
-              "value": false,
-              "type": "boolean"
-            },
-            {
-              "time": "2:15:13 PM",
-              "timestamp": 1766441713137,
-              "value": true,
-              "type": "boolean"
-            },
-            {
-              "time": "2:14:58 PM",
-              "timestamp": 1766441698142,
-              "value": false,
-              "type": "boolean"
-            },
-            {
-              "time": "2:14:47 PM",
-              "timestamp": 1766441687550,
-              "value": true,
-              "type": "boolean"
-            },
-            {
-              "time": "2:14:41 PM",
-              "timestamp": 1766441681401,
-              "value": false,
-              "type": "boolean"
-            },
-            {
-              "time": "2:14:38 PM",
-              "timestamp": 1766441678569,
-              "value": true,
-              "type": "boolean"
-            },
-            {
-              "time": "2:14:17 PM",
-              "timestamp": 1766441657589,
+              "time": "2:20:00 PM",
+              "timestamp": 1766442000250,
               "value": false,
               "type": "boolean"
             }
           ],
           "currentValue": false,
-          "messageCount": 7
-        },
-        "selected": false
+          "messageCount": 1
+        }
       }
     }
   ],
   "connections": [
     {
-      "id": "d460ef1ff6ad6ba3",
-      "source": "b5a8fe82547f99ad",
-      "target": "a5cf0c72ad7e1420",
+      "id": "85a47ba1015af42b",
+      "source": "72f33003d4962a8c",
+      "target": "152055858a7e348d",
       "sourceOutput": "output",
       "targetInput": "input"
     },
     {
-      "id": "d9002127dd6b596b",
-      "source": "b5a8fe82547f99ad",
-      "target": "eb224c46272594cb",
+      "id": "8d8b69193b043422",
+      "source": "72f33003d4962a8c",
+      "target": "b6bd02decbb30efa",
       "sourceOutput": "output",
       "targetInput": "trigger"
     }
   ],
   "viewport": {
-    "x": 32.86898574829095,
-    "y": -387.1200492858886,
-    "k": 1.240578978064205
+    "x": -142.47398300170903,
+    "y": -417.3622496128082,
+    "k": 1.2037325418367204
   },
   "autoSaved": true,
-  "timestamp": 1766441813718
+  "timestamp": 1766442120228
 }

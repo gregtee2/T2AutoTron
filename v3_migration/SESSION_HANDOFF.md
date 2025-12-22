@@ -1,3 +1,81 @@
+# Session Handoff - December 22, 2025
+
+## Addendum (Session 15 - Lock Automation & Inject Pulse Mode)
+
+### What changed (Session 15 - Claude Opus 4.5)
+
+**Current Version: 2.1.127**
+
+### 🚨 CRITICAL: ACTIVE BUG - INJECT NODE PULSE MODE NOT WORKING
+
+**The Problem:** 
+User wants to auto-lock door at 10pm every night. Built automation:
+- Inject Node → Lock Node trigger
+- Value: `false` (lock)
+- Schedule: 10:00 PM daily
+
+**Why Original Approach Failed:**
+- Inject Node outputs `false` constantly once triggered
+- Lock Node has edge detection - only acts when value CHANGES
+- At 10pm, Inject "fires" but value stays `false` → Lock sees no change → does nothing
+
+**What We Built (Pulse Mode):**
+Added `pulseMode` option to Inject Node:
+- When enabled, output is `undefined` except during pulse
+- At trigger time, briefly outputs the value (500ms) then returns to `undefined`
+- This creates a clear `undefined → false → undefined` edge that Lock can detect
+
+**BUG STATUS:**
+- Pulse mode checkbox UI is added ✅
+- Properties are saved/restored ✅  
+- **NOT TESTED** - pushed without confirming it actually works ❌
+- User reports it's "not firing" - needs debugging
+
+**Files Changed:**
+- `backend/plugins/InjectNode.js` - Added pulseMode, pulseDurationMs, isPulsing properties
+- `backend/plugins/HALockNode.js` - Added edge detection (triggerInitialized flag)
+
+### Next Agent Tasks:
+1. **TEST BEFORE PUSHING** - Start server, open browser, test manually
+2. Debug why pulse mode isn't firing:
+   - Is `trigger()` being called when schedule fires?
+   - Is `isPulsing` being set to true?
+   - Is `changeCallback()` being called to propagate the change?
+   - Is `data()` returning the payload during pulse?
+3. Check Lock Node edge detection logic with `undefined → false` transition
+
+### Debug Approach:
+Add temporary console.log statements:
+```javascript
+// In InjectNode.js trigger()
+console.log('[Inject] trigger() called, pulseMode:', this.properties.pulseMode);
+
+// In InjectNode.js data()
+console.log('[Inject] data() isPulsing:', this.properties.isPulsing, 'output:', output);
+```
+
+---
+
+#### ✨ Earlier Changes (v2.1.125-126)
+
+**v2.1.125 - Lock Node Polish:**
+- Added `ha-node-tron` CSS class for Tron border styling (green=locked, orange=unlocked)
+- Added `graphLoadComplete` event listener for fast device loading on graph load
+- Added `changeCallback()` in `updateDeviceDropdown()` for auto-refresh
+- Removed experimental HADeviceExplorerNode (user didn't find it useful)
+
+**v2.1.126 - Lock Node Edge Detection:**
+- Added `triggerInitialized` property to skip first trigger value on load
+- Prevents lock command spam when graph loads with existing trigger wired
+
+### 🦴 Caveman Summary
+1. **User Goal**: Lock door at 10pm every night automatically
+2. **Problem**: Inject Node holds `false` constantly → Lock sees no change → nothing happens
+3. **Solution Attempt**: Added "Pulse Mode" - briefly outputs value then goes back to nothing
+4. **Current Status**: UI is there but it's NOT WORKING - needs debugging
+
+---
+
 # Session Handoff - December 21, 2025
 
 ## Addendum (Session 14 - HA Lock Control Node)
