@@ -395,9 +395,9 @@
                 key: 'search', 
                 style: { marginBottom: '8px' } 
             },
-                React.createElement(window.RetePresets.classic.Control, {
+                React.createElement(window.RefComponent, {
                     key: 'search-ctrl',
-                    payload: searchControl
+                    init: (ref) => emit({ type: 'render', data: { type: 'control', element: ref, payload: searchControl } })
                 })
             ),
 
@@ -406,9 +406,9 @@
                 key: 'device', 
                 style: { marginBottom: '12px' } 
             },
-                React.createElement(window.RetePresets.classic.Control, {
+                React.createElement(window.RefComponent, {
                     key: 'device-ctrl',
-                    payload: deviceControl
+                    init: (ref) => emit({ type: 'render', data: { type: 'control', element: ref, payload: deviceControl } })
                 })
             ),
 
