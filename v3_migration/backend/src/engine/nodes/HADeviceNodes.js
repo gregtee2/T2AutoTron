@@ -1295,7 +1295,8 @@ class HALockNode {
   async data(inputs) {
     const triggerInput = inputs.trigger?.[0];
 
-    // If trigger changed, send lock/unlock command
+    // Only act on defined trigger values (true/false), ignore undefined
+    // This supports pulse mode where output goes: undefined → value → undefined
     if (triggerInput !== undefined && triggerInput !== this.properties.lastTrigger) {
       this.properties.lastTrigger = triggerInput;
       
@@ -1303,6 +1304,11 @@ class HALockNode {
         // true = unlock, false = lock
         await this.sendLockCommand(triggerInput ? 'unlock' : 'lock');
       }
+    }
+    
+    // Reset lastTrigger when input becomes undefined (ready for next pulse)
+    if (triggerInput === undefined && this.properties.lastTrigger !== undefined) {
+      this.properties.lastTrigger = undefined;
     }
 
     const isLocked = this.properties.currentState === 'locked';

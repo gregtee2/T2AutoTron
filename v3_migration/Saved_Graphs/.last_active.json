@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "b6bd02decbb30efa",
+      "id": "cad2bc21d6f4050c",
       "label": "HA Lock Control",
       "position": {
-        "x": 867.2903137674178,
-        "y": 400.7901236451701
+        "x": 834.4261162365536,
+        "y": 192
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "40c8527fee4f6805",
+            "id": "e00f1205b4e9104d",
             "control": null,
             "showControl": true
           }
@@ -26,7 +26,7 @@
             },
             "label": "State",
             "multipleConnections": true,
-            "id": "9a84fe0126529631"
+            "id": "5ef178535f364e69"
           },
           "is_locked": {
             "socket": {
@@ -34,19 +34,19 @@
             },
             "label": "Is Locked",
             "multipleConnections": true,
-            "id": "7e54c2382cbb5e07"
+            "id": "60af52c5fb2b3f1f"
           }
         },
         "controls": {
           "search": {
-            "id": "2e5a301e67094db3",
+            "id": "c20f450b96c6a18e",
             "label": "🔍 Search",
             "value": "",
             "placeholder": "Type to filter locks...",
             "type": "text"
           },
           "device_select": {
-            "id": "b8a38d671766977f",
+            "id": "661030c5e37441be",
             "label": "Lock",
             "values": [
               "— Select Lock —",
@@ -56,7 +56,7 @@
           }
         },
         "label": "HA Lock Control",
-        "id": "b6bd02decbb30efa",
+        "id": "cad2bc21d6f4050c",
         "width": 280,
         "height": 220,
         "properties": {
@@ -64,7 +64,7 @@
           "deviceName": "Sunshine Terrace Door Lock",
           "searchText": "",
           "currentState": "unlocked",
-          "lastTrigger": false,
+          "lastTrigger": true,
           "triggerInitialized": true
         },
         "devices": [
@@ -73,7 +73,7 @@
             "name": "Sunshine Terrace Door Lock",
             "type": "lock",
             "state": {
-              "state": "locked",
+              "state": "unlocked",
               "on": false,
               "brightness": 0,
               "hs_color": [
@@ -89,15 +89,16 @@
               "supported_features": 0
             }
           }
-        ]
+        ],
+        "selected": false
       }
     },
     {
-      "id": "72f33003d4962a8c",
+      "id": "689740deb1d686ce",
       "label": "Inject",
       "position": {
-        "x": 410.8641975308642,
-        "y": 461.6063494909234
+        "x": 369,
+        "y": 297.81622584575325
       },
       "data": {
         "inputs": {},
@@ -108,12 +109,12 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "63ca631fbf1779fb"
+            "id": "44a208730691150e"
           }
         },
         "controls": {},
         "label": "Inject",
-        "id": "72f33003d4962a8c",
+        "id": "689740deb1d686ce",
         "width": 220,
         "properties": {
           "payloadType": "boolean",
@@ -124,7 +125,7 @@
           "pulseMode": true,
           "pulseDurationMs": 500,
           "scheduleEnabled": true,
-          "scheduleTime": "14:22",
+          "scheduleTime": "14:34",
           "scheduleDays": [
             true,
             true,
@@ -134,29 +135,30 @@
             true,
             true
           ],
-          "lastTriggerTime": 1766442060246,
+          "lastTriggerTime": 1766442788144,
           "triggerCount": 1,
           "isRepeating": false,
           "onceTriggered": false,
-          "nextScheduledTime": 1766442120000,
+          "nextScheduledTime": 1766442840000,
           "isPulsing": false,
           "debug": false
         },
         "_repeatTimer": null,
         "_onceTimer": null,
         "_scheduleTimer": null,
-        "_scheduleCheckInterval": 25,
+        "_scheduleCheckInterval": 26,
         "_pulseTimer": null,
         "_shouldOutput": true,
-        "_initialized": true
+        "_initialized": true,
+        "selected": false
       }
     },
     {
-      "id": "152055858a7e348d",
+      "id": "916f1767c52513ad",
       "label": "Debug",
       "position": {
-        "x": 859.2384242242531,
-        "y": 795.3056970306202
+        "x": 832.3742266933889,
+        "y": 591.5155733854501
       },
       "data": {
         "inputs": {
@@ -165,7 +167,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "0dce42b5645d5186",
+            "id": "a2f31641b92ff67c",
             "control": null,
             "showControl": true
           }
@@ -177,12 +179,12 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "ecf14b996b49c342"
+            "id": "3a16b8240fa13aa7"
           }
         },
         "controls": {},
         "label": "Debug",
-        "id": "152055858a7e348d",
+        "id": "916f1767c52513ad",
         "width": 260,
         "properties": {
           "name": "",
@@ -191,39 +193,46 @@
           "enabled": true,
           "history": [
             {
-              "time": "2:20:00 PM",
-              "timestamp": 1766442000250,
+              "time": "2:33:10 PM",
+              "timestamp": 1766442790772,
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "time": "2:32:08 PM",
+              "timestamp": 1766442728150,
               "value": false,
               "type": "boolean"
             }
           ],
-          "currentValue": false,
-          "messageCount": 1
-        }
+          "currentValue": true,
+          "messageCount": 2
+        },
+        "selected": false
       }
     }
   ],
   "connections": [
     {
-      "id": "85a47ba1015af42b",
-      "source": "72f33003d4962a8c",
-      "target": "152055858a7e348d",
+      "id": "ea290833b8f9bd95",
+      "source": "689740deb1d686ce",
+      "target": "916f1767c52513ad",
       "sourceOutput": "output",
       "targetInput": "input"
     },
     {
-      "id": "8d8b69193b043422",
-      "source": "72f33003d4962a8c",
-      "target": "b6bd02decbb30efa",
+      "id": "e5b6ebf33e50c22d",
+      "source": "689740deb1d686ce",
+      "target": "cad2bc21d6f4050c",
       "sourceOutput": "output",
       "targetInput": "trigger"
     }
   ],
   "viewport": {
-    "x": -142.47398300170903,
-    "y": -417.3622496128082,
-    "k": 1.2037325418367204
+    "x": 0,
+    "y": 0,
+    "k": 1
   },
   "autoSaved": true,
-  "timestamp": 1766442120228
+  "timestamp": 1766442848137
 }
