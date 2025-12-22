@@ -41,7 +41,7 @@
         constructor(changeCallback) {
             super("HA Lock Control");
             this.width = 280;
-            this.height = 220;
+            this.height = 260;  // Increased for retry options
             this.changeCallback = changeCallback;
 
             this.properties = {
@@ -50,10 +50,18 @@
                 searchText: '',
                 currentState: 'unknown',
                 lastTrigger: null,
-                triggerInitialized: false  // Skip first value to prevent false triggers on load
+                triggerInitialized: false,  // Skip first value to prevent false triggers on load
+                // Retry/Verify settings
+                retryEnabled: true,         // Enable verify & retry
+                retryDelay: 5000,           // Wait 5 seconds before checking
+                maxRetries: 3,              // Try up to 3 times
+                retryCount: 0,              // Current retry count
+                lastCommandAction: null,    // 'lock' or 'unlock'
+                lastCommandTime: null       // When command was sent
             };
 
             this.devices = [];
+            this._retryTimer = null;
 
             // Add input for trigger
             this.addInput('trigger', new ClassicPreset.Input(window.sockets.boolean, 'Trigger'));
@@ -114,6 +122,10 @@
             }
             if (this._onGraphLoadComplete) {
                 window.removeEventListener('graphLoadComplete', this._onGraphLoadComplete);
+            }
+            if (this._retryTimer) {
+                clearTimeout(this._retryTimer);
+                this._retryTimer = null;
             }
         }
 
@@ -216,11 +228,20 @@
             }
         }
 
-        async sendLockCommand(action) {
+        async sendLockCommand(action, isRetry = false) {
             if (!this.properties.deviceId) return;
 
             const entityId = this.properties.deviceId.replace('ha_', '');
             const service = action === 'lock' ? 'lock' : 'unlock';
+
+            // Track the command for retry logic
+            if (!isRetry) {
+                this.properties.retryCount = 0;
+                this.properties.lastCommandAction = action;
+                this.properties.lastCommandTime = Date.now();
+            }
+
+            console.log(`[HALockNode] Sending ${action} command to ${entityId} (attempt ${this.properties.retryCount + 1}/${this.properties.maxRetries})`);
 
             try {
                 const fetchFn = window.apiFetch || fetch;
@@ -237,8 +258,65 @@
                 // Optimistically update state
                 this.properties.currentState = action === 'lock' ? 'locked' : 'unlocked';
                 if (this.changeCallback) this.changeCallback();
+
+                // Schedule verification if retry is enabled
+                if (this.properties.retryEnabled) {
+                    this.scheduleVerification(action);
+                }
             } catch (err) {
                 console.error(`[HALockNode] Error sending ${action} command:`, err);
+            }
+        }
+
+        scheduleVerification(expectedAction) {
+            // Clear any existing retry timer
+            if (this._retryTimer) {
+                clearTimeout(this._retryTimer);
+            }
+
+            this._retryTimer = setTimeout(async () => {
+                this._retryTimer = null;
+                await this.verifyAndRetry(expectedAction);
+            }, this.properties.retryDelay);
+        }
+
+        async verifyAndRetry(expectedAction) {
+            if (!this.properties.deviceId) return;
+
+            // Fetch fresh state from HA
+            try {
+                const entityId = this.properties.deviceId.replace('ha_', '');
+                const fetchFn = window.apiFetch || fetch;
+                const response = await fetchFn(`/api/lights/ha/${entityId}/state`);
+                const data = await response.json();
+                
+                if (data.success && data.state) {
+                    const actualState = data.state.state || 'unknown';
+                    this.properties.currentState = actualState;
+                    
+                    const expectedState = expectedAction === 'lock' ? 'locked' : 'unlocked';
+                    
+                    if (actualState === expectedState) {
+                        console.log(`[HALockNode] ✅ Verified: Lock is ${actualState} as expected`);
+                        this.properties.retryCount = 0;  // Reset on success
+                    } else {
+                        console.log(`[HALockNode] ❌ Mismatch: Expected ${expectedState}, got ${actualState}`);
+                        
+                        // Retry if we haven't exceeded max retries
+                        if (this.properties.retryCount < this.properties.maxRetries - 1) {
+                            this.properties.retryCount++;
+                            console.log(`[HALockNode] 🔄 Retrying ${expectedAction} (attempt ${this.properties.retryCount + 1}/${this.properties.maxRetries})`);
+                            await this.sendLockCommand(expectedAction, true);
+                        } else {
+                            console.error(`[HALockNode] ⚠️ Max retries (${this.properties.maxRetries}) exceeded. Lock may be stuck in ${actualState} state.`);
+                            this.properties.retryCount = 0;  // Reset for next command
+                        }
+                    }
+                    
+                    if (this.changeCallback) this.changeCallback();
+                }
+            } catch (err) {
+                console.error('[HALockNode] Error verifying state:', err);
             }
         }
 
@@ -246,20 +324,28 @@
             // Handle trigger input
             const triggerInput = inputs.trigger?.[0];
             
-            // Edge detection: only act when value CHANGES, not on first load
+            // Pulse Mode support:
+            // - undefined → false/true = ACT (rising/falling edge from pulse)
+            // - false/true → undefined = reset (pulse ended, ready for next)
+            // - false → true or true → false = ACT (value change)
+            
             if (triggerInput !== undefined) {
-                if (!this.properties.triggerInitialized) {
-                    // First time seeing a value - just store it, don't act
-                    this.properties.triggerInitialized = true;
-                    this.properties.lastTrigger = triggerInput;
-                } else if (triggerInput !== this.properties.lastTrigger) {
-                    // Value actually changed - act on it
+                // Got a real value (true or false)
+                if (this.properties.lastTrigger !== triggerInput) {
+                    // Value changed (or came from undefined) - ACT
+                    console.log(`[HALockNode] Trigger changed: ${this.properties.lastTrigger} → ${triggerInput}`);
                     this.properties.lastTrigger = triggerInput;
                     
                     if (this.properties.deviceId) {
                         // true = unlock, false = lock
                         this.sendLockCommand(triggerInput ? 'unlock' : 'lock');
                     }
+                }
+            } else {
+                // Input is undefined - reset for next pulse
+                if (this.properties.lastTrigger !== undefined) {
+                    console.log('[HALockNode] Trigger reset to undefined (ready for next pulse)');
+                    this.properties.lastTrigger = undefined;
                 }
             }
 
@@ -276,7 +362,10 @@
                 deviceId: this.properties.deviceId,
                 deviceName: this.properties.deviceName,
                 searchText: this.properties.searchText,
-                currentState: this.properties.currentState
+                currentState: this.properties.currentState,
+                retryEnabled: this.properties.retryEnabled,
+                retryDelay: this.properties.retryDelay,
+                maxRetries: this.properties.maxRetries
             };
         }
 
@@ -284,11 +373,15 @@
             const props = state.properties || state;
             if (props) {
                 Object.assign(this.properties, props);
+                // Ensure retry settings have defaults if missing from old saves
+                if (this.properties.retryEnabled === undefined) this.properties.retryEnabled = true;
+                if (this.properties.retryDelay === undefined) this.properties.retryDelay = 5000;
+                if (this.properties.maxRetries === undefined) this.properties.maxRetries = 3;
             }
 
-            // Reset trigger detection to ignore first value after restore
-            this.properties.triggerInitialized = false;
-            this.properties.lastTrigger = null;
+            // Reset trigger detection - start with undefined so first pulse triggers action
+            this.properties.lastTrigger = undefined;
+            this.properties.retryCount = 0;
 
             // Restore dropdown value
             const control = this.controls.device_select;

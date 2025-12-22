@@ -1,11 +1,123 @@
 {
   "nodes": [
     {
-      "id": "cad2bc21d6f4050c",
+      "id": "c068eabd6557bcdb",
+      "label": "Inject",
+      "position": {
+        "x": 501,
+        "y": 284
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "45d41834a192cf80"
+          }
+        },
+        "controls": {},
+        "label": "Inject",
+        "id": "c068eabd6557bcdb",
+        "width": 220,
+        "properties": {
+          "payloadType": "boolean",
+          "payloadValue": false,
+          "repeatMs": 0,
+          "onceDelay": 0,
+          "name": "",
+          "pulseMode": true,
+          "pulseDurationMs": 500,
+          "scheduleEnabled": true,
+          "scheduleTime": "15:21",
+          "scheduleDays": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "lastTriggerTime": 1766445660192,
+          "triggerCount": 2,
+          "isRepeating": false,
+          "onceTriggered": false,
+          "nextScheduledTime": 1766532060000,
+          "isPulsing": false,
+          "debug": false
+        },
+        "_repeatTimer": null,
+        "_onceTimer": null,
+        "_scheduleTimer": null,
+        "_scheduleCheckInterval": 25,
+        "_pulseTimer": null,
+        "_shouldOutput": true,
+        "_initialized": true,
+        "selected": false
+      }
+    },
+    {
+      "id": "af6c28033728df1e",
+      "label": "Debug",
+      "position": {
+        "x": 999.0985126088749,
+        "y": 687.7810331560222
+      },
+      "data": {
+        "inputs": {
+          "input": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input",
+            "id": "82ed395f5a50e38a",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "2cf2f28f2bbf65a0"
+          }
+        },
+        "controls": {},
+        "label": "Debug",
+        "id": "af6c28033728df1e",
+        "width": 260,
+        "properties": {
+          "name": "",
+          "toConsole": false,
+          "maxHistory": 10,
+          "enabled": true,
+          "history": [
+            {
+              "time": "3:20:00 PM",
+              "timestamp": 1766445600186,
+              "value": false,
+              "type": "boolean"
+            }
+          ],
+          "currentValue": false,
+          "messageCount": 1
+        },
+        "selected": true
+      }
+    },
+    {
+      "id": "cbada2640bc4d337",
       "label": "HA Lock Control",
       "position": {
-        "x": 834.4261162365536,
-        "y": 192
+        "x": 999.1111111111111,
+        "y": 288.1177284865779
       },
       "data": {
         "inputs": {
@@ -14,7 +126,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "e00f1205b4e9104d",
+            "id": "728efb0b324db293",
             "control": null,
             "showControl": true
           }
@@ -26,7 +138,7 @@
             },
             "label": "State",
             "multipleConnections": true,
-            "id": "5ef178535f364e69"
+            "id": "3cc1823e444ad7b3"
           },
           "is_locked": {
             "socket": {
@@ -34,19 +146,19 @@
             },
             "label": "Is Locked",
             "multipleConnections": true,
-            "id": "60af52c5fb2b3f1f"
+            "id": "6aaa37d6269c298c"
           }
         },
         "controls": {
           "search": {
-            "id": "c20f450b96c6a18e",
+            "id": "3082a63b7439313b",
             "label": "🔍 Search",
             "value": "",
             "placeholder": "Type to filter locks...",
             "type": "text"
           },
           "device_select": {
-            "id": "661030c5e37441be",
+            "id": "d282b2ad5c35a55f",
             "label": "Lock",
             "values": [
               "— Select Lock —",
@@ -56,16 +168,21 @@
           }
         },
         "label": "HA Lock Control",
-        "id": "cad2bc21d6f4050c",
+        "id": "cbada2640bc4d337",
         "width": 280,
-        "height": 220,
+        "height": 260,
         "properties": {
           "deviceId": "ha_lock.aura_lock",
           "deviceName": "Sunshine Terrace Door Lock",
           "searchText": "",
-          "currentState": "unlocked",
-          "lastTrigger": true,
-          "triggerInitialized": true
+          "currentState": "locked",
+          "triggerInitialized": true,
+          "retryEnabled": true,
+          "retryDelay": 5000,
+          "maxRetries": 3,
+          "retryCount": 0,
+          "lastCommandAction": "lock",
+          "lastCommandTime": 1766445660197
         },
         "devices": [
           {
@@ -90,140 +207,23 @@
             }
           }
         ],
-        "selected": false
-      }
-    },
-    {
-      "id": "689740deb1d686ce",
-      "label": "Inject",
-      "position": {
-        "x": 369,
-        "y": 297.81622584575325
-      },
-      "data": {
-        "inputs": {},
-        "outputs": {
-          "output": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Output",
-            "multipleConnections": true,
-            "id": "44a208730691150e"
-          }
-        },
-        "controls": {},
-        "label": "Inject",
-        "id": "689740deb1d686ce",
-        "width": 220,
-        "properties": {
-          "payloadType": "boolean",
-          "payloadValue": false,
-          "repeatMs": 0,
-          "onceDelay": 0,
-          "name": "",
-          "pulseMode": true,
-          "pulseDurationMs": 500,
-          "scheduleEnabled": true,
-          "scheduleTime": "14:34",
-          "scheduleDays": [
-            true,
-            true,
-            true,
-            true,
-            true,
-            true,
-            true
-          ],
-          "lastTriggerTime": 1766442788144,
-          "triggerCount": 1,
-          "isRepeating": false,
-          "onceTriggered": false,
-          "nextScheduledTime": 1766442840000,
-          "isPulsing": false,
-          "debug": false
-        },
-        "_repeatTimer": null,
-        "_onceTimer": null,
-        "_scheduleTimer": null,
-        "_scheduleCheckInterval": 26,
-        "_pulseTimer": null,
-        "_shouldOutput": true,
-        "_initialized": true,
-        "selected": false
-      }
-    },
-    {
-      "id": "916f1767c52513ad",
-      "label": "Debug",
-      "position": {
-        "x": 832.3742266933889,
-        "y": 591.5155733854501
-      },
-      "data": {
-        "inputs": {
-          "input": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Input",
-            "id": "a2f31641b92ff67c",
-            "control": null,
-            "showControl": true
-          }
-        },
-        "outputs": {
-          "output": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Output",
-            "multipleConnections": true,
-            "id": "3a16b8240fa13aa7"
-          }
-        },
-        "controls": {},
-        "label": "Debug",
-        "id": "916f1767c52513ad",
-        "width": 260,
-        "properties": {
-          "name": "",
-          "toConsole": false,
-          "maxHistory": 10,
-          "enabled": true,
-          "history": [
-            {
-              "time": "2:33:10 PM",
-              "timestamp": 1766442790772,
-              "value": true,
-              "type": "boolean"
-            },
-            {
-              "time": "2:32:08 PM",
-              "timestamp": 1766442728150,
-              "value": false,
-              "type": "boolean"
-            }
-          ],
-          "currentValue": true,
-          "messageCount": 2
-        },
+        "_retryTimer": null,
         "selected": false
       }
     }
   ],
   "connections": [
     {
-      "id": "ea290833b8f9bd95",
-      "source": "689740deb1d686ce",
-      "target": "916f1767c52513ad",
+      "id": "ded5d74eabb30b1e",
+      "source": "c068eabd6557bcdb",
+      "target": "af6c28033728df1e",
       "sourceOutput": "output",
       "targetInput": "input"
     },
     {
-      "id": "e5b6ebf33e50c22d",
-      "source": "689740deb1d686ce",
-      "target": "cad2bc21d6f4050c",
+      "id": "713c7b52f7229c93",
+      "source": "c068eabd6557bcdb",
+      "target": "cbada2640bc4d337",
       "sourceOutput": "output",
       "targetInput": "trigger"
     }
@@ -234,5 +234,5 @@
     "k": 1
   },
   "autoSaved": true,
-  "timestamp": 1766442848137
+  "timestamp": 1766445715178
 }

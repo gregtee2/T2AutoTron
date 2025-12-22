@@ -137,10 +137,10 @@
                 return;
             }
 
-            // Check every 30 seconds
+            // Check every 1 second for precise triggering
             this._scheduleCheckInterval = setInterval(() => {
                 this._checkSchedule();
-            }, 30000);
+            }, 1000);
 
             // Also check immediately
             this._checkSchedule();
@@ -177,10 +177,11 @@
 
             const currentHours = now.getHours();
             const currentMinutes = now.getMinutes();
+            const currentSeconds = now.getSeconds();
 
-            // Check if we're within the trigger window (same minute)
-            if (currentHours === hours && currentMinutes === minutes) {
-                // Only trigger if we haven't triggered this minute
+            // Trigger at exactly the start of the minute (within first 2 seconds)
+            if (currentHours === hours && currentMinutes === minutes && currentSeconds < 2) {
+                // Only trigger if we haven't triggered recently (within 60 seconds)
                 const lastTrigger = this.properties.lastTriggerTime;
                 if (!lastTrigger || (Date.now() - lastTrigger) > 60000) {
                     this.trigger();

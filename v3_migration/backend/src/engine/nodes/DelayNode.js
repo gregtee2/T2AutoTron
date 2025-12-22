@@ -270,10 +270,10 @@ class InjectNode {
 
     console.log(`[InjectNode] Starting schedule checker for ${this.properties.scheduleTime}`);
     
-    // Check every 10 seconds for more responsive scheduling
+    // Check every 1 second for precise triggering
     this._scheduleCheckInterval = setInterval(() => {
       this._checkSchedule();
-    }, 10000);
+    }, 1000);
 
     // Also check immediately
     this._checkSchedule();
@@ -305,14 +305,14 @@ class InjectNode {
 
     const currentHours = now.getHours();
     const currentMinutes = now.getMinutes();
-    const currentMinuteKey = currentHours * 60 + currentMinutes;
+    const currentSeconds = now.getSeconds();
 
-    // Check if we're within the trigger window (same minute)
-    if (currentHours === hours && currentMinutes === minutes) {
-      // Only trigger if we haven't triggered this minute
-      if (this._lastScheduleMinute !== currentMinuteKey) {
-        console.log(`[InjectNode] Schedule triggered at ${this.properties.scheduleTime}`);
-        this._lastScheduleMinute = currentMinuteKey;
+    // Trigger at exactly the start of the minute (within first 2 seconds)
+    if (currentHours === hours && currentMinutes === minutes && currentSeconds < 2) {
+      // Only trigger if we haven't triggered recently (within 60 seconds)
+      const lastTrigger = this.properties.lastTriggerTime;
+      if (!lastTrigger || (Date.now() - lastTrigger) > 60000) {
+        console.log(`[InjectNode] Schedule triggered at ${this.properties.scheduleTime} (${currentHours}:${currentMinutes}:${currentSeconds})`);
         this.trigger();
       }
     }
@@ -322,7 +322,7 @@ class InjectNode {
     // Pulse mode: only output during active pulse, undefined otherwise
     if (this.properties.pulseMode) {
       const output = this.properties.isPulsing ? this._getPayload() : undefined;
-      console.log(`[InjectNode] data() pulseMode=true, isPulsing=${this.properties.isPulsing}, output=${output}`);
+      // Only log when pulse state changes or starts (avoid spam on every tick)
       return { output };
     }
     

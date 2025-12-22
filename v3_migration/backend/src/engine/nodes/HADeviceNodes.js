@@ -1236,6 +1236,7 @@ class HADeviceStateDisplayNode {
 /**
  * HALockNode - Backend engine node for controlling locks
  * Sends lock/unlock commands when trigger input changes
+ * Includes verify & retry logic for reliability
  */
 class HALockNode {
   constructor() {
@@ -1245,31 +1246,51 @@ class HALockNode {
       deviceId: '',
       deviceName: '',
       currentState: 'unknown',
-      lastTrigger: null
+      lastTrigger: null,
+      // Retry/Verify settings
+      retryEnabled: true,
+      retryDelay: 5000,      // 5 seconds
+      maxRetries: 3,
+      retryCount: 0,
+      lastCommandAction: null
     };
     this.inputs = ['trigger'];
     this.outputs = ['state', 'is_locked'];
     this.lastCommandTime = 0;
     this.MIN_COMMAND_INTERVAL = 1000; // 1 second throttle
+    this._retryTimer = null;
   }
 
   restore(data) {
     if (data.properties) {
       Object.assign(this.properties, data.properties);
+      // Ensure retry settings have defaults if missing
+      if (this.properties.retryEnabled === undefined) this.properties.retryEnabled = true;
+      if (this.properties.retryDelay === undefined) this.properties.retryDelay = 5000;
+      if (this.properties.maxRetries === undefined) this.properties.maxRetries = 3;
     }
+    this.properties.retryCount = 0;
   }
 
-  async sendLockCommand(action) {
+  async sendLockCommand(action, isRetry = false) {
     if (!this.properties.deviceId) return;
     
-    // Throttle commands
+    // Throttle commands (but allow retries)
     const now = Date.now();
-    if (now - this.lastCommandTime < this.MIN_COMMAND_INTERVAL) return;
+    if (!isRetry && now - this.lastCommandTime < this.MIN_COMMAND_INTERVAL) return;
     this.lastCommandTime = now;
+
+    // Track for retry logic
+    if (!isRetry) {
+      this.properties.retryCount = 0;
+      this.properties.lastCommandAction = action;
+    }
 
     const entityId = this.properties.deviceId.replace('ha_', '');
     const service = action === 'lock' ? 'lock' : 'unlock';
     const config = getHAConfig();
+
+    console.log(`[HALockNode] Sending ${action} command to ${entityId} (attempt ${this.properties.retryCount + 1}/${this.properties.maxRetries})`);
 
     try {
       const response = await fetch(`${config.host}/api/services/lock/${service}`, {
@@ -1283,12 +1304,80 @@ class HALockNode {
 
       if (response.ok) {
         this.properties.currentState = action === 'lock' ? 'locked' : 'unlocked';
-        engineLogger.log('LOCK-CMD', entityId, { service, success: true });
+        engineLogger.log('LOCK-CMD', entityId, { service, success: true, attempt: this.properties.retryCount + 1 });
+        
+        // Schedule verification if retry is enabled
+        if (this.properties.retryEnabled) {
+          this.scheduleVerification(action);
+        }
       } else {
         engineLogger.log('LOCK-CMD', entityId, { service, success: false, status: response.status });
       }
     } catch (err) {
       engineLogger.log('LOCK-CMD', entityId, { service, success: false, error: err.message });
+    }
+  }
+
+  scheduleVerification(expectedAction) {
+    if (this._retryTimer) {
+      clearTimeout(this._retryTimer);
+    }
+
+    this._retryTimer = setTimeout(async () => {
+      this._retryTimer = null;
+      await this.verifyAndRetry(expectedAction);
+    }, this.properties.retryDelay);
+  }
+
+  async verifyAndRetry(expectedAction) {
+    if (!this.properties.deviceId) return;
+
+    const entityId = this.properties.deviceId.replace('ha_', '');
+    const config = getHAConfig();
+
+    try {
+      const response = await fetch(`${config.host}/api/states/${entityId}`, {
+        headers: {
+          'Authorization': `Bearer ${config.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const actualState = data.state || 'unknown';
+        this.properties.currentState = actualState;
+
+        const expectedState = expectedAction === 'lock' ? 'locked' : 'unlocked';
+
+        if (actualState === expectedState) {
+          console.log(`[HALockNode] ✅ Verified: Lock is ${actualState} as expected`);
+          engineLogger.log('LOCK-VERIFY', entityId, { expected: expectedState, actual: actualState, success: true });
+          this.properties.retryCount = 0;
+        } else {
+          console.log(`[HALockNode] ❌ Mismatch: Expected ${expectedState}, got ${actualState}`);
+          engineLogger.log('LOCK-VERIFY', entityId, { expected: expectedState, actual: actualState, success: false });
+
+          if (this.properties.retryCount < this.properties.maxRetries - 1) {
+            this.properties.retryCount++;
+            console.log(`[HALockNode] 🔄 Retrying ${expectedAction} (attempt ${this.properties.retryCount + 1}/${this.properties.maxRetries})`);
+            await this.sendLockCommand(expectedAction, true);
+          } else {
+            console.error(`[HALockNode] ⚠️ Max retries (${this.properties.maxRetries}) exceeded. Lock stuck at ${actualState}`);
+            engineLogger.log('LOCK-RETRY-FAILED', entityId, { expected: expectedState, actual: actualState, maxRetries: this.properties.maxRetries });
+            this.properties.retryCount = 0;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[HALockNode] Error verifying state:', err.message);
+    }
+  }
+
+  destroy() {
+    if (this._retryTimer) {
+      clearTimeout(this._retryTimer);
+      this._retryTimer = null;
     }
   }
 
