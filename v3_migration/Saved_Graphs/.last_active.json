@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "c172a2de65b57404",
+      "id": "b917bdd506728acb",
       "label": "HA Lock Control",
       "position": {
-        "x": 518.3338631780019,
-        "y": 222.9376538362325
+        "x": 477.3031561790015,
+        "y": 190.09053527245953
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "02b75b8c2357641b",
+            "id": "7a25d927c55f57dc",
             "control": null,
             "showControl": true
           }
@@ -26,7 +26,7 @@
             },
             "label": "State",
             "multipleConnections": true,
-            "id": "d823e36d6ae2d9de"
+            "id": "b289e9e20606fb6a"
           },
           "is_locked": {
             "socket": {
@@ -34,63 +34,42 @@
             },
             "label": "Is Locked",
             "multipleConnections": true,
-            "id": "683f4c80f6be8351"
+            "id": "3e6deb3b2d27ce39"
           }
         },
         "controls": {
           "search": {
-            "id": "2e1dea25e154c6b5",
+            "id": "2b3e125b50adccac",
             "label": "🔍 Search",
             "value": "",
             "placeholder": "Type to filter locks...",
             "type": "text"
           },
           "device_select": {
-            "id": "cc4b2f90cbf1f980",
+            "id": "d7fe1db7487c8e5a",
             "label": "Lock",
             "values": [
               "— Select Lock —",
-              "Aura Reach",
-              "Aura Reach"
+              "Sunshine Terrace Door Lock"
             ],
-            "value": "Aura Reach"
+            "value": "Sunshine Terrace Door Lock"
           }
         },
         "label": "HA Lock Control",
-        "id": "c172a2de65b57404",
+        "id": "b917bdd506728acb",
         "width": 280,
         "height": 220,
         "properties": {
-          "deviceId": "ha_lock.aura_reach",
-          "deviceName": "Aura Reach",
+          "deviceId": "ha_lock.aura_lock",
+          "deviceName": "Sunshine Terrace Door Lock",
           "searchText": "",
           "currentState": "locked",
           "lastTrigger": null
         },
         "devices": [
           {
-            "id": "ha_lock.aura_reach",
-            "name": "Aura Reach",
-            "type": "lock",
-            "state": {
-              "state": "unavailable",
-              "on": false,
-              "brightness": 0,
-              "hs_color": [
-                0,
-                0
-              ],
-              "power": null,
-              "energy": null
-            },
-            "attributes": {
-              "friendly_name": "Aura Reach",
-              "supported_features": 0
-            }
-          },
-          {
-            "id": "ha_lock.aura_reach_2",
-            "name": "Aura Reach",
+            "id": "ha_lock.aura_lock",
+            "name": "Sunshine Terrace Door Lock",
             "type": "lock",
             "state": {
               "state": "locked",
@@ -105,21 +84,21 @@
             },
             "attributes": {
               "changed_by": "Remote",
-              "friendly_name": "Aura Reach",
+              "friendly_name": "Sunshine Terrace Door Lock",
               "supported_features": 0
             }
           }
         ],
-        "selected": true
+        "selected": false
       }
     }
   ],
   "connections": [],
   "viewport": {
-    "x": -406.9853500366212,
-    "y": -262.79701414108274,
-    "k": 1.9099376297100015
+    "x": -49.73066329956045,
+    "y": 129.44704474210747,
+    "k": 1.0048689722320063
   },
   "autoSaved": true,
-  "timestamp": 1766357148233
+  "timestamp": 1766433360139
 }

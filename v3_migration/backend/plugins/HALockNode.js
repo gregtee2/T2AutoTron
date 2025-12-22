@@ -95,12 +95,24 @@
                 window.socket.on('device-state-update', this._onDeviceStateUpdate);
                 window.socket.on('connect', this._onConnect);
             }
+
+            // Listen for graph load complete to fetch devices
+            this._onGraphLoadComplete = () => {
+                this.fetchDevices();
+                if (this.properties.deviceId) {
+                    this.fetchCurrentState();
+                }
+            };
+            window.addEventListener('graphLoadComplete', this._onGraphLoadComplete);
         }
 
         destroy() {
             if (window.socket) {
                 if (this._onDeviceStateUpdate) window.socket.off('device-state-update', this._onDeviceStateUpdate);
                 if (this._onConnect) window.socket.off('connect', this._onConnect);
+            }
+            if (this._onGraphLoadComplete) {
+                window.removeEventListener('graphLoadComplete', this._onGraphLoadComplete);
             }
         }
 
@@ -151,6 +163,9 @@
             }
             
             if (control.updateDropdown) control.updateDropdown();
+            
+            // Trigger re-render so UI updates
+            if (this.changeCallback) this.changeCallback();
         }
 
         onDeviceSelected(name) {
@@ -368,9 +383,26 @@
             transition: 'all 0.2s'
         });
 
+        // Border style based on lock state
+        const borderStyle = isLocked 
+            ? '1px solid rgba(95, 170, 125, 0.5)' 
+            : isUnlocked 
+            ? '1px solid rgba(212, 160, 84, 0.5)' 
+            : '1px solid rgba(0, 243, 255, 0.3)';
+        const boxShadowStyle = isLocked 
+            ? '0 0 15px rgba(95, 170, 125, 0.3), inset 0 0 10px rgba(95, 170, 125, 0.1)' 
+            : isUnlocked 
+            ? '0 0 15px rgba(212, 160, 84, 0.3), inset 0 0 10px rgba(212, 160, 84, 0.1)' 
+            : 'none';
+
         return React.createElement('div', { 
-            className: 'ha-lock-node',
-            style: containerStyle
+            className: 'ha-node-tron',
+            style: {
+                ...containerStyle,
+                border: borderStyle,
+                boxShadow: boxShadowStyle,
+                transition: 'border 0.3s ease, box-shadow 0.3s ease'
+            }
         }, [
             // Header
             NodeHeader && React.createElement(NodeHeader, {
