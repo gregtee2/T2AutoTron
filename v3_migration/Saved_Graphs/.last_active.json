@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "b917bdd506728acb",
+      "id": "eb224c46272594cb",
       "label": "HA Lock Control",
       "position": {
-        "x": 477.3031561790015,
-        "y": 190.09053527245953
+        "x": 661.4814814814815,
+        "y": 229.18518537356528
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "7a25d927c55f57dc",
+            "id": "145a0563e552e16b",
             "control": null,
             "showControl": true
           }
@@ -26,7 +26,7 @@
             },
             "label": "State",
             "multipleConnections": true,
-            "id": "b289e9e20606fb6a"
+            "id": "953a344abc52d81a"
           },
           "is_locked": {
             "socket": {
@@ -34,19 +34,19 @@
             },
             "label": "Is Locked",
             "multipleConnections": true,
-            "id": "3e6deb3b2d27ce39"
+            "id": "d5df854dcb99cf36"
           }
         },
         "controls": {
           "search": {
-            "id": "2b3e125b50adccac",
+            "id": "ec4bc6ba5bd5066d",
             "label": "🔍 Search",
             "value": "",
             "placeholder": "Type to filter locks...",
             "type": "text"
           },
           "device_select": {
-            "id": "d7fe1db7487c8e5a",
+            "id": "07fbbe219a910dc3",
             "label": "Lock",
             "values": [
               "— Select Lock —",
@@ -56,7 +56,7 @@
           }
         },
         "label": "HA Lock Control",
-        "id": "b917bdd506728acb",
+        "id": "eb224c46272594cb",
         "width": 280,
         "height": 220,
         "properties": {
@@ -64,7 +64,8 @@
           "deviceName": "Sunshine Terrace Door Lock",
           "searchText": "",
           "currentState": "locked",
-          "lastTrigger": null
+          "lastTrigger": false,
+          "triggerInitialized": true
         },
         "devices": [
           {
@@ -91,14 +92,173 @@
         ],
         "selected": false
       }
+    },
+    {
+      "id": "b5a8fe82547f99ad",
+      "label": "Inject",
+      "position": {
+        "x": 168.7819793535936,
+        "y": 280.32850831496273
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "8c1a9ed7906d955c"
+          }
+        },
+        "controls": {},
+        "label": "Inject",
+        "id": "b5a8fe82547f99ad",
+        "width": 220,
+        "properties": {
+          "payloadType": "boolean",
+          "payloadValue": false,
+          "repeatMs": 0,
+          "onceDelay": 0,
+          "name": "",
+          "scheduleEnabled": true,
+          "scheduleTime": "14:16",
+          "scheduleDays": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "lastTriggerTime": null,
+          "triggerCount": 0,
+          "isRepeating": false,
+          "onceTriggered": false,
+          "nextScheduledTime": 1766441760000,
+          "debug": false
+        },
+        "_repeatTimer": null,
+        "_onceTimer": null,
+        "_scheduleTimer": null,
+        "_scheduleCheckInterval": null,
+        "_shouldOutput": false,
+        "_initialized": true,
+        "selected": false
+      }
+    },
+    {
+      "id": "a5cf0c72ad7e1420",
+      "label": "Debug",
+      "position": {
+        "x": 687.2847521035621,
+        "y": 624.506834001045
+      },
+      "data": {
+        "inputs": {
+          "input": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input",
+            "id": "9c87ad3a8c108f26",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "4f08b1c527e71a2d"
+          }
+        },
+        "controls": {},
+        "label": "Debug",
+        "id": "a5cf0c72ad7e1420",
+        "width": 260,
+        "properties": {
+          "name": "",
+          "toConsole": false,
+          "maxHistory": 10,
+          "enabled": true,
+          "history": [
+            {
+              "time": "2:15:25 PM",
+              "timestamp": 1766441725719,
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "time": "2:15:13 PM",
+              "timestamp": 1766441713137,
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "time": "2:14:58 PM",
+              "timestamp": 1766441698142,
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "time": "2:14:47 PM",
+              "timestamp": 1766441687550,
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "time": "2:14:41 PM",
+              "timestamp": 1766441681401,
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "time": "2:14:38 PM",
+              "timestamp": 1766441678569,
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "time": "2:14:17 PM",
+              "timestamp": 1766441657589,
+              "value": false,
+              "type": "boolean"
+            }
+          ],
+          "currentValue": false,
+          "messageCount": 7
+        },
+        "selected": false
+      }
     }
   ],
-  "connections": [],
+  "connections": [
+    {
+      "id": "d460ef1ff6ad6ba3",
+      "source": "b5a8fe82547f99ad",
+      "target": "a5cf0c72ad7e1420",
+      "sourceOutput": "output",
+      "targetInput": "input"
+    },
+    {
+      "id": "d9002127dd6b596b",
+      "source": "b5a8fe82547f99ad",
+      "target": "eb224c46272594cb",
+      "sourceOutput": "output",
+      "targetInput": "trigger"
+    }
+  ],
   "viewport": {
-    "x": -49.73066329956045,
-    "y": 129.44704474210747,
-    "k": 1.0048689722320063
+    "x": 32.86898574829095,
+    "y": -387.1200492858886,
+    "k": 1.240578978064205
   },
   "autoSaved": true,
-  "timestamp": 1766433360139
+  "timestamp": 1766441813718
 }

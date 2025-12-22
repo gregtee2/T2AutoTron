@@ -79,6 +79,8 @@
                 repeatMs: 0,  // 0 = no repeat, otherwise interval in ms
                 onceDelay: 0, // 0 = disabled, otherwise seconds after start to inject once
                 name: '',     // Optional name for identification
+                pulseMode: false, // When true, output is undefined except during pulse
+                pulseDurationMs: 500, // How long pulse lasts
                 // Schedule settings
                 scheduleEnabled: false,
                 scheduleTime: '',      // HH:MM format (24-hour)
@@ -89,6 +91,7 @@
                 isRepeating: false,
                 onceTriggered: false,
                 nextScheduledTime: null,
+                isPulsing: false,      // True during active pulse
                 debug: false
             };
 
@@ -97,6 +100,7 @@
             this._onceTimer = null;
             this._scheduleTimer = null;
             this._scheduleCheckInterval = null;
+            this._pulseTimer = null;
             this._shouldOutput = false;
             this._initialized = false;
 
@@ -240,6 +244,24 @@
             this._shouldOutput = true;
             this.properties.lastTriggerTime = Date.now();
             this.properties.triggerCount++;
+            
+            // Handle pulse mode - output value briefly then go back to undefined
+            if (this.properties.pulseMode) {
+                this.properties.isPulsing = true;
+                
+                // Clear any existing pulse timer
+                if (this._pulseTimer) {
+                    clearTimeout(this._pulseTimer);
+                }
+                
+                // End pulse after duration
+                this._pulseTimer = setTimeout(() => {
+                    this.properties.isPulsing = false;
+                    this._pulseTimer = null;
+                    if (this.changeCallback) this.changeCallback();
+                }, this.properties.pulseDurationMs || 500);
+            }
+            
             if (this.changeCallback) this.changeCallback();
         }
 
@@ -293,14 +315,17 @@
             // Initialize on first data() call (flow started)
             this.initialize();
             
-            // Check if we should output (triggered)
-            if (this._shouldOutput) {
-                this._shouldOutput = false;
-                return { output: this._getPayload() };
+            // Pulse mode: only output during active pulse, undefined otherwise
+            if (this.properties.pulseMode) {
+                if (this.properties.isPulsing) {
+                    return { output: this._getPayload() };
+                } else {
+                    return { output: undefined };
+                }
             }
             
-            // When not triggered, still return the last value for downstream
-            // This allows the flow to continue processing
+            // Non-pulse mode: always return the payload value
+            // (original behavior - value stays on the wire)
             return { output: this._getPayload() };
         }
 
@@ -312,6 +337,8 @@
                 this.properties.repeatMs = state.properties.repeatMs || 0;
                 this.properties.onceDelay = state.properties.onceDelay || 0;
                 this.properties.name = state.properties.name || '';
+                this.properties.pulseMode = state.properties.pulseMode || false;
+                this.properties.pulseDurationMs = state.properties.pulseDurationMs || 500;
                 // Schedule settings
                 this.properties.scheduleEnabled = state.properties.scheduleEnabled || false;
                 this.properties.scheduleTime = state.properties.scheduleTime || '';
@@ -321,6 +348,7 @@
                 this.properties.lastTriggerTime = null;
                 this.properties.onceTriggered = false;
                 this.properties.nextScheduledTime = null;
+                this.properties.isPulsing = false;
             }
             this._initialized = false;
         }
@@ -332,6 +360,8 @@
                 repeatMs: this.properties.repeatMs,
                 onceDelay: this.properties.onceDelay,
                 name: this.properties.name,
+                pulseMode: this.properties.pulseMode,
+                pulseDurationMs: this.properties.pulseDurationMs,
                 scheduleEnabled: this.properties.scheduleEnabled,
                 scheduleTime: this.properties.scheduleTime,
                 scheduleDays: this.properties.scheduleDays
@@ -344,6 +374,10 @@
             if (this._onceTimer) {
                 clearTimeout(this._onceTimer);
                 this._onceTimer = null;
+            }
+            if (this._pulseTimer) {
+                clearTimeout(this._pulseTimer);
+                this._pulseTimer = null;
             }
         }
     }
@@ -464,6 +498,13 @@
             if (props.scheduleEnabled && data._updateNextScheduledTime) {
                 data._updateNextScheduledTime();
             }
+            forceUpdate(n => n + 1);
+            if (data.changeCallback) data.changeCallback();
+        }, [data, props]);
+
+        // Pulse mode handler
+        const handlePulseToggle = useCallback(() => {
+            props.pulseMode = !props.pulseMode;
             forceUpdate(n => n + 1);
             if (data.changeCallback) data.changeCallback();
         }, [data, props]);
@@ -744,7 +785,41 @@
                     style: repeatButtonStyle,
                     onClick: toggleRepeat,
                     onPointerDown: stopPropagation
-                }, props.isRepeating ? '⏹ Stop' : '▶ Start Repeat')
+                }, props.isRepeating ? '⏹ Stop' : '▶ Start Repeat'),
+
+                // Pulse mode toggle
+                React.createElement('div', { 
+                    style: { ...rowStyle, cursor: 'pointer', marginTop: '8px' },
+                    onClick: handlePulseToggle,
+                    onPointerDown: stopPropagation
+                },
+                    React.createElement('span', { style: labelStyle }, 
+                        '⚡ Pulse Mode',
+                        HelpIcon && React.createElement(HelpIcon, { 
+                            text: 'When enabled, output briefly pulses the value then returns to undefined. This creates a clear "edge" that trigger-based nodes can detect. Use this when scheduling a lock or other action.', 
+                            size: 10 
+                        })
+                    ),
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: props.pulseMode,
+                        readOnly: true,
+                        style: { width: '14px', height: '14px', accentColor: THEME.primary }
+                    })
+                ),
+                
+                // Pulse mode indicator
+                props.pulseMode && React.createElement('div', { 
+                    style: { 
+                        fontSize: '10px', 
+                        color: THEME.warning,
+                        textAlign: 'center',
+                        marginTop: '4px',
+                        padding: '4px',
+                        background: 'rgba(212, 160, 84, 0.1)',
+                        borderRadius: '4px'
+                    } 
+                }, '⚡ Value pulses briefly, then goes undefined')
             ),
 
             // Schedule section
