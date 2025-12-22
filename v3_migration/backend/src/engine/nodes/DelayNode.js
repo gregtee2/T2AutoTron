@@ -164,6 +164,8 @@ class InjectNode {
   }
 
   restore(data) {
+    console.log(`[InjectNode] restore() called with:`, JSON.stringify(data.properties || {}, null, 2));
+    
     if (data.properties) {
       // Restore all properties from saved graph
       this.properties.payloadType = data.properties.payloadType || 'boolean';
@@ -184,6 +186,8 @@ class InjectNode {
         this.properties.payloadValue = data.properties.value;
       }
     }
+    
+    console.log(`[InjectNode] After restore - scheduleEnabled: ${this.properties.scheduleEnabled}, scheduleTime: ${this.properties.scheduleTime}, pulseMode: ${this.properties.pulseMode}`);
     
     // Start schedule checker if enabled
     this._startScheduleChecker();
