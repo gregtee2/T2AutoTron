@@ -1329,6 +1329,37 @@ class HALockNode {
     }, this.properties.retryDelay);
   }
 
+  async sendTelegramNotification(message) {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+
+    if (!botToken || !chatId) {
+      console.log('[HALockNode] Telegram not configured, skipping notification');
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: 'Markdown'
+        })
+      });
+
+      if (response.ok) {
+        console.log(`[HALockNode] Telegram notification sent: ${message}`);
+      } else {
+        const data = await response.json();
+        console.error(`[HALockNode] Telegram failed: ${data.description}`);
+      }
+    } catch (err) {
+      console.error(`[HALockNode] Telegram error: ${err.message}`);
+    }
+  }
+
   async verifyAndRetry(expectedAction) {
     if (!this.properties.deviceId) return;
 
@@ -1349,11 +1380,17 @@ class HALockNode {
         this.properties.currentState = actualState;
 
         const expectedState = expectedAction === 'lock' ? 'locked' : 'unlocked';
+        const deviceName = this.properties.deviceName || 'Lock';
+        const icon = expectedAction === 'lock' ? '🔒' : '🔓';
+        const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
         if (actualState === expectedState) {
           console.log(`[HALockNode] ✅ Verified: Lock is ${actualState} as expected`);
           engineLogger.log('LOCK-VERIFY', entityId, { expected: expectedState, actual: actualState, success: true });
           this.properties.retryCount = 0;
+          
+          // Send Telegram notification on confirmed state change
+          this.sendTelegramNotification(`${icon} *${deviceName}* ${actualState} at ${time}`);
         } else {
           console.log(`[HALockNode] ❌ Mismatch: Expected ${expectedState}, got ${actualState}`);
           engineLogger.log('LOCK-VERIFY', entityId, { expected: expectedState, actual: actualState, success: false });
@@ -1366,6 +1403,9 @@ class HALockNode {
             console.error(`[HALockNode] ⚠️ Max retries (${this.properties.maxRetries}) exceeded. Lock stuck at ${actualState}`);
             engineLogger.log('LOCK-RETRY-FAILED', entityId, { expected: expectedState, actual: actualState, maxRetries: this.properties.maxRetries });
             this.properties.retryCount = 0;
+            
+            // Send warning notification that lock failed
+            this.sendTelegramNotification(`⚠️ *${deviceName}* failed to ${expectedAction} after ${this.properties.maxRetries} attempts!`);
           }
         }
       }

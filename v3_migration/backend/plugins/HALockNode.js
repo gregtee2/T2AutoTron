@@ -280,6 +280,20 @@
             }, this.properties.retryDelay);
         }
 
+        async sendTelegramNotification(message) {
+            try {
+                const fetchFn = window.apiFetch || fetch;
+                await fetchFn('/api/telegram/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                console.log('[HALockNode] Telegram notification sent');
+            } catch (err) {
+                console.error('[HALockNode] Telegram notification failed:', err.message);
+            }
+        }
+
         async verifyAndRetry(expectedAction) {
             if (!this.properties.deviceId) return;
 
@@ -295,10 +309,16 @@
                     this.properties.currentState = actualState;
                     
                     const expectedState = expectedAction === 'lock' ? 'locked' : 'unlocked';
+                    const deviceName = this.properties.deviceName || 'Lock';
+                    const icon = expectedAction === 'lock' ? '🔒' : '🔓';
+                    const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
                     
                     if (actualState === expectedState) {
                         console.log(`[HALockNode] ✅ Verified: Lock is ${actualState} as expected`);
                         this.properties.retryCount = 0;  // Reset on success
+                        
+                        // Send Telegram notification on confirmed state change
+                        this.sendTelegramNotification(`${icon} *${deviceName}* ${actualState} at ${time}`);
                     } else {
                         console.log(`[HALockNode] ❌ Mismatch: Expected ${expectedState}, got ${actualState}`);
                         
@@ -310,6 +330,9 @@
                         } else {
                             console.error(`[HALockNode] ⚠️ Max retries (${this.properties.maxRetries}) exceeded. Lock may be stuck in ${actualState} state.`);
                             this.properties.retryCount = 0;  // Reset for next command
+                            
+                            // Send warning notification that lock failed
+                            this.sendTelegramNotification(`⚠️ *${deviceName}* failed to ${expectedAction} after ${this.properties.maxRetries} attempts!`);
                         }
                     }
                     
