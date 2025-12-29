@@ -205,18 +205,24 @@ async function autoStartEngine() {
     console.log(`[Engine] Loaded ${registry.size} node types`);
     
     // Check if auto-start is enabled
-    const autoStartEnv = process.env.ENGINE_AUTO_START;
+    // Support both ENGINE_AUTO_START and ENGINE_AUTOSTART for compatibility
+    const autoStartEnv = process.env.ENGINE_AUTO_START || process.env.ENGINE_AUTOSTART;
     const isHAAddon = !!process.env.SUPERVISOR_TOKEN;
+    
+    console.log(`[Engine] Auto-start check: ENGINE_AUTO_START=${process.env.ENGINE_AUTO_START}, ENGINE_AUTOSTART=${process.env.ENGINE_AUTOSTART}, SUPERVISOR_TOKEN=${isHAAddon ? 'present' : 'absent'}`);
     
     // If explicitly set, use that value. Otherwise, auto-start only in HA addon mode.
     let shouldAutoStart = false;
     if (autoStartEnv === 'true' || autoStartEnv === '1') {
       shouldAutoStart = true;
+      console.log('[Engine] Auto-start enabled via env var');
     } else if (autoStartEnv === 'false' || autoStartEnv === '0') {
       shouldAutoStart = false;
+      console.log('[Engine] Auto-start disabled via env var');
     } else {
       // Default: auto-start in HA addon, don't auto-start on desktop
       shouldAutoStart = isHAAddon;
+      console.log(`[Engine] Auto-start default: ${shouldAutoStart} (isHAAddon=${isHAAddon})`);
     }
     
     if (!shouldAutoStart) {

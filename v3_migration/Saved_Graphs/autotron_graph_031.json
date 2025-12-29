@@ -1,0 +1,6919 @@
+{
+  "nodes": [
+    {
+      "id": "18c61864ae674e4a",
+      "label": "Time of Day",
+      "position": {
+        "x": -2894.600883626659,
+        "y": 150.48571990927462
+      },
+      "data": {
+        "id": "18c61864ae674e4a",
+        "label": "Time of Day",
+        "properties": {
+          "customName": "10pm Off",
+          "start_hour": 8,
+          "start_minute": 0,
+          "start_ampm": "AM",
+          "start_enabled": false,
+          "stop_hour": 10,
+          "stop_minute": 30,
+          "stop_ampm": "PM",
+          "stop_enabled": true,
+          "cycle_hour": 4,
+          "cycle_minute": 45,
+          "cycle_ampm": "AM",
+          "cycle_duration": 10,
+          "cycle_enabled": false,
+          "timezone": "America/Los_Angeles",
+          "next_on_date": null,
+          "next_off_date": "2025-12-30T06:30:00.000Z",
+          "next_cycle_date": null,
+          "currentState": false,
+          "status": "Initializing...",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "8d4af06d6181b1c6",
+      "label": "Sender",
+      "position": {
+        "x": -2354.117143609974,
+        "y": 153.58294013982277
+      },
+      "data": {
+        "id": "8d4af06d6181b1c6",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "10pm Off",
+          "lastValue": false,
+          "registeredName": "[Trigger]10pm Off",
+          "finalName": "[Trigger]10pm Off"
+        }
+      }
+    },
+    {
+      "id": "537324f4d766e02b",
+      "label": "Sunrise/Sunset Trigger",
+      "position": {
+        "x": -442.785614258582,
+        "y": 2598.004468026361
+      },
+      "data": {
+        "id": "537324f4d766e02b",
+        "label": "Sunrise/Sunset Trigger",
+        "properties": {
+          "customName": "Sunset",
+          "on_offset_hours": 0,
+          "on_offset_minutes": 5,
+          "on_offset_direction": "Before",
+          "on_enabled": true,
+          "fixed_on_hour": 6,
+          "fixed_on_minute": 0,
+          "fixed_on_ampm": "PM",
+          "fixed_on_enabled": false,
+          "off_offset_hours": 0,
+          "off_offset_minutes": 0,
+          "off_offset_direction": "Before",
+          "off_enabled": false,
+          "fixed_stop_hour": 3,
+          "fixed_stop_minute": 0,
+          "fixed_stop_ampm": "AM",
+          "fixed_stop_enabled": true,
+          "latitude": 34.1381051,
+          "longitude": -118.3871759,
+          "city": "Home",
+          "timezone": "America/Los_Angeles",
+          "haToken": "",
+          "sunrise_time": "2025-12-29T14:57:17.000Z",
+          "sunset_time": "2025-12-30T00:54:24.000Z",
+          "next_on_date": "2025-12-30T00:49:24.000Z",
+          "next_off_date": "2025-12-30T11:00:00.000Z",
+          "currentState": false,
+          "status": "Home - Updated",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "757c6f3bd4fd74dd",
+      "label": "Weather Logic",
+      "position": {
+        "x": -2883.4443938980776,
+        "y": 2590.1116880332847
+      },
+      "data": {
+        "id": "757c6f3bd4fd74dd",
+        "label": "Weather Logic",
+        "properties": {
+          "solarEnabled": true,
+          "solarThresholdHigh": 20,
+          "solarThresholdLow": 0,
+          "solarInvert": false,
+          "solarLabel": "Solar",
+          "tempEnabled": true,
+          "tempThresholdHigh": 80,
+          "tempThresholdLow": 60,
+          "tempInvert": false,
+          "tempLabel": "Temp",
+          "humidityEnabled": true,
+          "humidityThresholdHigh": 70,
+          "humidityThresholdLow": 30,
+          "humidityInvert": false,
+          "humidityLabel": "Humidity",
+          "windEnabled": true,
+          "windThresholdHigh": 15,
+          "windThresholdLow": 5,
+          "windInvert": false,
+          "windLabel": "Wind",
+          "hourlyRainEnabled": true,
+          "hourlyRainThreshold": 0.1,
+          "hourlyRainInvert": false,
+          "hourlyRainLabel": "Hourly Rain",
+          "eventRainEnabled": true,
+          "eventRainThreshold": 0.1,
+          "eventRainInvert": false,
+          "eventRainLabel": "Event Rain",
+          "dailyRainEnabled": true,
+          "dailyRainThreshold": 0.1,
+          "dailyRainInvert": false,
+          "dailyRainLabel": "Daily Rain",
+          "logicType": "OR",
+          "hysteresis": 5,
+          "_lastEval": {
+            "solar": false,
+            "temp": false,
+            "humidity": true,
+            "wind": false,
+            "hourlyRain": false,
+            "eventRain": false,
+            "dailyRain": false,
+            "all": true
+          }
+        }
+      }
+    },
+    {
+      "id": "50f4fa1dafd492f9",
+      "label": "Logic Operations",
+      "position": {
+        "x": -2061.473203281075,
+        "y": 2774.991429106324
+      },
+      "data": {
+        "id": "50f4fa1dafd492f9",
+        "label": "Logic Operations",
+        "properties": {
+          "mode": "AND",
+          "inputCount": 2,
+          "compareInputIndex": -1,
+          "compareOperator": ">",
+          "compareThreshold": 80,
+          "setVariable": "",
+          "_lastResult": false
+        }
+      }
+    },
+    {
+      "id": "cb4c3820c4b47079",
+      "label": "Sunrise/Sunset Trigger",
+      "position": {
+        "x": -1717.6283691798496,
+        "y": 2579.28443193158
+      },
+      "data": {
+        "id": "cb4c3820c4b47079",
+        "label": "Sunrise/Sunset Trigger",
+        "properties": {
+          "customName": "House Lights ON/Off",
+          "on_offset_hours": 0,
+          "on_offset_minutes": 29,
+          "on_offset_direction": "Before",
+          "on_enabled": true,
+          "fixed_on_hour": 6,
+          "fixed_on_minute": 0,
+          "fixed_on_ampm": "PM",
+          "fixed_on_enabled": false,
+          "off_offset_hours": 0,
+          "off_offset_minutes": 0,
+          "off_offset_direction": "Before",
+          "off_enabled": false,
+          "fixed_stop_hour": 10,
+          "fixed_stop_minute": 30,
+          "fixed_stop_ampm": "PM",
+          "fixed_stop_enabled": true,
+          "latitude": 34.1381051,
+          "longitude": -118.3871759,
+          "city": "Home",
+          "timezone": "America/Los_Angeles",
+          "haToken": "",
+          "sunrise_time": "2025-12-29T14:57:17.000Z",
+          "sunset_time": "2025-12-30T00:54:24.000Z",
+          "next_on_date": "2025-12-30T00:25:24.000Z",
+          "next_off_date": "2025-12-30T06:30:00.000Z",
+          "currentState": false,
+          "status": "Home - Updated",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "d384f545fa2b7f45",
+      "label": "Logic Operations",
+      "position": {
+        "x": -1201.813422520416,
+        "y": 2587.3058941375193
+      },
+      "data": {
+        "id": "d384f545fa2b7f45",
+        "label": "Logic Operations",
+        "properties": {
+          "mode": "OR",
+          "inputCount": 2,
+          "compareInputIndex": -1,
+          "compareOperator": ">",
+          "compareThreshold": 80,
+          "setVariable": "",
+          "_lastResult": false
+        }
+      }
+    },
+    {
+      "id": "9ddae6d5a04de8a0",
+      "label": "Backdrop",
+      "position": {
+        "x": -3020.1014227650335,
+        "y": -7.685483237722941
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "9ddae6d5a04de8a0",
+        "width": 6607.819863944256,
+        "height": 5663.026931886523,
+        "properties": {
+          "title": "Timers ",
+          "colorIndex": 5,
+          "customColor": "#374527",
+          "fontSize": 60,
+          "width": 6607.819863944256,
+          "height": 5663.026931886523,
+          "capturedNodes": [
+            "18c61864ae674e4a",
+            "8d4af06d6181b1c6",
+            "537324f4d766e02b",
+            "757c6f3bd4fd74dd",
+            "50f4fa1dafd492f9",
+            "cb4c3820c4b47079",
+            "d384f545fa2b7f45",
+            "720bd29f88ec7e96",
+            "444d3a77af409b04",
+            "b774e53e008efd8a",
+            "c01e165c7bfe62a5",
+            "8480926f954c2743",
+            "ccf1a34014c85926",
+            "d34623b94b64ad5c",
+            "0cab81e8c5c154ff",
+            "80cb637e8dec510c",
+            "e2f1b055323b6048",
+            "105adc7b3db42147",
+            "4e9efb3c40202f3d",
+            "15d23e2dcb5c4e04",
+            "e5129f50942c3bf8",
+            "983a98adf4480305",
+            "c695cec7637a252f"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "2b25cfa47f32087e",
+      "label": "Backdrop",
+      "position": {
+        "x": 3709.073752359903,
+        "y": -10.127027822227252
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "2b25cfa47f32087e",
+        "width": 4741.901895387619,
+        "height": 3055.633287236639,
+        "properties": {
+          "title": "Living Room",
+          "colorIndex": 0,
+          "customColor": "#215f73",
+          "fontSize": 60,
+          "width": 4741.901895387619,
+          "height": 3055.633287236639,
+          "capturedNodes": [
+            "e82bee10d637f7bd",
+            "83837d8f043f49cf",
+            "e0ea6f0875da65de",
+            "23c01481261e42d1",
+            "ccbfbe4498e0188d",
+            "d6bb910c707b1dd5",
+            "39309e0384e43956",
+            "043a50dbfccdcd71",
+            "6b63b8e9fb86837c",
+            "48772a09399ce435",
+            "2769561f4d1141e5",
+            "0c96213adb3281f4",
+            "41b1e60811ee1356",
+            "a28b6cbc2f1c610b",
+            "e2ebe9e12e74d6aa"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "720bd29f88ec7e96",
+      "label": "Time of Day",
+      "position": {
+        "x": -1781.557899243377,
+        "y": 197.66333558347498
+      },
+      "data": {
+        "id": "720bd29f88ec7e96",
+        "label": "Time of Day",
+        "properties": {
+          "customName": "1AM Off",
+          "start_hour": 8,
+          "start_minute": 0,
+          "start_ampm": "AM",
+          "start_enabled": false,
+          "stop_hour": 1,
+          "stop_minute": 0,
+          "stop_ampm": "AM",
+          "stop_enabled": true,
+          "cycle_hour": 4,
+          "cycle_minute": 45,
+          "cycle_ampm": "AM",
+          "cycle_duration": 10,
+          "cycle_enabled": false,
+          "timezone": "America/Los_Angeles",
+          "next_on_date": null,
+          "next_off_date": "2025-12-30T09:00:00.000Z",
+          "next_cycle_date": null,
+          "currentState": false,
+          "status": "Initializing...",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "444d3a77af409b04",
+      "label": "Sender",
+      "position": {
+        "x": -892.156859780052,
+        "y": 379.90055162594575
+      },
+      "data": {
+        "id": "444d3a77af409b04",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "1AM Off",
+          "lastValue": false,
+          "registeredName": "[Trigger]1AM Off",
+          "finalName": "[Trigger]1AM Off"
+        }
+      }
+    },
+    {
+      "id": "b774e53e008efd8a",
+      "label": "Sunrise/Sunset Trigger",
+      "position": {
+        "x": 772.7832072769445,
+        "y": 2595.567963437061
+      },
+      "data": {
+        "id": "b774e53e008efd8a",
+        "label": "Sunrise/Sunset Trigger",
+        "properties": {
+          "customName": "Bathroom Light On/Off",
+          "on_offset_hours": 0,
+          "on_offset_minutes": 30,
+          "on_offset_direction": "Before",
+          "on_enabled": true,
+          "fixed_on_hour": 6,
+          "fixed_on_minute": 0,
+          "fixed_on_ampm": "PM",
+          "fixed_on_enabled": false,
+          "off_offset_hours": 4,
+          "off_offset_minutes": 0,
+          "off_offset_direction": "Before",
+          "off_enabled": true,
+          "fixed_stop_hour": 10,
+          "fixed_stop_minute": 30,
+          "fixed_stop_ampm": "PM",
+          "fixed_stop_enabled": false,
+          "latitude": 34.1381051,
+          "longitude": -118.3871759,
+          "city": "Home",
+          "timezone": "America/Los_Angeles",
+          "haToken": "",
+          "sunrise_time": "2025-12-29T14:57:17.000Z",
+          "sunset_time": "2025-12-30T00:54:24.000Z",
+          "next_on_date": "2025-12-30T00:24:24.000Z",
+          "next_off_date": "2025-12-30T10:57:17.000Z",
+          "currentState": false,
+          "status": "Home - Updated",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "c01e165c7bfe62a5",
+      "label": "Sender",
+      "position": {
+        "x": 1377.3119184547975,
+        "y": 2599.9173413145104
+      },
+      "data": {
+        "id": "c01e165c7bfe62a5",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Bathroom Light On/Off",
+          "lastValue": false,
+          "registeredName": "[Trigger]Bathroom Light On/Off",
+          "finalName": "[Trigger]Bathroom Light On/Off"
+        }
+      }
+    },
+    {
+      "id": "8480926f954c2743",
+      "label": "Sunrise/Sunset Trigger",
+      "position": {
+        "x": 1931.9521926413947,
+        "y": 2579.6852130814386
+      },
+      "data": {
+        "id": "8480926f954c2743",
+        "label": "Sunrise/Sunset Trigger",
+        "properties": {
+          "customName": "KitchenCounterLights",
+          "on_offset_hours": 0,
+          "on_offset_minutes": 59,
+          "on_offset_direction": "Before",
+          "on_enabled": true,
+          "fixed_on_hour": 6,
+          "fixed_on_minute": 0,
+          "fixed_on_ampm": "PM",
+          "fixed_on_enabled": false,
+          "off_offset_hours": 0,
+          "off_offset_minutes": 0,
+          "off_offset_direction": "Before",
+          "off_enabled": true,
+          "fixed_stop_hour": 10,
+          "fixed_stop_minute": 30,
+          "fixed_stop_ampm": "PM",
+          "fixed_stop_enabled": true,
+          "latitude": 34.1381051,
+          "longitude": -118.3871759,
+          "city": "Home",
+          "timezone": "America/Los_Angeles",
+          "haToken": "",
+          "sunrise_time": "2025-12-29T14:57:17.000Z",
+          "sunset_time": "2025-12-30T00:54:24.000Z",
+          "next_on_date": "2025-12-29T23:55:24.000Z",
+          "next_off_date": "2025-12-30T06:30:00.000Z",
+          "currentState": false,
+          "status": "Home - Updated",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "ccf1a34014c85926",
+      "label": "Sender",
+      "position": {
+        "x": 2543.716752310358,
+        "y": 2587.5701111223557
+      },
+      "data": {
+        "id": "ccf1a34014c85926",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "KitchenCounterLights",
+          "lastValue": false,
+          "registeredName": "[Trigger]KitchenCounterLights",
+          "finalName": "[Trigger]KitchenCounterLights"
+        }
+      }
+    },
+    {
+      "id": "d34623b94b64ad5c",
+      "label": "Sender",
+      "position": {
+        "x": -858.4473573658597,
+        "y": 3057.983198381276
+      },
+      "data": {
+        "id": "d34623b94b64ad5c",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "House Lights ON/Off",
+          "lastValue": false,
+          "registeredName": "[Trigger]House Lights ON/Off",
+          "finalName": "[Trigger]House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "0cab81e8c5c154ff",
+      "label": "Sender",
+      "position": {
+        "x": -2322.696835874179,
+        "y": 1354.1639070118772
+      },
+      "data": {
+        "id": "0cab81e8c5c154ff",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "9:30 On",
+          "lastValue": false,
+          "registeredName": "[Trigger]9:30 On",
+          "finalName": "[Trigger]9:30 On"
+        }
+      }
+    },
+    {
+      "id": "e82bee10d637f7bd",
+      "label": "Receiver",
+      "position": {
+        "x": 7190.520267386282,
+        "y": 968.5488534648491
+      },
+      "data": {
+        "id": "e82bee10d637f7bd",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "6ff49671565a0255",
+      "label": "Conditional Integer Output",
+      "position": {
+        "x": 596.8004819557932,
+        "y": -975.745519159906
+      },
+      "data": {
+        "id": "6ff49671565a0255",
+        "label": "Conditional Integer Output",
+        "properties": {
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "90d3eea48e12005f",
+      "label": "Receiver",
+      "position": {
+        "x": 592.0840471419492,
+        "y": -1260.3853313679265
+      },
+      "data": {
+        "id": "90d3eea48e12005f",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Sunset",
+          "lastValue": false,
+          "lastTriggerSource": "Sunset"
+        }
+      }
+    },
+    {
+      "id": "f4dd2d2e6355d1c9",
+      "label": "Integer Selector",
+      "position": {
+        "x": 200.18898851379754,
+        "y": -1085.049853071565
+      },
+      "data": {
+        "id": "f4dd2d2e6355d1c9",
+        "label": "Integer Selector",
+        "properties": {
+          "value": 3,
+          "min": -1,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "13d7d35bcd11958e",
+      "label": "Conditional Switch",
+      "position": {
+        "x": 250.5753197798665,
+        "y": -727.5318974973875
+      },
+      "data": {
+        "id": "13d7d35bcd11958e",
+        "label": "Conditional Switch",
+        "properties": {
+          "numberOfInputs": 4,
+          "clampSelect": true,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "32214cb284b6c445",
+      "label": "Sender",
+      "position": {
+        "x": 601.1949812084615,
+        "y": -484.0507464884474
+      },
+      "data": {
+        "id": "32214cb284b6c445",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Bathroom_to_office_color",
+          "lastValue": {
+            "hue": 0.10555555555555556,
+            "saturation": 0,
+            "brightness": 83,
+            "transition": 0
+          },
+          "registeredName": "[HSV]Bathroom_to_office_color",
+          "finalName": "[HSV]Bathroom_to_office_color"
+        }
+      }
+    },
+    {
+      "id": "8b0054e3d5a4b49f",
+      "label": "HSV Control",
+      "position": {
+        "x": -368.9065906743954,
+        "y": -1357.000188299382
+      },
+      "data": {
+        "id": "8b0054e3d5a4b49f",
+        "label": "HSV Control",
+        "properties": {
+          "hueShift": 38,
+          "saturation": 0,
+          "brightness": 83,
+          "transitionTime": 0,
+          "enableCommand": false,
+          "autoTriggerInterval": 5000,
+          "showColorOptions": true,
+          "whiteAdjust": 4000
+        }
+      }
+    },
+    {
+      "id": "1556397fa0448d51",
+      "label": "HSV Control",
+      "position": {
+        "x": -360.7076234368142,
+        "y": -717.4523729877092
+      },
+      "data": {
+        "id": "1556397fa0448d51",
+        "label": "HSV Control",
+        "properties": {
+          "hueShift": 86,
+          "saturation": 86,
+          "brightness": 180,
+          "transitionTime": 0,
+          "enableCommand": false,
+          "autoTriggerInterval": 5000,
+          "showColorOptions": true,
+          "whiteAdjust": 4000
+        }
+      }
+    },
+    {
+      "id": "83837d8f043f49cf",
+      "label": "Sunrise/Sunset Trigger",
+      "position": {
+        "x": 3755.241847800137,
+        "y": 456.58972488484847
+      },
+      "data": {
+        "id": "83837d8f043f49cf",
+        "label": "Sunrise/Sunset Trigger",
+        "properties": {
+          "customName": "Living Room Ceiling Lights",
+          "on_offset_hours": 0,
+          "on_offset_minutes": 30,
+          "on_offset_direction": "Before",
+          "on_enabled": true,
+          "fixed_on_hour": 6,
+          "fixed_on_minute": 0,
+          "fixed_on_ampm": "PM",
+          "fixed_on_enabled": false,
+          "off_offset_hours": 0,
+          "off_offset_minutes": 0,
+          "off_offset_direction": "Before",
+          "off_enabled": true,
+          "fixed_stop_hour": 10,
+          "fixed_stop_minute": 30,
+          "fixed_stop_ampm": "PM",
+          "fixed_stop_enabled": true,
+          "latitude": 34.1381051,
+          "longitude": -118.3871759,
+          "city": "Home",
+          "timezone": "America/Los_Angeles",
+          "haToken": "",
+          "sunrise_time": "2025-12-29T14:57:17.000Z",
+          "sunset_time": "2025-12-30T00:54:24.000Z",
+          "next_on_date": "2025-12-30T00:24:24.000Z",
+          "next_off_date": "2025-12-30T06:30:00.000Z",
+          "currentState": false,
+          "status": "Home - Updated",
+          "debug": false,
+          "pulseMode": true
+        }
+      }
+    },
+    {
+      "id": "e0ea6f0875da65de",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 4898.957500348224,
+        "y": 2237.489592924185
+      },
+      "data": {
+        "id": "e0ea6f0875da65de",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_switch.fireplace_uplights_2"
+          ],
+          "selectedDeviceNames": [
+            "Z_Fireplace Uplights"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Switch",
+          "triggerMode": "Follow",
+          "customTitle": "fireplace uplights ",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "23c994b073528f8a",
+      "label": "Backdrop",
+      "position": {
+        "x": 7974.6051729457,
+        "y": -3191.067863578168
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "23c994b073528f8a",
+        "width": 4061.588357049524,
+        "height": 3034.3289858213648,
+        "properties": {
+          "title": "Master Bedroom",
+          "colorIndex": 4,
+          "customColor": "#2a3810",
+          "fontSize": 60,
+          "width": 4061.588357049524,
+          "height": 3034.3289858213648,
+          "capturedNodes": [
+            "c602674304198387",
+            "f65af4c70a7f6f40",
+            "c1c9a5b0ed01c3b7",
+            "22ab7427bbcd0c0f",
+            "bb5e204a7266087a",
+            "fa3dd8e92a6fb03f",
+            "6602e66d9ef41f54",
+            "f655421d76358d81",
+            "7bd022dda6f9f5b4"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "c602674304198387",
+      "label": "Kasa Plug Control",
+      "position": {
+        "x": 8558.32079941599,
+        "y": -2948.932811257198
+      },
+      "data": {
+        "id": "c602674304198387",
+        "label": "Kasa Plug Control",
+        "properties": {
+          "selectedPlugIds": [
+            "kasa_80064392EA8A1983DF23CE5FACDBDADE235AE9F4"
+          ],
+          "selectedPlugNames": [
+            "Electric Blanket "
+          ],
+          "status": "Loaded 6 plugs",
+          "triggerMode": "Follow",
+          "autoRefreshInterval": 5000
+        }
+      }
+    },
+    {
+      "id": "eba4ac602a2dfa00",
+      "label": "Backdrop",
+      "position": {
+        "x": 3733.449255381269,
+        "y": -3192.448359788482
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "eba4ac602a2dfa00",
+        "width": 4120.928814834183,
+        "height": 3050.5127470353627,
+        "properties": {
+          "title": "House Front/ Back",
+          "colorIndex": 6,
+          "customColor": "#3f313b",
+          "fontSize": 60,
+          "width": 4120.928814834183,
+          "height": 3050.5127470353627,
+          "capturedNodes": [
+            "228368262223f1db",
+            "771f2954e396349a",
+            "9e2a30f7a17e5bd5",
+            "2f7d4a81e11769d4",
+            "e88b0238fe4d8b6b",
+            "3fb3a20b014821a8",
+            "cb87122766b2be7d",
+            "ceb925173a2931a7",
+            "6ac17d4ab201b32b",
+            "50ff70ef0f2acc96",
+            "7d16f3641fda9279",
+            "ff5f5d259cfeeb7f",
+            "b8b2168037d38a15"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "f65af4c70a7f6f40",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 10442.523855085037,
+        "y": -2394.3963131748533
+      },
+      "data": {
+        "id": "f65af4c70a7f6f40",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.osram_lightify_flex_outdoor_rgbw"
+          ],
+          "selectedDeviceNames": [
+            "Master Bedroom Wall Light"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "master bedroom wall washer",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "c1c9a5b0ed01c3b7",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 11292.527504225971,
+        "y": -3006.4404975420516
+      },
+      "data": {
+        "id": "c1c9a5b0ed01c3b7",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.hue_bloom_master_bath"
+          ],
+          "selectedDeviceNames": [
+            "Hue bloom Master Bath (ha)"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "master bathroom",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "22ab7427bbcd0c0f",
+      "label": "Sunrise/Sunset Trigger",
+      "position": {
+        "x": 9007.185638785118,
+        "y": -2188.39177357816
+      },
+      "data": {
+        "id": "22ab7427bbcd0c0f",
+        "label": "Sunrise/Sunset Trigger",
+        "properties": {
+          "customName": "",
+          "on_offset_hours": 0,
+          "on_offset_minutes": 30,
+          "on_offset_direction": "Before",
+          "on_enabled": true,
+          "fixed_on_hour": 6,
+          "fixed_on_minute": 0,
+          "fixed_on_ampm": "PM",
+          "fixed_on_enabled": false,
+          "off_offset_hours": 0,
+          "off_offset_minutes": 0,
+          "off_offset_direction": "Before",
+          "off_enabled": true,
+          "fixed_stop_hour": 1,
+          "fixed_stop_minute": 0,
+          "fixed_stop_ampm": "AM",
+          "fixed_stop_enabled": true,
+          "latitude": 34.1381051,
+          "longitude": -118.3871759,
+          "city": "Home",
+          "timezone": "America/Los_Angeles",
+          "haToken": "",
+          "sunrise_time": "2025-12-29T14:57:17.000Z",
+          "sunset_time": "2025-12-30T00:54:24.000Z",
+          "next_on_date": "2025-12-30T00:24:24.000Z",
+          "next_off_date": "2025-12-30T09:00:00.000Z",
+          "currentState": false,
+          "status": "Home - Updated",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "bb5e204a7266087a",
+      "label": "Time of Day",
+      "position": {
+        "x": 8033.421498691291,
+        "y": -2947.569865206627
+      },
+      "data": {
+        "id": "bb5e204a7266087a",
+        "label": "Time of Day",
+        "properties": {
+          "customName": "",
+          "start_hour": 9,
+          "start_minute": 0,
+          "start_ampm": "PM",
+          "start_enabled": true,
+          "stop_hour": 9,
+          "stop_minute": 0,
+          "stop_ampm": "AM",
+          "stop_enabled": true,
+          "cycle_hour": 4,
+          "cycle_minute": 45,
+          "cycle_ampm": "AM",
+          "cycle_duration": 10,
+          "cycle_enabled": false,
+          "timezone": "America/Los_Angeles",
+          "next_on_date": "2025-12-30T05:00:00.000Z",
+          "next_off_date": "2025-12-29T17:00:00.000Z",
+          "next_cycle_date": null,
+          "currentState": true,
+          "status": "Initializing...",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "228368262223f1db",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 4810.292949819107,
+        "y": -2889.6431736847753
+      },
+      "data": {
+        "id": "228368262223f1db",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.front_east_upper_sconce",
+            "ha_light.front_middle_upper_sconce",
+            "ha_light.back_door_sconce_upper_2",
+            "ha_light.front_west_upper_sconce"
+          ],
+          "selectedDeviceNames": [
+            "Front East Upper Sconce (ha)",
+            "Front Middle Upper Sconce (ha)",
+            "Back Door Sconce Upper (ha)",
+            "Front West Upper Sconce (ha)"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Sconce upper",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "771f2954e396349a",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 5809.622451189817,
+        "y": -2898.5853603882856
+      },
+      "data": {
+        "id": "771f2954e396349a",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.front_east_lower_sconce",
+            "ha_light.front_middle_lower_sconce",
+            "ha_light.front_west_lower_sconce",
+            "ha_light.house_back_lower_sconce"
+          ],
+          "selectedDeviceNames": [
+            "Front East Lower Sconce (ha)",
+            "Front Middle Lower Sconce (ha)",
+            "Front West Lower Sconce (ha)",
+            "House Back Lower Sconce (ha)"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Sconce lower",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "23c01481261e42d1",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 4881.47296186105,
+        "y": 200.0257283666517
+      },
+      "data": {
+        "id": "23c01481261e42d1",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.living_room_ceiling_1",
+            "ha_light.living_room_ceiling_3",
+            "ha_light.living_room_ceiling_2",
+            "ha_light.living_room_ceiling_4",
+            "ha_light.living_room_ceiling_5",
+            "ha_light.living_room_ceiling_6"
+          ],
+          "selectedDeviceNames": [
+            "Living room ceiling 1 (ha)",
+            "Living room ceiling 2 (ha)",
+            "Living room ceiling 3 (ha)",
+            "Living room ceiling 4 (ha)",
+            "Living room ceiling 5 (ha)",
+            "Living room ceiling 6 (ha)"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Living room lights",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "920b89d30ff0a0f1",
+      "label": "Backdrop",
+      "position": {
+        "x": 3730.921787394307,
+        "y": 3177.252998652909
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "920b89d30ff0a0f1",
+        "width": 4732.047922392427,
+        "height": 2473.125679101775,
+        "properties": {
+          "title": "Utility",
+          "colorIndex": 0,
+          "customColor": null,
+          "fontSize": 60,
+          "width": 4732.047922392427,
+          "height": 2473.125679101775,
+          "capturedNodes": [
+            "02cdc44a83e95f0a",
+            "961c4d262b632efd",
+            "bf36409ba6577997",
+            "e5a830aef8be2b75",
+            "72feea0c67d0fe48",
+            "e09aad466bc57eb5",
+            "d952bf546dfee841",
+            "23c891a32dcba27b",
+            "d922b82b0f32f89b",
+            "161d3b409d484105",
+            "eb1ae0c03de1a53e",
+            "c4fe9fd9ca0f3c02"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "9e2a30f7a17e5bd5",
+      "label": "Receiver",
+      "position": {
+        "x": 3792.5574022321184,
+        "y": -3025.723909177378
+      },
+      "data": {
+        "id": "9e2a30f7a17e5bd5",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Sunset",
+          "lastValue": false,
+          "lastTriggerSource": null
+        }
+      }
+    },
+    {
+      "id": "ccbfbe4498e0188d",
+      "label": "Receiver",
+      "position": {
+        "x": 7371.234997441759,
+        "y": 2006.7019982531315
+      },
+      "data": {
+        "id": "ccbfbe4498e0188d",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "d6bb910c707b1dd5",
+      "label": "Receiver",
+      "position": {
+        "x": 3798.6174953961176,
+        "y": 2192.4422212260974
+      },
+      "data": {
+        "id": "d6bb910c707b1dd5",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "2f7d4a81e11769d4",
+      "label": "Kasa Plug Control",
+      "position": {
+        "x": 4369.15248576871,
+        "y": -2403.9455441853133
+      },
+      "data": {
+        "id": "2f7d4a81e11769d4",
+        "label": "Kasa Plug Control",
+        "properties": {
+          "selectedPlugIds": [
+            "kasa_8006019A9DF368EDD0D3C54C64B739A222BE719B",
+            "kasa_8006260659F7E48ED6E2886ECD805A2522BE2B35"
+          ],
+          "selectedPlugNames": [
+            "Low Voltage Front ",
+            "Low Voltage Backyard "
+          ],
+          "status": "Loaded 6 plugs",
+          "triggerMode": "Follow",
+          "autoRefreshInterval": 5000
+        }
+      }
+    },
+    {
+      "id": "e88b0238fe4d8b6b",
+      "label": "Display",
+      "position": {
+        "x": 4083.482652845549,
+        "y": -2584.608936007126
+      },
+      "data": {
+        "id": "e88b0238fe4d8b6b",
+        "label": "Display",
+        "width": 200,
+        "height": 150,
+        "properties": {
+          "value": false
+        }
+      }
+    },
+    {
+      "id": "b5c2e59f236c52b2",
+      "label": "Backdrop",
+      "position": {
+        "x": -2968.563636865099,
+        "y": -3915.627568516091
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "b5c2e59f236c52b2",
+        "width": 6534.104081761693,
+        "height": 3801.0359666329114,
+        "properties": {
+          "title": "Colors",
+          "colorIndex": 0,
+          "customColor": null,
+          "fontSize": 60,
+          "width": 6534.104081761693,
+          "height": 3801.0359666329114,
+          "capturedNodes": [
+            "6ff49671565a0255",
+            "90d3eea48e12005f",
+            "f4dd2d2e6355d1c9",
+            "13d7d35bcd11958e",
+            "32214cb284b6c445",
+            "8b0054e3d5a4b49f",
+            "1556397fa0448d51",
+            "e318b65067c3608e",
+            "15bedae98acf174c",
+            "620d9422ac54e63e",
+            "2c3e63e9a7123804",
+            "57db63745a724bc3",
+            "8be42cfaab24b585",
+            "04169d0d9714a784",
+            "f92212978a300d5a",
+            "dd6bece03850fcd1",
+            "a3d39e49f47f28f7",
+            "bf71124258f2c9f4",
+            "56ee4fd527651afc",
+            "af5d78eb391594ce",
+            "c50730db0a8fc75b",
+            "3f6956273b66f32c",
+            "a096aaaa5d139111",
+            "a3d528fc57e1ff4d",
+            "d5004b3611dddf0f",
+            "ce37567d8626a0db",
+            "e4a99a5458a16357",
+            "6dbc9bbdcd1943e0",
+            "7b0803eadc605db8",
+            "d7f72f4c35755d5d",
+            "24035c8839725684",
+            "6737e33f3ada4c82",
+            "94cd5cd2d98323af",
+            "12a9e3f3ec9e1b68",
+            "65f3549d75b5278c",
+            "4cb66d05f6093141",
+            "3a81e20d6e06835a",
+            "11b733bfd380b567",
+            "49d07ae20033daef",
+            "93d6f872bd5baf64",
+            "5ca77d693549fe84",
+            "52b8f443ab0acf3e",
+            "bb48d377b60c7dba",
+            "41c9816aac4a7837",
+            "21a4d2813b9f0315",
+            "8564c1d6bd04440b",
+            "65fb0c43fa87a894",
+            "1a35f4f160273ad5",
+            "670018467da88996",
+            "7ff37422eae2b4e1",
+            "9d3def13f1929305",
+            "fab345bfbe6e5222",
+            "d6f8c05d1c1760b8",
+            "86116410f59b6600"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "e318b65067c3608e",
+      "label": "Sender",
+      "position": {
+        "x": -1210.573047335513,
+        "y": -3012.925071565249
+      },
+      "data": {
+        "id": "e318b65067c3608e",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Sconce Top Lights",
+          "lastValue": {
+            "hue": 0.37516339869281046,
+            "saturation": 1,
+            "brightness": 254,
+            "rgb": {
+              "r": 0,
+              "g": 254,
+              "b": 64
+            }
+          },
+          "registeredName": "[HSV]Sconce Top Lights",
+          "finalName": "[HSV]Sconce Top Lights"
+        }
+      }
+    },
+    {
+      "id": "15bedae98acf174c",
+      "label": "Sender",
+      "position": {
+        "x": -1223.3511231256189,
+        "y": -2585.3481293830996
+      },
+      "data": {
+        "id": "15bedae98acf174c",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Sconce Bottom Light",
+          "lastValue": {
+            "hue": 0,
+            "saturation": 1,
+            "brightness": 254,
+            "rgb": {
+              "r": 254,
+              "g": 0,
+              "b": 0
+            }
+          },
+          "registeredName": "[HSV]Sconce Bottom Light",
+          "finalName": "[HSV]Sconce Bottom Light"
+        }
+      }
+    },
+    {
+      "id": "3fb3a20b014821a8",
+      "label": "Receiver",
+      "position": {
+        "x": 4334.954174650701,
+        "y": -2824.3449331815295
+      },
+      "data": {
+        "id": "3fb3a20b014821a8",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[HSV]Sconce Top Lights",
+          "lastValue": {
+            "hue": 0.37516339869281046,
+            "saturation": 1,
+            "brightness": 254,
+            "rgb": {
+              "r": 0,
+              "g": 254,
+              "b": 64
+            }
+          },
+          "lastTriggerSource": "Sconce Top Lights"
+        }
+      }
+    },
+    {
+      "id": "cb87122766b2be7d",
+      "label": "Receiver",
+      "position": {
+        "x": 5380.306222952072,
+        "y": -2777.112806802656
+      },
+      "data": {
+        "id": "cb87122766b2be7d",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[HSV]Sconce Bottom Light",
+          "lastValue": {
+            "hue": 0,
+            "saturation": 1,
+            "brightness": 254,
+            "rgb": {
+              "r": 254,
+              "g": 0,
+              "b": 0
+            }
+          },
+          "lastTriggerSource": "Sconce Bottom Light"
+        }
+      }
+    },
+    {
+      "id": "6fa3a9cba7810647",
+      "label": "Backdrop",
+      "position": {
+        "x": 8547.537523265351,
+        "y": -7.756692700890618
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "6fa3a9cba7810647",
+        "width": 4146.753766774588,
+        "height": 3028.55197977325,
+        "properties": {
+          "title": "Kitchen/ Dining",
+          "colorIndex": 0,
+          "customColor": "#1e4b76",
+          "fontSize": 60,
+          "width": 4146.753766774588,
+          "height": 3028.55197977325,
+          "capturedNodes": [
+            "46fa426389043256",
+            "74640383197a8ca7",
+            "9ccb7efe133cf25a",
+            "9289bd97b1d582f5",
+            "b8140146b61cbe8b",
+            "0f7a5498635fd32f",
+            "c6a03d9be3047a22",
+            "5b71b0de41e3a529",
+            "4e242756c2612585",
+            "01446a4eb12772bd",
+            "9a4908a524f7808a",
+            "d08ef8707ab0fba4",
+            "7f0c3b161bddd6d7",
+            "a9c967aef62c5f5e",
+            "e3e2cab49fa297eb",
+            "1d2f2f544a29e92e",
+            "510ee1d7dabbecff",
+            "f1944ce140939e41",
+            "29bfa4d945ceb5da",
+            "425da669f29b9c80",
+            "94601ad50d4290d2",
+            "b2457172b83db337",
+            "6180bbc25b4977c7",
+            "5e818ebd02a96d61",
+            "27191efb1636eaf9",
+            "82b447ceac53ae67",
+            "31bdcd3d69a4e2ad",
+            "cbad499a84025e4f",
+            "225b8fa7a816b1ad",
+            "18b6e71b99164b08",
+            "482a8f354b1e14e4",
+            "fa8775e41c7c325b"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "46fa426389043256",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 10959.327589466227,
+        "y": 748.2320105219366
+      },
+      "data": {
+        "id": "46fa426389043256",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.kitchen_bar_spot_1",
+            "ha_light.kitchen_bar_spot_3"
+          ],
+          "selectedDeviceNames": [
+            "Kitchen Bar Spot 1 (ha)",
+            "Kitchen Bar Spot 3 (ha)"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Bar lamps cool ",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "74640383197a8ca7",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 11898.965346598043,
+        "y": 720.4100936072138
+      },
+      "data": {
+        "id": "74640383197a8ca7",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.kitchen_bar_spot_2",
+            "ha_light.kitchen_bar_spot_4"
+          ],
+          "selectedDeviceNames": [
+            "Kitchen Bar Spot 2 (ha)",
+            "Kitchen Bar Spot 4 (ha)"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Bar Lamps Warm",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "620d9422ac54e63e",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": -2873.3843915093025,
+        "y": -899.495508602765
+      },
+      "data": {
+        "id": "620d9422ac54e63e",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 127,
+          "green": 78,
+          "blue": 14,
+          "hueShift": 34,
+          "saturation": 89,
+          "brightness": 127,
+          "colorTemp": 2631,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "color"
+        }
+      }
+    },
+    {
+      "id": "2c3e63e9a7123804",
+      "label": "Sender",
+      "position": {
+        "x": -1386.5149576508188,
+        "y": -1293.776991659224
+      },
+      "data": {
+        "id": "2c3e63e9a7123804",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Bar Warm",
+          "lastValue": {
+            "hue": 0.09444444444444444,
+            "saturation": 0.89,
+            "brightness": 127,
+            "transition": 0,
+            "colorTemp": 2631,
+            "mode": "color",
+            "on": true,
+            "h": 34,
+            "s": 0.89,
+            "v": 0.4980392156862745
+          },
+          "registeredName": "[HSV]Bar Warm",
+          "finalName": "[HSV]Bar Warm"
+        }
+      }
+    },
+    {
+      "id": "57db63745a724bc3",
+      "label": "HSV Modifier",
+      "position": {
+        "x": -2371.8204917386042,
+        "y": -677.1945701214481
+      },
+      "data": {
+        "id": "57db63745a724bc3",
+        "label": "HSV Modifier",
+        "properties": {
+          "hueShift": 170,
+          "saturationScale": 1,
+          "brightnessScale": 124,
+          "enabled": true,
+          "presets": [],
+          "lastInputHSV": {
+            "hue": 0.09444444444444444,
+            "saturation": 0.89,
+            "brightness": 127,
+            "transition": 0,
+            "colorTemp": 2631,
+            "mode": "color",
+            "on": true,
+            "h": 34,
+            "s": 0.89,
+            "v": 0.4980392156862745
+          },
+          "selectedBuffer": "",
+          "selectedHsvBuffer": "",
+          "lastOutputHSV": {
+            "hue": 0.5666666666666667,
+            "saturation": 1,
+            "brightness": 124
+          }
+        }
+      }
+    },
+    {
+      "id": "8be42cfaab24b585",
+      "label": "Sender",
+      "position": {
+        "x": -1387.0865755805476,
+        "y": -1079.5485051591538
+      },
+      "data": {
+        "id": "8be42cfaab24b585",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Bar Cool",
+          "lastValue": {
+            "hue": 0.5666666666666667,
+            "saturation": 1,
+            "brightness": 124
+          },
+          "registeredName": "[HSV]Bar Cool",
+          "finalName": "[HSV]Bar Cool"
+        }
+      }
+    },
+    {
+      "id": "9ccb7efe133cf25a",
+      "label": "Receiver",
+      "position": {
+        "x": 12015.32183333865,
+        "y": 379.99898512142664
+      },
+      "data": {
+        "id": "9ccb7efe133cf25a",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[HSV]Bar Warm",
+          "lastValue": {
+            "hue": 0.09444444444444444,
+            "saturation": 0.89,
+            "brightness": 127,
+            "transition": 0,
+            "colorTemp": 2631,
+            "mode": "color",
+            "on": true,
+            "h": 34,
+            "s": 0.89,
+            "v": 0.4980392156862745
+          },
+          "lastTriggerSource": "Bar Warm"
+        }
+      }
+    },
+    {
+      "id": "9289bd97b1d582f5",
+      "label": "Receiver",
+      "position": {
+        "x": 11012.831624885728,
+        "y": 425.77339874070736
+      },
+      "data": {
+        "id": "9289bd97b1d582f5",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[HSV]Bar Cool",
+          "lastValue": {
+            "hue": 0.5666666666666667,
+            "saturation": 1,
+            "brightness": 124
+          },
+          "lastTriggerSource": "Bar Cool"
+        }
+      }
+    },
+    {
+      "id": "ceb925173a2931a7",
+      "label": "Display",
+      "position": {
+        "x": 4111.162565197116,
+        "y": -1772.0311790566088
+      },
+      "data": {
+        "id": "ceb925173a2931a7",
+        "label": "Display",
+        "width": 200,
+        "height": 150,
+        "properties": {
+          "value": false
+        }
+      }
+    },
+    {
+      "id": "b8140146b61cbe8b",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 8717.504110051497,
+        "y": 476.3015659221998
+      },
+      "data": {
+        "id": "b8140146b61cbe8b",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.bar_undermount_strip"
+          ],
+          "selectedDeviceNames": [
+            "Bar Undermount Strip (ha)"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "undermount strip",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "0dde712df0721d54",
+      "label": "Backdrop",
+      "position": {
+        "x": 8555.924868681459,
+        "y": 3175.290128423275
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "0dde712df0721d54",
+        "width": 3096.192917072549,
+        "height": 2492.7585532069907,
+        "properties": {
+          "title": "Office /Basement",
+          "colorIndex": 0,
+          "customColor": null,
+          "fontSize": 60,
+          "width": 3096.192917072549,
+          "height": 2492.7585532069907,
+          "capturedNodes": [
+            "642f583dff788b72",
+            "09acc1353342ccb0",
+            "638e3dd2992d1984",
+            "f9e613cfd22bb224",
+            "d75099b0931e7056",
+            "b697f1460c4c6614",
+            "d5686fc3e43513d6",
+            "c4018a258f9c8fbd",
+            "c095e7b26b0c147e",
+            "d146b474737e06c7",
+            "ba9e40b6cde18e11",
+            "d42bd5f074b47ab1",
+            "5c2cc55af04e29d0",
+            "404d13489437db4f",
+            "3e157bf1a086946f",
+            "fd185ab6bd6ac2d0",
+            "df1b591084715caa",
+            "82d02cb2283e4c10"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "642f583dff788b72",
+      "label": "Kasa Plug Control",
+      "position": {
+        "x": 9075.525942565926,
+        "y": 3414.9335922861733
+      },
+      "data": {
+        "id": "642f583dff788b72",
+        "label": "Kasa Plug Control",
+        "properties": {
+          "selectedPlugIds": [
+            "kasa_8006ED663F6679B22A1F413054488E0422BE46AE"
+          ],
+          "selectedPlugNames": [
+            "Dads Shark"
+          ],
+          "status": "Loaded 6 plugs",
+          "triggerMode": "Follow",
+          "autoRefreshInterval": 5000
+        }
+      }
+    },
+    {
+      "id": "09acc1353342ccb0",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 9747.965571080262,
+        "y": 4123.813335656643
+      },
+      "data": {
+        "id": "09acc1353342ccb0",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_switch.ledvance_plug"
+          ],
+          "selectedDeviceNames": [
+            "LEDVANCE PLUG"
+          ],
+          "status": "Turned On",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Switch",
+          "triggerMode": "Follow",
+          "customTitle": "Table light",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "638e3dd2992d1984",
+      "label": "Receiver",
+      "position": {
+        "x": 8642.831324566723,
+        "y": 3342.7375325984117
+      },
+      "data": {
+        "id": "638e3dd2992d1984",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Office ON/Off",
+          "lastValue": true,
+          "lastTriggerSource": "Office ON/Off"
+        }
+      }
+    },
+    {
+      "id": "f9e613cfd22bb224",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 11037.07758185797,
+        "y": 4649.456394914158
+      },
+      "data": {
+        "id": "f9e613cfd22bb224",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.downstairs_fire_extinguisher",
+            "ha_light.hue_color_leg_lamg"
+          ],
+          "selectedDeviceNames": [
+            "Downstairs Fire Extinguisher (ha)",
+            "Hue color Leg Lamg (ha)"
+          ],
+          "status": "Control applied to 2 devices",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Switch",
+          "triggerMode": "Follow",
+          "customTitle": "Office floor lights ",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "80cb637e8dec510c",
+      "label": "Time of Day",
+      "position": {
+        "x": -513.5521424168235,
+        "y": 359.8633752326996
+      },
+      "data": {
+        "id": "80cb637e8dec510c",
+        "label": "Time of Day",
+        "properties": {
+          "customName": "Copper fountain",
+          "start_hour": 7,
+          "start_minute": 30,
+          "start_ampm": "AM",
+          "start_enabled": true,
+          "stop_hour": 11,
+          "stop_minute": 0,
+          "stop_ampm": "PM",
+          "stop_enabled": true,
+          "cycle_hour": 4,
+          "cycle_minute": 45,
+          "cycle_ampm": "AM",
+          "cycle_duration": 10,
+          "cycle_enabled": false,
+          "timezone": "America/Los_Angeles",
+          "next_on_date": "2025-12-30T15:30:00.000Z",
+          "next_off_date": "2025-12-30T07:00:00.000Z",
+          "next_cycle_date": null,
+          "currentState": true,
+          "status": "Initializing...",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "e2f1b055323b6048",
+      "label": "Sender",
+      "position": {
+        "x": 144.46177864388977,
+        "y": 371.17857315234824
+      },
+      "data": {
+        "id": "e2f1b055323b6048",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Office ON/Off",
+          "lastValue": true,
+          "registeredName": "[Trigger]Office ON/Off",
+          "finalName": "[Trigger]Office ON/Off"
+        }
+      }
+    },
+    {
+      "id": "04169d0d9714a784",
+      "label": "Sender",
+      "position": {
+        "x": 395.88687948631315,
+        "y": -3504.2750664973414
+      },
+      "data": {
+        "id": "04169d0d9714a784",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Office Colors",
+          "lastValue": {
+            "hue": 0.5959860383944154,
+            "saturation": 0.8565022421524664,
+            "brightness": 112,
+            "rgb": {
+              "r": 14,
+              "g": 50,
+              "b": 98
+            }
+          },
+          "registeredName": "[HSV]Office Colors",
+          "finalName": "[HSV]Office Colors"
+        }
+      }
+    },
+    {
+      "id": "105adc7b3db42147",
+      "label": "Display",
+      "position": {
+        "x": 196.49581966801793,
+        "y": 671.1488645057309
+      },
+      "data": {
+        "id": "105adc7b3db42147",
+        "label": "Display",
+        "width": 200,
+        "height": 150,
+        "properties": {
+          "value": true
+        }
+      }
+    },
+    {
+      "id": "d75099b0931e7056",
+      "label": "Receiver",
+      "position": {
+        "x": 10334.165378288031,
+        "y": 5160.188221204208
+      },
+      "data": {
+        "id": "d75099b0931e7056",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[HSV]Office Colors",
+          "lastValue": {
+            "hue": 0.5959860383944154,
+            "saturation": 0.8565022421524664,
+            "brightness": 112,
+            "rgb": {
+              "r": 14,
+              "g": 50,
+              "b": 98
+            }
+          },
+          "lastTriggerSource": "Office Colors"
+        }
+      }
+    },
+    {
+      "id": "0f7a5498635fd32f",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 9326.755264169504,
+        "y": 471.4422459149899
+      },
+      "data": {
+        "id": "0f7a5498635fd32f",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.dining_room"
+          ],
+          "selectedDeviceNames": [
+            "Dining Room"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Dinning room",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "f92212978a300d5a",
+      "label": "HSV Modifier",
+      "position": {
+        "x": -1514.7202858503451,
+        "y": -718.1719110534141
+      },
+      "data": {
+        "id": "f92212978a300d5a",
+        "label": "HSV Modifier",
+        "properties": {
+          "hueShift": 203,
+          "saturationScale": 1,
+          "brightnessScale": 131,
+          "enabled": true,
+          "presets": [],
+          "lastInputHSV": {
+            "hue": 0.09444444444444444,
+            "saturation": 0.89,
+            "brightness": 127,
+            "transition": 0,
+            "colorTemp": 2631,
+            "mode": "color",
+            "on": true,
+            "h": 34,
+            "s": 0.89,
+            "v": 0.4980392156862745
+          },
+          "selectedBuffer": "",
+          "selectedHsvBuffer": "",
+          "lastOutputHSV": {
+            "hue": 0.6583333333333333,
+            "saturation": 1,
+            "brightness": 131
+          }
+        }
+      }
+    },
+    {
+      "id": "dd6bece03850fcd1",
+      "label": "Sender",
+      "position": {
+        "x": -1006.6420389192655,
+        "y": -713.4807854267076
+      },
+      "data": {
+        "id": "dd6bece03850fcd1",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Dinning Room Table",
+          "lastValue": {
+            "hue": 0.6583333333333333,
+            "saturation": 1,
+            "brightness": 131
+          },
+          "registeredName": "[HSV]Dinning Room Table",
+          "finalName": "[HSV]Dinning Room Table"
+        }
+      }
+    },
+    {
+      "id": "c6a03d9be3047a22",
+      "label": "Receiver",
+      "position": {
+        "x": 9578.051587580285,
+        "y": 190.74486162159997
+      },
+      "data": {
+        "id": "c6a03d9be3047a22",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[HSV]Dinning Room Table",
+          "lastValue": {
+            "hue": 0.6583333333333333,
+            "saturation": 1,
+            "brightness": 131
+          },
+          "lastTriggerSource": "Dinning Room Table"
+        }
+      }
+    },
+    {
+      "id": "fa3dd8e92a6fb03f",
+      "label": "Display",
+      "position": {
+        "x": 8585.626410774432,
+        "y": -2289.270974136061
+      },
+      "data": {
+        "id": "fa3dd8e92a6fb03f",
+        "label": "Display",
+        "width": 200,
+        "height": 150,
+        "properties": {
+          "value": true
+        }
+      }
+    },
+    {
+      "id": "5b71b0de41e3a529",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 11951.79824050911,
+        "y": 2174.738641314534
+      },
+      "data": {
+        "id": "5b71b0de41e3a529",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.bar_lamp"
+          ],
+          "selectedDeviceNames": [
+            "Bar Lamp (ha)"
+          ],
+          "status": "Control applied to 1 devices",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Bar Lamp",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "4e242756c2612585",
+      "label": "Receiver",
+      "position": {
+        "x": 11952.220214340394,
+        "y": 1866.4669621929586
+      },
+      "data": {
+        "id": "4e242756c2612585",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[HSV]Temps",
+          "lastValue": {
+            "hue": 0.004685408299866131,
+            "saturation": 1,
+            "brightness": 254,
+            "rgb": {
+              "r": 248,
+              "g": 7,
+              "b": 0
+            }
+          },
+          "lastTriggerSource": "Temps"
+        }
+      }
+    },
+    {
+      "id": "fab345bfbe6e5222",
+      "label": "Backdrop",
+      "position": {
+        "x": -2906.8373715915823,
+        "y": -1418.0297609119452
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "fab345bfbe6e5222",
+        "width": 2435.782729920644,
+        "height": 1249.5707041006235,
+        "properties": {
+          "title": "Bar Lights",
+          "colorIndex": 0,
+          "customColor": null,
+          "fontSize": 40,
+          "width": 2435.782729920644,
+          "height": 1249.5707041006235,
+          "capturedNodes": [
+            "620d9422ac54e63e",
+            "2c3e63e9a7123804",
+            "57db63745a724bc3",
+            "8be42cfaab24b585",
+            "f92212978a300d5a",
+            "dd6bece03850fcd1",
+            "670018467da88996",
+            "7ff37422eae2b4e1",
+            "9d3def13f1929305"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "a3d39e49f47f28f7",
+      "label": "Conditional Switch",
+      "position": {
+        "x": -1554.9910490093166,
+        "y": -2794.601490212719
+      },
+      "data": {
+        "id": "a3d39e49f47f28f7",
+        "label": "Conditional Switch",
+        "properties": {
+          "numberOfInputs": 3,
+          "clampSelect": true,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "bf71124258f2c9f4",
+      "label": "Date Comparison",
+      "position": {
+        "x": -2921.1827672626255,
+        "y": -1860.5773116129458
+      },
+      "data": {
+        "id": "bf71124258f2c9f4",
+        "label": "Date Comparison",
+        "properties": {
+          "useRange": true,
+          "month": 4,
+          "day": 17,
+          "startMonth": 12,
+          "startDay": 1,
+          "endMonth": 12,
+          "endDay": 31,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "56ee4fd527651afc",
+      "label": "Conditional Switch",
+      "position": {
+        "x": -1556.1706474524372,
+        "y": -3224.6144441466013
+      },
+      "data": {
+        "id": "56ee4fd527651afc",
+        "label": "Conditional Switch",
+        "properties": {
+          "numberOfInputs": 3,
+          "clampSelect": true,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "af5d78eb391594ce",
+      "label": "Conditional Integer Output",
+      "position": {
+        "x": -2214.3857472655955,
+        "y": -1715.3229918870566
+      },
+      "data": {
+        "id": "af5d78eb391594ce",
+        "label": "Conditional Integer Output",
+        "properties": {
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "c50730db0a8fc75b",
+      "label": "Integer Selector",
+      "position": {
+        "x": -2561.1326106515444,
+        "y": -1719.3516777348113
+      },
+      "data": {
+        "id": "c50730db0a8fc75b",
+        "label": "Integer Selector",
+        "properties": {
+          "value": 2,
+          "min": 2,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "3f6956273b66f32c",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": -2566.743012074845,
+        "y": -3717.553830173717
+      },
+      "data": {
+        "id": "3f6956273b66f32c",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 152,
+          "green": 89,
+          "blue": 27,
+          "hueShift": 30,
+          "saturation": 82,
+          "brightness": 152,
+          "colorTemp": 2250,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "temp"
+        }
+      }
+    },
+    {
+      "id": "a096aaaa5d139111",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": -2099.0915486147323,
+        "y": -3728.074416224089
+      },
+      "data": {
+        "id": "a096aaaa5d139111",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 0,
+          "green": 104,
+          "blue": 136,
+          "hueShift": 194,
+          "saturation": 100,
+          "brightness": 136,
+          "colorTemp": 5629,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "color"
+        }
+      }
+    },
+    {
+      "id": "b697f1460c4c6614",
+      "label": "Receiver",
+      "position": {
+        "x": 10532.798976184155,
+        "y": 3615.9298661573002
+      },
+      "data": {
+        "id": "b697f1460c4c6614",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "d5686fc3e43513d6",
+      "label": "AND Gate",
+      "position": {
+        "x": 10829.629753642457,
+        "y": 3358.351892016766
+      },
+      "data": {
+        "id": "d5686fc3e43513d6",
+        "label": "AND Gate",
+        "properties": {
+          "inputCount": 2,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "6ac17d4ab201b32b",
+      "label": "Kasa Plug Control",
+      "position": {
+        "x": 4370.841515833962,
+        "y": -1712.9917996508252
+      },
+      "data": {
+        "id": "6ac17d4ab201b32b",
+        "label": "Kasa Plug Control",
+        "properties": {
+          "selectedPlugIds": [
+            "kasa_80065D313D27312EAA60D828D18FFCD9235A184D"
+          ],
+          "selectedPlugNames": [
+            "Copper Fountain "
+          ],
+          "status": "Loaded 6 plugs",
+          "triggerMode": "Follow",
+          "autoRefreshInterval": 5000
+        }
+      }
+    },
+    {
+      "id": "50ff70ef0f2acc96",
+      "label": "Receiver",
+      "position": {
+        "x": 3902.8454417913986,
+        "y": -1575.2032390964619
+      },
+      "data": {
+        "id": "50ff70ef0f2acc96",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]9:30 On",
+          "lastValue": false,
+          "lastTriggerSource": "9:30 On"
+        }
+      }
+    },
+    {
+      "id": "39309e0384e43956",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 7845.981025716984,
+        "y": 254.8935047942433
+      },
+      "data": {
+        "id": "39309e0384e43956",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.living_room_wall_washer_north",
+            "ha_light.living_room_wall_washer_south"
+          ],
+          "selectedDeviceNames": [
+            "Living room wall washer North (ha)",
+            "Living room wall washer south (ha)"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "couch lights ",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "043a50dbfccdcd71",
+      "label": "Receiver",
+      "position": {
+        "x": 7211.228056201917,
+        "y": 173.86875064496388
+      },
+      "data": {
+        "id": "043a50dbfccdcd71",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[HSV]Bar Cool",
+          "lastValue": {
+            "hue": 0.5666666666666667,
+            "saturation": 1,
+            "brightness": 124
+          },
+          "lastTriggerSource": "Bar Cool"
+        }
+      }
+    },
+    {
+      "id": "6b63b8e9fb86837c",
+      "label": "HSV Modifier",
+      "position": {
+        "x": 7178.26843420048,
+        "y": 408.9224150316276
+      },
+      "data": {
+        "id": "6b63b8e9fb86837c",
+        "label": "HSV Modifier",
+        "properties": {
+          "hueShift": 352,
+          "saturationScale": 1,
+          "brightnessScale": 169,
+          "enabled": true,
+          "presets": [],
+          "lastInputHSV": {
+            "hue": 0.5666666666666667,
+            "saturation": 1,
+            "brightness": 124
+          },
+          "selectedBuffer": "",
+          "selectedHsvBuffer": "",
+          "lastOutputHSV": {
+            "hue": 0.5444444444444444,
+            "saturation": 1,
+            "brightness": 169
+          }
+        }
+      }
+    },
+    {
+      "id": "01446a4eb12772bd",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 10183.032296385185,
+        "y": 2189.513153488065
+      },
+      "data": {
+        "id": "01446a4eb12772bd",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.kitchen_cabinet_bottom"
+          ],
+          "selectedDeviceNames": [
+            "Kitchen Cabinet Bottom"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Switch",
+          "triggerMode": "Follow",
+          "customTitle": "Kitchen Cabinet Bottom",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "9a4908a524f7808a",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 10802.668574504443,
+        "y": 2185.5329250070445
+      },
+      "data": {
+        "id": "9a4908a524f7808a",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.kitchen_cabinet_top"
+          ],
+          "selectedDeviceNames": [
+            "kitchen Cabinet Top"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Switch",
+          "triggerMode": "Follow",
+          "customTitle": "Kitchen Cabinet Top",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "d08ef8707ab0fba4",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 11343.130547559114,
+        "y": 2190.6381994675803
+      },
+      "data": {
+        "id": "d08ef8707ab0fba4",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.kitchen_sink_light"
+          ],
+          "selectedDeviceNames": [
+            "kitchen Sink Light"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Switch",
+          "triggerMode": "Follow",
+          "customTitle": "Kitchen Sink",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "6602e66d9ef41f54",
+      "label": "Receiver",
+      "position": {
+        "x": 9849.164548420722,
+        "y": -3057.5461232816606
+      },
+      "data": {
+        "id": "6602e66d9ef41f54",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]1AM Off",
+          "lastValue": false,
+          "lastTriggerSource": null
+        }
+      }
+    },
+    {
+      "id": "48772a09399ce435",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 7856.746848863559,
+        "y": 2209.127851379882
+      },
+      "data": {
+        "id": "48772a09399ce435",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.living_room_chandelier"
+          ],
+          "selectedDeviceNames": [
+            "Living Room Chandelier"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Chandelier",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "2769561f4d1141e5",
+      "label": "Stepped Color Gradient",
+      "position": {
+        "x": 4318.925395541233,
+        "y": 397.39026528657405
+      },
+      "data": {
+        "inputs": {
+          "value": {
+            "socket": {
+              "name": "number"
+            },
+            "label": "Value",
+            "id": "9b0b4d52337ee402",
+            "control": null,
+            "showControl": true
+          },
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "16bd2ef187e06e12",
+            "control": null,
+            "showControl": true
+          },
+          "timerDuration": {
+            "socket": {
+              "name": "number"
+            },
+            "label": "Timer Duration",
+            "id": "c6d23317d33901c6",
+            "control": null,
+            "showControl": true
+          },
+          "startTime": {
+            "socket": {
+              "name": "string"
+            },
+            "label": "Start Time",
+            "id": "e344b8a6095a7ed4",
+            "control": null,
+            "showControl": true
+          },
+          "endTime": {
+            "socket": {
+              "name": "string"
+            },
+            "label": "End Time",
+            "id": "451e15068e6db618",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "hsvInfo": {
+            "socket": {
+              "name": "hsv_info"
+            },
+            "label": "HSV Info",
+            "multipleConnections": true,
+            "id": "f6ae28b400705ad5"
+          }
+        },
+        "controls": {},
+        "label": "Stepped Color Gradient",
+        "id": "2769561f4d1141e5",
+        "width": 460,
+        "height": 680,
+        "properties": {
+          "colorMode": "custom",
+          "predefinedWedge": "warm-to-cool",
+          "directMode": true,
+          "colorBias": 0.54,
+          "fromColor": {
+            "r": 255,
+            "g": 255,
+            "b": 255
+          },
+          "toColor": {
+            "r": 255,
+            "g": 134,
+            "b": 36
+          },
+          "fromBrightness": 72,
+          "toBrightness": 36,
+          "startHue": 0,
+          "startSaturation": 0,
+          "startBrightness": 100,
+          "endHue": 38,
+          "endSaturation": 80,
+          "endBrightness": 48,
+          "rangeMode": "time",
+          "startValue": 20,
+          "endValue": 30,
+          "startTimeHours": 10,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 2,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "timeSteps": 60,
+          "useBrightnessOverride": false,
+          "brightnessOverride": 254,
+          "debug": false
+        },
+        "colorMode": "custom",
+        "predefinedWedge": "warm-to-cool",
+        "directMode": true,
+        "colorBias": 0.54,
+        "fromColor": {
+          "r": 255,
+          "g": 255,
+          "b": 255
+        },
+        "toColor": {
+          "r": 255,
+          "g": 134,
+          "b": 36
+        },
+        "fromBrightness": 72,
+        "toBrightness": 36,
+        "startHue": 0,
+        "startSaturation": 0,
+        "startBrightness": 100,
+        "endHue": 38,
+        "endSaturation": 80,
+        "endBrightness": 48,
+        "rangeMode": "time",
+        "startValue": 20,
+        "endValue": 30,
+        "startTimeHours": 10,
+        "startTimeMinutes": 0,
+        "startTimePeriod": "AM",
+        "endTimeHours": 2,
+        "endTimeMinutes": 0,
+        "endTimePeriod": "PM",
+        "timerDurationValue": 1,
+        "timerUnit": "hours",
+        "timeSteps": 60,
+        "useBrightnessOverride": false,
+        "brightnessOverride": 254,
+        "debug": false,
+        "timerStart": null,
+        "currentStep": 0,
+        "lastTimeStep": null,
+        "position": 0,
+        "isInRange": false,
+        "lastColor": {
+          "r": 255,
+          "g": 255,
+          "b": 255
+        },
+        "inputStartTime": "4:24 PM",
+        "inputEndTime": "10:30 PM"
+      }
+    },
+    {
+      "id": "a3d528fc57e1ff4d",
+      "label": "Time of Day",
+      "position": {
+        "x": -619.4451476076305,
+        "y": -3498.2581533572793
+      },
+      "data": {
+        "id": "a3d528fc57e1ff4d",
+        "label": "Time of Day",
+        "properties": {
+          "customName": "",
+          "start_hour": 7,
+          "start_minute": 30,
+          "start_ampm": "AM",
+          "start_enabled": true,
+          "stop_hour": 10,
+          "stop_minute": 0,
+          "stop_ampm": "PM",
+          "stop_enabled": true,
+          "cycle_hour": 4,
+          "cycle_minute": 45,
+          "cycle_ampm": "AM",
+          "cycle_duration": 10,
+          "cycle_enabled": false,
+          "timezone": "America/Los_Angeles",
+          "next_on_date": "2025-12-30T15:30:00.000Z",
+          "next_off_date": "2025-12-30T06:00:00.000Z",
+          "next_cycle_date": null,
+          "currentState": false,
+          "status": "Initializing...",
+          "debug": false,
+          "pulseMode": true
+        }
+      }
+    },
+    {
+      "id": "0c96213adb3281f4",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 7850.11380784081,
+        "y": 1215.7477153277064
+      },
+      "data": {
+        "id": "0c96213adb3281f4",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.living_room_table_south",
+            "ha_light.third_reality_inc_3rcb01057z_2"
+          ],
+          "selectedDeviceNames": [
+            "Living Room Table South (ha)",
+            "Living Room Table North (ha)"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Living Room Tables",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "4e9efb3c40202f3d",
+      "label": "Combine",
+      "position": {
+        "x": -1180.005497704175,
+        "y": 207.4325355850463
+      },
+      "data": {
+        "inputs": {
+          "in1": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input 1",
+            "id": "c422dcca946fb4a4",
+            "control": null,
+            "showControl": true
+          },
+          "in2": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input 2",
+            "id": "dbc996e6a29e0e36",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "e19ce52350229685"
+          }
+        },
+        "controls": {},
+        "label": "Combine",
+        "id": "4e9efb3c40202f3d",
+        "properties": {
+          "inputCount": 2,
+          "mode": "all",
+          "lastActiveInput": 2,
+          "lastValue": false
+        }
+      }
+    },
+    {
+      "id": "15d23e2dcb5c4e04",
+      "label": "Debug",
+      "position": {
+        "x": 336.1983172490918,
+        "y": 2793.569475611256
+      },
+      "data": {
+        "inputs": {
+          "input": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input",
+            "id": "3f2f9db5ba11045c",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "2c8d9186b51c3511"
+          }
+        },
+        "controls": {},
+        "label": "Debug",
+        "id": "15d23e2dcb5c4e04",
+        "width": 260,
+        "properties": {
+          "name": "",
+          "toConsole": false,
+          "maxHistory": 10,
+          "enabled": true,
+          "history": [
+            {
+              "time": "8:37:55 AM",
+              "timestamp": 1767026275229,
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "time": "8:37:53 AM",
+              "timestamp": 1767026273119,
+              "value": true,
+              "type": "boolean"
+            }
+          ],
+          "currentValue": false,
+          "messageCount": 2
+        }
+      }
+    },
+    {
+      "id": "f655421d76358d81",
+      "label": "Timeline Color",
+      "position": {
+        "x": 9753.843390008711,
+        "y": -2338.746211912149
+      },
+      "data": {
+        "id": "f655421d76358d81",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 0.48083070884833906,
+              "y": 0.27159669082932414,
+              "id": "p1765503605186"
+            },
+            {
+              "x": 1,
+              "y": 0.1531689805955625,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "time",
+          "startValue": 0,
+          "endValue": 100,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "timerLoopMode": "none",
+          "outputStepInterval": 1000,
+          "colorMode": "custom",
+          "colorStops": [
+            {
+              "position": 0,
+              "rgb": {
+                "r": 0,
+                "g": 132,
+                "b": 255
+              }
+            },
+            {
+              "position": 0.69,
+              "rgb": {
+                "r": 255,
+                "g": 149,
+                "b": 0
+              }
+            }
+          ],
+          "editorWidth": 430.49647368296837,
+          "editorHeight": 400,
+          "showColorEditor": true,
+          "previewMode": false,
+          "previewPosition": 0.762842218507593,
+          "position": 0,
+          "isInRange": false,
+          "outputHue": 0.5803921568627451,
+          "outputSaturation": 1,
+          "outputBrightness": 254,
+          "outputRgb": {
+            "r": 0,
+            "g": 131,
+            "b": 254
+          }
+        }
+      }
+    },
+    {
+      "id": "7bd022dda6f9f5b4",
+      "label": "Timeline Color",
+      "position": {
+        "x": 11299.91901906524,
+        "y": -2242.2481166598145
+      },
+      "data": {
+        "id": "7bd022dda6f9f5b4",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 0.4431367102202647,
+              "y": 0.4053928026060224,
+              "id": "p1765503605186"
+            },
+            {
+              "x": 1,
+              "y": 0.1760593265214515,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "time",
+          "startValue": 0,
+          "endValue": 100,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "timerLoopMode": "none",
+          "outputStepInterval": 1000,
+          "colorMode": "custom",
+          "colorStops": [
+            {
+              "position": 0,
+              "rgb": {
+                "r": 255,
+                "g": 255,
+                "b": 255
+              }
+            },
+            {
+              "position": 0.78,
+              "rgb": {
+                "r": 255,
+                "g": 149,
+                "b": 0
+              }
+            }
+          ],
+          "editorWidth": 377.1649140574209,
+          "editorHeight": 400,
+          "showColorEditor": true,
+          "previewMode": false,
+          "previewPosition": 0.762842218507593,
+          "position": 0,
+          "isInRange": false,
+          "outputHue": 0,
+          "outputSaturation": 0,
+          "outputBrightness": 254,
+          "outputRgb": {
+            "r": 254,
+            "g": 254,
+            "b": 254
+          }
+        }
+      }
+    },
+    {
+      "id": "d5004b3611dddf0f",
+      "label": "Timeline Color",
+      "position": {
+        "x": -2541.2605272835185,
+        "y": -2832.3894869598407
+      },
+      "data": {
+        "id": "d5004b3611dddf0f",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "timer",
+          "startValue": 0,
+          "endValue": 100,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 5,
+          "timerUnit": "minutes",
+          "timerLoopMode": "ping-pong",
+          "outputStepInterval": 1000,
+          "colorMode": "custom",
+          "colorStops": [
+            {
+              "position": 0,
+              "rgb": {
+                "r": 0,
+                "g": 255,
+                "b": 64
+              }
+            },
+            {
+              "position": 1,
+              "rgb": {
+                "r": 255,
+                "g": 0,
+                "b": 0
+              }
+            }
+          ],
+          "editorWidth": 360,
+          "editorHeight": 180,
+          "showColorEditor": true,
+          "previewMode": false,
+          "previewPosition": 0,
+          "position": 0,
+          "isInRange": false,
+          "outputHue": 0.37516339869281046,
+          "outputSaturation": 1,
+          "outputBrightness": 254,
+          "outputRgb": {
+            "r": 0,
+            "g": 254,
+            "b": 64
+          }
+        }
+      }
+    },
+    {
+      "id": "ce37567d8626a0db",
+      "label": "Timeline Color",
+      "position": {
+        "x": -2080.248000728279,
+        "y": -2833.030998916757
+      },
+      "data": {
+        "id": "ce37567d8626a0db",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "timer",
+          "startValue": 0,
+          "endValue": 100,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 5,
+          "timerUnit": "minutes",
+          "timerLoopMode": "ping-pong",
+          "outputStepInterval": 1000,
+          "colorMode": "custom",
+          "colorStops": [
+            {
+              "position": 0,
+              "rgb": {
+                "r": 255,
+                "g": 0,
+                "b": 0
+              }
+            },
+            {
+              "position": 1,
+              "rgb": {
+                "r": 68,
+                "g": 255,
+                "b": 0
+              }
+            }
+          ],
+          "editorWidth": 360,
+          "editorHeight": 180,
+          "showColorEditor": true,
+          "previewMode": false,
+          "previewPosition": 0,
+          "position": 0,
+          "isInRange": false,
+          "outputHue": 0,
+          "outputSaturation": 1,
+          "outputBrightness": 254,
+          "outputRgb": {
+            "r": 254,
+            "g": 0,
+            "b": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "c4018a258f9c8fbd",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": 10535.71701076121,
+        "y": 3858.6952116252746
+      },
+      "data": {
+        "id": "c4018a258f9c8fbd",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 53,
+          "green": 39,
+          "blue": 28,
+          "hueShift": 28,
+          "saturation": 47,
+          "brightness": 53,
+          "colorTemp": 3400,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "temp"
+        }
+      }
+    },
+    {
+      "id": "e4a99a5458a16357",
+      "label": "HA Device Automation",
+      "position": {
+        "x": 1095.312123848343,
+        "y": -2767.960762438444
+      },
+      "data": {
+        "id": "e4a99a5458a16357",
+        "label": "HA Device Automation",
+        "properties": {
+          "status": "Fields: value",
+          "debug": false,
+          "lastEntityType": "sensor",
+          "selectedFields": [
+            "value"
+          ],
+          "lastOutputValues": {
+            "value": 52.3
+          },
+          "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
+        }
+      }
+    },
+    {
+      "id": "6dbc9bbdcd1943e0",
+      "label": "HA Device State Output",
+      "position": {
+        "x": 1105.8755958584604,
+        "y": -2432.131188376382
+      },
+      "data": {
+        "id": "6dbc9bbdcd1943e0",
+        "label": "HA Device State Output",
+        "properties": {
+          "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
+          "selectedDeviceName": "Sunshine terrace  Feels like",
+          "status": "✅ Sunshine terrace  Feels like: 52.3",
+          "debug": false,
+          "haToken": "",
+          "filterType": "Sensor",
+          "letterFilter": "All Letters"
+        }
+      }
+    },
+    {
+      "id": "7b0803eadc605db8",
+      "label": "Timeline Color",
+      "position": {
+        "x": 1665.6311758027064,
+        "y": -2794.337741534764
+      },
+      "data": {
+        "id": "7b0803eadc605db8",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0.26893281510643363,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 0.7218048466596311,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "numerical",
+          "startValue": 32,
+          "endValue": 100,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "timerLoopMode": "none",
+          "outputStepInterval": 5000,
+          "colorMode": "custom",
+          "colorStops": [
+            {
+              "position": 0.11,
+              "rgb": {
+                "r": 166,
+                "g": 0,
+                "b": 255
+              }
+            },
+            {
+              "position": 0.36,
+              "rgb": {
+                "r": 23,
+                "g": 126,
+                "b": 222
+              }
+            },
+            {
+              "position": 0.53,
+              "rgb": {
+                "r": 21,
+                "g": 188,
+                "b": 63
+              }
+            },
+            {
+              "position": 0.82,
+              "rgb": {
+                "r": 255,
+                "g": 115,
+                "b": 0
+              }
+            }
+          ],
+          "editorWidth": 360,
+          "editorHeight": 180,
+          "showColorEditor": true,
+          "previewMode": false,
+          "previewPosition": 0.043893880635679956,
+          "position": 0.2985294117647058,
+          "isInRange": true,
+          "outputHue": 0.6308139534883721,
+          "outputSaturation": 0.7478260869565218,
+          "outputBrightness": 98,
+          "outputRgb": {
+            "r": 22,
+            "g": 37,
+            "b": 88
+          }
+        }
+      }
+    },
+    {
+      "id": "d7f72f4c35755d5d",
+      "label": "Sender",
+      "position": {
+        "x": 3145.9798823046194,
+        "y": -3354.841402616181
+      },
+      "data": {
+        "id": "d7f72f4c35755d5d",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Temps",
+          "lastValue": {
+            "hue": 0.004685408299866131,
+            "saturation": 1,
+            "brightness": 254,
+            "rgb": {
+              "r": 248,
+              "g": 7,
+              "b": 0
+            }
+          },
+          "registeredName": "[HSV]Temps",
+          "finalName": "[HSV]Temps"
+        }
+      }
+    },
+    {
+      "id": "24035c8839725684",
+      "label": "Receiver",
+      "position": {
+        "x": -2907.815911234354,
+        "y": -3076.1756769644226
+      },
+      "data": {
+        "id": "24035c8839725684",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Sunset",
+          "lastValue": false,
+          "lastTriggerSource": null
+        }
+      }
+    },
+    {
+      "id": "e5129f50942c3bf8",
+      "label": "Sender",
+      "position": {
+        "x": 375.98964093008635,
+        "y": 2603.1453251319263
+      },
+      "data": {
+        "id": "e5129f50942c3bf8",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Sunset",
+          "lastValue": false,
+          "registeredName": "[Trigger]Sunset",
+          "finalName": "[Trigger]Sunset"
+        }
+      }
+    },
+    {
+      "id": "c095e7b26b0c147e",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 11078.736121494921,
+        "y": 3360.4734319415593
+      },
+      "data": {
+        "id": "c095e7b26b0c147e",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.basement_left",
+            "ha_light.basement_right",
+            "ha_light.laundry_room"
+          ],
+          "selectedDeviceNames": [
+            "Basement Left (ha)",
+            "Basement Right (ha)",
+            "Laundry Room (ha)"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Basemanet table lamps",
+          "autoRefreshInterval": 30000
+        }
+      }
+    },
+    {
+      "id": "6737e33f3ada4c82",
+      "label": "Timeline Color",
+      "position": {
+        "x": -83.16838635835467,
+        "y": -3509.3721713446625
+      },
+      "data": {
+        "id": "6737e33f3ada4c82",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 0.4590076894234225,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 0.20760315481233427,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "time",
+          "startValue": 0,
+          "endValue": 100,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "timerLoopMode": "none",
+          "outputStepInterval": 1000,
+          "colorMode": "custom",
+          "colorStops": [
+            {
+              "position": 0,
+              "rgb": {
+                "r": 0,
+                "g": 110,
+                "b": 255
+              }
+            },
+            {
+              "position": 0.81,
+              "rgb": {
+                "r": 255,
+                "g": 136,
+                "b": 0
+              }
+            }
+          ],
+          "editorWidth": 360,
+          "editorHeight": 180,
+          "showColorEditor": true,
+          "previewMode": false,
+          "previewPosition": 0.04122530107064291,
+          "position": 0.10299289272030651,
+          "isInRange": true,
+          "outputHue": 0.5959860383944154,
+          "outputSaturation": 0.8565022421524664,
+          "outputBrightness": 112,
+          "outputRgb": {
+            "r": 14,
+            "g": 50,
+            "b": 98
+          }
+        }
+      }
+    },
+    {
+      "id": "7d16f3641fda9279",
+      "label": "Debug",
+      "position": {
+        "x": 4079.386810407963,
+        "y": -1227.2632808611243
+      },
+      "data": {
+        "inputs": {
+          "input": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input",
+            "id": "505e2b8b19d7111d",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "e6cc093af43e91fe"
+          }
+        },
+        "controls": {},
+        "label": "Debug",
+        "id": "7d16f3641fda9279",
+        "width": 260,
+        "properties": {
+          "name": "",
+          "toConsole": false,
+          "maxHistory": 10,
+          "enabled": true,
+          "history": [
+            {
+              "time": "8:37:53 AM",
+              "timestamp": 1767026273121,
+              "value": false,
+              "type": "boolean"
+            }
+          ],
+          "currentValue": false,
+          "messageCount": 1
+        }
+      }
+    },
+    {
+      "id": "983a98adf4480305",
+      "label": "Time of Day",
+      "position": {
+        "x": -2880.0343089206303,
+        "y": 1347.7490179283304
+      },
+      "data": {
+        "id": "983a98adf4480305",
+        "label": "Time of Day",
+        "properties": {
+          "customName": "Copper Fountain On 9:30",
+          "start_hour": 9,
+          "start_minute": 30,
+          "start_ampm": "AM",
+          "start_enabled": true,
+          "stop_hour": 8,
+          "stop_minute": 0,
+          "stop_ampm": "PM",
+          "stop_enabled": true,
+          "cycle_hour": 4,
+          "cycle_minute": 45,
+          "cycle_ampm": "AM",
+          "cycle_duration": 10,
+          "cycle_enabled": false,
+          "timezone": "America/Los_Angeles",
+          "next_on_date": "2025-12-29T17:30:00.000Z",
+          "next_off_date": "2025-12-30T04:00:00.000Z",
+          "next_cycle_date": null,
+          "currentState": false,
+          "status": "Initializing...",
+          "debug": false,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "7f0c3b161bddd6d7",
+      "label": "Toggle",
+      "position": {
+        "x": 12279.826663554166,
+        "y": 1896.8677995546666
+      },
+      "data": {
+        "id": "7f0c3b161bddd6d7",
+        "label": "Toggle",
+        "properties": {
+          "state": true,
+          "pulseMode": false,
+          "lastCommand": true
+        }
+      }
+    },
+    {
+      "id": "94cd5cd2d98323af",
+      "label": "Stock Price",
+      "position": {
+        "x": 2121.972628301617,
+        "y": -2745.6703164374776
+      },
+      "data": {
+        "id": "94cd5cd2d98323af",
+        "label": "Stock Price",
+        "properties": {
+          "symbol": "SLV",
+          "refreshInterval": 60,
+          "lastPrice": 65.74,
+          "priceChange": -5.38000000000001,
+          "changePercent": -7.56467941507313,
+          "isUp": false,
+          "lastUpdate": "8:58:43 AM",
+          "status": "OK",
+          "error": null
+        }
+      }
+    },
+    {
+      "id": "12a9e3f3ec9e1b68",
+      "label": "Timeline Color",
+      "position": {
+        "x": 2443.885407035144,
+        "y": -2781.519373007432
+      },
+      "data": {
+        "id": "12a9e3f3ec9e1b68",
+        "label": "Timeline Color",
+        "properties": {
+          "points": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "saturationPoints": [
+            {
+              "x": 0,
+              "y": 1,
+              "id": "p0"
+            },
+            {
+              "x": 1,
+              "y": 1,
+              "id": "p1"
+            }
+          ],
+          "interpolation": "catmull-rom",
+          "editMode": "brightness",
+          "collapsed": false,
+          "rangeMode": "numerical",
+          "startValue": -8,
+          "endValue": 8,
+          "startTimeHours": 8,
+          "startTimeMinutes": 0,
+          "startTimePeriod": "AM",
+          "endTimeHours": 6,
+          "endTimeMinutes": 0,
+          "endTimePeriod": "PM",
+          "timerDurationValue": 1,
+          "timerUnit": "hours",
+          "timerLoopMode": "none",
+          "outputStepInterval": 1000,
+          "colorMode": "custom",
+          "colorStops": [
+            {
+              "position": 0,
+              "rgb": {
+                "r": 255,
+                "g": 0,
+                "b": 0
+              }
+            },
+            {
+              "position": 1,
+              "rgb": {
+                "r": 17,
+                "g": 255,
+                "b": 0
+              }
+            }
+          ],
+          "editorWidth": 360,
+          "editorHeight": 180,
+          "showColorEditor": true,
+          "previewMode": false,
+          "previewPosition": 0,
+          "position": 0.0272075365579294,
+          "isInRange": true,
+          "outputHue": 0.004685408299866131,
+          "outputSaturation": 1,
+          "outputBrightness": 254,
+          "outputRgb": {
+            "r": 248,
+            "g": 7,
+            "b": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "65f3549d75b5278c",
+      "label": "Conditional Switch",
+      "position": {
+        "x": 2886.221496562247,
+        "y": -3360.884169355098
+      },
+      "data": {
+        "id": "65f3549d75b5278c",
+        "label": "Conditional Switch",
+        "properties": {
+          "numberOfInputs": 3,
+          "clampSelect": true,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "4cb66d05f6093141",
+      "label": "Time Range (Continuous)",
+      "position": {
+        "x": 1116.752697382064,
+        "y": -3626.637055690499
+      },
+      "data": {
+        "id": "4cb66d05f6093141",
+        "label": "Time Range (Continuous)",
+        "properties": {
+          "startHour": 6,
+          "startMinute": 30,
+          "endHour": 13,
+          "endMinute": 0,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "3a81e20d6e06835a",
+      "label": "Day of Week Comparison",
+      "position": {
+        "x": 1116.9520723251235,
+        "y": -3188.244316077103
+      },
+      "data": {
+        "id": "3a81e20d6e06835a",
+        "label": "Day of Week Comparison",
+        "properties": {
+          "mode": "range",
+          "singleDay": 1,
+          "startDay": 1,
+          "endDay": 5,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "11b733bfd380b567",
+      "label": "Debug",
+      "position": {
+        "x": 2011.9762448214747,
+        "y": -3549.692118918167
+      },
+      "data": {
+        "inputs": {
+          "input": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input",
+            "id": "686fc4973ad50457",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "4fe890bf770ede90"
+          }
+        },
+        "controls": {},
+        "label": "Debug",
+        "id": "11b733bfd380b567",
+        "width": 260,
+        "properties": {
+          "name": "",
+          "toConsole": false,
+          "maxHistory": 10,
+          "enabled": true,
+          "history": [
+            {
+              "time": "8:37:53 AM",
+              "timestamp": 1767026273120,
+              "value": true,
+              "type": "boolean"
+            }
+          ],
+          "currentValue": true,
+          "messageCount": 1
+        }
+      }
+    },
+    {
+      "id": "49d07ae20033daef",
+      "label": "Integer Selector",
+      "position": {
+        "x": 2027.686467930122,
+        "y": -3199.793381859285
+      },
+      "data": {
+        "id": "49d07ae20033daef",
+        "label": "Integer Selector",
+        "properties": {
+          "value": 2,
+          "min": 0,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "93d6f872bd5baf64",
+      "label": "Conditional Integer Output",
+      "position": {
+        "x": 2432.7299211202367,
+        "y": -3408.625409315101
+      },
+      "data": {
+        "id": "93d6f872bd5baf64",
+        "label": "Conditional Integer Output",
+        "properties": {
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "5ca77d693549fe84",
+      "label": "Logic Operations",
+      "position": {
+        "x": 1589.7587371895306,
+        "y": -3555.130311076206
+      },
+      "data": {
+        "id": "5ca77d693549fe84",
+        "label": "Logic Operations",
+        "properties": {
+          "mode": "AND",
+          "inputCount": 2,
+          "compareInputIndex": -1,
+          "compareOperator": ">",
+          "compareThreshold": 80,
+          "setVariable": "",
+          "_lastResult": true
+        }
+      }
+    },
+    {
+      "id": "d146b474737e06c7",
+      "label": "Day of Week Comparison",
+      "position": {
+        "x": 8643.221559224297,
+        "y": 4042.4265304197456
+      },
+      "data": {
+        "id": "d146b474737e06c7",
+        "label": "Day of Week Comparison",
+        "properties": {
+          "mode": "range",
+          "singleDay": 1,
+          "startDay": 1,
+          "endDay": 5,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "ba9e40b6cde18e11",
+      "label": "Time Range (Continuous)",
+      "position": {
+        "x": 8651.317053776305,
+        "y": 4422.685330271865
+      },
+      "data": {
+        "id": "ba9e40b6cde18e11",
+        "label": "Time Range (Continuous)",
+        "properties": {
+          "startHour": 8,
+          "startMinute": 0,
+          "endHour": 20,
+          "endMinute": 0,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "d42bd5f074b47ab1",
+      "label": "AND Gate",
+      "position": {
+        "x": 9094.46620217884,
+        "y": 4295.687739462545
+      },
+      "data": {
+        "id": "d42bd5f074b47ab1",
+        "label": "AND Gate",
+        "properties": {
+          "inputCount": 2,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "5c2cc55af04e29d0",
+      "label": "AND Gate",
+      "position": {
+        "x": 9485.53932270078,
+        "y": 4125.732342058095
+      },
+      "data": {
+        "id": "5c2cc55af04e29d0",
+        "label": "AND Gate",
+        "properties": {
+          "inputCount": 2,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "a9c967aef62c5f5e",
+      "label": "Receiver",
+      "position": {
+        "x": 8672.779446266448,
+        "y": 2674.5743975357764
+      },
+      "data": {
+        "id": "a9c967aef62c5f5e",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "e3e2cab49fa297eb",
+      "label": "Receiver",
+      "position": {
+        "x": 10807.422392991566,
+        "y": 1964.4077959225883
+      },
+      "data": {
+        "id": "e3e2cab49fa297eb",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "1d2f2f544a29e92e",
+      "label": "Receiver",
+      "position": {
+        "x": 11353.565386575136,
+        "y": 1969.0072090028393
+      },
+      "data": {
+        "id": "1d2f2f544a29e92e",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "510ee1d7dabbecff",
+      "label": "Receiver",
+      "position": {
+        "x": 8734.551978679689,
+        "y": 226.542715460598
+      },
+      "data": {
+        "id": "510ee1d7dabbecff",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "f1944ce140939e41",
+      "label": "Receiver",
+      "position": {
+        "x": 9305.974789572183,
+        "y": 193.1887123790125
+      },
+      "data": {
+        "id": "f1944ce140939e41",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "29bfa4d945ceb5da",
+      "label": "Receiver",
+      "position": {
+        "x": 11323.568834593685,
+        "y": 374.0895740321848
+      },
+      "data": {
+        "id": "29bfa4d945ceb5da",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "482a8f354b1e14e4",
+      "label": "Backdrop",
+      "position": {
+        "x": 8604.333192878763,
+        "y": 1796.1428714295926
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "482a8f354b1e14e4",
+        "width": 3207.2836686556366,
+        "height": 1197.8780248888158,
+        "properties": {
+          "title": "Kitchen Cabinets",
+          "colorIndex": 0,
+          "customColor": "#6c4c33",
+          "fontSize": 60,
+          "width": 3207.2836686556366,
+          "height": 1197.8780248888158,
+          "capturedNodes": [
+            "01446a4eb12772bd",
+            "9a4908a524f7808a",
+            "d08ef8707ab0fba4",
+            "a9c967aef62c5f5e",
+            "e3e2cab49fa297eb",
+            "1d2f2f544a29e92e",
+            "5e818ebd02a96d61",
+            "27191efb1636eaf9",
+            "82b447ceac53ae67",
+            "31bdcd3d69a4e2ad",
+            "cbad499a84025e4f",
+            "225b8fa7a816b1ad",
+            "18b6e71b99164b08"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "fa8775e41c7c325b",
+      "label": "Backdrop",
+      "position": {
+        "x": 10437.200546547043,
+        "y": 173.62873143045027
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "fa8775e41c7c325b",
+        "width": 2082.1154756186106,
+        "height": 1573.4887669605175,
+        "properties": {
+          "title": "Bar Pendents",
+          "colorIndex": 13,
+          "customColor": "#704929",
+          "fontSize": 60,
+          "width": 2082.1154756186106,
+          "height": 1573.4887669605175,
+          "capturedNodes": [
+            "46fa426389043256",
+            "74640383197a8ca7",
+            "9ccb7efe133cf25a",
+            "9289bd97b1d582f5",
+            "29bfa4d945ceb5da",
+            "425da669f29b9c80",
+            "94601ad50d4290d2",
+            "b2457172b83db337",
+            "6180bbc25b4977c7"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "425da669f29b9c80",
+      "label": "Hue Effect",
+      "position": {
+        "x": 10501.664534470003,
+        "y": 768.3693906191565
+      },
+      "data": {
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "7dea7b5956ed5726",
+            "control": null,
+            "showControl": true
+          },
+          "hsv_in": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV In",
+            "id": "db0c6a951645cc43",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "hsv_out": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV Out",
+            "multipleConnections": true,
+            "id": "3ca941f5e980636e"
+          },
+          "active": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Active",
+            "multipleConnections": true,
+            "id": "d1276235489e9043"
+          },
+          "applied": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Applied",
+            "multipleConnections": true,
+            "id": "faabd762194031c3"
+          }
+        },
+        "controls": {},
+        "label": "Hue Effect",
+        "id": "425da669f29b9c80",
+        "width": 300,
+        "height": 360,
+        "properties": {
+          "entityIds": [
+            "ha_light.kitchen_bar_spot_1",
+            "ha_light.kitchen_bar_spot_3"
+          ],
+          "effect": "candle",
+          "lastTrigger": false,
+          "lastSentEffect": "candle",
+          "previousStates": {}
+        }
+      }
+    },
+    {
+      "id": "94601ad50d4290d2",
+      "label": "Hue Effect",
+      "position": {
+        "x": 11495.472659232128,
+        "y": 742.3432538042076
+      },
+      "data": {
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "49dee0d70135369d",
+            "control": null,
+            "showControl": true
+          },
+          "hsv_in": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV In",
+            "id": "d197f1dca0a17c77",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "hsv_out": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV Out",
+            "multipleConnections": true,
+            "id": "e84e39fdbf65706d"
+          },
+          "active": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Active",
+            "multipleConnections": true,
+            "id": "71285ae40ba95509"
+          },
+          "applied": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Applied",
+            "multipleConnections": true,
+            "id": "6c4665f6a7c635eb"
+          }
+        },
+        "controls": {},
+        "label": "Hue Effect",
+        "id": "94601ad50d4290d2",
+        "width": 300,
+        "height": 360,
+        "properties": {
+          "entityIds": [
+            "ha_light.kitchen_bar_spot_2",
+            "ha_light.kitchen_bar_spot_4"
+          ],
+          "effect": "candle",
+          "lastTrigger": false,
+          "lastSentEffect": "candle",
+          "previousStates": {}
+        }
+      }
+    },
+    {
+      "id": "b2457172b83db337",
+      "label": "Time Range (Continuous)",
+      "position": {
+        "x": 10495.40735536163,
+        "y": 306.52835432020436
+      },
+      "data": {
+        "id": "b2457172b83db337",
+        "label": "Time Range (Continuous)",
+        "properties": {
+          "startHour": 19,
+          "startMinute": 0,
+          "endHour": 23,
+          "endMinute": 30,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "6180bbc25b4977c7",
+      "label": "OR Gate",
+      "position": {
+        "x": 11637.234386772976,
+        "y": 458.65440911252017
+      },
+      "data": {
+        "id": "6180bbc25b4977c7",
+        "label": "OR Gate",
+        "properties": {
+          "inputCount": 2,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "c695cec7637a252f",
+      "label": "Receiver",
+      "position": {
+        "x": -1331.3650700252015,
+        "y": 552.6918606075039
+      },
+      "data": {
+        "id": "c695cec7637a252f",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Bathroom Light On/Off",
+          "lastValue": false,
+          "lastTriggerSource": "Bathroom Light On/Off"
+        }
+      }
+    },
+    {
+      "id": "41b1e60811ee1356",
+      "label": "Receiver",
+      "position": {
+        "x": 4512.2838312935655,
+        "y": 153.52814787299326
+      },
+      "data": {
+        "id": "41b1e60811ee1356",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]House Lights ON/Off",
+          "lastValue": false,
+          "lastTriggerSource": "House Lights ON/Off"
+        }
+      }
+    },
+    {
+      "id": "404d13489437db4f",
+      "label": "Receiver",
+      "position": {
+        "x": 10528.154257589757,
+        "y": 3361.224740042972
+      },
+      "data": {
+        "id": "404d13489437db4f",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Office ON/Off",
+          "lastValue": true,
+          "lastTriggerSource": "Office ON/Off"
+        }
+      }
+    },
+    {
+      "id": "3e157bf1a086946f",
+      "label": "Receiver",
+      "position": {
+        "x": 10713.9996859663,
+        "y": 4652.9775294906085
+      },
+      "data": {
+        "id": "3e157bf1a086946f",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Office ON/Off",
+          "lastValue": true,
+          "lastTriggerSource": "Office ON/Off"
+        }
+      }
+    },
+    {
+      "id": "fd185ab6bd6ac2d0",
+      "label": "Receiver",
+      "position": {
+        "x": 9085.881824183467,
+        "y": 4042.156166995554
+      },
+      "data": {
+        "id": "fd185ab6bd6ac2d0",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Office ON/Off",
+          "lastValue": true,
+          "lastTriggerSource": "Office ON/Off"
+        }
+      }
+    },
+    {
+      "id": "df1b591084715caa",
+      "label": "Hue Effect",
+      "position": {
+        "x": 10694.109971293108,
+        "y": 4888.1640028750235
+      },
+      "data": {
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "1041d9fa66caa028",
+            "control": null,
+            "showControl": true
+          },
+          "hsv_in": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV In",
+            "id": "58b9a9c058eebca6",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "hsv_out": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV Out",
+            "multipleConnections": true,
+            "id": "bb17c60ff2d21ad9"
+          },
+          "active": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Active",
+            "multipleConnections": true,
+            "id": "16ccf3bd3963666e"
+          },
+          "applied": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Applied",
+            "multipleConnections": true,
+            "id": "5da9dcfb558d1dbc"
+          }
+        },
+        "controls": {},
+        "label": "Hue Effect",
+        "id": "df1b591084715caa",
+        "width": 300,
+        "height": 360,
+        "properties": {
+          "entityIds": [
+            "ha_light.downstairs_fire_extinguisher",
+            "ha_light.hue_color_leg_lamg"
+          ],
+          "effect": "candle",
+          "lastTrigger": false,
+          "lastSentEffect": null,
+          "previousStates": {}
+        }
+      }
+    },
+    {
+      "id": "82d02cb2283e4c10",
+      "label": "Time Range (Continuous)",
+      "position": {
+        "x": 10320.44561651973,
+        "y": 4653.732335438849
+      },
+      "data": {
+        "id": "82d02cb2283e4c10",
+        "label": "Time Range (Continuous)",
+        "properties": {
+          "startHour": 21,
+          "startMinute": 0,
+          "endHour": 0,
+          "endMinute": 0,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "d6f8c05d1c1760b8",
+      "label": "Backdrop",
+      "position": {
+        "x": 1072.291933470345,
+        "y": -3748.098577421338
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "d6f8c05d1c1760b8",
+        "width": 2403.147742556335,
+        "height": 2102.2882499554958,
+        "properties": {
+          "title": "Bar Lamp Colors",
+          "colorIndex": 0,
+          "customColor": "#401943",
+          "fontSize": 40,
+          "width": 2403.147742556335,
+          "height": 2102.2882499554958,
+          "capturedNodes": [
+            "e4a99a5458a16357",
+            "6dbc9bbdcd1943e0",
+            "7b0803eadc605db8",
+            "d7f72f4c35755d5d",
+            "94cd5cd2d98323af",
+            "12a9e3f3ec9e1b68",
+            "65f3549d75b5278c",
+            "4cb66d05f6093141",
+            "3a81e20d6e06835a",
+            "11b733bfd380b567",
+            "49d07ae20033daef",
+            "93d6f872bd5baf64",
+            "5ca77d693549fe84",
+            "52b8f443ab0acf3e"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "86116410f59b6600",
+      "label": "Backdrop",
+      "position": {
+        "x": -736.7544200814672,
+        "y": -3735.749524118891
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {},
+        "controls": {},
+        "label": "Backdrop",
+        "id": "86116410f59b6600",
+        "width": 1533.2095142504775,
+        "height": 1503.8511463076502,
+        "properties": {
+          "title": "Office Colors",
+          "colorIndex": 0,
+          "customColor": "#1f5c6b",
+          "fontSize": 16,
+          "width": 1533.2095142504775,
+          "height": 1503.8511463076502,
+          "capturedNodes": [
+            "04169d0d9714a784",
+            "a3d528fc57e1ff4d",
+            "6737e33f3ada4c82",
+            "65fb0c43fa87a894",
+            "1a35f4f160273ad5"
+          ],
+          "locked": true
+        }
+      }
+    },
+    {
+      "id": "52b8f443ab0acf3e",
+      "label": "Display",
+      "position": {
+        "x": 2225.051976442482,
+        "y": -2918.5315819780185
+      },
+      "data": {
+        "id": "52b8f443ab0acf3e",
+        "label": "Display",
+        "width": 200,
+        "height": 150,
+        "properties": {
+          "value": true
+        }
+      }
+    },
+    {
+      "id": "5e818ebd02a96d61",
+      "label": "Time Range (Continuous)",
+      "position": {
+        "x": 8681.5130090725,
+        "y": 2019.276908022897
+      },
+      "data": {
+        "id": "5e818ebd02a96d61",
+        "label": "Time Range (Continuous)",
+        "properties": {
+          "startHour": 5,
+          "startMinute": 30,
+          "endHour": 8,
+          "endMinute": 0,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "27191efb1636eaf9",
+      "label": "OR Gate",
+      "position": {
+        "x": 9865.53814857093,
+        "y": 2190.6368416986325
+      },
+      "data": {
+        "id": "27191efb1636eaf9",
+        "label": "OR Gate",
+        "properties": {
+          "inputCount": 2,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "bb48d377b60c7dba",
+      "label": "HA Device State Output",
+      "position": {
+        "x": 1434.0782947615699,
+        "y": -1451.84226269121
+      },
+      "data": {
+        "id": "bb48d377b60c7dba",
+        "label": "HA Device State Output",
+        "properties": {
+          "selectedDeviceId": "person.greg_teegarden",
+          "selectedDeviceName": "greg teegarden",
+          "status": "✅ greg teegarden: unknown",
+          "debug": false,
+          "haToken": "",
+          "filterType": "Person",
+          "letterFilter": "All Letters"
+        }
+      }
+    },
+    {
+      "id": "41c9816aac4a7837",
+      "label": "HA Device Automation",
+      "position": {
+        "x": 1900.8154534208436,
+        "y": -1268.1551510396762
+      },
+      "data": {
+        "id": "41c9816aac4a7837",
+        "label": "HA Device Automation",
+        "properties": {
+          "status": "Fields: state",
+          "debug": false,
+          "lastEntityType": "person",
+          "selectedFields": [
+            "state"
+          ],
+          "lastOutputValues": {
+            "state": "unknown"
+          },
+          "lastInputDeviceId": "person.greg_teegarden"
+        }
+      }
+    },
+    {
+      "id": "21a4d2813b9f0315",
+      "label": "Comparison",
+      "position": {
+        "x": 2452.887947565959,
+        "y": -1221.9314819132105
+      },
+      "data": {
+        "id": "21a4d2813b9f0315",
+        "label": "Comparison",
+        "properties": {
+          "operator": "=",
+          "compareValue": "home"
+        }
+      }
+    },
+    {
+      "id": "8564c1d6bd04440b",
+      "label": "Sender",
+      "position": {
+        "x": 2698.312032336386,
+        "y": -998.6759751491882
+      },
+      "data": {
+        "id": "8564c1d6bd04440b",
+        "label": "Sender",
+        "properties": {
+          "bufferName": "Home",
+          "lastValue": false,
+          "registeredName": "[Trigger]Home",
+          "finalName": "[Trigger]Home"
+        }
+      }
+    },
+    {
+      "id": "82b447ceac53ae67",
+      "label": "AND Gate",
+      "position": {
+        "x": 9631.524424427129,
+        "y": 2136.8749498158295
+      },
+      "data": {
+        "id": "82b447ceac53ae67",
+        "label": "AND Gate",
+        "properties": {
+          "inputCount": 3,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "31bdcd3d69a4e2ad",
+      "label": "Receiver",
+      "position": {
+        "x": 8673.582455400077,
+        "y": 2441.673507173611
+      },
+      "data": {
+        "id": "31bdcd3d69a4e2ad",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Home",
+          "lastValue": false,
+          "lastTriggerSource": "Home"
+        }
+      }
+    },
+    {
+      "id": "ff5f5d259cfeeb7f",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 6804.060583447257,
+        "y": -2897.5775188951498
+      },
+      "data": {
+        "id": "ff5f5d259cfeeb7f",
+        "label": "HA Generic Device",
+        "properties": {
+          "selectedDeviceIds": [
+            "ha_light.front_door_light_2"
+          ],
+          "selectedDeviceNames": [
+            "FD_Light"
+          ],
+          "status": "Turned Off",
+          "haConnected": true,
+          "haWsConnected": true,
+          "debug": false,
+          "haToken": "",
+          "transitionTime": 1000,
+          "filterType": "Light",
+          "triggerMode": "Follow",
+          "customTitle": "Front Door light"
+        }
+      }
+    },
+    {
+      "id": "b8b2168037d38a15",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": 6308.393066794723,
+        "y": -2737.874166161626
+      },
+      "data": {
+        "id": "b8b2168037d38a15",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 59,
+          "green": 33,
+          "blue": 8,
+          "hueShift": 30,
+          "saturation": 87,
+          "brightness": 59,
+          "colorTemp": 2150,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "temp"
+        }
+      }
+    },
+    {
+      "id": "cbad499a84025e4f",
+      "label": "HA Device Field",
+      "position": {
+        "x": 8989.253157785752,
+        "y": 2476.0034884786432
+      },
+      "data": {
+        "id": "cbad499a84025e4f",
+        "label": "HA Device Field",
+        "properties": {
+          "deviceId": "ha_sensor.sunshine_terrace_irradiance",
+          "deviceName": "Sunshine terrace  Irradiance",
+          "field": "state",
+          "lastValue": "40.09",
+          "filterType": "Sensor",
+          "letterFilter": "STU",
+          "searchText": ""
+        }
+      }
+    },
+    {
+      "id": "225b8fa7a816b1ad",
+      "label": "Comparison",
+      "position": {
+        "x": 9391.867776570638,
+        "y": 2562.1702097400116
+      },
+      "data": {
+        "id": "225b8fa7a816b1ad",
+        "label": "Comparison",
+        "properties": {
+          "operator": "<=",
+          "compareValue": "20"
+        }
+      }
+    },
+    {
+      "id": "18b6e71b99164b08",
+      "label": "State Machine",
+      "position": {
+        "x": 9687.807995329495,
+        "y": 2453.683073395791
+      },
+      "data": {
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Trigger",
+            "id": "c2cfa82dbc99a8b2",
+            "control": null,
+            "showControl": true
+          },
+          "reset": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Reset",
+            "id": "1976f77bf9cd32ae",
+            "control": null,
+            "showControl": true
+          },
+          "setState": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Set State",
+            "id": "fb023de8b2dacbcc",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "state": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "State",
+            "multipleConnections": true,
+            "id": "49d53ebb3bcd7e79"
+          },
+          "stateIndex": {
+            "socket": {
+              "name": "number"
+            },
+            "label": "Index",
+            "multipleConnections": true,
+            "id": "6328cedc6129d1e5"
+          },
+          "changed": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Changed",
+            "multipleConnections": true,
+            "id": "339ff3407ab6fe94"
+          }
+        },
+        "controls": {},
+        "label": "State Machine",
+        "id": "18b6e71b99164b08",
+        "width": 260,
+        "properties": {
+          "states": "idle,armed,triggered,cooldown",
+          "transitions": "idle→armed:true\narmed→triggered:true\ntriggered→cooldown:true\ncooldown→idle:true",
+          "currentState": "idle",
+          "previousState": null,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "02cdc44a83e95f0a",
+      "label": "HA Lock Control",
+      "position": {
+        "x": 6950.195453917655,
+        "y": 4185.55287779044
+      },
+      "data": {
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "b1f6e79139862113",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "state": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "State",
+            "multipleConnections": true,
+            "id": "bb33ea7b8cbf0531"
+          },
+          "is_locked": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Is Locked",
+            "multipleConnections": true,
+            "id": "f5bc33328350eee2"
+          }
+        },
+        "controls": {
+          "search": {
+            "id": "49f359d2d1ff5cef",
+            "label": "🔍 Search",
+            "value": "",
+            "placeholder": "Type to filter locks...",
+            "type": "text"
+          },
+          "device_select": {
+            "id": "0c220cd080e58e96",
+            "label": "Lock",
+            "values": [
+              "— Select Lock —",
+              "Sunshine Terrace Door Lock"
+            ],
+            "value": "Sunshine Terrace Door Lock"
+          }
+        },
+        "label": "HA Lock Control",
+        "id": "02cdc44a83e95f0a",
+        "width": 280,
+        "height": 260,
+        "properties": {
+          "deviceId": "ha_lock.aura_lock",
+          "deviceName": "Sunshine Terrace Door Lock",
+          "searchText": "",
+          "currentState": "locked",
+          "triggerInitialized": false,
+          "retryEnabled": true,
+          "retryDelay": 5000,
+          "maxRetries": 3,
+          "retryCount": 0,
+          "lastCommandAction": "unlock",
+          "lastCommandTime": 1766448778738
+        },
+        "devices": [
+          {
+            "id": "ha_lock.aura_lock",
+            "name": "Sunshine Terrace Door Lock",
+            "type": "lock",
+            "state": {
+              "state": "locked",
+              "on": false,
+              "brightness": 0,
+              "hs_color": [
+                0,
+                0
+              ],
+              "power": null,
+              "energy": null
+            },
+            "attributes": {
+              "changed_by": "Manual",
+              "friendly_name": "Sunshine Terrace Door Lock",
+              "supported_features": 0
+            }
+          }
+        ],
+        "_retryTimer": null
+      }
+    },
+    {
+      "id": "961c4d262b632efd",
+      "label": "HA Device Field",
+      "position": {
+        "x": 4185.451908475868,
+        "y": 3543.3594663803674
+      },
+      "data": {
+        "id": "961c4d262b632efd",
+        "label": "HA Device Field",
+        "properties": {
+          "deviceId": "ha_device_tracker.iphone",
+          "deviceName": "Greg’s iPhone ",
+          "field": "state",
+          "lastValue": "unknown",
+          "filterType": "All",
+          "letterFilter": "GHI",
+          "searchText": "iphone"
+        }
+      }
+    },
+    {
+      "id": "bf36409ba6577997",
+      "label": "Comparison",
+      "position": {
+        "x": 4622.131874860339,
+        "y": 3913.4873113031026
+      },
+      "data": {
+        "id": "bf36409ba6577997",
+        "label": "Comparison",
+        "properties": {
+          "operator": "=",
+          "compareValue": "home"
+        }
+      }
+    },
+    {
+      "id": "e5a830aef8be2b75",
+      "label": "Comparison",
+      "position": {
+        "x": 4624.397719070637,
+        "y": 4281.479020715625
+      },
+      "data": {
+        "id": "e5a830aef8be2b75",
+        "label": "Comparison",
+        "properties": {
+          "operator": "!=",
+          "compareValue": "home"
+        }
+      }
+    },
+    {
+      "id": "72feea0c67d0fe48",
+      "label": "Combine",
+      "position": {
+        "x": 5136.762537771807,
+        "y": 4180.82862696266
+      },
+      "data": {
+        "inputs": {
+          "in1": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input 1",
+            "id": "6fbcccd5c436799c",
+            "control": null,
+            "showControl": true
+          },
+          "in2": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input 2",
+            "id": "9ab85fe88064e260",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "866f6186cd15615c"
+          }
+        },
+        "controls": {},
+        "label": "Combine",
+        "id": "72feea0c67d0fe48",
+        "properties": {
+          "inputCount": 2,
+          "mode": "priority",
+          "lastActiveInput": 2,
+          "lastValue": true
+        }
+      }
+    },
+    {
+      "id": "e09aad466bc57eb5",
+      "label": "Display",
+      "position": {
+        "x": 7001.268374203867,
+        "y": 4687.597062296863
+      },
+      "data": {
+        "id": "e09aad466bc57eb5",
+        "label": "Display",
+        "width": 354,
+        "height": 295,
+        "properties": {
+          "value": "No Data"
+        }
+      }
+    },
+    {
+      "id": "d952bf546dfee841",
+      "label": "Toggle",
+      "position": {
+        "x": 5729.032988754658,
+        "y": 3996.756313737187
+      },
+      "data": {
+        "id": "d952bf546dfee841",
+        "label": "Toggle",
+        "properties": {
+          "state": false,
+          "pulseMode": false,
+          "lastCommand": false
+        }
+      }
+    },
+    {
+      "id": "23c891a32dcba27b",
+      "label": "Inject",
+      "position": {
+        "x": 6086.857862485089,
+        "y": 3751.174731017804
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "b4dc29ad4905eea7"
+          }
+        },
+        "controls": {},
+        "label": "Inject",
+        "id": "23c891a32dcba27b",
+        "width": 220,
+        "properties": {
+          "payloadType": "boolean",
+          "payloadValue": false,
+          "repeatMs": 0,
+          "onceDelay": 0,
+          "name": "",
+          "pulseMode": true,
+          "pulseDurationMs": 500,
+          "scheduleEnabled": true,
+          "scheduleTime": "21:00",
+          "scheduleDays": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "lastTriggerTime": null,
+          "triggerCount": 0,
+          "isRepeating": false,
+          "onceTriggered": false,
+          "nextScheduledTime": 1767070800000,
+          "isPulsing": false,
+          "debug": false
+        },
+        "_repeatTimer": null,
+        "_onceTimer": null,
+        "_scheduleTimer": null,
+        "_scheduleCheckInterval": 2529,
+        "_pulseTimer": null,
+        "_shouldOutput": false,
+        "_initialized": true
+      }
+    },
+    {
+      "id": "d922b82b0f32f89b",
+      "label": "Combine",
+      "position": {
+        "x": 6400.395726473904,
+        "y": 4477.37809322805
+      },
+      "data": {
+        "inputs": {
+          "in1": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input 1",
+            "id": "0239355de76c9f71",
+            "control": null,
+            "showControl": true
+          },
+          "in2": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input 2",
+            "id": "22bc092ac236370e",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "e79986e863927911"
+          }
+        },
+        "controls": {},
+        "label": "Combine",
+        "id": "d922b82b0f32f89b",
+        "properties": {
+          "inputCount": 2,
+          "mode": "priority",
+          "lastActiveInput": 1,
+          "lastValue": true
+        },
+        "selected": false
+      }
+    },
+    {
+      "id": "161d3b409d484105",
+      "label": "Comparison",
+      "position": {
+        "x": 5148.702762928493,
+        "y": 4534.683745660331
+      },
+      "data": {
+        "id": "161d3b409d484105",
+        "label": "Comparison",
+        "properties": {
+          "operator": "=",
+          "compareValue": "true"
+        }
+      }
+    },
+    {
+      "id": "eb1ae0c03de1a53e",
+      "label": "Debug",
+      "position": {
+        "x": 5389.092574255098,
+        "y": 3832.8384119691204
+      },
+      "data": {
+        "inputs": {
+          "input": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input",
+            "id": "e84595e8b2e425f9",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "048ebbd1f6950c6f"
+          }
+        },
+        "controls": {},
+        "label": "Debug",
+        "id": "eb1ae0c03de1a53e",
+        "width": 260,
+        "properties": {
+          "name": "",
+          "toConsole": false,
+          "maxHistory": 10,
+          "enabled": true,
+          "history": [
+            {
+              "time": "8:37:55 AM",
+              "timestamp": 1767026275231,
+              "value": "unknown",
+              "type": "string"
+            },
+            {
+              "time": "8:37:53 AM",
+              "timestamp": 1767026273123,
+              "value": "home",
+              "type": "string"
+            }
+          ],
+          "currentValue": "unknown",
+          "messageCount": 2
+        }
+      }
+    },
+    {
+      "id": "c4fe9fd9ca0f3c02",
+      "label": "Time Range (Continuous)",
+      "position": {
+        "x": 5020.566006158591,
+        "y": 4865.25937595328
+      },
+      "data": {
+        "id": "c4fe9fd9ca0f3c02",
+        "label": "Time Range (Continuous)",
+        "properties": {
+          "startHour": 6,
+          "startMinute": 0,
+          "endHour": 20,
+          "endMinute": 0,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "a28b6cbc2f1c610b",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": 7352.252186208699,
+        "y": 2281.2902136714583
+      },
+      "data": {
+        "id": "a28b6cbc2f1c610b",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 132,
+          "green": 80,
+          "blue": 32,
+          "hueShift": 29,
+          "saturation": 76,
+          "brightness": 132,
+          "colorTemp": 2400,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "temp"
+        }
+      }
+    },
+    {
+      "id": "e2ebe9e12e74d6aa",
+      "label": "All-in-One Color Control",
+      "position": {
+        "x": 7298.581970789588,
+        "y": 1245.712552555969
+      },
+      "data": {
+        "id": "e2ebe9e12e74d6aa",
+        "label": "All-in-One Color Control",
+        "properties": {
+          "red": 59,
+          "green": 36,
+          "blue": 14,
+          "hueShift": 29,
+          "saturation": 76,
+          "brightness": 59,
+          "colorTemp": 2400,
+          "whiteAdjust": 4000,
+          "transitionTime": 0,
+          "enableAutoTrigger": false,
+          "autoInterval": 5000,
+          "showPalette": true,
+          "activeMode": "temp"
+        }
+      }
+    },
+    {
+      "id": "65fb0c43fa87a894",
+      "label": "Hue Effect",
+      "position": {
+        "x": 388.6150567029933,
+        "y": -3283.4087592438323
+      },
+      "data": {
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "79338c629ed93820",
+            "control": null,
+            "showControl": true
+          },
+          "hsv_in": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV In",
+            "id": "0b04366fd1983153",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "hsv_out": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV Out",
+            "multipleConnections": true,
+            "id": "d83fa8ba4ee3dbe7"
+          },
+          "active": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Active",
+            "multipleConnections": true,
+            "id": "e99826fb6687cf36"
+          },
+          "applied": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Applied",
+            "multipleConnections": true,
+            "id": "347a974f41bfa0f4"
+          }
+        },
+        "controls": {},
+        "label": "Hue Effect",
+        "id": "65fb0c43fa87a894",
+        "width": 300,
+        "height": 360,
+        "properties": {
+          "entityIds": [
+            "ha_light.downstairs_fire_extinguisher",
+            "ha_light.hue_color_leg_lamg"
+          ],
+          "effect": "fire",
+          "lastTrigger": false,
+          "lastSentEffect": "fire",
+          "previousStates": {}
+        },
+        "selected": false
+      }
+    },
+    {
+      "id": "1a35f4f160273ad5",
+      "label": "Time Range (Continuous)",
+      "position": {
+        "x": 375.8476241036797,
+        "y": -2765.346604244945
+      },
+      "data": {
+        "id": "1a35f4f160273ad5",
+        "label": "Time Range (Continuous)",
+        "properties": {
+          "startHour": 20,
+          "startMinute": 0,
+          "endHour": 22,
+          "endMinute": 0,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "670018467da88996",
+      "label": "Hue Effect",
+      "position": {
+        "x": -2409.713547385185,
+        "y": -1302.6854392361286
+      },
+      "data": {
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "c46dab29d0bdcaf9",
+            "control": null,
+            "showControl": true
+          },
+          "hsv_in": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV In",
+            "id": "28f04fffb727d21a",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "hsv_out": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV Out",
+            "multipleConnections": true,
+            "id": "1fafaea7b031790a"
+          },
+          "active": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Active",
+            "multipleConnections": true,
+            "id": "57e9e3ffa81ab339"
+          },
+          "applied": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Applied",
+            "multipleConnections": true,
+            "id": "092ee2efbb43c809"
+          }
+        },
+        "controls": {},
+        "label": "Hue Effect",
+        "id": "670018467da88996",
+        "width": 300,
+        "height": 360,
+        "properties": {
+          "entityIds": [
+            "ha_light.kitchen_bar_spot_1",
+            "ha_light.kitchen_bar_spot_2",
+            "ha_light.kitchen_bar_spot_3",
+            "ha_light.kitchen_bar_spot_4"
+          ],
+          "effect": "candle",
+          "lastTrigger": false,
+          "lastSentEffect": null,
+          "previousStates": {}
+        },
+        "selected": false
+      }
+    },
+    {
+      "id": "7ff37422eae2b4e1",
+      "label": "Time Range (Continuous)",
+      "position": {
+        "x": -2864.332297668455,
+        "y": -1310.9476997447478
+      },
+      "data": {
+        "id": "7ff37422eae2b4e1",
+        "label": "Time Range (Continuous)",
+        "properties": {
+          "startHour": 19,
+          "startMinute": 0,
+          "endHour": 23,
+          "endMinute": 0,
+          "debug": false
+        }
+      }
+    },
+    {
+      "id": "9d3def13f1929305",
+      "label": "Hue Effect",
+      "position": {
+        "x": -1915.3062985949182,
+        "y": -1137.095266548446
+      },
+      "data": {
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "88fb34a8683888a2",
+            "control": null,
+            "showControl": true
+          },
+          "hsv_in": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV In",
+            "id": "b7d06880b61f7775",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "hsv_out": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV Out",
+            "multipleConnections": true,
+            "id": "2f01548e5cc91512"
+          },
+          "active": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Active",
+            "multipleConnections": true,
+            "id": "1a85ad4de655d241"
+          },
+          "applied": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Applied",
+            "multipleConnections": true,
+            "id": "c4e6c69fd5f66f15"
+          }
+        },
+        "controls": {},
+        "label": "Hue Effect",
+        "id": "9d3def13f1929305",
+        "width": 300,
+        "height": 360,
+        "properties": {
+          "entityIds": [
+            "ha_light.kitchen_bar_spot_1",
+            "ha_light.kitchen_bar_spot_2",
+            "ha_light.kitchen_bar_spot_3",
+            "ha_light.kitchen_bar_spot_4"
+          ],
+          "effect": "candle",
+          "lastTrigger": false,
+          "lastSentEffect": null,
+          "previousStates": {}
+        },
+        "selected": false
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "58bc4edf0a1aa730",
+      "source": "18c61864ae674e4a",
+      "target": "8d4af06d6181b1c6",
+      "sourceOutput": "state",
+      "targetInput": "in"
+    },
+    {
+      "id": "e94dccf734315b00",
+      "source": "cb4c3820c4b47079",
+      "target": "d384f545fa2b7f45",
+      "sourceOutput": "state",
+      "targetInput": "in0"
+    },
+    {
+      "id": "059e3a356de1f68b",
+      "source": "b774e53e008efd8a",
+      "target": "c01e165c7bfe62a5",
+      "sourceOutput": "state",
+      "targetInput": "in"
+    },
+    {
+      "id": "72b022b0e0511992",
+      "source": "8480926f954c2743",
+      "target": "ccf1a34014c85926",
+      "sourceOutput": "state",
+      "targetInput": "in"
+    },
+    {
+      "id": "bffe399d461e9d47",
+      "source": "d384f545fa2b7f45",
+      "target": "d34623b94b64ad5c",
+      "sourceOutput": "result",
+      "targetInput": "in"
+    },
+    {
+      "id": "5175fe9356cb882a",
+      "source": "90d3eea48e12005f",
+      "target": "6ff49671565a0255",
+      "sourceOutput": "out",
+      "targetInput": "a"
+    },
+    {
+      "id": "aa50691ef46ee6e0",
+      "source": "f4dd2d2e6355d1c9",
+      "target": "6ff49671565a0255",
+      "sourceOutput": "value",
+      "targetInput": "b"
+    },
+    {
+      "id": "70bc105919f6084a",
+      "source": "6ff49671565a0255",
+      "target": "13d7d35bcd11958e",
+      "sourceOutput": "out",
+      "targetInput": "select"
+    },
+    {
+      "id": "b58010e3adb1aef8",
+      "source": "13d7d35bcd11958e",
+      "target": "32214cb284b6c445",
+      "sourceOutput": "out",
+      "targetInput": "in"
+    },
+    {
+      "id": "f044e9f2805d048f",
+      "source": "8b0054e3d5a4b49f",
+      "target": "13d7d35bcd11958e",
+      "sourceOutput": "hsv_out",
+      "targetInput": "data_0"
+    },
+    {
+      "id": "b8cf3d85ae2f13fc",
+      "source": "1556397fa0448d51",
+      "target": "13d7d35bcd11958e",
+      "sourceOutput": "hsv_out",
+      "targetInput": "data_3"
+    },
+    {
+      "id": "18cd0743cccf151f",
+      "source": "757c6f3bd4fd74dd",
+      "target": "50f4fa1dafd492f9",
+      "sourceOutput": "solar",
+      "targetInput": "in0"
+    },
+    {
+      "id": "bee062426e70202c",
+      "source": "bb5e204a7266087a",
+      "target": "c602674304198387",
+      "sourceOutput": "state",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "33e983c7dccfe8fc",
+      "source": "d6bb910c707b1dd5",
+      "target": "e0ea6f0875da65de",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "c0f7e60505f5c176",
+      "source": "9e2a30f7a17e5bd5",
+      "target": "2f7d4a81e11769d4",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "520faf1714874c81",
+      "source": "620d9422ac54e63e",
+      "target": "57db63745a724bc3",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_in"
+    },
+    {
+      "id": "25bc3da06f20936e",
+      "source": "9e2a30f7a17e5bd5",
+      "target": "ceb925173a2931a7",
+      "sourceOutput": "out",
+      "targetInput": "input"
+    },
+    {
+      "id": "e4dae6bada40d6f2",
+      "source": "638e3dd2992d1984",
+      "target": "642f583dff788b72",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "ceec9802acad2da9",
+      "source": "80cb637e8dec510c",
+      "target": "e2f1b055323b6048",
+      "sourceOutput": "state",
+      "targetInput": "in"
+    },
+    {
+      "id": "b66a7a2e43dbffef",
+      "source": "80cb637e8dec510c",
+      "target": "105adc7b3db42147",
+      "sourceOutput": "state",
+      "targetInput": "input"
+    },
+    {
+      "id": "70f8f4e893b82f09",
+      "source": "620d9422ac54e63e",
+      "target": "f92212978a300d5a",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_in"
+    },
+    {
+      "id": "6ac203975ace788f",
+      "source": "f92212978a300d5a",
+      "target": "dd6bece03850fcd1",
+      "sourceOutput": "hsv_out",
+      "targetInput": "in"
+    },
+    {
+      "id": "04289ed47b76961d",
+      "source": "c6a03d9be3047a22",
+      "target": "0f7a5498635fd32f",
+      "sourceOutput": "out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "d4bd3589df0c68d0",
+      "source": "bb5e204a7266087a",
+      "target": "fa3dd8e92a6fb03f",
+      "sourceOutput": "state",
+      "targetInput": "input"
+    },
+    {
+      "id": "b213e9bf78f4a784",
+      "source": "9e2a30f7a17e5bd5",
+      "target": "e88b0238fe4d8b6b",
+      "sourceOutput": "out",
+      "targetInput": "input"
+    },
+    {
+      "id": "e7492436c82aa084",
+      "source": "56ee4fd527651afc",
+      "target": "e318b65067c3608e",
+      "sourceOutput": "out",
+      "targetInput": "in"
+    },
+    {
+      "id": "ad564c88e5584596",
+      "source": "bf71124258f2c9f4",
+      "target": "af5d78eb391594ce",
+      "sourceOutput": "isInRange",
+      "targetInput": "a"
+    },
+    {
+      "id": "d026ac9ff020147e",
+      "source": "c50730db0a8fc75b",
+      "target": "af5d78eb391594ce",
+      "sourceOutput": "value",
+      "targetInput": "b"
+    },
+    {
+      "id": "5335024b3790736d",
+      "source": "af5d78eb391594ce",
+      "target": "a3d39e49f47f28f7",
+      "sourceOutput": "out",
+      "targetInput": "select"
+    },
+    {
+      "id": "9f567ea459d78e64",
+      "source": "af5d78eb391594ce",
+      "target": "56ee4fd527651afc",
+      "sourceOutput": "out",
+      "targetInput": "select"
+    },
+    {
+      "id": "8e42a39072599253",
+      "source": "3f6956273b66f32c",
+      "target": "56ee4fd527651afc",
+      "sourceOutput": "hsv_out",
+      "targetInput": "data_0"
+    },
+    {
+      "id": "6a5035286f14a70c",
+      "source": "a096aaaa5d139111",
+      "target": "a3d39e49f47f28f7",
+      "sourceOutput": "hsv_out",
+      "targetInput": "data_0"
+    },
+    {
+      "id": "087dc8440d15f2f8",
+      "source": "50ff70ef0f2acc96",
+      "target": "6ac17d4ab201b32b",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "723b897b768ae532",
+      "source": "e82bee10d637f7bd",
+      "target": "39309e0384e43956",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "0c65f08feeac40ad",
+      "source": "043a50dbfccdcd71",
+      "target": "6b63b8e9fb86837c",
+      "sourceOutput": "out",
+      "targetInput": "hsv_in"
+    },
+    {
+      "id": "ccccc1bab789e2a7",
+      "source": "6b63b8e9fb86837c",
+      "target": "39309e0384e43956",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "13f0587d573e5ad0",
+      "source": "6602e66d9ef41f54",
+      "target": "f65af4c70a7f6f40",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "bfa60d136399328d",
+      "source": "6602e66d9ef41f54",
+      "target": "c1c9a5b0ed01c3b7",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "a25b18b966ab2a99",
+      "source": "ccbfbe4498e0188d",
+      "target": "48772a09399ce435",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "ae4589dee56d72c4",
+      "source": "2769561f4d1141e5",
+      "target": "23c01481261e42d1",
+      "sourceOutput": "hsvInfo",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "ad56ed0db3f3dea5",
+      "source": "83837d8f043f49cf",
+      "target": "2769561f4d1141e5",
+      "sourceOutput": "startTime",
+      "targetInput": "startTime"
+    },
+    {
+      "id": "d697767fa00aa2c9",
+      "source": "83837d8f043f49cf",
+      "target": "2769561f4d1141e5",
+      "sourceOutput": "endTime",
+      "targetInput": "endTime"
+    },
+    {
+      "id": "ba38b70010e0b508",
+      "source": "4e9efb3c40202f3d",
+      "target": "444d3a77af409b04",
+      "sourceOutput": "output",
+      "targetInput": "in"
+    },
+    {
+      "id": "87f9d941bb22fc3b",
+      "source": "720bd29f88ec7e96",
+      "target": "4e9efb3c40202f3d",
+      "sourceOutput": "state",
+      "targetInput": "in1"
+    },
+    {
+      "id": "f9c31ea711cc8a56",
+      "source": "50f4fa1dafd492f9",
+      "target": "d384f545fa2b7f45",
+      "sourceOutput": "result",
+      "targetInput": "in1"
+    },
+    {
+      "id": "7403f10988605fd1",
+      "source": "537324f4d766e02b",
+      "target": "15d23e2dcb5c4e04",
+      "sourceOutput": "state",
+      "targetInput": "input"
+    },
+    {
+      "id": "9d1f33cfaeb26388",
+      "source": "e82bee10d637f7bd",
+      "target": "0c96213adb3281f4",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "e97942fcbf6082c4",
+      "source": "22ab7427bbcd0c0f",
+      "target": "f655421d76358d81",
+      "sourceOutput": "startTime",
+      "targetInput": "startTime"
+    },
+    {
+      "id": "ec3c769e5a3b36a0",
+      "source": "22ab7427bbcd0c0f",
+      "target": "f655421d76358d81",
+      "sourceOutput": "endTime",
+      "targetInput": "endTime"
+    },
+    {
+      "id": "d92474c36a9d629a",
+      "source": "f655421d76358d81",
+      "target": "f65af4c70a7f6f40",
+      "sourceOutput": "hsvInfo",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "548659cb5d04bc8f",
+      "source": "22ab7427bbcd0c0f",
+      "target": "7bd022dda6f9f5b4",
+      "sourceOutput": "startTime",
+      "targetInput": "startTime"
+    },
+    {
+      "id": "4592c0c5976c5511",
+      "source": "22ab7427bbcd0c0f",
+      "target": "7bd022dda6f9f5b4",
+      "sourceOutput": "endTime",
+      "targetInput": "endTime"
+    },
+    {
+      "id": "83026af0953fdb16",
+      "source": "7bd022dda6f9f5b4",
+      "target": "c1c9a5b0ed01c3b7",
+      "sourceOutput": "hsvInfo",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "9554501b0bbe7ce2",
+      "source": "d5004b3611dddf0f",
+      "target": "56ee4fd527651afc",
+      "sourceOutput": "hsvInfo",
+      "targetInput": "data_2"
+    },
+    {
+      "id": "88fa75d2cf58052b",
+      "source": "ce37567d8626a0db",
+      "target": "a3d39e49f47f28f7",
+      "sourceOutput": "hsvInfo",
+      "targetInput": "data_2"
+    },
+    {
+      "id": "6e761592bc0b4787",
+      "source": "6dbc9bbdcd1943e0",
+      "target": "e4a99a5458a16357",
+      "sourceOutput": "device_state",
+      "targetInput": "device_state"
+    },
+    {
+      "id": "bb90a2d3295c7624",
+      "source": "a3d39e49f47f28f7",
+      "target": "15bedae98acf174c",
+      "sourceOutput": "out",
+      "targetInput": "in"
+    },
+    {
+      "id": "c5db2de6ba56c0fd",
+      "source": "537324f4d766e02b",
+      "target": "e5129f50942c3bf8",
+      "sourceOutput": "state",
+      "targetInput": "in"
+    },
+    {
+      "id": "aceafc979c321811",
+      "source": "24035c8839725684",
+      "target": "ce37567d8626a0db",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "46531aae9e3468ef",
+      "source": "24035c8839725684",
+      "target": "d5004b3611dddf0f",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "5d1e1f9950c88b07",
+      "source": "9e2a30f7a17e5bd5",
+      "target": "771f2954e396349a",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "2d52fc4cf52c9eb1",
+      "source": "9e2a30f7a17e5bd5",
+      "target": "228368262223f1db",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "79d102205165b419",
+      "source": "b697f1460c4c6614",
+      "target": "d5686fc3e43513d6",
+      "sourceOutput": "out",
+      "targetInput": "in1"
+    },
+    {
+      "id": "b582d64acd6383dd",
+      "source": "a3d528fc57e1ff4d",
+      "target": "6737e33f3ada4c82",
+      "sourceOutput": "endTime",
+      "targetInput": "endTime"
+    },
+    {
+      "id": "ada5d462d9a11b2e",
+      "source": "a3d528fc57e1ff4d",
+      "target": "6737e33f3ada4c82",
+      "sourceOutput": "startTime",
+      "targetInput": "startTime"
+    },
+    {
+      "id": "cecd25e9df02ca01",
+      "source": "50ff70ef0f2acc96",
+      "target": "7d16f3641fda9279",
+      "sourceOutput": "out",
+      "targetInput": "input"
+    },
+    {
+      "id": "44364cfb02ed63ad",
+      "source": "983a98adf4480305",
+      "target": "0cab81e8c5c154ff",
+      "sourceOutput": "state",
+      "targetInput": "in"
+    },
+    {
+      "id": "4c5a5291572344bc",
+      "source": "3fb3a20b014821a8",
+      "target": "228368262223f1db",
+      "sourceOutput": "out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "1166c6f7e47e468e",
+      "source": "cb87122766b2be7d",
+      "target": "771f2954e396349a",
+      "sourceOutput": "out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "8b822b94387ef76d",
+      "source": "c4018a258f9c8fbd",
+      "target": "c095e7b26b0c147e",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "b09fee90812bd23f",
+      "source": "d5686fc3e43513d6",
+      "target": "c095e7b26b0c147e",
+      "sourceOutput": "result",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "2d5a6576bf8e533e",
+      "source": "7f0c3b161bddd6d7",
+      "target": "5b71b0de41e3a529",
+      "sourceOutput": "state",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "808b82f82f359ff4",
+      "source": "11b733bfd380b567",
+      "target": "93d6f872bd5baf64",
+      "sourceOutput": "output",
+      "targetInput": "a"
+    },
+    {
+      "id": "6e6bdaa87fa943ff",
+      "source": "49d07ae20033daef",
+      "target": "93d6f872bd5baf64",
+      "sourceOutput": "value",
+      "targetInput": "b"
+    },
+    {
+      "id": "70973b2a5d8b8fff",
+      "source": "93d6f872bd5baf64",
+      "target": "65f3549d75b5278c",
+      "sourceOutput": "out",
+      "targetInput": "select"
+    },
+    {
+      "id": "d517e2308c61b936",
+      "source": "3a81e20d6e06835a",
+      "target": "5ca77d693549fe84",
+      "sourceOutput": "isInRange",
+      "targetInput": "in1"
+    },
+    {
+      "id": "d48f07fe8d22bfa5",
+      "source": "65f3549d75b5278c",
+      "target": "d7f72f4c35755d5d",
+      "sourceOutput": "out",
+      "targetInput": "in"
+    },
+    {
+      "id": "dfd36c697e792ead",
+      "source": "12a9e3f3ec9e1b68",
+      "target": "65f3549d75b5278c",
+      "sourceOutput": "hsvInfo",
+      "targetInput": "data_2"
+    },
+    {
+      "id": "36ff73fd4920ba91",
+      "source": "7b0803eadc605db8",
+      "target": "65f3549d75b5278c",
+      "sourceOutput": "hsvInfo",
+      "targetInput": "data_0"
+    },
+    {
+      "id": "068a382241c77f20",
+      "source": "e4a99a5458a16357",
+      "target": "7b0803eadc605db8",
+      "sourceOutput": "out_value",
+      "targetInput": "value"
+    },
+    {
+      "id": "eaf84e01c7b9cf9a",
+      "source": "94cd5cd2d98323af",
+      "target": "12a9e3f3ec9e1b68",
+      "sourceOutput": "changePercent",
+      "targetInput": "value"
+    },
+    {
+      "id": "39c2b46c6588847b",
+      "source": "4cb66d05f6093141",
+      "target": "5ca77d693549fe84",
+      "sourceOutput": "isInRange",
+      "targetInput": "in0"
+    },
+    {
+      "id": "022d49841dbe4388",
+      "source": "5ca77d693549fe84",
+      "target": "11b733bfd380b567",
+      "sourceOutput": "result",
+      "targetInput": "input"
+    },
+    {
+      "id": "24b64e86bebd8564",
+      "source": "4e242756c2612585",
+      "target": "5b71b0de41e3a529",
+      "sourceOutput": "out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "1906177a13d04f06",
+      "source": "d146b474737e06c7",
+      "target": "d42bd5f074b47ab1",
+      "sourceOutput": "isInRange",
+      "targetInput": "in0"
+    },
+    {
+      "id": "29b0b885d9ce04fc",
+      "source": "ba9e40b6cde18e11",
+      "target": "d42bd5f074b47ab1",
+      "sourceOutput": "isInRange",
+      "targetInput": "in1"
+    },
+    {
+      "id": "f3b0d1743d1d4356",
+      "source": "d42bd5f074b47ab1",
+      "target": "5c2cc55af04e29d0",
+      "sourceOutput": "result",
+      "targetInput": "in1"
+    },
+    {
+      "id": "a92ad044b2f1f86d",
+      "source": "5c2cc55af04e29d0",
+      "target": "09acc1353342ccb0",
+      "sourceOutput": "result",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "ca2b9c57fac414ca",
+      "source": "e3e2cab49fa297eb",
+      "target": "9a4908a524f7808a",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "24c264b0567dffb0",
+      "source": "1d2f2f544a29e92e",
+      "target": "d08ef8707ab0fba4",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "bd663320fb958375",
+      "source": "510ee1d7dabbecff",
+      "target": "b8140146b61cbe8b",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "2e2a19b4c4206cbc",
+      "source": "f1944ce140939e41",
+      "target": "0f7a5498635fd32f",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "9e375538b82b303c",
+      "source": "9289bd97b1d582f5",
+      "target": "425da669f29b9c80",
+      "sourceOutput": "out",
+      "targetInput": "hsv_in"
+    },
+    {
+      "id": "dee66faa9b74ce18",
+      "source": "425da669f29b9c80",
+      "target": "46fa426389043256",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "3cf2571c20b4b6af",
+      "source": "9ccb7efe133cf25a",
+      "target": "94601ad50d4290d2",
+      "sourceOutput": "out",
+      "targetInput": "hsv_in"
+    },
+    {
+      "id": "f9243d196cb57843",
+      "source": "94601ad50d4290d2",
+      "target": "74640383197a8ca7",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "0d61ff7273fe4c46",
+      "source": "b2457172b83db337",
+      "target": "94601ad50d4290d2",
+      "sourceOutput": "isInRange",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "5b908df3c7a75aa9",
+      "source": "b2457172b83db337",
+      "target": "6180bbc25b4977c7",
+      "sourceOutput": "isInRange",
+      "targetInput": "in1"
+    },
+    {
+      "id": "6db136b207513501",
+      "source": "6180bbc25b4977c7",
+      "target": "74640383197a8ca7",
+      "sourceOutput": "result",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "f18b979b9707c3df",
+      "source": "6180bbc25b4977c7",
+      "target": "46fa426389043256",
+      "sourceOutput": "result",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "2fb2b8d247c636b3",
+      "source": "b2457172b83db337",
+      "target": "425da669f29b9c80",
+      "sourceOutput": "isInRange",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "0057c2a377408caa",
+      "source": "29bfa4d945ceb5da",
+      "target": "6180bbc25b4977c7",
+      "sourceOutput": "out",
+      "targetInput": "in0"
+    },
+    {
+      "id": "596ccf4d212d67ab",
+      "source": "c695cec7637a252f",
+      "target": "4e9efb3c40202f3d",
+      "sourceOutput": "out",
+      "targetInput": "in2"
+    },
+    {
+      "id": "f5c23d85c3a5d2cb",
+      "source": "41b1e60811ee1356",
+      "target": "23c01481261e42d1",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "2dea3eef096bcdb0",
+      "source": "404d13489437db4f",
+      "target": "d5686fc3e43513d6",
+      "sourceOutput": "out",
+      "targetInput": "in0"
+    },
+    {
+      "id": "5e1b8206fd2a6f60",
+      "source": "3e157bf1a086946f",
+      "target": "f9e613cfd22bb224",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "b1d2d6ea2f2c81c2",
+      "source": "fd185ab6bd6ac2d0",
+      "target": "5c2cc55af04e29d0",
+      "sourceOutput": "out",
+      "targetInput": "in0"
+    },
+    {
+      "id": "2f0c9cffc30a8146",
+      "source": "d75099b0931e7056",
+      "target": "df1b591084715caa",
+      "sourceOutput": "out",
+      "targetInput": "hsv_in"
+    },
+    {
+      "id": "c629d0cbb8d05067",
+      "source": "df1b591084715caa",
+      "target": "f9e613cfd22bb224",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "608df8b7e3bd5919",
+      "source": "82d02cb2283e4c10",
+      "target": "df1b591084715caa",
+      "sourceOutput": "isInRange",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "7b719b3ac8ed1c05",
+      "source": "5ca77d693549fe84",
+      "target": "52b8f443ab0acf3e",
+      "sourceOutput": "result",
+      "targetInput": "input"
+    },
+    {
+      "id": "ba0108323ba53ff9",
+      "source": "a9c967aef62c5f5e",
+      "target": "27191efb1636eaf9",
+      "sourceOutput": "out",
+      "targetInput": "in1"
+    },
+    {
+      "id": "6c67fe4cf59f1368",
+      "source": "27191efb1636eaf9",
+      "target": "01446a4eb12772bd",
+      "sourceOutput": "result",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "9246879fa1cdc626",
+      "source": "bb48d377b60c7dba",
+      "target": "41c9816aac4a7837",
+      "sourceOutput": "device_state",
+      "targetInput": "device_state"
+    },
+    {
+      "id": "ee8ed5b4069c00ea",
+      "source": "41c9816aac4a7837",
+      "target": "21a4d2813b9f0315",
+      "sourceOutput": "out_state",
+      "targetInput": "in"
+    },
+    {
+      "id": "153df5eebcea72f2",
+      "source": "21a4d2813b9f0315",
+      "target": "8564c1d6bd04440b",
+      "sourceOutput": "result",
+      "targetInput": "in"
+    },
+    {
+      "id": "99584e00fedb9dc3",
+      "source": "5e818ebd02a96d61",
+      "target": "82b447ceac53ae67",
+      "sourceOutput": "isInRange",
+      "targetInput": "in0"
+    },
+    {
+      "id": "e933d5177e859ded",
+      "source": "31bdcd3d69a4e2ad",
+      "target": "82b447ceac53ae67",
+      "sourceOutput": "out",
+      "targetInput": "in1"
+    },
+    {
+      "id": "0a1a4cb0f58b3bf7",
+      "source": "82b447ceac53ae67",
+      "target": "27191efb1636eaf9",
+      "sourceOutput": "result",
+      "targetInput": "in0"
+    },
+    {
+      "id": "f311b98a3b1be081",
+      "source": "b8b2168037d38a15",
+      "target": "ff5f5d259cfeeb7f",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "41908b4adf068831",
+      "source": "9e2a30f7a17e5bd5",
+      "target": "ff5f5d259cfeeb7f",
+      "sourceOutput": "out",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "ac4a1162574175f4",
+      "source": "cbad499a84025e4f",
+      "target": "225b8fa7a816b1ad",
+      "sourceOutput": "value",
+      "targetInput": "in"
+    },
+    {
+      "id": "1b721e8dfabc9610",
+      "source": "225b8fa7a816b1ad",
+      "target": "82b447ceac53ae67",
+      "sourceOutput": "result",
+      "targetInput": "in2"
+    },
+    {
+      "id": "5cba4f050223d58e",
+      "source": "961c4d262b632efd",
+      "target": "bf36409ba6577997",
+      "sourceOutput": "value",
+      "targetInput": "in"
+    },
+    {
+      "id": "017b3db96b02107c",
+      "source": "961c4d262b632efd",
+      "target": "e5a830aef8be2b75",
+      "sourceOutput": "value",
+      "targetInput": "in"
+    },
+    {
+      "id": "0c3e2b13e300d611",
+      "source": "e5a830aef8be2b75",
+      "target": "72feea0c67d0fe48",
+      "sourceOutput": "result",
+      "targetInput": "in2"
+    },
+    {
+      "id": "6351f89473e22a90",
+      "source": "bf36409ba6577997",
+      "target": "72feea0c67d0fe48",
+      "sourceOutput": "result",
+      "targetInput": "in1"
+    },
+    {
+      "id": "8c1ec1b308c2f44a",
+      "source": "23c891a32dcba27b",
+      "target": "d922b82b0f32f89b",
+      "sourceOutput": "output",
+      "targetInput": "in2"
+    },
+    {
+      "id": "abb28c8edabf394b",
+      "source": "72feea0c67d0fe48",
+      "target": "d922b82b0f32f89b",
+      "sourceOutput": "output",
+      "targetInput": "in1"
+    },
+    {
+      "id": "8335948ab84449dc",
+      "source": "bf36409ba6577997",
+      "target": "161d3b409d484105",
+      "sourceOutput": "result",
+      "targetInput": "in"
+    },
+    {
+      "id": "29b8f6c665f19b29",
+      "source": "961c4d262b632efd",
+      "target": "eb1ae0c03de1a53e",
+      "sourceOutput": "value",
+      "targetInput": "input"
+    },
+    {
+      "id": "240c34d7486d2bc0",
+      "source": "23c891a32dcba27b",
+      "target": "02cdc44a83e95f0a",
+      "sourceOutput": "output",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "0b1309f701f0d41c",
+      "source": "23c891a32dcba27b",
+      "target": "e09aad466bc57eb5",
+      "sourceOutput": "output",
+      "targetInput": "input"
+    },
+    {
+      "id": "2a9d3b7a16880745",
+      "source": "a28b6cbc2f1c610b",
+      "target": "48772a09399ce435",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "6975f0666571cef2",
+      "source": "e2ebe9e12e74d6aa",
+      "target": "0c96213adb3281f4",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "f32eb366527ae7af",
+      "source": "6737e33f3ada4c82",
+      "target": "65fb0c43fa87a894",
+      "sourceOutput": "hsvInfo",
+      "targetInput": "hsv_in"
+    },
+    {
+      "id": "0dbb40216a95cc5b",
+      "source": "65fb0c43fa87a894",
+      "target": "04169d0d9714a784",
+      "sourceOutput": "hsv_out",
+      "targetInput": "in"
+    },
+    {
+      "id": "bf937a5aea0a314b",
+      "source": "1a35f4f160273ad5",
+      "target": "65fb0c43fa87a894",
+      "sourceOutput": "isInRange",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "e0431c67be8357bc",
+      "source": "7ff37422eae2b4e1",
+      "target": "670018467da88996",
+      "sourceOutput": "isInRange",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "a8e6be1a5883ecb8",
+      "source": "620d9422ac54e63e",
+      "target": "670018467da88996",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_in"
+    },
+    {
+      "id": "7093af403862e2fb",
+      "source": "670018467da88996",
+      "target": "2c3e63e9a7123804",
+      "sourceOutput": "hsv_out",
+      "targetInput": "in"
+    },
+    {
+      "id": "2e86a8f4d33226af",
+      "source": "57db63745a724bc3",
+      "target": "9d3def13f1929305",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_in"
+    },
+    {
+      "id": "dbf45eea719c3fff",
+      "source": "7ff37422eae2b4e1",
+      "target": "9d3def13f1929305",
+      "sourceOutput": "isInRange",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "e751ab2d9ab46c41",
+      "source": "9d3def13f1929305",
+      "target": "8be42cfaab24b585",
+      "sourceOutput": "hsv_out",
+      "targetInput": "in"
+    }
+  ],
+  "viewport": {
+    "x": 2151.815010811397,
+    "y": 1236.224110684705,
+    "k": 0.7296816931906259
+  }
+}
