@@ -136,11 +136,15 @@ class BackendNodeRegistry {
       'HA Light Control': 'HALightControlNode',
       'HA Device Automation': 'HADeviceAutomationNode',
       'HA Generic Device': 'HAGenericDeviceNode',
+      'HA Lock Control': 'HALockNode',
+      'HA Device Field': null,  // UI-only visualization node
       'Device State': 'HADeviceStateNode',
       
       // Device nodes
       'Hue Light': 'HueLightNode',
       'Hue Lights': 'HueLightNode',
+      'Hue Effect': null,  // UI-only - triggers Hue effects via frontend only
+      'Stock Price': 'StockPriceNode',
       'Kasa Light': 'KasaLightNode',
       'Kasa Lights': 'KasaLightNode',
       'Kasa Plug': 'KasaPlugNode',
