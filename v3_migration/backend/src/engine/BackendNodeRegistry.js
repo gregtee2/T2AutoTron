@@ -143,7 +143,7 @@ class BackendNodeRegistry {
       // Device nodes
       'Hue Light': 'HueLightNode',
       'Hue Lights': 'HueLightNode',
-      'Hue Effect': null,  // UI-only - triggers Hue effects via frontend only
+      'Hue Effect': 'HueEffectNode',
       'Stock Price': 'StockPriceNode',
       'Kasa Light': 'KasaLightNode',
       'Kasa Lights': 'KasaLightNode',
