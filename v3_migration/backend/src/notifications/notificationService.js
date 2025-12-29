@@ -28,6 +28,39 @@ function setupNotifications(io) {
   if (bot) log('Telegram bot ready', 'info');
   else log('Telegram disabled (no token/chat_id)', 'warn');
 
+  // Queue drain interval - ensures queued messages don't get stuck
+  let drainScheduled = false;
+  const scheduleDrain = () => {
+    if (drainScheduled) return;
+    if (queue.length === 0) return;
+    drainScheduled = true;
+    const timeUntilNextSend = Math.max(0, MIN_GLOBAL_MS - (Date.now() - lastGlobalSend));
+    setTimeout(() => {
+      drainScheduled = false;
+      if (queue.length > 0) {
+        const next = queue.shift();
+        sendImmediate(next.msg, next.deviceId);
+      }
+    }, timeUntilNextSend + 100);
+  };
+
+  // Internal send function that bypasses rate limit (called when rate limit has passed)
+  const sendImmediate = async (msg, deviceId = 'system') => {
+    if (!bot) return;
+    const now = Date.now();
+    lastGlobalSend = now;
+    try {
+      await bot.sendMessage(process.env.TELEGRAM_CHAT_ID, msg, { parse_mode: 'Markdown' });
+      log(`Telegram: ${msg}`, 'info');
+      lastSent.set(deviceId, { text: msg, time: now });
+    } catch (err) {
+      log(`Telegram failed: ${err.message}`, 'error');
+    } finally {
+      // Schedule next queue drain
+      scheduleDrain();
+    }
+  };
+
   const send = async (msg, deviceId = 'system') => {
     if (!bot) return;
 
@@ -36,78 +69,80 @@ function setupNotifications(io) {
     // 1. Deduplicate identical message per device
     const last = lastSent.get(deviceId);
     if (last?.text === msg && now - last.time < MIN_PER_DEVICE_MS) {
-      log(`Skipped duplicate: ${msg}`, 'info');
+      // Silently skip duplicate messages
       return;
     }
 
     // 2. Global rate limit
     if (now - lastGlobalSend < MIN_GLOBAL_MS) {
       queue.push({ msg, deviceId });
-      log('Queued message (rate limit)', 'info');
+      // Queue silently - too noisy to log every queued message
+      scheduleDrain();  // Ensure queue gets processed
       return;
     }
 
-    // Update timestamp immediately to prevent race conditions
-    lastGlobalSend = now;
-
-    // Send
-    try {
-      await bot.sendMessage(process.env.TELEGRAM_CHAT_ID, msg, { parse_mode: 'Markdown' });
-      log(`Telegram: ${msg}`, 'info');
-      lastSent.set(deviceId, { text: msg, time: now });
-    } catch (err) {
-      log(`Telegram failed: ${err.message}`, 'error');
-    } finally {
-      // Drain queue
-      if (queue.length > 0) {
-        const next = queue.shift();
-        setTimeout(() => send(next.msg, next.deviceId), MIN_GLOBAL_MS);
-      }
-    }
+    // Send immediately
+    await sendImmediate(msg, deviceId);
   };
 
-  emitter.on('notify', (message) => {
+  emitter.on('notify', (message, options = {}) => {
     // Always show in UI
     io.emit('notification', message);
+    
+    // Priority messages (e.g., security events like locks) bypass rate limiting
+    const isPriority = options.priority === true;
 
-    // Parse device ON/OFF messages - new simpler format: "Name turned ON/OFF"
+    // 1. Device ON/OFF messages
     const turnedMatch = message.match(/\*?(.+?)\*?\s+turned\s+\*?(ON|OFF)\*?/i);
     if (turnedMatch) {
       const [_, rawName, state] = turnedMatch;
       const name = rawName.replace(/_/g, ' ').replace(/[*[\]`]/g, '').trim();
       const deviceId = name.toLowerCase().replace(/\s+/g, '_');
-      
       const newState = { on: state.toUpperCase() === 'ON' };
       const oldState = deviceStates.get(deviceId);
-      
-      // Only send if this is a NEW state (not duplicate)
       if (!oldState || oldState.on !== newState.on) {
         send(message, deviceId);
         deviceStates.set(deviceId, newState);
-      } else {
-        log(`Skipped duplicate ON/OFF: ${name}`, 'info');
       }
+      // Duplicate - silently skip (deduplication working)
       return;
     }
-    
-    // Legacy format: "Update: Name is ON/OFF" - still parse but only for ON/OFF
+
+    // 2. Lock state messages (e.g. "🔒 *Front Door* LOCKED")
+    // Only final states: LOCKED or UNLOCKED (transitional states filtered at source)
+    const lockMatch = message.match(/(🔒|🔓)\s*\*([^*]+)\*\s+(LOCKED|UNLOCKED)/i);
+    if (lockMatch) {
+      const [_, emoji, lockName, action] = lockMatch;
+      const deviceId = `lock_${lockName.toLowerCase().replace(/\s+/g, '_')}`;
+      const newState = { state: action.toUpperCase() };
+      const oldState = deviceStates.get(deviceId);
+      log(`🔐 Lock notification: ${lockName} -> ${action} (old: ${oldState?.state || 'none'})`, 'info');
+      if (!oldState || oldState.state !== newState.state) {
+        // Lock events are priority - send immediately (bypass rate limit queue)
+        if (isPriority) {
+          sendImmediate(message, deviceId);
+        } else {
+          send(message, deviceId);
+        }
+        deviceStates.set(deviceId, newState);
+      }
+      // Duplicate lock state - silently skip
+      return;
+    }
+
+    // 3. Legacy ON/OFF format
     const legacyMatch = message.match(/(?:🔄\s*)?(?:HA|Kasa|Hue)?\s*Update:\s*(.*?)\s+is\s+(ON|OFF)/i);
     if (legacyMatch) {
       const [_, rawName, state] = legacyMatch;
       const name = rawName.replace(/_/g, ' ').replace(/[*[\]`]/g, '');
       const deviceId = name.toLowerCase().replace(/\s+/g, '_');
-
       const newState = { on: state === 'ON' };
       const oldState = deviceStates.get(deviceId);
-
-      // First time seen
       if (!oldState) {
         send(`Device online: ${name} is ${state}`, deviceId);
         deviceStates.set(deviceId, newState);
         return;
       }
-
-      // Only ON/OFF change matters now (not brightness)
       if (oldState.on !== newState.on) {
         send(message, deviceId);
         deviceStates.set(deviceId, newState);
@@ -116,11 +151,15 @@ function setupNotifications(io) {
       }
       return;
     }
-    
-    // Non-device messages: only send errors/warnings
+
+    // 4. Non-device messages: only send errors/warnings
     if (message.includes('ERROR') || message.includes('Failed') || message.includes('WARNING')) {
       send(message, 'system');
+      return;
     }
+    
+    // 5. Debug: log unmatched messages to help diagnose issues
+    log(`Unmatched notification (no Telegram): ${message.substring(0, 100)}`, 'info');
   });
 
   return emitter;

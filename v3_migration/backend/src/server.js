@@ -695,7 +695,9 @@ app.post('/api/settings', requireLocalOrPin, express.json(), async (req, res) =>
         logger.log('Home Assistant manager config refreshed, re-initializing...', 'info', false, 'settings:ha-refresh');
         // Re-initialize to establish WebSocket connection with new credentials
         try {
-          await homeAssistantManager.initialize(io, null, logger.log.bind(logger));
+          // Pass the stored notificationEmitter so lock state changes still get Telegram notifications
+          const notificationEmitter = io.sockets.notificationEmitter || null;
+          await homeAssistantManager.initialize(io, notificationEmitter, logger.log.bind(logger));
           logger.log('Home Assistant re-initialized successfully', 'info', false, 'settings:ha-reinit');
         } catch (haError) {
           logger.log(`HA re-init failed: ${haError.message}`, 'warn', false, 'settings:ha-reinit-fail');

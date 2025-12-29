@@ -1,4 +1,16 @@
+
 # Changelog
+
+## [2.1.135] - 2025-12-29
+### Fixed
+- Lock notifications from Home Assistant now send Telegram messages for all lock state changes (locked/unlocked)
+- Lock notification bug: notificationEmitter was null after HA re-init; now fixed
+- Kasa bulbs now show 💡 instead of 🔌 (device.lighting detection)
+### Added
+- Improved device type emoji detection for Kasa devices
+- Caveman summary and handoff instructions in SESSION_HANDOFF.md
+### Changed
+- Backend engine runs automations 24/7, browser not required
 
 All notable changes to T2AutoTron will be documented in this file.
 

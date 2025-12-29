@@ -49,7 +49,7 @@ async function setupHue(io, notificationEmitter) {
     for (const light of lightsData) {
       const hueLight = new HueLight(light, hueClient);
       hueLights.push(hueLight);
-      logWithTimestamp(`🟡 Connected Hue Light: ${hueLight.name} (ID: ${hueLight.id})`, 'info');
+      // Individual light logs removed - summary at the end is sufficient
       await hueLight.updateState(io, notificationEmitter);
     }
 

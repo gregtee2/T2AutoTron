@@ -11,6 +11,7 @@ class HomeAssistantManager {
     };
     this.ws = null;
     this.io = null;
+    this.notificationEmitter = null;  // Store for lock state change notifications
     this.isConnected = false;
     this.wsConnected = false;
     // Performance caching
@@ -33,6 +34,7 @@ class HomeAssistantManager {
 
   async initialize(io, notificationEmitter, log) {
     this.io = io;
+    this.notificationEmitter = notificationEmitter;  // Store for lock notifications
     try {
       // Always refresh config from current environment before connecting.
       // This prevents stale host/token if the module was loaded before dotenv
@@ -108,6 +110,7 @@ class HomeAssistantManager {
             const msg = JSON.parse(data);
             if (msg.type === 'event' && msg.event.event_type === 'state_changed') {
               const entity = msg.event.data.new_state;
+              const oldEntity = msg.event.data.old_state;
               if (!entity) return;
               const domain = entity.entity_id.split('.')[0];
               if (!['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather', 'device_tracker', 'person', 'lock', 'climate', 'vacuum', 'camera'].includes(domain)) return;
@@ -148,6 +151,40 @@ class HomeAssistantManager {
               };
               io.emit('device-state-update', state);
               log(`HA state update: ${state.id} - ${entity.state}`, 'info', false, `ha:state:${state.id}`);
+              
+              // Send Telegram notification for lock state changes
+              if (domain === 'lock' && this.notificationEmitter) {
+                const oldState = oldEntity?.state;
+                const newState = entity.state;
+                const lockName = entity.attributes.friendly_name || entity.entity_id;
+                
+                // Only notify if state actually changed (not just attribute update)
+                // ALSO: Skip transitional states (locking/unlocking) - only notify on final states
+                if (oldState && oldState !== newState) {
+                  let emoji = '🔒';
+                  let action = newState;
+                  let shouldNotify = true;
+                  
+                  if (newState === 'locked') {
+                    emoji = '🔒';
+                    action = 'LOCKED';
+                  } else if (newState === 'unlocked') {
+                    emoji = '🔓';
+                    action = 'UNLOCKED';
+                  } else if (newState === 'locking' || newState === 'unlocking') {
+                    // Skip transitional states - too spammy
+                    shouldNotify = false;
+                    log(`Lock transitional state skipped: ${lockName} -> ${newState}`, 'info', false, `ha:lock:${entity.entity_id}`);
+                  }
+                  
+                  if (shouldNotify) {
+                    const message = `${emoji} *${lockName}* ${action}`;
+                    // Use priority flag for security-critical lock notifications
+                    this.notificationEmitter.emit('notify', message, { priority: true });
+                    log(`Lock notification: ${message}`, 'info', false, `ha:lock:${entity.entity_id}`);
+                  }
+                }
+              }
             }
           } catch (err) {
             log(`HA WebSocket message error: ${err.message}`, 'error', false, 'ha:websocket:message');

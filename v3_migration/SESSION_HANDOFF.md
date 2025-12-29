@@ -1,3 +1,23 @@
+# Session Handoff - December 29, 2025
+
+## Recent Fixes (v2.1.135)
+- Lock notifications from Home Assistant now send Telegram messages for all lock state changes (locked/unlocked), even after settings are saved. Bug was passing null for notificationEmitter during HA re-init; now fixed.
+- Kasa smart bulbs now show 💡 emoji instead of 🔌, thanks to improved device detection (checks device.lighting capability).
+- Backend engine runs automations 24/7, even if browser is closed.
+- All changes tested, pending user confirmation before next version bump.
+
+### Caveman Summary
+- Lock notifications: Messenger stays connected after settings change, so you always get alerts.
+- Kasa bulbs: Bulbs show correct emoji (💡), plugs show (🔌).
+- Engine: Automations run all the time, not just when app is open.
+
+### Next Agent Instructions
+- Confirm lock notifications work from HA, keypad, and T2 automations.
+- Confirm Kasa bulbs and plugs show correct emoji.
+- Do not bump version until user confirms all working.
+- Do not start servers; user manages server restarts.
+- See CHANGELOG.md for full list of recent fixes.
+
 # Session Handoff - December 22, 2025
 
 ## Addendum (Session 15 - Lock Automation & Inject Pulse Mode)

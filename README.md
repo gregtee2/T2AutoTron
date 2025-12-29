@@ -1,4 +1,13 @@
+
 # T2AutoTron 2.1
+
+## 🆕 Latest Fixes (v2.1.135, Dec 29, 2025)
+- Lock notifications from Home Assistant now send Telegram messages for all lock state changes (locked/unlocked), even after settings are saved. Bug was passing null for notificationEmitter during HA re-init; now fixed.
+- Kasa smart bulbs now show 💡 emoji instead of 🔌, thanks to improved device detection (checks device.lighting capability).
+- Backend engine runs automations 24/7, even if browser is closed.
+- All changes tested, pending user confirmation before next version bump.
+
+See SESSION_HANDOFF.md and CHANGELOG.md for full details and agent handoff instructions.
 
 [![License](https://img.shields.io/github/license/gregtee2/T2AutoTron?style=flat-square)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.1.109--beta-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)

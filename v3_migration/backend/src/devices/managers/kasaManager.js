@@ -16,6 +16,12 @@ const devices = new Map();
 const discoveredIds = new Set();
 // Track offline devices with backoff - don't poll them as often
 const offlineDevices = new Map(); // deviceId -> { failCount, lastAttempt }
+// Track which devices successfully responded during current session
+const respondedThisSession = new Set(); // deviceId
+// Startup grace period - don't log offline until we've had time to poll everything
+let startupComplete = false;
+let startupOfflineSummaryLogged = false;
+const STARTUP_GRACE_PERIOD_MS = 90000; // 90 seconds to let all devices respond
 const MAX_BACKOFF_MINUTES = 5; // Max time between retries for offline devices
 
 function addDevice(device) {
@@ -61,15 +67,21 @@ function shouldSkipOfflineDevice(deviceId) {
 
 // Mark device as offline with backoff
 function markDeviceOffline(deviceId) {
-    const existing = offlineDevices.get(deviceId) || { failCount: 0 };
+    const existing = offlineDevices.get(deviceId) || { failCount: 0, logged: false };
     offlineDevices.set(deviceId, {
         failCount: existing.failCount + 1,
-        lastAttempt: Date.now()
+        lastAttempt: Date.now(),
+        logged: existing.logged  // PRESERVE the logged flag!
     });
 }
 
-// Mark device as online (clear backoff)
-function markDeviceOnline(deviceId) {
+// Mark device as online (clear backoff) - called when TCP polling succeeds
+function markDeviceOnline(deviceId, deviceAlias, deviceHost) {
+    const wasOffline = offlineDevices.get(deviceId);
+    if (wasOffline && wasOffline.logged && startupComplete) {
+        // Device was logged as offline, now it's back - log recovery
+        logger.log(`🟢 Device online: ${deviceAlias || deviceId} (IP: ${deviceHost || 'unknown'}) - recovered after ${wasOffline.failCount} failed polls`, 'info', false, `kasa:online:${deviceId}`);
+    }
     offlineDevices.delete(deviceId);
 }
 
@@ -86,8 +98,9 @@ async function refreshDeviceStatus(device, io, notificationEmitter) {
         
         const sysInfo = await device.getSysInfo();
         
-        // Device responded - mark as online
-        markDeviceOnline(device.deviceId);
+        // Device responded! Track it as responsive this session
+        respondedThisSession.add(device.deviceId);
+        markDeviceOnline(device.deviceId, device.alias, device.host);
         
         let state = { on: sysInfo.relay_state === 1 };
         if (device.deviceType === 'bulb') {
@@ -143,16 +156,37 @@ async function refreshDeviceStatus(device, io, notificationEmitter) {
             // Only send Telegram on ON/OFF changes, not brightness/color changes
             if (onOffChanged && notificationEmitter) {
                 const status = state.on ? 'ON' : 'OFF';
-                notificationEmitter.emit('notify', `🔌 *${device.alias}* turned *${status}*`);
+                // Use 💡 for bulbs OR devices with lighting capability (some bulbs report as 'plug')
+                const isBulb = device.deviceType === 'bulb' || (device.lighting && typeof device.lighting.getLightState === 'function');
+                const emoji = isBulb ? '💡' : '🔌';
+                notificationEmitter.emit('notify', `${emoji} *${device.alias}* turned *${status}*`);
             }
         }
     } catch (err) {
-        // Mark device as offline with backoff
-        markDeviceOffline(device.deviceId);
-        // Only log error once per backoff period (first failure)
+        // TCP polling failed - THIS is the reliable offline detection
+        const existingInfo = offlineDevices.get(device.deviceId);
+        const wasResponding = respondedThisSession.has(device.deviceId);
+        
+        if (existingInfo) {
+            // Already tracked as offline - increment fail count silently
+            existingInfo.lastAttempt = Date.now();
+            existingInfo.failCount++;
+        } else {
+            // First failure - start tracking
+            offlineDevices.set(device.deviceId, {
+                failCount: 1,
+                lastAttempt: Date.now(),
+                logged: false
+            });
+        }
+        
+        // Only log ONCE after startup if device was previously responding
         const offlineInfo = offlineDevices.get(device.deviceId);
-        if (offlineInfo && offlineInfo.failCount === 1) {
-            await logger.log(`Device offline: ${device?.alias || 'unknown'} (will retry with backoff)`, 'warn', false, `kasa:offline:${device?.deviceId || 'unknown'}`);
+        if (startupComplete && wasResponding && !offlineInfo.logged && offlineInfo.failCount >= 3) {
+            // Device WAS working, has now failed 3+ polls - this is truly offline
+            offlineInfo.logged = true;
+            respondedThisSession.delete(device.deviceId);
+            logger.log(`🔴 Device offline: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host}) - failed ${offlineInfo.failCount} polls`, 'warn', false, `kasa:offline:${device.deviceId}`);
         }
     }
 }
@@ -223,22 +257,33 @@ async function setupKasa(io, notificationEmitter) {
                 await logger.log(`Emitted device-list-update with ${kasaDevices.length} devices`, 'info', false, 'kasa:devices');
             })
             .on('device-offline', (device) => {
-                const wasOffline = offlineDevices.has(device.deviceId);
-                markDeviceOffline(device.deviceId);
-                // Log only on transition to offline to avoid log floods.
-                if (!wasOffline) {
-                    logger.log(`🔴 Device offline: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host})`, 'warn', false, `kasa:offline:${device.deviceId}`);
-                }
+                // COMPLETELY IGNORE this event - it's unreliable (UDP-based)
+                // The library fires this repeatedly even for devices that respond to TCP polling fine
+                // We rely ONLY on refreshDeviceStatus TCP polling failures to detect true offline state
+                // DO NOT LOG ANYTHING HERE - this is the source of the spam!
             })
             .on('device-online', (device) => {
-                const wasOffline = offlineDevices.has(device.deviceId);
+                // Just track internally - don't log (we log in refreshDeviceStatus on recovery)
                 markDeviceOnline(device.deviceId);
-                // Log only if this was a transition from offline to online.
-                if (wasOffline) {
-                    logger.log(`🟢 Device online: ${device.alias} (ID: ${device.deviceId}, IP: ${device.host})`, 'info', false, `kasa:online:${device.deviceId}`);
-                }
+                respondedThisSession.add(device.deviceId);
             })
             .on('error', (err) => logger.log(`Discovery error: ${err.message}`, 'error', false, 'kasa:error'));
+        
+        // Schedule startup summary after grace period
+        setTimeout(() => {
+            startupComplete = true;
+            if (!startupOfflineSummaryLogged) {
+                startupOfflineSummaryLogged = true;
+                const allDevices = getDevices();
+                const unreachable = allDevices.filter(d => !respondedThisSession.has(d.deviceId));
+                if (unreachable.length > 0) {
+                    const names = unreachable.map(d => d.alias).join(', ');
+                    logger.log(`📊 Kasa startup summary: ${unreachable.length}/${allDevices.length} devices unreachable: ${names}`, 'warn', false, 'kasa:startup-summary');
+                } else {
+                    logger.log(`📊 Kasa startup summary: All ${allDevices.length} devices responding`, 'info', false, 'kasa:startup-summary');
+                }
+            }
+        }, STARTUP_GRACE_PERIOD_MS);
         
         const baseInterval = parseInt(process.env.KASA_POLLING_INTERVAL, 10) || 10000; // Increased default to 10s
         let pollCount = 0;
