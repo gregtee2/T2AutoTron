@@ -633,6 +633,72 @@ class HAGenericDeviceNode {
     this.lastHsv = null;
   }
 
+  /**
+   * Reconcile node state with actual HA device states before engine starts.
+   * This prevents firing commands at startup for devices already in correct state.
+   * Called by BackendEngine.reconcileDeviceStates() before first tick.
+   * 
+   * @param {Map} stateCache - bulkStateCache.states Map of entityId → state
+   */
+  reconcile(stateCache) {
+    const entityIds = (this.properties.selectedDeviceIds || [])
+      .filter(id => id)
+      .map(id => id.replace('ha_', ''));
+    
+    if (entityIds.length === 0) {
+      return { skipped: true, reason: 'no devices' };
+    }
+
+    let onCount = 0;
+    let offCount = 0;
+    const results = [];
+
+    for (const entityId of entityIds) {
+      const state = stateCache.get(entityId);
+      if (!state) {
+        results.push({ entityId, status: 'not_found' });
+        continue;
+      }
+
+      // Check if device is ON
+      const isOn = state.state === 'on' || state.state === 'open' || state.state === 'playing';
+      
+      // Pre-populate deviceStates with actual state
+      this.deviceStates[`ha_${entityId}`] = isOn;
+      
+      if (isOn) {
+        onCount++;
+      } else {
+        offCount++;
+      }
+      
+      results.push({ entityId, state: state.state, isOn });
+    }
+
+    // Pre-set lastTrigger based on majority state (or true if any are on)
+    // This prevents "trigger changed from undefined" on first tick
+    const anyOn = onCount > 0;
+    this.lastTrigger = anyOn;
+    
+    // Mark warmup as complete - we've already reconciled
+    this.warmupComplete = true;
+    this.tickCount = 11; // Past warmup period
+    
+    engineLogger.log('HA-RECONCILE', `${this.label || this.id}: ${onCount} ON, ${offCount} OFF → lastTrigger=${anyOn}`, {
+      nodeId: this.id,
+      devices: results.slice(0, 5), // Log first 5 devices
+      totalDevices: entityIds.length
+    });
+
+    return { 
+      success: true, 
+      onCount, 
+      offCount, 
+      lastTrigger: anyOn,
+      results 
+    };
+  }
+
   async controlDevice(entityId, turnOn, hsv = null) {
     // Check if frontend is active - if so, skip device commands to avoid conflict
     const engine = getEngine();
@@ -1917,5 +1983,6 @@ module.exports = {
   HALockNode,
   HueEffectNode,
   WizEffectNode,
-  getHAConfig
+  getHAConfig,
+  bulkStateCache  // Exposed for engine reconciliation
 };

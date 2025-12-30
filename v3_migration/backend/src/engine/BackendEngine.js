@@ -350,9 +350,60 @@ class BackendEngine {
   }
 
   /**
+   * Reconcile device states with Home Assistant before starting.
+   * This queries HA for actual device states and pre-populates node state
+   * to prevent unnecessary commands at startup.
+   */
+  async reconcileDeviceStates() {
+    try {
+      // Import bulkStateCache from HADeviceNodes (lazy to avoid circular dep)
+      const { bulkStateCache } = require('./nodes/HADeviceNodes');
+      
+      // Refresh cache to get current HA states
+      console.log('[BackendEngine] Reconciling device states with Home Assistant...');
+      await bulkStateCache.refreshCache();
+      
+      const stateCache = bulkStateCache.states;
+      if (!stateCache || stateCache.size === 0) {
+        console.warn('[BackendEngine] No HA states available for reconciliation');
+        return { success: false, reason: 'no_states' };
+      }
+      
+      let reconciledNodes = 0;
+      let totalDevices = 0;
+      
+      // Find all HAGenericDeviceNode instances and reconcile them
+      for (const [nodeId, node] of this.nodes) {
+        // Check if this node has a reconcile method (HAGenericDeviceNode)
+        if (typeof node.reconcile === 'function') {
+          const result = node.reconcile(stateCache);
+          if (result && result.success) {
+            reconciledNodes++;
+            totalDevices += (result.onCount || 0) + (result.offCount || 0);
+          }
+        }
+      }
+      
+      engineLogger.logEngineEvent('RECONCILE-COMPLETE', { 
+        reconciledNodes, 
+        totalDevices,
+        haEntityCount: stateCache.size 
+      });
+      
+      console.log(`[BackendEngine] ✅ Reconciliation complete: ${reconciledNodes} device nodes, ${totalDevices} devices synced with HA`);
+      
+      return { success: true, reconciledNodes, totalDevices };
+    } catch (error) {
+      console.error(`[BackendEngine] Reconciliation failed: ${error.message}`);
+      // Continue anyway - warmup period will handle it the old way
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Start the engine
    */
-  start() {
+  async start() {
     if (this.running) {
       console.log('[BackendEngine] Already running');
       return;
@@ -390,6 +441,10 @@ class BackendEngine {
       const type = node?.type || node?.constructor?.name || '?';
       return `${i + 1}. ${type} (${id})`;
     }));
+    
+    // *** Reconcile device states with HA before first tick ***
+    // This prevents unnecessary OFF commands at startup
+    await this.reconcileDeviceStates();
     
     // Call tick immediately, then on interval
     this.tick();
@@ -433,7 +488,7 @@ class BackendEngine {
     
     // Only restart if there are nodes to process
     if (wasRunning && this.nodes.size > 0) {
-      this.start();
+      await this.start();
       console.log('[BackendEngine] Hot-reloaded graph and restarted');
     } else if (wasRunning) {
       console.log('[BackendEngine] Hot-reload: graph is empty, staying stopped');

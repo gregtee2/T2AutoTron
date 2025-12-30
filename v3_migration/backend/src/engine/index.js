@@ -61,7 +61,7 @@ async function autoStart() {
     const success = await engine.loadGraph(lastActivePath);
     
     if (success) {
-      engine.start();
+      await engine.start();
       console.log('[Engine] Auto-started with last active graph');
     }
   } catch (error) {
@@ -80,7 +80,7 @@ module.exports = {
   autoStart,
   
   // Convenience methods
-  start: () => engine.start(),
+  start: () => engine.start(),  // Returns Promise now
   stop: () => engine.stop(),
   loadGraph: (path) => engine.loadGraph(path),
   getStatus: () => engine.getStatus()

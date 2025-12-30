@@ -64,7 +64,7 @@ function initEngineSocketHandlers(socketIO) {
           }
         }
         
-        engine.start();
+        await engine.start();
         io.emit('engine-started', engine.getStatus());
       } catch (error) {
         socket.emit('engine-error', { message: error.message });
@@ -253,7 +253,7 @@ async function autoStartEngine() {
     }
     
     // Start the engine
-    engine.start();
+    await engine.start();
     console.log(`[Engine] Auto-started ${graphLoaded ? `with ${engine.nodes.size} nodes` : '(no graph loaded)'}`);
     
     // Start periodic device audit

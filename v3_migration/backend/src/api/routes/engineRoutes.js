@@ -97,7 +97,7 @@ router.post('/start', async (req, res) => {
       });
     }
     
-    engine.start();
+    await engine.start();
     
     // Start periodic device audit (every 5 minutes)
     deviceAudit.startPeriodicAudit();
