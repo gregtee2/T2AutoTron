@@ -2,6 +2,19 @@ const fetch = require('node-fetch');
 const WebSocket = require('ws');
 const logger = require('../../logging/logger');
 
+// Lazy-load commandTracker to avoid circular dependencies
+let commandTracker = null;
+function getCommandTracker() {
+  if (!commandTracker) {
+    try {
+      commandTracker = require('../../engine/commandTracker');
+    } catch (e) {
+      // Engine not available (e.g., during startup)
+    }
+  }
+  return commandTracker;
+}
+
 class HomeAssistantManager {
   constructor() {
     this.devices = [];
@@ -111,9 +124,22 @@ class HomeAssistantManager {
             if (msg.type === 'event' && msg.event.event_type === 'state_changed') {
               const entity = msg.event.data.new_state;
               const oldEntity = msg.event.data.old_state;
+              const context = msg.event.data.context; // HA's context: user_id, parent_id, id
               if (!entity) return;
               const domain = entity.entity_id.split('.')[0];
               if (!['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather', 'device_tracker', 'person', 'lock', 'climate', 'vacuum', 'camera'].includes(domain)) return;
+
+              // Track state change origin for debugging
+              const tracker = getCommandTracker();
+              if (tracker && ['light', 'switch', 'lock', 'cover', 'fan', 'climate'].includes(domain)) {
+                tracker.logIncomingStateChange({
+                  entityId: entity.entity_id,
+                  oldState: oldEntity?.state,
+                  newState: entity.state,
+                  context,
+                  attributes: entity.attributes
+                });
+              }
 
               // Invalidate cache on state change
               const cacheKey = `ha_${entity.entity_id}`;

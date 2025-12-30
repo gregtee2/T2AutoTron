@@ -15,6 +15,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const deviceAudit = require('../../engine/deviceAudit');
+const commandTracker = require('../../engine/commandTracker');
 
 // Get the graphs directory - uses GRAPH_SAVE_PATH env var in Docker, or falls back to local path
 function getGraphsDir() {
@@ -962,6 +963,56 @@ router.get('/audit/tracked', (req, res) => {
       success: true,
       deviceCount: Object.keys(tracked).length,
       devices: tracked
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/engine/commands
+ * Get command history - shows who sent what and why
+ * Query params:
+ *   - entity: Filter by entity ID (e.g., "lock.front_door")
+ *   - limit: Max number of events (default 100)
+ */
+router.get('/commands', (req, res) => {
+  try {
+    const entity = req.query.entity;
+    const limit = parseInt(req.query.limit) || 100;
+    
+    const history = commandTracker.getHistory(entity, limit);
+    const pending = commandTracker.getPendingCommands();
+    
+    res.json({
+      success: true,
+      filter: entity || 'all',
+      count: history.length,
+      pendingCommands: pending,
+      history
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/engine/commands/pending
+ * Get commands we sent that haven't received state confirmations yet
+ */
+router.get('/commands/pending', (req, res) => {
+  try {
+    const pending = commandTracker.getPendingCommands();
+    res.json({
+      success: true,
+      count: pending.length,
+      pending
     });
   } catch (error) {
     res.status(500).json({

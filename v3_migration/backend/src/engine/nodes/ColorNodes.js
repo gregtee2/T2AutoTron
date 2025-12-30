@@ -273,11 +273,7 @@ class SplineTimelineColorNode {
         const startTimeInput = inputs.startTime?.[0] ?? this.properties.startTime;
         const endTimeInput = inputs.endTime?.[0] ?? this.properties.endTime;
         
-        // Log inputs periodically to trace data flow (every 30 seconds)
-        if (!this._lastInputLog || Date.now() - this._lastInputLog > 30000) {
-            this._lastInputLog = Date.now();
-            console.log(`[SplineTimelineColorNode ${this.id?.slice(0,8)}] 📥 Inputs: value=${inputValue}, trigger=${trigger}, mode=${this.properties.rangeMode}`);
-        }
+        // Removed per-tick logging - too noisy for addon logs
         
         // Calculate position based on mode
         if (this.properties.rangeMode === 'numerical') {

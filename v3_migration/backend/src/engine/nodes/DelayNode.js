@@ -6,6 +6,9 @@
 
 const registry = require('../BackendNodeRegistry');
 
+// Debug mode - only log verbose info when enabled
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+
 /**
  * DelayNode - Delays passing a value through
  */
@@ -164,7 +167,7 @@ class InjectNode {
   }
 
   restore(data) {
-    console.log(`[InjectNode] restore() called with:`, JSON.stringify(data.properties || {}, null, 2));
+    if (VERBOSE) console.log(`[InjectNode] restore() called with:`, JSON.stringify(data.properties || {}, null, 2));
     
     if (data.properties) {
       // Restore all properties from saved graph
@@ -187,7 +190,7 @@ class InjectNode {
       }
     }
     
-    console.log(`[InjectNode] After restore - scheduleEnabled: ${this.properties.scheduleEnabled}, scheduleTime: ${this.properties.scheduleTime}, pulseMode: ${this.properties.pulseMode}`);
+    if (VERBOSE) console.log(`[InjectNode] After restore - scheduleEnabled: ${this.properties.scheduleEnabled}, scheduleTime: ${this.properties.scheduleTime}, pulseMode: ${this.properties.pulseMode}`);
     
     // Start schedule checker if enabled
     this._startScheduleChecker();
@@ -223,13 +226,13 @@ class InjectNode {
   }
 
   trigger() {
-    console.log(`[InjectNode] trigger() called, pulseMode: ${this.properties.pulseMode}`);
+    if (VERBOSE) console.log(`[InjectNode] trigger() called, pulseMode: ${this.properties.pulseMode}`);
     this.properties.lastTriggerTime = Date.now();
     
     if (this.properties.pulseMode) {
       // Set pulsing state
       this.properties.isPulsing = true;
-      console.log(`[InjectNode] Starting pulse, isPulsing: true`);
+      if (VERBOSE) console.log(`[InjectNode] Starting pulse, isPulsing: true`);
       
       // Clear any existing pulse timer
       if (this._pulseTimer) {
@@ -240,7 +243,7 @@ class InjectNode {
       this._pulseTimer = setTimeout(() => {
         this.properties.isPulsing = false;
         this._pulseTimer = null;
-        console.log(`[InjectNode] Pulse ended, isPulsing: false`);
+        if (VERBOSE) console.log(`[InjectNode] Pulse ended, isPulsing: false`);
       }, this.properties.pulseDurationMs || 500);
     }
   }
@@ -268,7 +271,7 @@ class InjectNode {
       return;
     }
 
-    console.log(`[InjectNode] Starting schedule checker for ${this.properties.scheduleTime}`);
+    if (VERBOSE) console.log(`[InjectNode] Starting schedule checker for ${this.properties.scheduleTime}`);
     
     // Check every 1 second for precise triggering
     this._scheduleCheckInterval = setInterval(() => {
@@ -312,7 +315,7 @@ class InjectNode {
       // Only trigger if we haven't triggered recently (within 60 seconds)
       const lastTrigger = this.properties.lastTriggerTime;
       if (!lastTrigger || (Date.now() - lastTrigger) > 60000) {
-        console.log(`[InjectNode] Schedule triggered at ${this.properties.scheduleTime} (${currentHours}:${currentMinutes}:${currentSeconds})`);
+        if (VERBOSE) console.log(`[InjectNode] Schedule triggered at ${this.properties.scheduleTime} (${currentHours}:${currentMinutes}:${currentSeconds})`);
         this.trigger();
       }
     }

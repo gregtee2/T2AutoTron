@@ -8,6 +8,7 @@
 const registry = require('../BackendNodeRegistry');
 const engineLogger = require('../engineLogger');
 const deviceAudit = require('../deviceAudit');
+const commandTracker = require('../commandTracker');
 
 // Lazy-load engine to avoid circular dependency
 let _engine = null;
@@ -175,8 +176,8 @@ const bulkStateCache = {
         
         this.lastFetchTime = Date.now();
         
-        // Log cache refresh periodically (every 30 seconds)
-        if (!this._lastLogTime || Date.now() - this._lastLogTime > 30000) {
+        // Log cache refresh rarely (every 10 minutes) - too noisy otherwise
+        if (!this._lastLogTime || Date.now() - this._lastLogTime > 600000) {
           this._lastLogTime = Date.now();
           console.log(`[BulkStateCache] ✅ Cache refreshed: ${this.states.size} entities`);
         }
@@ -253,12 +254,14 @@ class HADeviceStateNode {
       if (this.properties.selectedDeviceId && !this.properties.entityId) {
         this.properties.entityId = this.properties.selectedDeviceId;
       }
-      // Log what we restored for debugging
-      const entityId = this.properties.entityId || this.properties.selectedDeviceId;
-      if (entityId) {
-        console.log(`[HADeviceStateNode ${this.id?.slice(0,8) || 'new'}] Restored with entityId: ${entityId}`);
-      } else {
-        console.warn(`[HADeviceStateNode ${this.id?.slice(0,8) || 'new'}] Restored but NO entityId found in properties:`, Object.keys(data.properties));
+      // Log what we restored for debugging (only in verbose mode)
+      if (VERBOSE) {
+        const entityId = this.properties.entityId || this.properties.selectedDeviceId;
+        if (entityId) {
+          console.log(`[HADeviceStateNode ${this.id?.slice(0,8) || 'new'}] Restored with entityId: ${entityId}`);
+        } else {
+          console.warn(`[HADeviceStateNode ${this.id?.slice(0,8) || 'new'}] Restored but NO entityId found in properties:`, Object.keys(data.properties));
+        }
       }
     }
   }
@@ -328,11 +331,13 @@ class HADeviceStateNode {
   async data(inputs) {
     const now = Date.now();
     
-    // Log on first tick to confirm node is running with correct config
+    // Log on first tick to confirm node is running with correct config (only in verbose mode)
     if (!this._startupLogged) {
       this._startupLogged = true;
-      const entityId = this.properties.entityId || this.properties.selectedDeviceId;
-      console.log(`[HADeviceStateNode ${this.id?.slice(0,8) || 'new'}] 🚀 First tick - entityId: ${entityId || 'NOT SET'}`);
+      if (VERBOSE) {
+        const entityId = this.properties.entityId || this.properties.selectedDeviceId;
+        console.log(`[HADeviceStateNode ${this.id?.slice(0,8) || 'new'}] 🚀 First tick - entityId: ${entityId || 'NOT SET'}`);
+      }
     }
     
     // Calculate dynamic poll interval based on failure count
@@ -392,12 +397,7 @@ class HADeviceStateNode {
     const state = this.cachedState.state;
     const isOn = state === 'on' || state === 'playing' || state === 'home';
     
-    // Log output periodically to trace data flow (every 30 seconds)
-    if (!this._lastOutputLog || Date.now() - this._lastOutputLog > 30000) {
-      this._lastOutputLog = Date.now();
-      const entityId = this.properties.entityId || this.properties.selectedDeviceId;
-      console.log(`[HADeviceStateNode ${this.id?.slice(0,8)}] 📤 Output: entity=${entityId}, state=${state}`);
-    }
+    // Removed per-tick logging - too noisy for addon logs
     
     return {
       state: state,
@@ -685,6 +685,17 @@ class HAGenericDeviceNode {
         service
       });
       
+      // Track command origin for debugging
+      commandTracker.logOutgoingCommand({
+        entityId,
+        action: service,
+        payload,
+        nodeId: this.id,
+        nodeType: 'HAGenericDeviceNode',
+        reason: this.lastTriggerReason || 'Input trigger',
+        inputs: this.lastInputs
+      });
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -709,6 +720,9 @@ class HAGenericDeviceNode {
   async data(inputs) {
     const trigger = inputs.trigger?.[0];
     const hsv = inputs.hsv_info?.[0];
+    
+    // Store inputs for command tracking (helps answer "why did this trigger?")
+    this.lastInputs = { trigger, hsv: hsv ? 'present' : 'none' };
     
     // Track ticks for warmup period
     if (this.tickCount === undefined) {
@@ -850,7 +864,8 @@ class HAGenericDeviceNode {
           case 'Follow':
             // Follow trigger state
             shouldTurnOn = !!trigger;
-            reason = `Follow mode: trigger=${trigger} → shouldTurnOn=${shouldTurnOn}`;
+            reason = `Follow mode: trigger=${trigger}`;
+            this.lastTriggerReason = reason;
             break;
           case 'Toggle':
             // Toggle on rising edge only
@@ -858,6 +873,7 @@ class HAGenericDeviceNode {
               this.deviceStates[entityId] = !this.deviceStates[entityId];
               shouldTurnOn = this.deviceStates[entityId];
               reason = `Toggle mode: rising edge → ${shouldTurnOn ? 'ON' : 'OFF'}`;
+              this.lastTriggerReason = reason;
               engineLogger.log('HA-DECISION', reason, { entityId });
               await this.controlDevice(entityId, shouldTurnOn, hsv);
             } else {
@@ -1026,12 +1042,12 @@ class HADeviceAutomationNode {
    * Restore properties from saved graph and recompute outputs
    */
   restore(data) {
-    console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8)}] restore() called with:`, JSON.stringify(data?.properties || {}).slice(0,200));
+    if (VERBOSE) console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8)}] restore() called with:`, JSON.stringify(data?.properties || {}).slice(0,200));
     if (data.properties) {
       Object.assign(this.properties, data.properties);
       // CRITICAL: Recompute outputs after restore since constructor runs before this
       this._updateOutputs();
-      console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8)}] Restored with fields: [${(this.properties.selectedFields || []).join(', ')}], outputs: [${this.outputs?.join(', ')}]`);
+      if (VERBOSE) console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8)}] Restored with fields: [${(this.properties.selectedFields || []).join(', ')}], outputs: [${this.outputs?.join(', ')}]`);
     }
   }
 
@@ -1139,11 +1155,13 @@ class HADeviceAutomationNode {
   }
 
   data(inputs) {
-    // Log on first tick to confirm node is in the engine
+    // Log on first tick to confirm node is in the engine (only in verbose mode)
     if (!this._startupLogged) {
       this._startupLogged = true;
-      console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8) || 'new'}] 🚀 First tick - fields: [${(this.properties.selectedFields || []).join(', ')}], outputs: [${(this.outputs || []).join(', ')}]`);
-      console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8) || 'new'}] 🚀 Has input: ${!!inputs.device_state?.[0]}, type: ${typeof inputs.device_state?.[0]}`);
+      if (VERBOSE) {
+        console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8) || 'new'}] 🚀 First tick - fields: [${(this.properties.selectedFields || []).join(', ')}], outputs: [${(this.outputs || []).join(', ')}]`);
+        console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8) || 'new'}] 🚀 Has input: ${!!inputs.device_state?.[0]}, type: ${typeof inputs.device_state?.[0]}`);
+      }
     }
     
     const inputData = inputs.device_state?.[0];
@@ -1199,11 +1217,7 @@ class HADeviceAutomationNode {
       this.properties.lastOutputValues[field] = value;
     });
     
-    // Log output periodically to trace data flow (every 30 seconds)
-    if (!this._lastOutputLog || Date.now() - this._lastOutputLog > 30000) {
-      this._lastOutputLog = Date.now();
-      console.log(`[HADeviceAutomationNode ${this.id?.slice(0,8)}] 📤 Output: ${JSON.stringify(result)}`);
-    }
+    // Removed per-tick logging - too noisy for addon logs
     
     // Ensure all dynamic outputs have a value
     this.outputs.forEach(outputKey => {
