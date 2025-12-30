@@ -66,60 +66,44 @@
         constructor(changeCallback) {
             super("WiZ Effect");
             this.width = 300;
-            this.height = 420;
+            this.height = 400;
             this.changeCallback = changeCallback;
 
             this.properties = {
                 entityIds: [],       // Array of HA entity_ids
-                effect: 'Fireplace', // Selected effect (single mode)
-                cycleEffects: [],    // Array of effects to cycle through
-                cycleIndex: 0,       // Current position in cycle
-                cycleMode: false,    // Whether cycle mode is enabled
+                effect: 'Fireplace', // Selected effect from dropdown (fallback)
                 lastTrigger: null,
-                lastNext: null,      // For detecting next input rising edge
                 lastSentEffect: null,
                 previousStates: {}   // Map of entityId -> captured state
             };
 
             // Inputs
             this.addInput('trigger', new ClassicPreset.Input(window.sockets.boolean, 'Trigger'));
-            this.addInput('next', new ClassicPreset.Input(window.sockets.boolean, 'Next'));
+            this.addInput('effect_name', new ClassicPreset.Input(window.sockets.any, 'Effect'));
             this.addInput('hsv_in', new ClassicPreset.Input(window.sockets.object, 'HSV In'));
             
             // Outputs
             this.addOutput('hsv_out', new ClassicPreset.Output(window.sockets.object, 'HSV Out'));
             this.addOutput('active', new ClassicPreset.Output(window.sockets.boolean, 'Active'));
             this.addOutput('applied', new ClassicPreset.Output(window.sockets.boolean, 'Applied'));
-            this.addOutput('effect_name', new ClassicPreset.Output(window.sockets.any, 'Effect Name'));
         }
 
-        // Get current effect based on mode
-        getCurrentEffect() {
-            if (this.properties.cycleMode && this.properties.cycleEffects.length > 0) {
-                const idx = this.properties.cycleIndex % this.properties.cycleEffects.length;
-                return this.properties.cycleEffects[idx];
+        // Get current effect - input takes priority over dropdown
+        getCurrentEffect(inputs) {
+            const inputEffect = inputs?.effect_name?.[0];
+            if (inputEffect && typeof inputEffect === 'string') {
+                return inputEffect;
             }
             return this.properties.effect;
         }
 
-        // Advance to next effect in cycle
-        advanceCycle() {
-            if (this.properties.cycleEffects.length > 0) {
-                this.properties.cycleIndex = (this.properties.cycleIndex + 1) % this.properties.cycleEffects.length;
-                console.log(`[WizEffectNode] Cycled to effect ${this.properties.cycleIndex + 1}/${this.properties.cycleEffects.length}: ${this.getCurrentEffect()}`);
-            }
-        }
-
         data(inputs) {
             const trigger = inputs.trigger?.[0];
-            const next = inputs.next?.[0];
             const hsvIn = inputs.hsv_in?.[0];
             const wasTriggered = this.properties.lastTrigger === true;
             const isTriggered = trigger === true;
-            const wasNext = this.properties.lastNext === true;
-            const isNext = next === true;
             const hasLights = this.properties.entityIds && this.properties.entityIds.length > 0;
-            const currentEffect = this.getCurrentEffect();
+            const currentEffect = this.getCurrentEffect(inputs);
             
             // Build HSV output with exclusion metadata when effect is active
             const buildHsvOutput = (active) => {
@@ -139,34 +123,19 @@
                 
                 return hsvIn;
             };
-
-            // Handle "next" input - advance cycle and apply new effect (if already triggered)
-            if (isNext && !wasNext && this.properties.cycleMode && isTriggered) {
-                this.advanceCycle();
-                this.sendEffect(); // Apply the new effect immediately
-                this.properties.lastNext = next;
-                if (this.changeCallback) this.changeCallback(); // Update UI
-                return { 
-                    hsv_out: buildHsvOutput(true), 
-                    applied: true, 
-                    active: true,
-                    effect_name: this.getCurrentEffect()
-                };
-            }
-            this.properties.lastNext = next;
             
             // Detect rising edge (false→true) - activate effect
             if (isTriggered && !wasTriggered && hasLights && currentEffect) {
-                this.captureStateAndSendEffect();
+                this.captureStateAndSendEffect(currentEffect);
                 this.properties.lastTrigger = trigger;
-                return { hsv_out: buildHsvOutput(true), applied: true, active: true, effect_name: currentEffect };
+                return { hsv_out: buildHsvOutput(true), applied: true, active: true };
             }
             
             // Detect falling edge (true→false) - restore previous state
             if (!isTriggered && wasTriggered && hasLights) {
                 this.restorePreviousState();
                 this.properties.lastTrigger = trigger;
-                return { hsv_out: buildHsvOutput(false), applied: false, active: false, effect_name: null };
+                return { hsv_out: buildHsvOutput(false), applied: false, active: false };
             }
 
             this.properties.lastTrigger = trigger;
@@ -174,14 +143,13 @@
             return { 
                 hsv_out: buildHsvOutput(isTriggered), 
                 applied: false, 
-                active: isTriggered,
-                effect_name: isTriggered ? currentEffect : null
+                active: isTriggered
             };
         }
 
-        async captureStateAndSendEffect() {
+        async captureStateAndSendEffect(effectToSend) {
             const entityIds = this.properties.entityIds;
-            const effect = this.getCurrentEffect();
+            const effect = effectToSend || this.properties.effect;
 
             if (!entityIds || entityIds.length === 0) return;
 
@@ -213,19 +181,19 @@
             console.log(`[WizEffectNode] Captured states for ${Object.keys(this.properties.previousStates).length} lights`);
 
             // Send effect to all lights
-            this.sendEffect();
+            this.sendEffect(effect);
         }
 
-        async sendEffect() {
+        async sendEffect(effectToSend) {
             const entityIds = this.properties.entityIds;
-            const effect = this.getCurrentEffect();
+            const effect = effectToSend || this.properties.effect;
 
             if (!entityIds || entityIds.length === 0) {
                 console.warn('[WizEffectNode] No lights selected');
                 return;
             }
 
-            console.log(`[WizEffectNode] Sending effect "${effect}" to ${entityIds.length} lights${this.properties.cycleMode ? ` (cycle ${this.properties.cycleIndex + 1}/${this.properties.cycleEffects.length})` : ''}`);
+            console.log(`[WizEffectNode] Sending effect "${effect}" to ${entityIds.length} lights`);
 
             // Send to all lights in parallel
             const fetchFn = window.apiFetch || fetch;
@@ -344,11 +312,6 @@
         const [availableEffects, setAvailableEffects] = useState(null);
         const [expanded, setExpanded] = useState(false);
         const [seed, setSeed] = useState(0);
-        
-        // Cycle mode state
-        const [cycleMode, setCycleMode] = useState(data.properties.cycleMode || false);
-        const [cycleEffects, setCycleEffects] = useState(data.properties.cycleEffects || []);
-        const [cycleExpanded, setCycleExpanded] = useState(false);
 
         // Sync changeCallback for re-renders
         useEffect(() => {
@@ -456,50 +419,39 @@
         useEffect(() => {
             data.properties.entityIds = selectedIds;
             data.properties.effect = effect;
-            data.properties.cycleMode = cycleMode;
-            data.properties.cycleEffects = cycleEffects;
-        }, [selectedIds, effect, cycleMode, cycleEffects, data.properties]);
+        }, [selectedIds, effect, data.properties]);
 
         // Toggle a light in the selection
         const toggleLight = (id) => {
             setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
         };
-        
-        // Toggle an effect in the cycle list
-        const toggleCycleEffect = (eff) => {
-            setCycleEffects(prev => {
-                if (prev.includes(eff)) {
-                    return prev.filter(e => e !== eff);
-                } else {
-                    return [...prev, eff];
-                }
-            });
-        };
 
         const handleTest = () => {
             if (selectedIds.length > 0 && effect) {
-                data.sendEffect();
+                data.sendEffect(effect);
                 if (window.T2Toast) {
                     window.T2Toast.success(`Sent "${effect}" to ${selectedIds.length} light(s)`);
                 }
             }
         };
+        
+        // Check if effect_name input is connected
+        const effectInputConnected = data.inputs?.effect_name?.connections?.length > 0;
 
         // Get shared components
         const { HelpIcon } = window.T2Controls || {};
         const RefComponent = window.RefComponent;
 
         const tooltips = {
-            node: "Triggers WiZ light effects like Fireplace, Ocean, Party, Christmas, etc.\n\nSit this node INLINE in your color flow:\nTimeline → WizEffect → HA Device\n\nWhen active, selected lights are excluded from HSV commands.",
+            node: "Triggers WiZ light effects like Fireplace, Ocean, Party, Christmas, etc.\n\nConnect the 'Effect' input to dynamically choose effects (e.g., from a Switch node based on time).\n\nWhen active, selected lights are excluded from HSV commands.",
             lights: "Select one or more WiZ lights.\nOnly WiZ-capable bulbs are shown.\n\nThese lights will be excluded from downstream HSV while effect is running.",
-            effect: "The scene/effect to play.\nWiZ has 35+ built-in effects!",
+            effect: "The scene/effect to play.\nWiZ has 35+ built-in effects!\n\nIf nothing connected to 'Effect' input, dropdown is used.",
             trigger: "TRUE = play effect\nFALSE = restore previous state\n\nConnect a button, time node, or sensor.",
-            next: "CYCLE MODE: Rising edge advances to next effect.\n\nConnect a button or timer to cycle through effects.",
+            effect_name: "Connect a string (effect name) here.\n\nExamples: 'Ocean', 'Fireplace', 'Party'\n\nUse a Switch node to pick effects based on time of day!",
             hsv_in: "Connect your color source here.\nTimeline, spline, or manual HSV.\n\nPasses through to HSV Out.",
             hsv_out: "Connect to HA Device node.\nHSV flows through with metadata telling downstream to skip effect lights.",
             active: "TRUE while the effect is running.",
-            applied: "Pulses TRUE briefly when effect is first sent.",
-            effect_name: "CYCLE MODE: Outputs the current effect name.\n\nUseful for debugging or display."
+            applied: "Pulses TRUE briefly when effect is first sent."
         };
 
         const inputs = Object.entries(data.inputs || {});
@@ -525,10 +477,7 @@
         };
 
         // Get current effect for preview (uses cycle effect if in cycle mode)
-        const currentEffectName = cycleMode && cycleEffects.length > 0 
-            ? cycleEffects[data.properties.cycleIndex || 0] || cycleEffects[0]
-            : effect;
-        const currentPreview = effectPreviewConfig[currentEffectName] || effectPreviewConfig['default'];
+        const currentPreview = effectPreviewConfig[effect] || effectPreviewConfig['default'];
 
         return React.createElement('div', { className: 'wiz-effect-node' }, [
             // Header
@@ -630,93 +579,30 @@
                     })
                 ),
 
-                // Effect selector row (hidden when cycle mode is on)
-                !cycleMode && React.createElement('div', { key: 'effect-row', className: 'wiz-effect-row' }, [
+                // Effect selector row (shows "via input" when connected)
+                React.createElement('div', { key: 'effect-row', className: 'wiz-effect-row' }, [
                     React.createElement('span', { key: 'label', className: 'wiz-effect-label' }, 'Effect'),
-                    React.createElement('select', {
-                        key: 'select',
-                        className: 'wiz-effect-select',
-                        value: effect,
-                        onChange: (e) => setEffect(e.target.value),
-                        onPointerDown: (e) => e.stopPropagation()
-                    },
-                        (availableEffects || WIZ_EFFECTS.map(e => e.value)).map(eff => {
-                            const value = typeof eff === 'string' ? eff : eff.value;
-                            const label = typeof eff === 'string' 
-                                ? (WIZ_EFFECTS.find(h => h.value === eff)?.label || eff)
-                                : eff.label;
-                            return React.createElement('option', { key: value, value }, label);
-                        })
-                    ),
-                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.effect, size: 12 })
-                ]),
-                
-                // Cycle mode toggle row
-                React.createElement('div', { key: 'cycle-row', className: 'wiz-effect-row' }, [
-                    React.createElement('span', { key: 'label', className: 'wiz-effect-label' }, 'Cycle Mode'),
-                    React.createElement('label', { key: 'toggle', className: 'wiz-effect-cycle-toggle', onPointerDown: (e) => e.stopPropagation() }, [
-                        React.createElement('input', {
-                            key: 'cb',
-                            type: 'checkbox',
-                            checked: cycleMode,
-                            onChange: (e) => setCycleMode(e.target.checked)
-                        }),
-                        React.createElement('span', { key: 'slider', className: 'wiz-cycle-slider' })
-                    ]),
-                    HelpIcon && React.createElement(HelpIcon, { 
-                        key: 'help', 
-                        text: "Enable to cycle through multiple effects.\n\nConnect a trigger to the 'next' input to advance.\n\nGreat for party mode!", 
-                        size: 12 
-                    })
-                ]),
-                
-                // Cycle effects selection (only when cycle mode is on)
-                cycleMode && React.createElement('div', { key: 'cycle-effects', className: 'wiz-effect-cycle-section' }, [
-                    React.createElement('div', { key: 'header', className: 'wiz-effect-row' }, [
-                        React.createElement('span', { key: 'label', className: 'wiz-effect-label' }, 
-                            `Effects (${cycleEffects.length} selected)`
-                        ),
-                        React.createElement('button', {
-                            key: 'toggle',
-                            className: 'wiz-effect-light-toggle',
-                            onClick: () => setCycleExpanded(!cycleExpanded),
+                    effectInputConnected 
+                        ? React.createElement('div', { 
+                            key: 'via-input', 
+                            className: 'wiz-effect-via-input'
+                          }, '← via input')
+                        : React.createElement('select', {
+                            key: 'select',
+                            className: 'wiz-effect-select',
+                            value: effect,
+                            onChange: (e) => setEffect(e.target.value),
                             onPointerDown: (e) => e.stopPropagation()
-                        }, [
-                            React.createElement('span', { key: 'pos' }, 
-                                data.properties.cycleIndex !== undefined 
-                                    ? `${data.properties.cycleIndex + 1}/${cycleEffects.length}` 
-                                    : 'Select...'
-                            ),
-                            React.createElement('span', { key: 'arrow', className: 'arrow' }, cycleExpanded ? '▲' : '▼')
-                        ])
-                    ]),
-                    // Effect multi-select list
-                    React.createElement('div', { 
-                        key: 'effect-list', 
-                        className: `wiz-effect-light-list ${cycleExpanded ? 'expanded' : ''}`,
-                        onWheel: (e) => e.stopPropagation()
-                    },
-                        (availableEffects || WIZ_EFFECTS.map(e => e.value)).map(eff => {
-                            const value = typeof eff === 'string' ? eff : eff.value;
-                            const label = typeof eff === 'string' 
-                                ? (WIZ_EFFECTS.find(h => h.value === eff)?.label || eff)
-                                : eff.label;
-                            const isSelected = cycleEffects.includes(value);
-                            return React.createElement('label', { 
-                                key: value, 
-                                className: `wiz-effect-light-item ${isSelected ? 'selected' : ''}`,
-                                onPointerDown: (e) => e.stopPropagation()
-                            }, [
-                                React.createElement('input', {
-                                    key: 'cb',
-                                    type: 'checkbox',
-                                    checked: isSelected,
-                                    onChange: () => toggleCycleEffect(value)
-                                }),
-                                React.createElement('span', { key: 'name' }, label)
-                            ]);
-                        })
-                    )
+                        },
+                            (availableEffects || WIZ_EFFECTS.map(e => e.value)).map(eff => {
+                                const value = typeof eff === 'string' ? eff : eff.value;
+                                const label = typeof eff === 'string' 
+                                    ? (WIZ_EFFECTS.find(h => h.value === eff)?.label || eff)
+                                    : eff.label;
+                                return React.createElement('option', { key: value, value }, label);
+                            })
+                        ),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.effect, size: 12 })
                 ]),
 
                 // Test button
@@ -725,8 +611,8 @@
                     className: 'wiz-effect-test-btn',
                     onClick: handleTest,
                     onPointerDown: (e) => e.stopPropagation(),
-                    disabled: selectedIds.length === 0
-                }, cycleMode ? '▶ Test Current Effect' : '▶ Test Effect')
+                    disabled: selectedIds.length === 0 || effectInputConnected
+                }, effectInputConnected ? '(Use trigger input)' : '▶ Test Effect')
             ]),
 
             // Inline styles for the component
@@ -891,57 +777,17 @@
                     cursor: not-allowed;
                 }
                 
-                /* Cycle mode toggle switch */
-                .wiz-effect-cycle-toggle {
-                    position: relative;
-                    display: inline-block;
-                    width: 40px;
-                    height: 20px;
-                    cursor: pointer;
-                }
-                .wiz-effect-cycle-toggle input {
-                    opacity: 0;
-                    width: 0;
-                    height: 0;
-                }
-                .wiz-cycle-slider {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(255,255,255,0.15);
-                    border-radius: 10px;
-                    transition: 0.3s;
-                }
-                .wiz-cycle-slider:before {
-                    position: absolute;
-                    content: "";
-                    height: 14px;
-                    width: 14px;
-                    left: 3px;
-                    bottom: 3px;
-                    background: #888;
-                    border-radius: 50%;
-                    transition: 0.3s;
-                }
-                .wiz-effect-cycle-toggle input:checked + .wiz-cycle-slider {
-                    background: rgba(79, 195, 247, 0.4);
-                }
-                .wiz-effect-cycle-toggle input:checked + .wiz-cycle-slider:before {
-                    transform: translateX(20px);
-                    background: #4fc3f7;
-                }
-                
-                /* Cycle effects section */
-                .wiz-effect-cycle-section {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 4px;
-                    padding: 8px;
-                    background: rgba(79, 195, 247, 0.08);
+                /* Via input indicator */
+                .wiz-effect-via-input {
+                    flex: 1;
+                    padding: 6px 10px;
+                    background: rgba(79, 195, 247, 0.15);
+                    border: 1px dashed rgba(79, 195, 247, 0.4);
                     border-radius: 4px;
-                    border-left: 3px solid #4fc3f7;
+                    color: #4fc3f7;
+                    font-size: 11px;
+                    font-style: italic;
+                    text-align: center;
                 }
 
                 /* Effect Preview Bar */
