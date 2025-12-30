@@ -256,6 +256,10 @@ async function autoStartEngine() {
     engine.start();
     console.log(`[Engine] Auto-started ${graphLoaded ? `with ${engine.nodes.size} nodes` : '(no graph loaded)'}`);
     
+    // Start periodic device audit
+    const deviceAudit = require('../engine/deviceAudit');
+    deviceAudit.startPeriodicAudit();
+    
   } catch (error) {
     console.error('[Engine] Auto-start error:', error.message);
   }

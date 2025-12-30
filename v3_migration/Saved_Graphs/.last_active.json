@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "4628b7d7a0a80e4b",
+      "id": "adec3719ef346b93",
       "label": "WiZ Effect",
       "position": {
-        "x": 1128.6095087964884,
-        "y": 257.7780166403271
+        "x": 645.1470362812661,
+        "y": 198.6422139828112
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "9033b922ded537c4",
+            "id": "cb2ec5997042138c",
             "control": null,
             "showControl": true
           },
@@ -23,7 +23,7 @@
               "name": "any"
             },
             "label": "Effect",
-            "id": "7044161d25b098f0",
+            "id": "eb0c9d5741d853f8",
             "control": null,
             "showControl": true
           },
@@ -32,7 +32,7 @@
               "name": "object"
             },
             "label": "HSV In",
-            "id": "335fec08808a7335",
+            "id": "d9efb698c18b0e70",
             "control": null,
             "showControl": true
           }
@@ -44,7 +44,7 @@
             },
             "label": "HSV Out",
             "multipleConnections": true,
-            "id": "76f9e22c56cd52a2"
+            "id": "d4bd5afddf9d3ec3"
           },
           "active": {
             "socket": {
@@ -52,7 +52,7 @@
             },
             "label": "Active",
             "multipleConnections": true,
-            "id": "daad5e7f0a6e5f16"
+            "id": "852fcb1b3539f20b"
           },
           "applied": {
             "socket": {
@@ -60,36 +60,47 @@
             },
             "label": "Applied",
             "multipleConnections": true,
-            "id": "81c8f652747e8716"
+            "id": "7f429a316457e8dd"
           }
         },
         "controls": {},
         "label": "WiZ Effect",
-        "id": "4628b7d7a0a80e4b",
+        "id": "adec3719ef346b93",
         "width": 300,
         "height": 400,
         "properties": {
           "entityIds": [
             "ha_light.laundry_room_sink_light"
           ],
-          "effect": "Halloween",
-          "speed": 107,
-          "lastTrigger": false,
-          "lastSentEffect": "Halloween",
-          "previousStates": {}
+          "effect": "Christmas",
+          "speed": 15,
+          "lastTrigger": true,
+          "lastSentEffect": "Christmas",
+          "previousStates": {
+            "ha_light.laundry_room_sink_light": {
+              "on": true,
+              "brightness": 255,
+              "rgb_color": [
+                0,
+                0,
+                255
+              ],
+              "effect": null
+            }
+          }
         },
-        "selected": true
+        "selected": false
       }
     },
     {
-      "id": "7d4c501b23b45507",
+      "id": "e58409d5ccce42e2",
       "label": "HA Generic Device",
       "position": {
-        "x": 1697.8269022992417,
-        "y": 213.13580265751588
+        "x": 1036.3644297840194,
+        "y": 124
       },
       "data": {
-        "id": "7d4c501b23b45507",
+        "id": "e58409d5ccce42e2",
         "label": "HA Generic Device",
         "properties": {
           "selectedDeviceIds": [
@@ -111,40 +122,40 @@
       }
     },
     {
-      "id": "59e71ad35981a8fd",
+      "id": "7b3e498d3c3b042b",
       "label": "Toggle",
       "position": {
-        "x": 759.9318988921825,
-        "y": 263.1117339191229
+        "x": 200.4694263769602,
+        "y": 101.975931261607
       },
       "data": {
-        "id": "59e71ad35981a8fd",
+        "id": "7b3e498d3c3b042b",
         "label": "Toggle",
         "properties": {
-          "state": false,
+          "state": true,
           "pulseMode": false,
-          "lastCommand": false
+          "lastCommand": true
         }
       }
     },
     {
-      "id": "ff9bdbd07fea3e86",
+      "id": "686442bf275892ec",
       "label": "All-in-One Color Control",
       "position": {
-        "x": 679.2941360012942,
-        "y": 488.668911785086
+        "x": 85,
+        "y": 335.6089557765714
       },
       "data": {
-        "id": "ff9bdbd07fea3e86",
+        "id": "686442bf275892ec",
         "label": "All-in-One Color Control",
         "properties": {
-          "red": 251,
-          "green": 80,
-          "blue": 150,
-          "hueShift": 335,
-          "saturation": 68,
-          "brightness": 251,
-          "colorTemp": 2701,
+          "red": 0,
+          "green": 0,
+          "blue": 255,
+          "hueShift": 240,
+          "saturation": 100,
+          "brightness": 255,
+          "colorTemp": 6500,
           "whiteAdjust": 4000,
           "transitionTime": 0,
           "enableAutoTrigger": false,
@@ -157,32 +168,32 @@
   ],
   "connections": [
     {
-      "id": "8562a8a873dd5d4e",
-      "source": "59e71ad35981a8fd",
-      "target": "4628b7d7a0a80e4b",
+      "id": "bd608bccba275afc",
+      "source": "7b3e498d3c3b042b",
+      "target": "adec3719ef346b93",
       "sourceOutput": "state",
       "targetInput": "trigger"
     },
     {
-      "id": "1409784c9e326482",
-      "source": "ff9bdbd07fea3e86",
-      "target": "4628b7d7a0a80e4b",
+      "id": "f9d469c5e8e692d5",
+      "source": "686442bf275892ec",
+      "target": "adec3719ef346b93",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "6bc93c1c595dae6d",
-      "source": "4628b7d7a0a80e4b",
-      "target": "7d4c501b23b45507",
+      "id": "db3de1b18a63c394",
+      "source": "adec3719ef346b93",
+      "target": "e58409d5ccce42e2",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     }
   ],
   "viewport": {
-    "x": -235.8145599365235,
-    "y": -83.38011593818666,
-    "k": 0.932065347906991
+    "x": 0,
+    "y": 0,
+    "k": 1
   },
   "autoSaved": true,
-  "timestamp": 1767056658376
+  "timestamp": 1767057210875
 }

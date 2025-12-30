@@ -7,6 +7,7 @@
 
 const registry = require('../BackendNodeRegistry');
 const engineLogger = require('../engineLogger');
+const deviceAudit = require('../deviceAudit');
 
 // Lazy-load engine to avoid circular dependency
 let _engine = null;
@@ -675,6 +676,14 @@ class HAGenericDeviceNode {
     try {
       // Log the device command
       engineLogger.logDeviceCommand(entityId, `${domain}.${service}`, payload);
+      
+      // Record engine intent for audit comparison
+      deviceAudit.recordEngineIntent(entityId, {
+        on: turnOn,
+        brightness: payload.brightness,
+        hs_color: payload.hs_color,
+        service
+      });
       
       const response = await fetch(url, {
         method: 'POST',

@@ -8,11 +8,13 @@
  * - POST /api/engine/load       - Load a graph file
  * - GET  /api/engine/nodes      - List registered node types
  * - GET  /api/engine/outputs    - Get current node outputs
+ * - GET  /api/engine/audit      - Compare engine intent vs actual HA states
  */
 
 const express = require('express');
 const router = express.Router();
 const path = require('path');
+const deviceAudit = require('../../engine/deviceAudit');
 
 // Get the graphs directory - uses GRAPH_SAVE_PATH env var in Docker, or falls back to local path
 function getGraphsDir() {
@@ -96,6 +98,9 @@ router.post('/start', async (req, res) => {
     
     engine.start();
     
+    // Start periodic device audit (every 5 minutes)
+    deviceAudit.startPeriodicAudit();
+    
     res.json({
       success: true,
       message: 'Engine started',
@@ -117,6 +122,9 @@ router.post('/stop', (req, res) => {
   try {
     const { engine } = getEngine();
     engine.stop();
+    
+    // Stop periodic audit
+    deviceAudit.stopPeriodicAudit();
     
     res.json({
       success: true,
@@ -925,5 +933,42 @@ function tryParseJson(str) {
     return str;
   }
 }
+
+/**
+ * GET /api/engine/audit
+ * Run audit comparing engine intent vs actual HA device states
+ * Returns mismatches between what engine thinks it sent and what HA reports
+ */
+router.get('/audit', async (req, res) => {
+  try {
+    const results = await deviceAudit.auditAndLog();
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/engine/audit/tracked
+ * Get list of devices currently being tracked by the audit system
+ */
+router.get('/audit/tracked', (req, res) => {
+  try {
+    const tracked = deviceAudit.getTrackedDevices();
+    res.json({
+      success: true,
+      deviceCount: Object.keys(tracked).length,
+      devices: tracked
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;
