@@ -214,10 +214,11 @@ module.exports = function (io) {
     const { domain, service, entity_id, data } = req.body;
     
     if (!domain || !service) {
+      logWithTimestamp(`Service call missing domain or service: ${JSON.stringify(req.body)}`, 'error');
       return res.status(400).json({ success: false, error: 'Missing domain or service' });
     }
 
-    logWithTimestamp(`Service call: ${domain}.${service} for ${entity_id || 'no entity'}`, 'info');
+    logWithTimestamp(`Service call: ${domain}.${service} for ${entity_id || 'no entity'} with data: ${JSON.stringify(data)}`, 'info');
 
     try {
       const haHost = homeAssistantManager.getConfig?.()?.host || process.env.HA_HOST;
@@ -231,6 +232,9 @@ module.exports = function (io) {
         ...(entity_id && { entity_id }),
         ...data
       };
+
+      // Log the actual payload being sent to HA
+      console.log(`[HA Service] Sending to ${haHost}/api/services/${domain}/${service}:`, JSON.stringify(payload));
 
       const response = await fetch(`${haHost}/api/services/${domain}/${service}`, {
         method: 'POST',

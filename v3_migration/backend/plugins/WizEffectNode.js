@@ -213,12 +213,18 @@
             const results = await Promise.all(
                 entityIds.map(async (entityId) => {
                     try {
-                        // Build service data - only include speed for supported effects
+                        // Build service data - HA WiZ integration only supports effect name
+                        // Speed would need direct pywizlight control, not available through HA
                         const serviceData = { effect: effect };
-                        if (supportsSpeed && speed !== 100) {
-                            // WiZ speed: 0-200 where 100 is normal
-                            serviceData.speed = Math.round(speed);
-                        }
+                        
+                        // Note: HA WiZ integration doesn't support speed parameter
+                        // Keeping this for future direct WiZ API support
+                        // if (supportsSpeed && speed !== 100) {
+                        //     serviceData.speed = Math.round(speed);
+                        // }
+                        
+                        const cleanEntityId = entityId.replace('ha_', '');
+                        console.log(`[WizEffectNode] Calling light.turn_on for ${cleanEntityId} with data:`, JSON.stringify(serviceData));
                         
                         const response = await fetchFn('/api/lights/ha/service', {
                             method: 'POST',
@@ -226,10 +232,15 @@
                             body: JSON.stringify({
                                 domain: 'light',
                                 service: 'turn_on',
-                                entity_id: entityId.replace('ha_', ''),
+                                entity_id: cleanEntityId,
                                 data: serviceData
                             })
                         });
+                        
+                        if (!response.ok) {
+                            const errText = await response.text();
+                            console.error(`[WizEffectNode] HA rejected: ${response.status} - ${errText}`);
+                        }
                         return response.ok;
                     } catch (err) {
                         console.error(`[WizEffectNode] Error sending to ${entityId}:`, err);
