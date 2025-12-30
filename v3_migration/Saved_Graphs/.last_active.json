@@ -1,23 +1,120 @@
 {
   "nodes": [
     {
-      "id": "474a58fd09818567",
-      "label": "HA Generic Device",
+      "id": "6d792935a06578c1",
+      "label": "WiZ Effect",
       "position": {
-        "x": 823.2098765432097,
-        "y": 155.11111129949117
+        "x": 330.9908920551788,
+        "y": 267.1686045521343
       },
       "data": {
-        "id": "474a58fd09818567",
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "b34e8a4d8b5468d7",
+            "control": null,
+            "showControl": true
+          },
+          "hsv_in": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV In",
+            "id": "c37d8055e2d7d381",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "hsv_out": {
+            "socket": {
+              "name": "object"
+            },
+            "label": "HSV Out",
+            "multipleConnections": true,
+            "id": "8dae282e6414debb"
+          },
+          "active": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Active",
+            "multipleConnections": true,
+            "id": "e6c210fc59e946fb"
+          },
+          "applied": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Applied",
+            "multipleConnections": true,
+            "id": "217014fa6fdd6b90"
+          }
+        },
+        "controls": {},
+        "label": "WiZ Effect",
+        "id": "6d792935a06578c1",
+        "width": 300,
+        "height": 360,
+        "properties": {
+          "entityIds": [
+            "ha_light.backdoor_lower_sconce",
+            "ha_light.backdoor_upper_sconce"
+          ],
+          "effect": "Fireplace",
+          "lastTrigger": true,
+          "lastSentEffect": "Fireplace",
+          "previousStates": {
+            "ha_light.backdoor_lower_sconce": {
+              "on": true,
+              "brightness": 255,
+              "rgb_color": [
+                255,
+                211,
+                175
+              ],
+              "color_temp": 238,
+              "effect": "Fireplace"
+            },
+            "ha_light.backdoor_upper_sconce": {
+              "on": true,
+              "brightness": 255,
+              "rgb_color": [
+                255,
+                167,
+                87
+              ],
+              "color_temp": 370,
+              "effect": "Fireplace"
+            }
+          }
+        },
+        "selected": false
+      }
+    },
+    {
+      "id": "129c938740c0bf57",
+      "label": "HA Generic Device",
+      "position": {
+        "x": 875.0617283950616,
+        "y": 81.03703722541712
+      },
+      "data": {
+        "id": "129c938740c0bf57",
         "label": "HA Generic Device",
         "properties": {
           "selectedDeviceIds": [
-            "ha_light.backdoor_lower_sconce"
+            "ha_light.backdoor_lower_sconce",
+            "ha_light.backdoor_upper_sconce"
           ],
           "selectedDeviceNames": [
-            "Backdoor Lower Sconce"
+            "Backdoor Lower Sconce",
+            "Backdoor Upper Sconce"
           ],
-          "status": "Loaded 903 devices",
+          "status": "Toggled 2 device(s)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -28,14 +125,46 @@
           "customTitle": ""
         }
       }
+    },
+    {
+      "id": "211a7c5048a3e81b",
+      "label": "Toggle",
+      "position": {
+        "x": 14.129122479652352,
+        "y": 197.37634140704307
+      },
+      "data": {
+        "id": "211a7c5048a3e81b",
+        "label": "Toggle",
+        "properties": {
+          "state": true,
+          "pulseMode": false,
+          "lastCommand": true
+        }
+      }
     }
   ],
-  "connections": [],
+  "connections": [
+    {
+      "id": "a1e4b70cc973b1d4",
+      "source": "6d792935a06578c1",
+      "target": "129c938740c0bf57",
+      "sourceOutput": "hsv_out",
+      "targetInput": "hsv_info"
+    },
+    {
+      "id": "9db3fc97b2a2d8ae",
+      "source": "211a7c5048a3e81b",
+      "target": "6d792935a06578c1",
+      "sourceOutput": "state",
+      "targetInput": "trigger"
+    }
+  ],
   "viewport": {
-    "x": 243.2,
-    "y": 103.35999984741213,
-    "k": 0.81
+    "x": 59.07038345336913,
+    "y": -71.55881862640379,
+    "k": 1.0566556110000005
   },
   "autoSaved": true,
-  "timestamp": 1767053338072
+  "timestamp": 1767053693621
 }

@@ -442,6 +442,27 @@
         const inputs = Object.entries(data.inputs || {});
         const outputs = Object.entries(data.outputs || {});
 
+        // Effect preview configurations - CSS animations for each effect type
+        const effectPreviewConfig = {
+            'Fireplace': { colors: ['#ff4500', '#ff6600', '#ff8c00', '#ffa500'], animation: 'flicker', speed: '0.3s' },
+            'Ocean': { colors: ['#006994', '#40e0d0', '#00bfff', '#1e90ff'], animation: 'wave', speed: '2s' },
+            'Romance': { colors: ['#ff69b4', '#ff1493', '#db7093', '#ffb6c1'], animation: 'pulse', speed: '1.5s' },
+            'Sunset': { colors: ['#ff4500', '#ff6347', '#ff7f50', '#ffd700'], animation: 'gradient', speed: '3s' },
+            'Party': { colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'], animation: 'strobe', speed: '0.5s' },
+            'Cozy': { colors: ['#ffa07a', '#ffb347', '#ffd700'], animation: 'gentle', speed: '4s' },
+            'Forest': { colors: ['#228b22', '#32cd32', '#006400', '#90ee90'], animation: 'sway', speed: '3s' },
+            'Christmas': { colors: ['#ff0000', '#00ff00', '#ff0000', '#00ff00'], animation: 'alternate', speed: '1s' },
+            'Halloween': { colors: ['#ff6600', '#8b00ff', '#ff6600', '#000000'], animation: 'spooky', speed: '0.8s' },
+            'Candlelight': { colors: ['#ff9900', '#ffcc00', '#ff6600'], animation: 'flicker', speed: '0.4s' },
+            'Club': { colors: ['#ff00ff', '#00ffff', '#ff0000', '#0000ff'], animation: 'strobe', speed: '0.3s' },
+            'Deep dive': { colors: ['#000080', '#0000cd', '#4169e1', '#00008b'], animation: 'wave', speed: '2.5s' },
+            'Jungle': { colors: ['#006400', '#228b22', '#32cd32', '#00ff00'], animation: 'sway', speed: '2s' },
+            'Mojito': { colors: ['#00ff7f', '#98fb98', '#00fa9a', '#adff2f'], animation: 'gentle', speed: '2s' },
+            'default': { colors: ['#4fc3f7', '#29b6f6', '#03a9f4'], animation: 'pulse', speed: '2s' }
+        };
+
+        const currentPreview = effectPreviewConfig[effect] || effectPreviewConfig['default'];
+
         return React.createElement('div', { className: 'wiz-effect-node' }, [
             // Header
             React.createElement('div', { key: 'header', className: 'wiz-effect-header' }, [
@@ -452,12 +473,25 @@
                 HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
             ]),
 
+            // Effect Preview Bar
+            React.createElement('div', { 
+                key: 'preview', 
+                className: `wiz-effect-preview wiz-anim-${currentPreview.animation}`,
+                style: {
+                    '--color1': currentPreview.colors[0],
+                    '--color2': currentPreview.colors[1],
+                    '--color3': currentPreview.colors[2] || currentPreview.colors[0],
+                    '--color4': currentPreview.colors[3] || currentPreview.colors[1],
+                    '--speed': currentPreview.speed
+                }
+            }),
+
             // IO Section
             React.createElement('div', { key: 'io', className: 'wiz-effect-io' }, [
                 // Inputs
                 React.createElement('div', { key: 'inputs', className: 'wiz-effect-inputs' },
                     inputs.map(([key, input]) => 
-                        React.createElement('div', { key, className: 'wiz-effect-socket-row' }, [
+                        React.createElement('div', { key, className: 'wiz-effect-socket-row input' }, [
                             React.createElement(RefComponent, {
                                 key: 'socket',
                                 init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: input.socket, nodeId: data.id, side: "input", key } }),
@@ -468,7 +502,7 @@
                         ])
                     )
                 ),
-                // Outputs
+                // Outputs - socket on the RIGHT (after label)
                 React.createElement('div', { key: 'outputs', className: 'wiz-effect-outputs' },
                     outputs.map(([key, output]) => 
                         React.createElement('div', { key, className: 'wiz-effect-socket-row output' }, [
@@ -609,8 +643,11 @@
                     font-size: 11px;
                     color: #aaa;
                 }
+                .wiz-effect-socket-row.input {
+                    justify-content: flex-start;
+                }
                 .wiz-effect-socket-row.output {
-                    flex-direction: row-reverse;
+                    justify-content: flex-end;
                 }
                 .wiz-effect-socket-label {
                     text-transform: capitalize;
@@ -717,6 +754,88 @@
                 .wiz-effect-test-btn:disabled {
                     opacity: 0.4;
                     cursor: not-allowed;
+                }
+
+                /* Effect Preview Bar */
+                .wiz-effect-preview {
+                    height: 24px;
+                    border-radius: 6px;
+                    margin-bottom: 12px;
+                    background: linear-gradient(90deg, var(--color1), var(--color2), var(--color3), var(--color4));
+                    background-size: 300% 100%;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+                }
+
+                /* Animation types */
+                .wiz-anim-flicker {
+                    animation: wizFlicker var(--speed) ease-in-out infinite;
+                }
+                .wiz-anim-wave {
+                    animation: wizWave var(--speed) ease-in-out infinite;
+                }
+                .wiz-anim-pulse {
+                    animation: wizPulse var(--speed) ease-in-out infinite;
+                }
+                .wiz-anim-gradient {
+                    animation: wizGradient var(--speed) linear infinite;
+                }
+                .wiz-anim-strobe {
+                    animation: wizStrobe var(--speed) steps(4) infinite;
+                }
+                .wiz-anim-gentle {
+                    animation: wizGentle var(--speed) ease-in-out infinite;
+                }
+                .wiz-anim-sway {
+                    animation: wizSway var(--speed) ease-in-out infinite;
+                }
+                .wiz-anim-alternate {
+                    animation: wizAlternate var(--speed) steps(2) infinite;
+                }
+                .wiz-anim-spooky {
+                    animation: wizSpooky var(--speed) ease-in-out infinite;
+                }
+
+                @keyframes wizFlicker {
+                    0%, 100% { opacity: 1; filter: brightness(1); }
+                    25% { opacity: 0.8; filter: brightness(0.9); }
+                    50% { opacity: 1; filter: brightness(1.1); }
+                    75% { opacity: 0.9; filter: brightness(0.95); }
+                }
+                @keyframes wizWave {
+                    0%, 100% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                }
+                @keyframes wizPulse {
+                    0%, 100% { transform: scaleY(1); opacity: 0.9; }
+                    50% { transform: scaleY(1.1); opacity: 1; }
+                }
+                @keyframes wizGradient {
+                    0% { background-position: 0% 50%; }
+                    100% { background-position: 300% 50%; }
+                }
+                @keyframes wizStrobe {
+                    0% { background-position: 0% 50%; filter: brightness(1.2); }
+                    25% { background-position: 33% 50%; filter: brightness(0.8); }
+                    50% { background-position: 66% 50%; filter: brightness(1.2); }
+                    75% { background-position: 100% 50%; filter: brightness(0.8); }
+                }
+                @keyframes wizGentle {
+                    0%, 100% { opacity: 0.85; filter: brightness(0.95); }
+                    50% { opacity: 1; filter: brightness(1.05); }
+                }
+                @keyframes wizSway {
+                    0%, 100% { background-position: 0% 50%; transform: translateX(0); }
+                    50% { background-position: 50% 50%; transform: translateX(2px); }
+                }
+                @keyframes wizAlternate {
+                    0%, 49% { background-position: 0% 50%; }
+                    50%, 100% { background-position: 100% 50%; }
+                }
+                @keyframes wizSpooky {
+                    0%, 100% { opacity: 1; filter: brightness(1) hue-rotate(0deg); }
+                    25% { opacity: 0.7; filter: brightness(0.8) hue-rotate(-10deg); }
+                    50% { opacity: 1; filter: brightness(1.1) hue-rotate(10deg); }
+                    75% { opacity: 0.8; filter: brightness(0.9) hue-rotate(-5deg); }
                 }
             `)
         ]);
