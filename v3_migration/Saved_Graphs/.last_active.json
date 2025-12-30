@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "6d792935a06578c1",
+      "id": "d1aa7d3cfeb15763",
       "label": "WiZ Effect",
       "position": {
-        "x": 330.9908920551788,
-        "y": 267.1686045521343
+        "x": 910.6747381173736,
+        "y": 144.5598483195643
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "b34e8a4d8b5468d7",
+            "id": "be52f2c66268e85c",
             "control": null,
             "showControl": true
           },
@@ -23,7 +23,7 @@
               "name": "object"
             },
             "label": "HSV In",
-            "id": "c37d8055e2d7d381",
+            "id": "6c2af2d4b73602b9",
             "control": null,
             "showControl": true
           }
@@ -35,7 +35,7 @@
             },
             "label": "HSV Out",
             "multipleConnections": true,
-            "id": "8dae282e6414debb"
+            "id": "95490f841bd8a47b"
           },
           "active": {
             "socket": {
@@ -43,7 +43,7 @@
             },
             "label": "Active",
             "multipleConnections": true,
-            "id": "e6c210fc59e946fb"
+            "id": "c38dc68db64a48a8"
           },
           "applied": {
             "socket": {
@@ -51,12 +51,12 @@
             },
             "label": "Applied",
             "multipleConnections": true,
-            "id": "217014fa6fdd6b90"
+            "id": "85f76ced0e118e5d"
           }
         },
         "controls": {},
         "label": "WiZ Effect",
-        "id": "6d792935a06578c1",
+        "id": "d1aa7d3cfeb15763",
         "width": 300,
         "height": 360,
         "properties": {
@@ -64,7 +64,7 @@
             "ha_light.backdoor_lower_sconce",
             "ha_light.backdoor_upper_sconce"
           ],
-          "effect": "Fireplace",
+          "effect": "Halloween",
           "lastTrigger": true,
           "lastSentEffect": "Fireplace",
           "previousStates": {
@@ -96,14 +96,14 @@
       }
     },
     {
-      "id": "129c938740c0bf57",
+      "id": "6217d82d5b3729f8",
       "label": "HA Generic Device",
       "position": {
-        "x": 875.0617283950616,
-        "y": 81.03703722541712
+        "x": 1418.4318405708468,
+        "y": 131
       },
       "data": {
-        "id": "129c938740c0bf57",
+        "id": "6217d82d5b3729f8",
         "label": "HA Generic Device",
         "properties": {
           "selectedDeviceIds": [
@@ -114,7 +114,7 @@
             "Backdoor Lower Sconce",
             "Backdoor Upper Sconce"
           ],
-          "status": "Toggled 2 device(s)",
+          "status": "Loaded 903 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -127,14 +127,14 @@
       }
     },
     {
-      "id": "211a7c5048a3e81b",
+      "id": "7fe77e5836157997",
       "label": "Toggle",
       "position": {
-        "x": 14.129122479652352,
-        "y": 197.37634140704307
+        "x": 531.8129685418471,
+        "y": 231.76758517447308
       },
       "data": {
-        "id": "211a7c5048a3e81b",
+        "id": "7fe77e5836157997",
         "label": "Toggle",
         "properties": {
           "state": true,
@@ -142,29 +142,50 @@
           "lastCommand": true
         }
       }
+    },
+    {
+      "id": "5c58de37c7f0d561",
+      "label": "HA Device Field",
+      "position": {
+        "x": 596,
+        "y": 965.0655749051535
+      },
+      "data": {
+        "id": "5c58de37c7f0d561",
+        "label": "HA Device Field",
+        "properties": {
+          "deviceId": "ha_person.greg_teegarden",
+          "deviceName": "greg teegarden",
+          "field": "is_home",
+          "lastValue": true,
+          "filterType": "All",
+          "letterFilter": "GHI",
+          "searchText": ""
+        }
+      }
     }
   ],
   "connections": [
     {
-      "id": "a1e4b70cc973b1d4",
-      "source": "6d792935a06578c1",
-      "target": "129c938740c0bf57",
+      "id": "7235e28f7f5545c5",
+      "source": "d1aa7d3cfeb15763",
+      "target": "6217d82d5b3729f8",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "9db3fc97b2a2d8ae",
-      "source": "211a7c5048a3e81b",
-      "target": "6d792935a06578c1",
+      "id": "d29b8b06cdb804e8",
+      "source": "7fe77e5836157997",
+      "target": "d1aa7d3cfeb15763",
       "sourceOutput": "state",
       "targetInput": "trigger"
     }
   ],
   "viewport": {
-    "x": 59.07038345336913,
-    "y": -71.55881862640379,
-    "k": 1.0566556110000005
+    "x": 0,
+    "y": 0,
+    "k": 1
   },
   "autoSaved": true,
-  "timestamp": 1767053693621
+  "timestamp": 1767054185639
 }
