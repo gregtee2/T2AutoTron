@@ -59,6 +59,14 @@
         { value: 'Rhythm', label: '🎵 Rhythm' }
     ];
 
+    // Effects that support speed adjustment (dynamic/animated effects)
+    const SPEED_EFFECTS = [
+        'Ocean', 'Party', 'Club', 'Christmas', 'Halloween', 'Fireplace', 
+        'Candlelight', 'Pulse', 'Alarm', 'Romance', 'Forest', 'Deep dive',
+        'Jungle', 'Mojito', 'Spring', 'Summer', 'Fall', 'Pastel colors',
+        'Rhythm', 'Steampunk', 'Diwali', 'Snowy sky'
+    ];
+
     // =========================================================================
     // NODE CLASS
     // =========================================================================
@@ -72,6 +80,7 @@
             this.properties = {
                 entityIds: [],       // Array of HA entity_ids
                 effect: 'Fireplace', // Selected effect from dropdown (fallback)
+                speed: 100,          // Effect speed 0-200 (100 = normal, 0 = slowest, 200 = fastest)
                 lastTrigger: null,
                 lastSentEffect: null,
                 previousStates: {}   // Map of entityId -> captured state
@@ -195,11 +204,22 @@
 
             console.log(`[WizEffectNode] Sending effect "${effect}" to ${entityIds.length} lights`);
 
+            // Check if this effect supports speed
+            const supportsSpeed = SPEED_EFFECTS.includes(effect);
+            const speed = this.properties.speed;
+
             // Send to all lights in parallel
             const fetchFn = window.apiFetch || fetch;
             const results = await Promise.all(
                 entityIds.map(async (entityId) => {
                     try {
+                        // Build service data - only include speed for supported effects
+                        const serviceData = { effect: effect };
+                        if (supportsSpeed && speed !== 100) {
+                            // WiZ speed: 0-200 where 100 is normal
+                            serviceData.speed = Math.round(speed);
+                        }
+                        
                         const response = await fetchFn('/api/lights/ha/service', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -207,7 +227,7 @@
                                 domain: 'light',
                                 service: 'turn_on',
                                 entity_id: entityId.replace('ha_', ''),
-                                data: { effect: effect }
+                                data: serviceData
                             })
                         });
                         return response.ok;
@@ -307,6 +327,7 @@
     function WizEffectNodeComponent({ data, emit }) {
         const [selectedIds, setSelectedIds] = useState(data.properties.entityIds || []);
         const [effect, setEffect] = useState(data.properties.effect || 'Fireplace');
+        const [speed, setSpeed] = useState(data.properties.speed ?? 100);
         const [devices, setDevices] = useState([]);
         const [loading, setLoading] = useState(true);
         const [availableEffects, setAvailableEffects] = useState(null);
@@ -419,7 +440,11 @@
         useEffect(() => {
             data.properties.entityIds = selectedIds;
             data.properties.effect = effect;
-        }, [selectedIds, effect, data.properties]);
+            data.properties.speed = speed;
+        }, [selectedIds, effect, speed, data.properties]);
+        
+        // Check if current effect supports speed
+        const effectSupportsSpeed = SPEED_EFFECTS.includes(effect);
 
         // Toggle a light in the selection
         const toggleLight = (id) => {
@@ -446,6 +471,7 @@
             node: "Triggers WiZ light effects like Fireplace, Ocean, Party, Christmas, etc.\n\nConnect the 'Effect' input to dynamically choose effects (e.g., from a Switch node based on time).\n\nWhen active, selected lights are excluded from HSV commands.",
             lights: "Select one or more WiZ lights.\nOnly WiZ-capable bulbs are shown.\n\nThese lights will be excluded from downstream HSV while effect is running.",
             effect: "The scene/effect to play.\nWiZ has 35+ built-in effects!\n\nIf nothing connected to 'Effect' input, dropdown is used.",
+            speed: "Adjust the animation speed for dynamic effects.\n\n🐢 Slow (0) → Normal (100) → Fast (200) 🐇\n\nOnly available for animated effects like Party, Ocean, Fireplace, etc.",
             trigger: "TRUE = play effect\nFALSE = restore previous state\n\nConnect a button, time node, or sensor.",
             effect_name: "Connect a string (effect name) here.\n\nExamples: 'Ocean', 'Fireplace', 'Party'\n\nUse a Switch node to pick effects based on time of day!",
             hsv_in: "Connect your color source here.\nTimeline, spline, or manual HSV.\n\nPasses through to HSV Out.",
@@ -603,6 +629,29 @@
                             })
                         ),
                     HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.effect, size: 12 })
+                ]),
+                
+                // Speed slider row (only shown for effects that support speed)
+                effectSupportsSpeed && React.createElement('div', { key: 'speed-row', className: 'wiz-effect-row wiz-effect-speed-row' }, [
+                    React.createElement('span', { key: 'label', className: 'wiz-effect-label' }, 'Speed'),
+                    React.createElement('div', { key: 'slider-container', className: 'wiz-effect-speed-container' }, [
+                        React.createElement('span', { key: 'slow', className: 'wiz-effect-speed-label' }, '🐢'),
+                        React.createElement('input', {
+                            key: 'slider',
+                            type: 'range',
+                            className: 'wiz-effect-speed-slider',
+                            min: 0,
+                            max: 200,
+                            value: speed,
+                            onChange: (e) => setSpeed(parseInt(e.target.value, 10)),
+                            onPointerDown: (e) => e.stopPropagation()
+                        }),
+                        React.createElement('span', { key: 'fast', className: 'wiz-effect-speed-label' }, '🐇')
+                    ]),
+                    React.createElement('span', { key: 'value', className: 'wiz-effect-speed-value' }, 
+                        speed === 100 ? 'Normal' : (speed < 100 ? 'Slow' : 'Fast')
+                    ),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.speed, size: 12 })
                 ]),
 
                 // Test button
@@ -788,6 +837,54 @@
                     font-size: 11px;
                     font-style: italic;
                     text-align: center;
+                }
+                
+                /* Speed slider */
+                .wiz-effect-speed-row {
+                    margin-top: 4px;
+                }
+                .wiz-effect-speed-container {
+                    flex: 1;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .wiz-effect-speed-label {
+                    font-size: 12px;
+                    opacity: 0.7;
+                }
+                .wiz-effect-speed-slider {
+                    flex: 1;
+                    height: 4px;
+                    -webkit-appearance: none;
+                    appearance: none;
+                    background: rgba(255,255,255,0.15);
+                    border-radius: 2px;
+                    outline: none;
+                    cursor: pointer;
+                }
+                .wiz-effect-speed-slider::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    width: 14px;
+                    height: 14px;
+                    background: #4fc3f7;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                }
+                .wiz-effect-speed-slider::-moz-range-thumb {
+                    width: 14px;
+                    height: 14px;
+                    background: #4fc3f7;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    border: none;
+                }
+                .wiz-effect-speed-value {
+                    min-width: 45px;
+                    font-size: 10px;
+                    color: #888;
+                    text-align: right;
                 }
 
                 /* Effect Preview Bar */

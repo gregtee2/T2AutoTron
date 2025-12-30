@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "321f4be9b2cc171d",
+      "id": "c186a55ae68a536a",
       "label": "WiZ Effect",
       "position": {
-        "x": 1089.7858492284847,
-        "y": 408.02898431041353
+        "x": 1165.4858326169228,
+        "y": 452.7717622863495
       },
       "data": {
         "inputs": {
@@ -14,16 +14,16 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "5b774b2cd1d5c9e7",
+            "id": "c335575bce8060bb",
             "control": null,
             "showControl": true
           },
-          "next": {
+          "effect_name": {
             "socket": {
-              "name": "boolean"
+              "name": "any"
             },
-            "label": "Next",
-            "id": "9a64cd4fa5332e16",
+            "label": "Effect",
+            "id": "422c80a31e45a15c",
             "control": null,
             "showControl": true
           },
@@ -32,7 +32,7 @@
               "name": "object"
             },
             "label": "HSV In",
-            "id": "c840061100661325",
+            "id": "eff0727289784d2a",
             "control": null,
             "showControl": true
           }
@@ -44,7 +44,7 @@
             },
             "label": "HSV Out",
             "multipleConnections": true,
-            "id": "4121027dc26a2b9d"
+            "id": "1d6eb79033a73a2f"
           },
           "active": {
             "socket": {
@@ -52,7 +52,7 @@
             },
             "label": "Active",
             "multipleConnections": true,
-            "id": "c3b6b70a6319d786"
+            "id": "290c8d46c343d8f2"
           },
           "applied": {
             "socket": {
@@ -60,31 +60,19 @@
             },
             "label": "Applied",
             "multipleConnections": true,
-            "id": "cbb6e3f3ab7df831"
-          },
-          "effect_name": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Effect Name",
-            "multipleConnections": true,
-            "id": "26187a4e0b302066"
+            "id": "66e24b76004e2fda"
           }
         },
         "controls": {},
         "label": "WiZ Effect",
-        "id": "321f4be9b2cc171d",
+        "id": "c186a55ae68a536a",
         "width": 300,
-        "height": 420,
+        "height": 400,
         "properties": {
           "entityIds": [
-            "ha_light.backdoor_lower_sconce",
-            "ha_light.backdoor_upper_sconce"
+            "ha_light.laundry_room_sink_light"
           ],
           "effect": "Fireplace",
-          "cycleEffects": [],
-          "cycleIndex": 0,
-          "cycleMode": false,
           "lastTrigger": true,
           "lastSentEffect": "Fireplace",
           "previousStates": {
@@ -93,11 +81,10 @@
               "brightness": 255,
               "rgb_color": [
                 255,
-                211,
+                210,
                 175
               ],
-              "color_temp": 238,
-              "effect": "Fireplace"
+              "effect": null
             },
             "ha_light.backdoor_upper_sconce": {
               "on": true,
@@ -107,8 +94,7 @@
                 167,
                 87
               ],
-              "color_temp": 370,
-              "effect": "Fireplace"
+              "effect": null
             }
           }
         },
@@ -116,25 +102,23 @@
       }
     },
     {
-      "id": "fd3f9321263dcac1",
+      "id": "6613525598c40067",
       "label": "HA Generic Device",
       "position": {
-        "x": 1680.542951681958,
-        "y": 246.46913599084922
+        "x": 1757.086161558501,
+        "y": 313.13580265751585
       },
       "data": {
-        "id": "fd3f9321263dcac1",
+        "id": "6613525598c40067",
         "label": "HA Generic Device",
         "properties": {
           "selectedDeviceIds": [
-            "ha_light.backdoor_lower_sconce",
-            "ha_light.backdoor_upper_sconce"
+            "ha_light.laundry_room_sink_light"
           ],
           "selectedDeviceNames": [
-            "Backdoor Lower Sconce",
-            "Backdoor Upper Sconce"
+            "Laundry Room Sink Light"
           ],
-          "status": "Loaded 903 devices",
+          "status": "Toggled 2 device(s)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -147,14 +131,14 @@
       }
     },
     {
-      "id": "6f7bb60fdf287689",
+      "id": "83730935cdcba575",
       "label": "Toggle",
       "position": {
-        "x": 772.9240796529583,
-        "y": 338.2367211653223
+        "x": 831.7595332792961,
+        "y": 539.819625928793
       },
       "data": {
-        "id": "6f7bb60fdf287689",
+        "id": "83730935cdcba575",
         "label": "Toggle",
         "properties": {
           "state": true,
@@ -164,14 +148,14 @@
       }
     },
     {
-      "id": "0e4fd804780a5018",
+      "id": "3db75b89fdec2191",
       "label": "HA Device Field",
       "position": {
-        "x": 291.1111111111111,
-        "y": 924.5347108960027
+        "x": 367.65432098765433,
+        "y": 991.2013775626694
       },
       "data": {
-        "id": "0e4fd804780a5018",
+        "id": "3db75b89fdec2191",
         "label": "HA Device Field",
         "properties": {
           "deviceId": "ha_person.greg_teegarden",
@@ -183,29 +167,81 @@
           "searchText": ""
         }
       }
+    },
+    {
+      "id": "3fa4f1a401443f01",
+      "label": "Debug",
+      "position": {
+        "x": 1405.751290512849,
+        "y": 865.3965350861383
+      },
+      "data": {
+        "inputs": {
+          "input": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Input",
+            "id": "0ec6a525fc00abad",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "3b154843c94357e4"
+          }
+        },
+        "controls": {},
+        "label": "Debug",
+        "id": "3fa4f1a401443f01",
+        "width": 260,
+        "properties": {
+          "name": "",
+          "toConsole": false,
+          "maxHistory": 10,
+          "enabled": true,
+          "history": [],
+          "currentValue": true,
+          "messageCount": 0
+        },
+        "selected": false
+      }
     }
   ],
   "connections": [
     {
-      "id": "a6e299896d778f92",
-      "source": "321f4be9b2cc171d",
-      "target": "fd3f9321263dcac1",
+      "id": "096259facace09f5",
+      "source": "c186a55ae68a536a",
+      "target": "6613525598c40067",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "e39a13048fdc0274",
-      "source": "6f7bb60fdf287689",
-      "target": "321f4be9b2cc171d",
+      "id": "528829f39d181a0c",
+      "source": "83730935cdcba575",
+      "target": "c186a55ae68a536a",
       "sourceOutput": "state",
       "targetInput": "trigger"
+    },
+    {
+      "id": "823fca7b9195cd68",
+      "source": "c186a55ae68a536a",
+      "target": "3fa4f1a401443f01",
+      "sourceOutput": "active",
+      "targetInput": "input"
     }
   ],
   "viewport": {
-    "x": -515.769637298584,
-    "y": -235.42360515594476,
-    "k": 1.1053558694552073
+    "x": 254.08866958618157,
+    "y": 45.85957925319673,
+    "k": 0.4854805195199541
   },
   "autoSaved": true,
-  "timestamp": 1767054630443
+  "timestamp": 1767056042739
 }
