@@ -1657,6 +1657,221 @@ class HueEffectNode {
   }
 }
 
+// ============================================================================
+// WizEffectNode - Backend implementation for triggering WiZ light effects
+// WiZ bulbs have 35+ built-in scenes/effects accessible via HA's effect attribute
+// ============================================================================
+class WizEffectNode {
+  constructor() {
+    this.type = 'WizEffectNode';
+    this.label = 'WiZ Effect';
+    
+    // WiZ scene names (as exposed by HA WiZ integration)
+    this.availableEffects = [
+      'Ocean', 'Romance', 'Sunset', 'Party', 'Fireplace', 'Cozy', 'Forest',
+      'Pastel colors', 'Wake-up', 'Bedtime', 'Warm white', 'Daylight',
+      'Cool white', 'Night light', 'Focus', 'Relax', 'True colors', 'TV time',
+      'Plantgrowth', 'Spring', 'Summer', 'Fall', 'Deep dive', 'Jungle',
+      'Mojito', 'Club', 'Christmas', 'Halloween', 'Candlelight', 'Golden white',
+      'Pulse', 'Steampunk', 'Diwali', 'White', 'Alarm', 'Snowy sky', 'Rhythm'
+    ];
+    
+    this.properties = {
+      entityIds: [],       // Array of HA entity_ids for WiZ lights
+      effect: 'Fireplace', // Selected effect name (default to a nice one)
+      previousStates: {},  // Captured states before effect was applied
+      debug: false
+    };
+    
+    this.lastTrigger = null;
+    this.isEffectActive = false;
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+    if (this.properties.debug) {
+      console.log(`[WizEffectNode ${this.id?.slice(-8) || '???'}] Restored with ${this.properties.entityIds?.length || 0} lights, effect: ${this.properties.effect}`);
+    }
+  }
+
+  async callHAService(domain, service, entityId, data = {}) {
+    const config = getHAConfig();
+    if (!config.token) {
+      console.error('[WizEffectNode] No HA_TOKEN configured');
+      return { success: false, error: 'No token' };
+    }
+
+    const url = `${config.host}/api/services/${domain}/${service}`;
+    const payload = { entity_id: entityId, ...data };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        console.error(`[WizEffectNode] HTTP ${response.status} calling ${domain}.${service}`);
+        return { success: false, error: `HTTP ${response.status}` };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error(`[WizEffectNode] Error calling ${domain}.${service}:`, error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async captureStatesAndApplyEffect() {
+    const entityIds = this.properties.entityIds;
+    const effect = this.properties.effect;
+
+    if (!entityIds || entityIds.length === 0) {
+      console.warn('[WizEffectNode] No lights configured');
+      return;
+    }
+
+    // Capture current state for each light
+    this.properties.previousStates = {};
+    
+    for (const entityId of entityIds) {
+      try {
+        // Remove ha_ prefix if present
+        const cleanId = entityId.replace('ha_', '');
+        const state = await bulkStateCache.getState(cleanId);
+        
+        if (state) {
+          const attrs = state.attributes || {};
+          this.properties.previousStates[entityId] = {
+            on: state.state === 'on',
+            brightness: attrs.brightness,
+            rgb_color: attrs.rgb_color,
+            color_temp: attrs.color_temp,
+            effect: attrs.effect || null
+          };
+        }
+      } catch (err) {
+        console.warn(`[WizEffectNode] Could not capture state for ${entityId}:`, err.message);
+      }
+    }
+
+    console.log(`[WizEffectNode] Captured states for ${Object.keys(this.properties.previousStates).length} lights`);
+    console.log(`[WizEffectNode] 🎨 Applying WiZ effect "${effect}" to ${entityIds.length} lights`);
+
+    // Send effect to all lights
+    let successCount = 0;
+    for (const entityId of entityIds) {
+      const cleanId = entityId.replace('ha_', '');
+      const result = await this.callHAService('light', 'turn_on', cleanId, { effect });
+      if (result.success) successCount++;
+    }
+
+    console.log(`[WizEffectNode] ✅ Effect sent to ${successCount}/${entityIds.length} lights`);
+    this.isEffectActive = true;
+  }
+
+  async restorePreviousStates() {
+    const entityIds = this.properties.entityIds;
+    const prevStates = this.properties.previousStates;
+
+    if (!entityIds || entityIds.length === 0 || !prevStates || Object.keys(prevStates).length === 0) {
+      console.log('[WizEffectNode] No previous states to restore');
+      return;
+    }
+
+    console.log(`[WizEffectNode] 🔄 Restoring ${Object.keys(prevStates).length} lights`);
+
+    let successCount = 0;
+    for (const entityId of entityIds) {
+      const prev = prevStates[entityId];
+      if (!prev) continue;
+
+      const cleanId = entityId.replace('ha_', '');
+
+      try {
+        // If light was off, turn it off
+        if (!prev.on) {
+          await this.callHAService('light', 'turn_off', cleanId);
+          successCount++;
+          continue;
+        }
+
+        // Build service data to restore state
+        const serviceData = {};
+
+        if (prev.brightness !== undefined && prev.brightness !== null) {
+          serviceData.brightness = prev.brightness;
+        }
+
+        if (prev.rgb_color && Array.isArray(prev.rgb_color) && prev.rgb_color.length === 3) {
+          serviceData.rgb_color = prev.rgb_color;
+        } else if (prev.color_temp !== undefined && prev.color_temp !== null) {
+          serviceData.color_temp = prev.color_temp;
+        }
+
+        await this.callHAService('light', 'turn_on', cleanId, serviceData);
+        successCount++;
+      } catch (err) {
+        console.error(`[WizEffectNode] Error restoring ${entityId}:`, err.message);
+      }
+    }
+
+    console.log(`[WizEffectNode] ✅ Restored ${successCount}/${entityIds.length} lights`);
+    this.properties.previousStates = {};
+    this.isEffectActive = false;
+  }
+
+  async data(inputs) {
+    const trigger = inputs.trigger?.[0];
+    const hsvIn = inputs.hsv_in?.[0];
+    const hasLights = this.properties.entityIds && this.properties.entityIds.length > 0;
+    
+    // Build HSV output with exclusion metadata when effect is active
+    const buildHsvOutput = (active) => {
+      if (!hsvIn) return null;
+      
+      if (active && hasLights) {
+        // Pass HSV through but tell downstream to exclude our lights
+        const existingExcludes = hsvIn._excludeDevices || [];
+        const ourExcludes = this.properties.entityIds || [];
+        const allExcludes = [...new Set([...existingExcludes, ...ourExcludes])];
+        
+        return { ...hsvIn, _excludeDevices: allExcludes };
+      }
+      
+      return hsvIn;
+    };
+
+    // Detect rising edge (false→true or null→true) - activate effect
+    if (trigger === true && this.lastTrigger !== true && hasLights && this.properties.effect) {
+      this.lastTrigger = trigger;
+      await this.captureStatesAndApplyEffect();
+      return { hsv_out: buildHsvOutput(true), applied: true, active: true };
+    }
+    
+    // Detect falling edge (true→false) - restore previous state
+    if (trigger === false && this.lastTrigger === true && hasLights) {
+      this.lastTrigger = trigger;
+      await this.restorePreviousStates();
+      return { hsv_out: buildHsvOutput(false), applied: false, active: false };
+    }
+
+    this.lastTrigger = trigger;
+    
+    return { 
+      hsv_out: buildHsvOutput(this.isEffectActive), 
+      applied: false, 
+      active: this.isEffectActive 
+    };
+  }
+}
+
 // Register nodes
 registry.register('HADeviceStateNode', HADeviceStateNode);
 registry.register('HADeviceStateOutputNode', HADeviceStateNode);  // Alias
@@ -1667,6 +1882,7 @@ registry.register('HAGenericDeviceNode', HAGenericDeviceNode);
 registry.register('HADeviceAutomationNode', HADeviceAutomationNode);
 registry.register('HALockNode', HALockNode);
 registry.register('HueEffectNode', HueEffectNode);
+registry.register('WizEffectNode', WizEffectNode);
 
 module.exports = { 
   HADeviceStateNode, 
@@ -1677,5 +1893,6 @@ module.exports = {
   HADeviceStateDisplayNode,
   HALockNode,
   HueEffectNode,
+  WizEffectNode,
   getHAConfig
 };
