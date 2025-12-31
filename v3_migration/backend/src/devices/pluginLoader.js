@@ -39,7 +39,8 @@ function normalizeManager(manager, file) {
       getConnectionStatus: manager.getConnectionStatus || null,
       // Pass through HA-specific methods for TTS/media players
       speakTTS: manager.speakTTS || null,
-      getMediaPlayers: manager.getMediaPlayers || null
+      getMediaPlayers: manager.getMediaPlayers || null,
+      getTtsEntities: manager.getTtsEntities || null
     };
   }
 

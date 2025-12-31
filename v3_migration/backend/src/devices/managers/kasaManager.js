@@ -1,9 +1,19 @@
 const { Client: KasaClient } = require('tplink-smarthome-api');
 const logger = require('../../logging/logger');
 
+// Silent logger to suppress tplink-smarthome-api's internal TCP error spam
+// The library logs full stack traces for every timeout, which floods the console
+const silentLogger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},  // Suppress the TCP timeout stack traces
+};
+
 // Create Kasa client with error handling options
 const kasaClient = new KasaClient({
-  logLevel: 'error', // Only log errors from the library
+  logLevel: 'silent', // Completely silence the library's logging
+  logger: silentLogger, // Use our silent logger to suppress TCP error stack traces
   timeout: 5000,     // 5 second timeout for device communication
 });
 

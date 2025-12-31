@@ -505,20 +505,53 @@ class HomeAssistantManager {
       return { success: false, error: 'No HA token configured' };
     }
 
-    // Strip 'ha_' prefix if present
+    // Strip 'ha_' prefix if present (this is the media_player target)
     const cleanEntityId = entityId.startsWith('ha_') ? entityId.slice(3) : entityId;
 
     try {
-      // Try services in order of preference:
-      // 1. tts.cloud_say (Nabu Casa)
-      // 2. tts.google_translate_say
-      // 3. tts.speak (generic)
-      
-      const ttsServices = [
-        { service: 'tts/cloud_say', payload: { entity_id: cleanEntityId, message, language: options.language || 'en-US' } },
-        { service: 'tts/google_translate_say', payload: { entity_id: cleanEntityId, message } },
-        { service: 'tts/speak', payload: { entity_id: cleanEntityId, media_player_entity_id: cleanEntityId, message } }
-      ];
+      let ttsServices;
+      if (options.tts_service) {
+        // Use only the selected service
+        if (options.tts_service === 'tts/speak') {
+          // tts.speak requires a TTS entity as the target, and media_player as the speaker
+          // The tts_entity_id is the TTS engine (e.g., 'tts.google_translate_en_com')
+          const ttsEntityId = options.tts_entity_id;
+          if (!ttsEntityId) {
+            logger.log('tts.speak requires a TTS entity (tts_entity_id option)', 'warn');
+            return { success: false, error: 'tts.speak requires selecting a TTS engine' };
+          }
+          ttsServices = [
+            { 
+              service: 'tts/speak', 
+              payload: { 
+                entity_id: ttsEntityId,  // The TTS engine entity
+                media_player_entity_id: cleanEntityId,  // The speaker to play on
+                message 
+              } 
+            }
+          ];
+        } else if (options.tts_service === 'tts/cloud_say') {
+          ttsServices = [
+            { service: 'tts/cloud_say', payload: { entity_id: cleanEntityId, message, language: options.language || 'en-US' } }
+          ];
+        } else if (options.tts_service === 'tts/google_translate_say') {
+          ttsServices = [
+            { service: 'tts/google_translate_say', payload: { entity_id: cleanEntityId, message } }
+          ];
+        } else {
+          // Unknown service, fallback to all
+          ttsServices = [
+            { service: options.tts_service, payload: { entity_id: cleanEntityId, message } }
+          ];
+        }
+      } else {
+        // Default order
+        ttsServices = [
+          { service: 'tts/cloud_say', payload: { entity_id: cleanEntityId, message, language: options.language || 'en-US' } },
+          { service: 'tts/google_translate_say', payload: { entity_id: cleanEntityId, message } },
+          { service: 'tts/speak', payload: { entity_id: cleanEntityId, media_player_entity_id: cleanEntityId, message } }
+        ];
+      }
 
       logger.log(`Sending TTS to ${cleanEntityId}: "${message}"`, 'info', false, 'ha:tts');
 
@@ -563,6 +596,39 @@ class HomeAssistantManager {
     logger.log(`Found ${players.length} media players: ${players.map(p => p.id).join(', ')}`, 'info');
     return players;
   }
+
+  /**
+   * Get all TTS entities (e.g., tts.google_translate_en_com)
+   * These are the "Target" entities shown in the HA tts.speak service UI
+   */
+  async getTtsEntities() {
+    if (!this.config.token) {
+      logger.log('Cannot get TTS entities: No HA token configured', 'error');
+      return [];
+    }
+
+    try {
+      const response = await fetch(`${this.config.host}/api/states`, {
+        headers: { Authorization: `Bearer ${this.config.token}` },
+      });
+      if (!response.ok) throw new Error(`HA API error: ${response.status}`);
+      const states = await response.json();
+      
+      // Filter for TTS entities (entity_id starts with 'tts.')
+      const ttsEntities = states
+        .filter(s => s.entity_id.startsWith('tts.'))
+        .map(s => ({
+          entity_id: s.entity_id,
+          friendly_name: s.attributes.friendly_name || s.entity_id.replace('tts.', '').replace(/_/g, ' ')
+        }));
+      
+      logger.log(`Found ${ttsEntities.length} TTS entities: ${ttsEntities.map(e => e.entity_id).join(', ')}`, 'info');
+      return ttsEntities;
+    } catch (error) {
+      logger.log(`Failed to get TTS entities: ${error.message}`, 'error');
+      return [];
+    }
+  }
 }
 
 // Create singleton instance
@@ -582,6 +648,7 @@ module.exports = {
   updateConfig: () => instance.updateConfig(),
   speakTTS: (entityId, message, options) => instance.speakTTS(entityId, message, options),
   getMediaPlayers: () => instance.getMediaPlayers(),
+  getTtsEntities: () => instance.getTtsEntities(),
   // Expose connection status for status requests
   getConnectionStatus: () => ({
     isConnected: instance.isConnected,

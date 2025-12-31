@@ -399,14 +399,18 @@ async function fetchHourlyRainForecast(dayOffset = 0, haToken = null) {
   
   const cacheKey = `day_${dayOffset}`;
   const now = Date.now();
+  const currentHour = new Date().getHours();
   
-  // Check cache
+  // For today's forecast, include current hour in cache key so it refreshes each hour
+  const todayCacheKey = dayOffset === 0 ? `day_0_hour_${currentHour}` : cacheKey;
+  
+  // Check cache (use hour-specific key for today)
   if (cachedHourlyRain && 
-      cachedHourlyRain[cacheKey] && 
+      cachedHourlyRain[todayCacheKey] && 
       lastHourlyRainFetch && 
       (now - lastHourlyRainFetch) < HOURLY_RAIN_CACHE_TIMEOUT) {
     debugLog('Returning cached hourly rain data');
-    return cachedHourlyRain[cacheKey];
+    return cachedHourlyRain[todayCacheKey];
   }
   
   try {
@@ -468,15 +472,29 @@ async function fetchHourlyRainForecast(dayOffset = 0, haToken = null) {
     const hourlyProb = data.hourly.precipitation_probability;
     const hourlyAmount = data.hourly.precipitation; // mm
     
-    // Find the start of the requested day
+    // For today (dayOffset=0), show rolling 24-hour window from current hour
+    // For future days, show the full calendar day
+    const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const targetDay = new Date(today);
-    targetDay.setDate(targetDay.getDate() + dayOffset);
-    const targetDayEnd = new Date(targetDay);
-    targetDayEnd.setDate(targetDayEnd.getDate() + 1);
     
-    // Filter hours for the target day
+    let windowStart, windowEnd;
+    
+    if (dayOffset === 0) {
+      // Rolling 24-hour window starting from current hour
+      windowStart = new Date(now);
+      windowStart.setMinutes(0, 0, 0); // Start of current hour
+      windowEnd = new Date(windowStart);
+      windowEnd.setHours(windowEnd.getHours() + 24); // 24 hours from now
+    } else {
+      // Full calendar day for future days
+      windowStart = new Date(today);
+      windowStart.setDate(windowStart.getDate() + dayOffset);
+      windowEnd = new Date(windowStart);
+      windowEnd.setDate(windowEnd.getDate() + 1);
+    }
+    
+    // Filter hours for the time window
     const hours = [];
     let rainPeriods = [];
     let currentRainPeriod = null;
@@ -484,7 +502,7 @@ async function fetchHourlyRainForecast(dayOffset = 0, haToken = null) {
     for (let i = 0; i < hourlyTimes.length; i++) {
       const hourTime = new Date(hourlyTimes[i]);
       
-      if (hourTime >= targetDay && hourTime < targetDayEnd) {
+      if (hourTime >= windowStart && hourTime < windowEnd) {
         const hour = hourTime.getHours();
         const probability = hourlyProb[i] || 0;
         const amountMm = hourlyAmount[i] || 0;
@@ -555,9 +573,9 @@ async function fetchHourlyRainForecast(dayOffset = 0, haToken = null) {
       fetchedAt: new Date().toISOString()
     };
     
-    // Cache the result
+    // Cache the result (use hour-specific key for today)
     if (!cachedHourlyRain) cachedHourlyRain = {};
-    cachedHourlyRain[cacheKey] = result;
+    cachedHourlyRain[todayCacheKey] = result;
     lastHourlyRainFetch = now;
     
     debugLog(`Hourly rain success: ${summary}`);

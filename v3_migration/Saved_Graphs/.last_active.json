@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "a91a88d06fe7a813",
+      "id": "42c10dd091862e92",
       "label": "TTS Announcement",
       "position": {
-        "x": 550.6913587782118,
-        "y": 199.55555574393563
+        "x": 659.9080591831541,
+        "y": 201.1455666069925
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "8a6ca7326ae4d73b",
+            "id": "dd7fb280e1848a9f",
             "control": null,
             "showControl": true
           },
@@ -23,7 +23,7 @@
               "name": "any"
             },
             "label": "Message",
-            "id": "21a5dc0de68b5892",
+            "id": "f3eca81795cc4baa",
             "control": null,
             "showControl": true
           }
@@ -35,28 +35,35 @@
             },
             "label": "Success",
             "multipleConnections": true,
-            "id": "5610541610a922e2"
+            "id": "9f7bc00facf0ec33"
           }
         },
         "controls": {},
         "label": "TTS Announcement",
-        "id": "a91a88d06fe7a813",
+        "id": "42c10dd091862e92",
         "width": 280,
         "height": 220,
         "properties": {
           "mediaPlayerId": "media_player.homepodoffice",
           "message": "Hello, this is a test announcement",
+          "ttsService": "elevenlabs",
+          "ttsEntityId": "tts.google_translate_en_com",
+          "elevenLabsVoiceId": "uhYnkYTBc711oAY590Ea",
+          "elevenLabsVoiceName": "Charlotte - Meditation & Relaxation",
           "lastResult": null
-        }
+        },
+        "_lastTrigger": false,
+        "_lastSentTime": 0,
+        "selected": true
       }
     }
   ],
   "connections": [],
   "viewport": {
-    "x": 194.93999938964845,
-    "y": 103.35999984741213,
-    "k": 0.81
+    "x": -117.07879638671876,
+    "y": -102.23469638824463,
+    "k": 1.3045131000000005
   },
   "autoSaved": true,
-  "timestamp": 1767195726469
+  "timestamp": 1767213656649
 }

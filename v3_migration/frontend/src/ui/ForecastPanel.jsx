@@ -448,7 +448,7 @@ export function ForecastPanel({ dockSlotRef }) {
                                             <div 
                                                 key={idx} 
                                                 className={`rain-bar-wrapper ${intensity !== 'none' ? 'has-rain' : ''}`}
-                                                title={`${timeLabel}: ${hour.probability}% chance${hour.amountMm > 0 ? `, ${hour.amountMm}mm` : ''}`}
+                                                title={`${timeLabel}: ${hour.probability}% chance${hour.amountIn > 0 ? `, ${hour.amountIn}"` : ''}`}
                                             >
                                                 {idx % 4 === 0 && hour.probability > 0 && (
                                                     <span className="rain-prob-label">{hour.probability}%</span>

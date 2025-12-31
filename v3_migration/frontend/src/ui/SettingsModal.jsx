@@ -222,6 +222,15 @@ const SETTINGS_CONFIG = [
         ]
     },
     {
+        category: 'ElevenLabs TTS',
+        icon: '🎙️',
+        description: 'AI voice generation for TTS Announcement node',
+        settings: [
+            { key: 'ELEVENLABS_API_KEY', label: 'API Key', placeholder: 'Your ElevenLabs API key', type: 'password', isSecret: true, hint: 'Get one at elevenlabs.io' },
+            { key: 'PUBLIC_URL', label: 'Public URL', placeholder: 'http://192.168.1.x:3000', type: 'text', hint: 'URL reachable by your speakers (for audio playback)' }
+        ]
+    },
+    {
         category: 'Location',
         icon: '📍',
         description: 'Your location for sunrise/sunset calculations and weather',

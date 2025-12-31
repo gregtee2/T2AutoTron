@@ -53,6 +53,10 @@
             this.properties = {
                 mediaPlayerId: '',
                 message: 'Hello, this is a test announcement',
+                ttsService: 'tts/speak',
+                ttsEntityId: '', // The TTS engine entity (e.g., tts.google_translate_en_com) - required for tts.speak
+                elevenLabsVoiceId: '', // ElevenLabs voice ID
+                elevenLabsVoiceName: '', // Display name for UI
                 lastResult: null
             };
 
@@ -63,31 +67,60 @@
             // Outputs
             this.addOutput('success', new ClassicPreset.Output(sockets.boolean, 'Success'));
 
-            // Track last trigger to detect edges
-            this._lastTrigger = undefined;
+            // Track last trigger to detect rising edge (false->true only)
+            this._lastTrigger = false;
+            this._lastSentTime = 0;  // Debounce: prevent rapid-fire
         }
 
         async data(inputs) {
             const trigger = inputs.trigger?.[0];
             const dynamicMessage = inputs.message?.[0];
 
-            // Detect rising edge of trigger
-            if (trigger && trigger !== this._lastTrigger) {
-                this._lastTrigger = trigger;
+            // Strict rising edge detection: only fire when trigger goes from false/undefined to TRUE
+            const triggerIsTrue = trigger === true;
+            const wasTriggered = this._lastTrigger === true;
+            
+            // Debounce: don't send more than once per second
+            const now = Date.now();
+            const debounceMs = 1000;
+            
+            if (triggerIsTrue && !wasTriggered && (now - this._lastSentTime) > debounceMs) {
+                this._lastTrigger = true;
+                this._lastSentTime = now;
                 
-                const message = dynamicMessage || this.properties.message;
+                // Use dynamic message if provided, otherwise fall back to static
+                // Use explicit check so empty string from dynamic input doesn't fall back
+                const message = (dynamicMessage !== undefined && dynamicMessage !== null && dynamicMessage !== '') 
+                    ? dynamicMessage 
+                    : this.properties.message;
+                    
                 if (this.properties.mediaPlayerId && message) {
                     // Send TTS via socket
                     if (window.socket) {
-                        window.socket.emit('request-tts', {
-                            entityId: this.properties.mediaPlayerId,
-                            message: message
-                        });
+                        if (this.properties.ttsService === 'elevenlabs') {
+                            // Use ElevenLabs TTS
+                            window.socket.emit('request-elevenlabs-tts', {
+                                message: message,
+                                voiceId: this.properties.elevenLabsVoiceId,
+                                mediaPlayerId: this.properties.mediaPlayerId
+                            });
+                        } else {
+                            // Use HA TTS
+                            window.socket.emit('request-tts', {
+                                entityId: this.properties.mediaPlayerId,
+                                message: message,
+                                options: { 
+                                    tts_service: this.properties.ttsService,
+                                    tts_entity_id: this.properties.ttsEntityId
+                                }
+                            });
+                        }
                         this.properties.lastResult = true;
                     }
                 }
-            } else if (!trigger) {
-                this._lastTrigger = undefined;
+            } else if (!triggerIsTrue) {
+                // Reset trigger state when trigger goes to false/undefined
+                this._lastTrigger = false;
             }
 
             return {
@@ -98,7 +131,11 @@
         serialize() {
             return {
                 mediaPlayerId: this.properties.mediaPlayerId,
-                message: this.properties.message
+                message: this.properties.message,
+                ttsService: this.properties.ttsService,
+                ttsEntityId: this.properties.ttsEntityId,
+                elevenLabsVoiceId: this.properties.elevenLabsVoiceId,
+                elevenLabsVoiceName: this.properties.elevenLabsVoiceName
             };
         }
 
@@ -106,52 +143,104 @@
             const props = state.properties || state;
             if (props.mediaPlayerId !== undefined) this.properties.mediaPlayerId = props.mediaPlayerId;
             if (props.message !== undefined) this.properties.message = props.message;
+            if (props.ttsService !== undefined) this.properties.ttsService = props.ttsService;
+            if (props.ttsEntityId !== undefined) this.properties.ttsEntityId = props.ttsEntityId;
+            if (props.elevenLabsVoiceId !== undefined) this.properties.elevenLabsVoiceId = props.elevenLabsVoiceId;
+            if (props.elevenLabsVoiceName !== undefined) this.properties.elevenLabsVoiceName = props.elevenLabsVoiceName;
         }
     }
 
     // React Component
     function TTSAnnouncementComponent({ data, emit }) {
         const [mediaPlayers, setMediaPlayers] = useState([]);
+        const [ttsEntities, setTtsEntities] = useState([]);
+        const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
         const [selectedPlayer, setSelectedPlayer] = useState(data.properties.mediaPlayerId || '');
+        const [selectedTtsEntity, setSelectedTtsEntity] = useState(data.properties.ttsEntityId || '');
+        const [selectedVoice, setSelectedVoice] = useState(data.properties.elevenLabsVoiceId || '');
         const [message, setMessage] = useState(data.properties.message || '');
+        const [ttsService, setTtsService] = useState(data.properties.ttsService || 'tts/speak');
         const [testStatus, setTestStatus] = useState('');
         const { NodeHeader, HelpIcon } = window.T2Controls || {};
 
-        // Fetch media players on mount
+        // Fetch media players and TTS entities on mount ONLY (empty deps = runs once)
+        // Use unique event names scoped to this node instance to prevent cross-talk
+        const nodeId = data.id;
+        
         useEffect(() => {
-            if (window.socket) {
-                const onMediaPlayers = (players) => {
-                    setMediaPlayers(players || []);
-                    // If we have a saved player, verify it still exists
-                    if (data.properties.mediaPlayerId) {
-                        const exists = players?.some(p => p.id === data.properties.mediaPlayerId || 
-                            p.id === `ha_${data.properties.mediaPlayerId}`);
-                        if (!exists && players?.length > 0) {
-                            // Player no longer exists, clear selection
+            if (!window.socket) return;
+            
+            // Create handlers with stable references
+            const onMediaPlayers = (players) => {
+                setMediaPlayers(players || []);
+            };
+
+            const onTtsEntities = (entities) => {
+                setTtsEntities(entities || []);
+                // Auto-select first TTS entity if none selected
+                if (!selectedTtsEntity && entities?.length > 0) {
+                    const first = entities[0]?.entity_id || '';
+                    setSelectedTtsEntity(first);
+                    data.properties.ttsEntityId = first;
+                }
+            };
+
+            const onElevenLabsVoices = (voices) => {
+                if (voices?.error) {
+                    console.warn('ElevenLabs voices error:', voices.error);
+                    setElevenLabsVoices([]);
+                } else {
+                    setElevenLabsVoices(voices || []);
+                    // Auto-select Charlotte if available and no voice selected
+                    if (!selectedVoice && voices?.length > 0) {
+                        const charlotte = voices.find(v => v.name?.toLowerCase() === 'charlotte');
+                        if (charlotte) {
+                            setSelectedVoice(charlotte.voice_id);
+                            data.properties.elevenLabsVoiceId = charlotte.voice_id;
+                            data.properties.elevenLabsVoiceName = charlotte.name;
                         }
                     }
-                };
+                }
+            };
 
-                window.socket.on('media-players', onMediaPlayers);
-                window.socket.emit('request-media-players');
+            // TTS result handlers - use node-scoped event to prevent stacking
+            const onTTSResult = (result) => {
+                setTestStatus(result.success ? '✓ Sent!' : '✗ ' + (result.error || 'Failed'));
+                setTimeout(() => setTestStatus(''), 3000);
+            };
 
-                // Also listen for TTS results for test button feedback
-                const onTTSResult = (result) => {
-                    if (result.success) {
-                        setTestStatus('✓ Sent!');
-                    } else {
-                        setTestStatus('✗ ' + (result.error || 'Failed'));
-                    }
-                    setTimeout(() => setTestStatus(''), 3000);
-                };
-                window.socket.on('tts-result', onTTSResult);
+            const onElevenLabsResult = (result) => {
+                setTestStatus(result.success ? '✓ Playing!' : '✗ ' + (result.error || 'Failed'));
+                setTimeout(() => setTestStatus(''), 3000);
+            };
 
-                return () => {
-                    window.socket.off('media-players', onMediaPlayers);
-                    window.socket.off('tts-result', onTTSResult);
-                };
-            }
-        }, []);
+            // Remove any existing handlers first (prevents stacking)
+            window.socket.off('media-players', onMediaPlayers);
+            window.socket.off('tts-entities', onTtsEntities);
+            window.socket.off('elevenlabs-voices', onElevenLabsVoices);
+            window.socket.off('tts-result', onTTSResult);
+            window.socket.off('elevenlabs-tts-result', onElevenLabsResult);
+            
+            // Now add fresh handlers
+            window.socket.on('media-players', onMediaPlayers);
+            window.socket.on('tts-entities', onTtsEntities);
+            window.socket.on('elevenlabs-voices', onElevenLabsVoices);
+            window.socket.on('tts-result', onTTSResult);
+            window.socket.on('elevenlabs-tts-result', onElevenLabsResult);
+            
+            // Request initial data
+            window.socket.emit('request-media-players');
+            window.socket.emit('request-tts-entities');
+            window.socket.emit('request-elevenlabs-voices');
+
+            return () => {
+                window.socket.off('media-players', onMediaPlayers);
+                window.socket.off('tts-entities', onTtsEntities);
+                window.socket.off('tts-result', onTTSResult);
+                window.socket.off('elevenlabs-voices', onElevenLabsVoices);
+                window.socket.off('elevenlabs-tts-result', onElevenLabsResult);
+            };
+        }, []); // Empty deps = run once on mount, cleanup on unmount
 
         const handlePlayerChange = (e) => {
             const value = e.target.value;
@@ -160,14 +249,46 @@
             if (data.changeCallback) data.changeCallback();
         };
 
+        const handleTtsEntityChange = (e) => {
+            const value = e.target.value;
+            setSelectedTtsEntity(value);
+            data.properties.ttsEntityId = value;
+            if (data.changeCallback) data.changeCallback();
+        };
+
         const handleMessageChange = (e) => {
             setMessage(e.target.value);
             data.properties.message = e.target.value;
         };
 
+        const handleTtsServiceChange = (e) => {
+            setTtsService(e.target.value);
+            data.properties.ttsService = e.target.value;
+            if (data.changeCallback) data.changeCallback();
+        };
+
+        const handleVoiceChange = (e) => {
+            const voiceId = e.target.value;
+            const voice = elevenLabsVoices.find(v => v.voice_id === voiceId);
+            setSelectedVoice(voiceId);
+            data.properties.elevenLabsVoiceId = voiceId;
+            data.properties.elevenLabsVoiceName = voice?.name || '';
+            if (data.changeCallback) data.changeCallback();
+        };
+
         const handleTest = () => {
             if (!selectedPlayer) {
                 setTestStatus('Select a speaker first');
+                setTimeout(() => setTestStatus(''), 2000);
+                return;
+            }
+            if (ttsService === 'tts/speak' && !selectedTtsEntity) {
+                setTestStatus('Select a TTS engine first');
+                setTimeout(() => setTestStatus(''), 2000);
+                return;
+            }
+            if (ttsService === 'elevenlabs' && !selectedVoice) {
+                setTestStatus('Select a voice first');
                 setTimeout(() => setTestStatus(''), 2000);
                 return;
             }
@@ -178,10 +299,24 @@
             }
             setTestStatus('Sending...');
             if (window.socket) {
-                window.socket.emit('request-tts', {
-                    entityId: selectedPlayer,
-                    message: message
-                });
+                if (ttsService === 'elevenlabs') {
+                    // Use ElevenLabs TTS
+                    window.socket.emit('request-elevenlabs-tts', {
+                        message: message,
+                        voiceId: selectedVoice,
+                        mediaPlayerId: selectedPlayer
+                    });
+                } else {
+                    // Use HA TTS
+                    window.socket.emit('request-tts', {
+                        entityId: selectedPlayer,
+                        message: message,
+                        options: { 
+                            tts_service: ttsService,
+                            tts_entity_id: selectedTtsEntity
+                        }
+                    });
+                }
             }
         };
 
@@ -191,14 +326,14 @@
                 const socket = input.socket;
                 return React.createElement('div', {
                     key: `input-${key}`,
-                    className: 'rete-input',
-                    'data-testid': `input-${key}`
+                    style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }
                 }, [
                     React.createElement(window.RefComponent, {
                         key: 'ref',
-                        init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'input', key, nodeId: data.id, element: ref, payload: socket } })
+                        init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'input', key, nodeId: data.id, element: ref, payload: socket } }),
+                        unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
                     }),
-                    React.createElement('span', { key: 'label', className: 'input-title' }, input.label || key)
+                    React.createElement('span', { key: 'label', style: { fontSize: '12px', color: '#c5cdd3' } }, input.label || key)
                 ]);
             });
         };
@@ -209,13 +344,13 @@
                 const socket = output.socket;
                 return React.createElement('div', {
                     key: `output-${key}`,
-                    className: 'rete-output',
-                    'data-testid': `output-${key}`
+                    style: { display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginBottom: '4px' }
                 }, [
-                    React.createElement('span', { key: 'label', className: 'output-title' }, output.label || key),
+                    React.createElement('span', { key: 'label', style: { fontSize: '12px', color: '#c5cdd3' } }, output.label || key),
                     React.createElement(window.RefComponent, {
                         key: 'ref',
-                        init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'output', key, nodeId: data.id, element: ref, payload: socket } })
+                        init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'output', key, nodeId: data.id, element: ref, payload: socket } }),
+                        unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
                     })
                 ]);
             });
@@ -291,11 +426,78 @@
                 style: { fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }
             }, '📢 TTS Announcement'),
 
-            // Inputs
-            React.createElement('div', { key: 'inputs', className: 'rete-inputs' }, renderInputs()),
+            // IO Container - inputs on left, outputs on right
+            React.createElement('div', { 
+                key: 'io', 
+                style: { display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }
+            }, [
+                // Inputs (left side)
+                React.createElement('div', { key: 'inputs', style: { display: 'flex', flexDirection: 'column' } }, renderInputs()),
+                // Outputs (right side)  
+                React.createElement('div', { key: 'outputs', style: { display: 'flex', flexDirection: 'column' } }, renderOutputs())
+            ]),
 
             // Controls
             React.createElement('div', { key: 'controls', style: controlsStyle }, [
+                // TTS Service dropdown
+                React.createElement('div', { key: 'tts-service-row' }, [
+                    React.createElement('div', { key: 'label', style: labelStyle }, [
+                        'TTS Service',
+                        HelpIcon && React.createElement(HelpIcon, { key: 'help', text: 'Choose TTS provider: HA services or ElevenLabs AI voices.', size: 10 })
+                    ]),
+                    React.createElement('select', {
+                        key: 'tts-service-select',
+                        value: ttsService,
+                        onChange: handleTtsServiceChange,
+                        onPointerDown: (e) => e.stopPropagation(),
+                        style: selectStyle
+                    }, [
+                        React.createElement('option', { key: 'tts/speak', value: 'tts/speak' }, 'tts.speak'),
+                        React.createElement('option', { key: 'tts/cloud_say', value: 'tts/cloud_say' }, 'tts.cloud_say'),
+                        React.createElement('option', { key: 'tts/google_translate_say', value: 'tts/google_translate_say' }, 'tts.google_translate_say'),
+                        React.createElement('option', { key: 'elevenlabs', value: 'elevenlabs' }, '🎙️ ElevenLabs')
+                    ])
+                ]),
+                // ElevenLabs Voice dropdown (only shown when elevenlabs is selected)
+                ttsService === 'elevenlabs' && React.createElement('div', { key: 'elevenlabs-voice-row' }, [
+                    React.createElement('div', { key: 'label', style: labelStyle }, [
+                        'Voice',
+                        HelpIcon && React.createElement(HelpIcon, { key: 'help', text: 'Select an ElevenLabs AI voice. Requires ELEVENLABS_API_KEY in .env', size: 10 })
+                    ]),
+                    React.createElement('select', {
+                        key: 'voice-select',
+                        value: selectedVoice,
+                        onChange: handleVoiceChange,
+                        onPointerDown: (e) => e.stopPropagation(),
+                        style: selectStyle
+                    }, [
+                        React.createElement('option', { key: 'empty', value: '' }, elevenLabsVoices.length ? '-- Select Voice --' : 'No API key configured'),
+                        ...elevenLabsVoices.map(v => {
+                            const label = v.labels?.accent ? `${v.name} (${v.labels.accent})` : v.name;
+                            return React.createElement('option', { key: v.voice_id, value: v.voice_id }, label);
+                        })
+                    ])
+                ]),
+                // TTS Entity dropdown (only shown when tts.speak is selected)
+                ttsService === 'tts/speak' && React.createElement('div', { key: 'tts-entity-row' }, [
+                    React.createElement('div', { key: 'label', style: labelStyle }, [
+                        'TTS Engine (Target)',
+                        HelpIcon && React.createElement(HelpIcon, { key: 'help', text: 'The TTS engine entity to use (e.g., Google Translate, Cloud TTS). Required for tts.speak service.', size: 10 })
+                    ]),
+                    React.createElement('select', {
+                        key: 'tts-entity-select',
+                        value: selectedTtsEntity,
+                        onChange: handleTtsEntityChange,
+                        onPointerDown: (e) => e.stopPropagation(),
+                        style: selectStyle
+                    }, [
+                        React.createElement('option', { key: 'empty', value: '' }, '-- Select TTS Engine --'),
+                        ...ttsEntities.map(e => {
+                            const name = e.friendly_name || e.entity_id?.replace('tts.', '') || e.entity_id;
+                            return React.createElement('option', { key: e.entity_id, value: e.entity_id }, name);
+                        })
+                    ])
+                ]),
                 // Media Player dropdown
                 React.createElement('div', { key: 'player-row' }, [
                     React.createElement('div', { key: 'label', style: labelStyle }, [
@@ -311,6 +513,7 @@
                     }, [
                         React.createElement('option', { key: 'empty', value: '' }, '-- Select Speaker --'),
                         ...mediaPlayers.map(p => {
+                            // Always show all media_player entities
                             const id = p.id?.replace('ha_', '') || p.entity_id;
                             const name = p.name || p.friendly_name || id;
                             return React.createElement('option', { key: id, value: id }, name);
@@ -351,10 +554,7 @@
                         style: { fontSize: '11px', color: testStatus.includes('✓') ? '#4caf50' : '#ff9800' }
                     }, testStatus)
                 ])
-            ]),
-
-            // Outputs
-            React.createElement('div', { key: 'outputs', className: 'rete-outputs' }, renderOutputs())
+            ])
         ]);
     }
 

@@ -315,6 +315,100 @@ io.on('connection', (socket) => {
     }
   });
 
+  // === TTS ENTITIES LIST REQUEST ===
+  socket.on('request-tts-entities', async () => {
+    try {
+      const haManager = deviceManagers.getManager('ha_');
+      if (!haManager || !haManager.getTtsEntities) {
+        logger.log('TTS entities request - no HA manager or getTtsEntities method', 'warn');
+        socket.emit('tts-entities', []);
+        return;
+      }
+      const entities = await haManager.getTtsEntities();
+      logger.log(`TTS entities found: ${entities.length}`, 'info');
+      socket.emit('tts-entities', entities);
+    } catch (err) {
+      logger.log(`TTS entities request failed: ${err.message}`, 'error');
+      socket.emit('tts-entities', []);
+    }
+  });
+
+  // === ELEVENLABS VOICES LIST REQUEST ===
+  socket.on('request-elevenlabs-voices', async () => {
+    try {
+      const elevenLabs = require('./tts/elevenLabsService');
+      const result = await elevenLabs.getVoices();
+      if (result.success) {
+        socket.emit('elevenlabs-voices', result.voices);
+      } else {
+        socket.emit('elevenlabs-voices', { error: result.error });
+      }
+    } catch (err) {
+      logger.log(`ElevenLabs voices request failed: ${err.message}`, 'error');
+      socket.emit('elevenlabs-voices', { error: err.message });
+    }
+  });
+
+  // === ELEVENLABS TTS REQUEST ===
+  socket.on('request-elevenlabs-tts', async (data = {}) => {
+    try {
+      const { message, voiceId, mediaPlayerId } = data;
+      if (!message) {
+        socket.emit('elevenlabs-tts-result', { success: false, error: 'No message provided' });
+        return;
+      }
+
+      const elevenLabs = require('./tts/elevenLabsService');
+      const result = await elevenLabs.generateSpeech(message, { voiceId });
+
+      if (!result.success) {
+        socket.emit('elevenlabs-tts-result', { success: false, error: result.error });
+        return;
+      }
+
+      // If a media player is specified, play the audio on it via HA
+      if (mediaPlayerId) {
+        const haManager = deviceManagers.getManager('ha_');
+        if (haManager) {
+          // Build the full URL to the audio file
+          const port = process.env.PORT || 3000;
+          const host = process.env.PUBLIC_URL || `http://localhost:${port}`;
+          const audioUrl = `${host}${result.audioUrl}`;
+          
+          // Use media_player.play_media to play the audio
+          const cleanEntityId = mediaPlayerId.startsWith('ha_') ? mediaPlayerId.slice(3) : mediaPlayerId;
+          
+          try {
+            await fetch(`${process.env.HA_HOST}/api/services/media_player/play_media`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${process.env.HA_TOKEN}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                entity_id: cleanEntityId,
+                media_content_id: audioUrl,
+                media_content_type: 'music'
+              })
+            });
+            logger.log(`ElevenLabs TTS played on ${cleanEntityId}`, 'info');
+          } catch (playErr) {
+            logger.log(`Error playing ElevenLabs TTS: ${playErr.message}`, 'error');
+          }
+        }
+      }
+
+      socket.emit('elevenlabs-tts-result', { 
+        success: true, 
+        audioUrl: result.audioUrl,
+        filename: result.filename 
+      });
+    } catch (err) {
+      logger.log(`ElevenLabs TTS request failed: ${err.message}`, 'error');
+      socket.emit('elevenlabs-tts-result', { success: false, error: err.message });
+    }
+  });
+
   // === DISCONNECT ===
   socket.on('disconnect', (reason) => {
     logger.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`, 'warn', false, 'socket:disconnect');
@@ -467,6 +561,7 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 app.use('/custom_nodes', express.static(path.join(__dirname, '../frontend/custom_nodes')));
 app.use('/plugins', express.static(path.join(__dirname, '../plugins')));
 app.use('/tools', express.static(path.join(__dirname, '../../tools')));
+app.use('/audio', express.static(path.join(__dirname, '../audio'))); // TTS audio files
 
 
 // Sandbox route for testing refactored index.html
@@ -615,6 +710,7 @@ const ALLOWED_SETTINGS = [
   'AMBIENT_API_KEY', 'AMBIENT_APPLICATION_KEY', 'AMBIENT_MAC_ADDRESS',
   'HUE_BRIDGE_IP', 'HUE_USERNAME',
   'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID',
+  'ELEVENLABS_API_KEY', 'PUBLIC_URL',
   'KASA_POLLING_INTERVAL',
   'LOCATION_CITY', 'LOCATION_LATITUDE', 'LOCATION_LONGITUDE', 'LOCATION_TIMEZONE'
 ];
@@ -626,7 +722,8 @@ const SECRET_SETTINGS = new Set([
   'AMBIENT_API_KEY',
   'AMBIENT_APPLICATION_KEY',
   'HUE_USERNAME',
-  'TELEGRAM_BOT_TOKEN'
+  'TELEGRAM_BOT_TOKEN',
+  'ELEVENLABS_API_KEY'
 ]);
 
 // Helper to get persistent env path (HA add-on uses /data/, standalone uses local .env)
