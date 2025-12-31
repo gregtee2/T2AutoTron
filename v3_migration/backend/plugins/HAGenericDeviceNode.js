@@ -957,6 +957,34 @@
             const entityType = dev.type || (dev.id?.includes('.') ? dev.id.split('.')[0].replace(/^ha_/, '') : 'light');
             if (colorbar) colorbar.data.entityType = entityType;
             await this.fetchDeviceState(dev.id);
+            
+            // SYNC NEW DEVICE: If the current trigger state contradicts the device's actual state,
+            // immediately sync the device to match the trigger. This ensures newly added devices
+            // match the node's intent without requiring a trigger toggle.
+            const mode = this.properties.triggerMode || "Follow";
+            if (mode === "Follow") {
+                const deviceState = this.perDeviceState[dev.id];
+                const deviceIsOn = deviceState?.on || deviceState?.state === 'on';
+                const triggerWantsOn = !!this.lastTriggerValue;
+                
+                if (deviceIsOn !== triggerWantsOn) {
+                    console.log(`[HAGenericDeviceNode] New device "${item.displayName}" state mismatch: device=${deviceIsOn ? 'ON' : 'OFF'}, trigger=${triggerWantsOn ? 'ON' : 'OFF'}. Syncing...`);
+                    
+                    // Temporarily store just this device to sync
+                    const originalIds = [...this.properties.selectedDeviceIds];
+                    this.properties.selectedDeviceIds = [dev.id];
+                    
+                    // Get current HSV if turning on
+                    const hsvInput = triggerWantsOn && this.lastHsvInfo ? JSON.parse(this.lastHsvInfo) : null;
+                    await this.setDevicesState(triggerWantsOn, hsvInput);
+                    
+                    // Restore full device list
+                    this.properties.selectedDeviceIds = originalIds;
+                    
+                    console.log(`[HAGenericDeviceNode] Device "${item.displayName}" synced to ${triggerWantsOn ? 'ON' : 'OFF'}`);
+                }
+            }
+            
             this.triggerUpdate();
         }
 
