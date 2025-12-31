@@ -36,7 +36,10 @@ function normalizeManager(manager, file) {
       getDevices: manager.getDevices,
       shutdown: manager.shutdown || (async () => { }),
       // Pass through connection status method if available
-      getConnectionStatus: manager.getConnectionStatus || null
+      getConnectionStatus: manager.getConnectionStatus || null,
+      // Pass through HA-specific methods for TTS/media players
+      speakTTS: manager.speakTTS || null,
+      getMediaPlayers: manager.getMediaPlayers || null
     };
   }
 

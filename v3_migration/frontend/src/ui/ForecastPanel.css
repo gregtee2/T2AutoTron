@@ -697,3 +697,161 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* ===== HOURLY RAIN TIMELINE ===== */
+.rain-timeline-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(var(--theme-primary-rgb, 0, 243, 255), 0.2);
+}
+
+.rain-timeline-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.rain-timeline-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--theme-text, #e0e0e0);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rain-timeline-loading,
+.rain-timeline-empty {
+    text-align: center;
+    font-size: 12px;
+    color: var(--theme-text-dim, #888);
+    padding: 16px;
+}
+
+.rain-summary {
+    font-size: 11px;
+    color: var(--theme-text, #e0e0e0);
+    background: rgba(74, 172, 254, 0.15);
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    line-height: 1.4;
+    border-left: 3px solid #4facfe;
+}
+
+.rain-timeline {
+    display: flex;
+    align-items: flex-end;
+    height: 120px;
+    gap: 2px;
+    padding: 24px 8px 28px 8px;
+    margin-top: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    overflow: visible;
+}
+
+.rain-bar-wrapper {
+    flex: 1;
+    min-width: 8px;
+    max-width: 16px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    position: relative;
+}
+
+.rain-prob-label {
+    position: absolute;
+    top: -18px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #4facfe;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+
+.rain-bar {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    transition: height 0.3s ease;
+    min-height: 4px;
+}
+
+.rain-bar.rain-none {
+    background: rgba(100, 100, 100, 0.3);
+}
+
+.rain-bar.rain-light {
+    background: linear-gradient(to top, #64b5f6, #90caf9);
+    box-shadow: 0 0 6px rgba(100, 181, 246, 0.4);
+}
+
+.rain-bar.rain-moderate {
+    background: linear-gradient(to top, #42a5f5, #64b5f6);
+    box-shadow: 0 0 8px rgba(66, 165, 245, 0.5);
+}
+
+.rain-bar.rain-heavy {
+    background: linear-gradient(to top, #1565c0, #42a5f5);
+    box-shadow: 0 0 10px rgba(21, 101, 192, 0.6);
+}
+
+.rain-hour-label {
+    position: absolute;
+    bottom: -20px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--theme-text, #e0e0e0);
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.rain-legend {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 8px;
+}
+
+.rain-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--theme-text-dim, #888);
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+}
+
+.legend-dot.rain-none {
+    background: rgba(100, 100, 100, 0.4);
+}
+
+.legend-dot.rain-light {
+    background: #90caf9;
+}
+
+.legend-dot.rain-moderate {
+    background: #42a5f5;
+}
+
+.legend-dot.rain-heavy {
+    background: #1565c0;
+}
+
+.has-rain .rain-bar {
+    animation: rain-pulse 2s infinite;
+}
+
+@keyframes rain-pulse {
+    0%, 100% { opacity: 0.9; }
+    50% { opacity: 1; }
+}

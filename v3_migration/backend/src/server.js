@@ -78,7 +78,7 @@ const logger = require('./logging/logger');
 const DeviceService = require('./devices/services/deviceService');
 const { setupNotifications } = require('./notifications/notificationService');
 const { fetchWeatherData } = require('./weather/weatherService');
-const { fetchForecastData } = require('./weather/forecastService');
+const { fetchForecastData, fetchHourlyRainForecast } = require('./weather/forecastService');
 const { normalizeState } = require('./utils/normalizeState');
 const { loadManagers, loadRoutes } = require('./devices/pluginLoader');
 const deviceManagers = require('./devices/managers/deviceManagers');
@@ -252,6 +252,66 @@ io.on('connection', (socket) => {
     } catch (err) {
       logger.log(`Weather request failed: ${err.message}`, 'error');
       console.error('Weather request failed:', err);
+    }
+  });
+
+  // === HOURLY RAIN FORECAST REQUEST ===
+  socket.on('request-hourly-rain', async (data = {}) => {
+    try {
+      const dayOffset = data.dayOffset || 0;
+      const haToken = process.env.HA_TOKEN;
+      const hourlyRain = await fetchHourlyRainForecast(dayOffset, haToken);
+      if (hourlyRain) {
+        socket.emit('hourly-rain-update', hourlyRain);
+        logger.log(`Sent hourly rain forecast for day ${dayOffset} to client`, 'info');
+      } else {
+        socket.emit('hourly-rain-update', { error: 'No hourly rain data available' });
+        logger.log('No hourly rain data to send', 'warn');
+      }
+    } catch (err) {
+      logger.log(`Hourly rain request failed: ${err.message}`, 'error');
+      console.error('Hourly rain request failed:', err);
+      socket.emit('hourly-rain-update', { error: err.message });
+    }
+  });
+
+  // === TTS ANNOUNCEMENT REQUEST ===
+  socket.on('request-tts', async (data = {}) => {
+    try {
+      const { entityId, message, options } = data;
+      if (!entityId || !message) {
+        socket.emit('tts-result', { success: false, error: 'Missing entityId or message' });
+        return;
+      }
+      const haManager = deviceManagers.getManager('ha_');
+      if (!haManager || !haManager.speakTTS) {
+        socket.emit('tts-result', { success: false, error: 'HA manager not available' });
+        return;
+      }
+      const result = await haManager.speakTTS(entityId, message, options || {});
+      socket.emit('tts-result', result);
+    } catch (err) {
+      logger.log(`TTS request failed: ${err.message}`, 'error');
+      socket.emit('tts-result', { success: false, error: err.message });
+    }
+  });
+
+  // === MEDIA PLAYERS LIST REQUEST ===
+  socket.on('request-media-players', async () => {
+    try {
+      const haManager = deviceManagers.getManager('ha_');
+      logger.log(`Media players request - haManager exists: ${!!haManager}, has getMediaPlayers: ${!!haManager?.getMediaPlayers}`, 'info');
+      if (!haManager || !haManager.getMediaPlayers) {
+        logger.log('Media players request - no HA manager or method', 'warn');
+        socket.emit('media-players', []);
+        return;
+      }
+      const players = await haManager.getMediaPlayers();
+      logger.log(`Media players found: ${players.length}`, 'info');
+      socket.emit('media-players', players);
+    } catch (err) {
+      logger.log(`Media players request failed: ${err.message}`, 'error');
+      socket.emit('media-players', []);
     }
   });
 

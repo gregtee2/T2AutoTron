@@ -18,7 +18,7 @@
         node: "Visual grouping box for organizing nodes.\n\nDrag to position, resize from corner handle.\n\nDouble-click title to rename.",
         lock: "🔒 LOCK: Prevents moving/dragging the backdrop.\n\nWhen locked:\n• Backdrop stays in place\n• Nodes inside can still be selected/moved\n• Click through backdrop to select nodes\n\n🔓 UNLOCK: Allows moving the backdrop.",
         title: "Double-click to rename this group.",
-        fontSize: "Title font size (8-72px).",
+        fontSize: "Title font size (min 8px, no max).",
         color: "Click to choose backdrop color.\n\nPresets or custom hex color.",
         resize: "Drag to resize the backdrop."
     };
@@ -285,7 +285,7 @@
                 return;
             }
             const size = parseInt(value, 10);
-            if (!isNaN(size) && size > 0 && size <= 72) {
+            if (!isNaN(size) && size > 0) {
                 setFontSize(size);
                 data.properties.fontSize = size;
             }

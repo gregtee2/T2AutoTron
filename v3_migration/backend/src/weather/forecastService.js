@@ -379,4 +379,206 @@ async function fetchForecastData(forceRefresh = false, haToken = null) {
   }
 }
 
-module.exports = { fetchForecastData };
+// =============================================================================
+// HOURLY RAIN FORECAST - Uses Open-Meteo (free) for precipitation prediction
+// Returns hourly precipitation probability and amount for the next 24-48 hours
+// =============================================================================
+
+let cachedHourlyRain = null;
+let lastHourlyRainFetch = null;
+const HOURLY_RAIN_CACHE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Fetch hourly rain forecast from Open-Meteo
+ * @param {number} dayOffset - Which day to get (0 = today, 1 = tomorrow, etc.)
+ * @param {string} haToken - HA token for location lookup
+ * @returns {object} { hours: [{time, probability, amount, intensity}], summary }
+ */
+async function fetchHourlyRainForecast(dayOffset = 0, haToken = null) {
+  debugLog(`fetchHourlyRainForecast called. dayOffset=${dayOffset}`);
+  
+  const cacheKey = `day_${dayOffset}`;
+  const now = Date.now();
+  
+  // Check cache
+  if (cachedHourlyRain && 
+      cachedHourlyRain[cacheKey] && 
+      lastHourlyRainFetch && 
+      (now - lastHourlyRainFetch) < HOURLY_RAIN_CACHE_TIMEOUT) {
+    debugLog('Returning cached hourly rain data');
+    return cachedHourlyRain[cacheKey];
+  }
+  
+  try {
+    // Get location
+    let lat, lon;
+    
+    // Try HA first
+    if (haToken) {
+      try {
+        const haHost = process.env.HA_HOST || 'http://supervisor/core';
+        const configRes = await fetch(`${haHost}/api/config`, {
+          headers: { 'Authorization': `Bearer ${haToken}` },
+          timeout: 5000
+        });
+        if (configRes.ok) {
+          const config = await configRes.json();
+          lat = config.latitude;
+          lon = config.longitude;
+          debugLog(`Got location from HA: ${lat}, ${lon}`);
+        }
+      } catch (e) {
+        debugLog(`HA location failed: ${e.message}`);
+      }
+    }
+    
+    // Fallback to env vars or locationService
+    if (!lat || !lon) {
+      lat = process.env.LOCATION_LATITUDE;
+      lon = process.env.LOCATION_LONGITUDE;
+      if (!lat || !lon) {
+        const locationService = require('./locationService');
+        const loc = await locationService.fetchLocationData();
+        lat = loc.latitude;
+        lon = loc.longitude;
+      }
+      debugLog(`Using fallback location: ${lat}, ${lon}`);
+    }
+    
+    // Fetch hourly precipitation from Open-Meteo
+    // Request 3 days of hourly data to handle any day offset
+    const url = `https://api.open-meteo.com/v1/forecast?` +
+      `latitude=${lat}&longitude=${lon}` +
+      `&hourly=precipitation_probability,precipitation` +
+      `&forecast_days=3&timezone=auto`;
+    
+    debugLog(`Fetching hourly rain: ${url}`);
+    
+    const response = await fetch(url, { timeout: 10000 });
+    if (!response.ok) throw new Error(`Open-Meteo HTTP ${response.status}`);
+    
+    const data = await response.json();
+    
+    if (!data?.hourly?.time) {
+      throw new Error('No hourly data from Open-Meteo');
+    }
+    
+    // Parse the hourly data - Open-Meteo returns ISO timestamps
+    const hourlyTimes = data.hourly.time;
+    const hourlyProb = data.hourly.precipitation_probability;
+    const hourlyAmount = data.hourly.precipitation; // mm
+    
+    // Find the start of the requested day
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const targetDay = new Date(today);
+    targetDay.setDate(targetDay.getDate() + dayOffset);
+    const targetDayEnd = new Date(targetDay);
+    targetDayEnd.setDate(targetDayEnd.getDate() + 1);
+    
+    // Filter hours for the target day
+    const hours = [];
+    let rainPeriods = [];
+    let currentRainPeriod = null;
+    
+    for (let i = 0; i < hourlyTimes.length; i++) {
+      const hourTime = new Date(hourlyTimes[i]);
+      
+      if (hourTime >= targetDay && hourTime < targetDayEnd) {
+        const hour = hourTime.getHours();
+        const probability = hourlyProb[i] || 0;
+        const amountMm = hourlyAmount[i] || 0;
+        const amountIn = amountMm * 0.0393701; // mm to inches
+        
+        // Determine intensity
+        let intensity = 'none';
+        if (amountMm > 0 || probability >= 30) {
+          if (amountMm >= 7.6) intensity = 'heavy';      // Heavy: >= 0.3 in/hr
+          else if (amountMm >= 2.5) intensity = 'moderate'; // Moderate: 0.1-0.3 in/hr
+          else if (amountMm > 0 || probability >= 50) intensity = 'light'; // Light rain
+          else if (probability >= 30) intensity = 'chance'; // Just a chance
+        }
+        
+        hours.push({
+          time: hourTime.toISOString(),
+          hour,
+          displayTime: formatHour(hour),
+          probability,
+          amountMm: Math.round(amountMm * 10) / 10,
+          amountIn: Math.round(amountIn * 100) / 100,
+          intensity
+        });
+        
+        // Track rain periods (probability >= 40% or actual rain)
+        const isRaining = probability >= 40 || amountMm > 0;
+        if (isRaining) {
+          if (!currentRainPeriod) {
+            currentRainPeriod = { start: hour, end: hour, maxProb: probability, totalMm: amountMm };
+          } else {
+            currentRainPeriod.end = hour;
+            currentRainPeriod.maxProb = Math.max(currentRainPeriod.maxProb, probability);
+            currentRainPeriod.totalMm += amountMm;
+          }
+        } else if (currentRainPeriod) {
+          rainPeriods.push(currentRainPeriod);
+          currentRainPeriod = null;
+        }
+      }
+    }
+    
+    // Don't forget the last period
+    if (currentRainPeriod) {
+      rainPeriods.push(currentRainPeriod);
+    }
+    
+    // Build summary text
+    let summary = 'No rain expected';
+    if (rainPeriods.length > 0) {
+      const periodTexts = rainPeriods.map(p => {
+        const startTime = formatHour(p.start);
+        const endTime = formatHour(p.end + 1); // End is inclusive, so add 1 for "until"
+        if (p.start === p.end) {
+          return `around ${startTime}`;
+        }
+        return `${startTime}-${endTime}`;
+      });
+      summary = `Rain expected: ${periodTexts.join(', ')}`;
+    }
+    
+    const result = {
+      hours,
+      rainPeriods,
+      summary,
+      totalPrecipMm: hours.reduce((sum, h) => sum + h.amountMm, 0),
+      maxProbability: Math.max(...hours.map(h => h.probability), 0),
+      dayOffset,
+      fetchedAt: new Date().toISOString()
+    };
+    
+    // Cache the result
+    if (!cachedHourlyRain) cachedHourlyRain = {};
+    cachedHourlyRain[cacheKey] = result;
+    lastHourlyRainFetch = now;
+    
+    debugLog(`Hourly rain success: ${summary}`);
+    return result;
+    
+  } catch (error) {
+    debugLog(`Hourly rain fetch error: ${error.message}`);
+    return {
+      hours: [],
+      rainPeriods: [],
+      summary: 'Unable to fetch rain forecast',
+      error: error.message
+    };
+  }
+}
+
+function formatHour(hour) {
+  if (hour === 0 || hour === 24) return '12am';
+  if (hour === 12) return '12pm';
+  if (hour < 12) return `${hour}am`;
+  return `${hour - 12}pm`;
+}
+
+module.exports = { fetchForecastData, fetchHourlyRainForecast };

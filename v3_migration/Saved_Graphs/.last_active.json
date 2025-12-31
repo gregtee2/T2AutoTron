@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "adec3719ef346b93",
-      "label": "WiZ Effect",
+      "id": "a91a88d06fe7a813",
+      "label": "TTS Announcement",
       "position": {
-        "x": 645.1470362812661,
-        "y": 198.6422139828112
+        "x": 550.6913587782118,
+        "y": 199.55555574393563
       },
       "data": {
         "inputs": {
@@ -14,186 +14,49 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "cb2ec5997042138c",
+            "id": "8a6ca7326ae4d73b",
             "control": null,
             "showControl": true
           },
-          "effect_name": {
+          "message": {
             "socket": {
               "name": "any"
             },
-            "label": "Effect",
-            "id": "eb0c9d5741d853f8",
-            "control": null,
-            "showControl": true
-          },
-          "hsv_in": {
-            "socket": {
-              "name": "object"
-            },
-            "label": "HSV In",
-            "id": "d9efb698c18b0e70",
+            "label": "Message",
+            "id": "21a5dc0de68b5892",
             "control": null,
             "showControl": true
           }
         },
         "outputs": {
-          "hsv_out": {
-            "socket": {
-              "name": "object"
-            },
-            "label": "HSV Out",
-            "multipleConnections": true,
-            "id": "d4bd5afddf9d3ec3"
-          },
-          "active": {
+          "success": {
             "socket": {
               "name": "boolean"
             },
-            "label": "Active",
+            "label": "Success",
             "multipleConnections": true,
-            "id": "852fcb1b3539f20b"
-          },
-          "applied": {
-            "socket": {
-              "name": "boolean"
-            },
-            "label": "Applied",
-            "multipleConnections": true,
-            "id": "7f429a316457e8dd"
+            "id": "5610541610a922e2"
           }
         },
         "controls": {},
-        "label": "WiZ Effect",
-        "id": "adec3719ef346b93",
-        "width": 300,
-        "height": 400,
+        "label": "TTS Announcement",
+        "id": "a91a88d06fe7a813",
+        "width": 280,
+        "height": 220,
         "properties": {
-          "entityIds": [
-            "ha_light.laundry_room_sink_light"
-          ],
-          "effect": "Christmas",
-          "speed": 15,
-          "lastTrigger": true,
-          "lastSentEffect": "Christmas",
-          "previousStates": {
-            "ha_light.laundry_room_sink_light": {
-              "on": true,
-              "brightness": 255,
-              "rgb_color": [
-                0,
-                0,
-                255
-              ],
-              "effect": null
-            }
-          }
-        },
-        "selected": false
-      }
-    },
-    {
-      "id": "e58409d5ccce42e2",
-      "label": "HA Generic Device",
-      "position": {
-        "x": 1036.3644297840194,
-        "y": 124
-      },
-      "data": {
-        "id": "e58409d5ccce42e2",
-        "label": "HA Generic Device",
-        "properties": {
-          "selectedDeviceIds": [
-            "ha_light.laundry_room_sink_light"
-          ],
-          "selectedDeviceNames": [
-            "Laundry Room Sink Light"
-          ],
-          "status": "Control applied to 1 devices",
-          "haConnected": true,
-          "haWsConnected": true,
-          "debug": false,
-          "haToken": "",
-          "transitionTime": 1000,
-          "filterType": "Light",
-          "triggerMode": "Follow",
-          "customTitle": ""
-        }
-      }
-    },
-    {
-      "id": "7b3e498d3c3b042b",
-      "label": "Toggle",
-      "position": {
-        "x": 200.4694263769602,
-        "y": 101.975931261607
-      },
-      "data": {
-        "id": "7b3e498d3c3b042b",
-        "label": "Toggle",
-        "properties": {
-          "state": true,
-          "pulseMode": false,
-          "lastCommand": true
-        }
-      }
-    },
-    {
-      "id": "686442bf275892ec",
-      "label": "All-in-One Color Control",
-      "position": {
-        "x": 85,
-        "y": 335.6089557765714
-      },
-      "data": {
-        "id": "686442bf275892ec",
-        "label": "All-in-One Color Control",
-        "properties": {
-          "red": 0,
-          "green": 0,
-          "blue": 255,
-          "hueShift": 240,
-          "saturation": 100,
-          "brightness": 255,
-          "colorTemp": 6500,
-          "whiteAdjust": 4000,
-          "transitionTime": 0,
-          "enableAutoTrigger": false,
-          "autoInterval": 5000,
-          "showPalette": true,
-          "activeMode": "color"
+          "mediaPlayerId": "media_player.homepodoffice",
+          "message": "Hello, this is a test announcement",
+          "lastResult": null
         }
       }
     }
   ],
-  "connections": [
-    {
-      "id": "bd608bccba275afc",
-      "source": "7b3e498d3c3b042b",
-      "target": "adec3719ef346b93",
-      "sourceOutput": "state",
-      "targetInput": "trigger"
-    },
-    {
-      "id": "f9d469c5e8e692d5",
-      "source": "686442bf275892ec",
-      "target": "adec3719ef346b93",
-      "sourceOutput": "hsv_out",
-      "targetInput": "hsv_in"
-    },
-    {
-      "id": "db3de1b18a63c394",
-      "source": "adec3719ef346b93",
-      "target": "e58409d5ccce42e2",
-      "sourceOutput": "hsv_out",
-      "targetInput": "hsv_info"
-    }
-  ],
+  "connections": [],
   "viewport": {
-    "x": 0,
-    "y": 0,
-    "k": 1
+    "x": 194.93999938964845,
+    "y": 103.35999984741213,
+    "k": 0.81
   },
   "autoSaved": true,
-  "timestamp": 1767057210875
+  "timestamp": 1767195726469
 }

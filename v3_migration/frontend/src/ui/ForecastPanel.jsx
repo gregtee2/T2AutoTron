@@ -16,6 +16,8 @@ export function ForecastPanel({ dockSlotRef }) {
     const [devicesHeight, setDevicesHeight] = useState(() => parseInt(localStorage.getItem('devicesOnHeight')) || 200);
     const [stationData, setStationData] = useState(null); // Live weather station data
     const [sensorConfig, setSensorConfig] = useState(null); // Configured HA sensors for forecast
+    const [hourlyRainData, setHourlyRainData] = useState(null); // Hourly rain forecast for selected day
+    const [loadingRain, setLoadingRain] = useState(false);
     const resizeRef = useRef(null);
 
     // Fetch sensor config from settings on mount
@@ -203,6 +205,33 @@ export function ForecastPanel({ dockSlotRef }) {
             socket.off('device-state-update', onDeviceStateUpdate);
         };
     }, [sensorConfig]); // Re-run when sensor config loads
+
+    // Fetch hourly rain data when a day is selected
+    useEffect(() => {
+        if (!socket || selectedDay === null) {
+            setHourlyRainData(null);
+            return;
+        }
+        
+        setLoadingRain(true);
+        
+        const onHourlyRainUpdate = (data) => {
+            setLoadingRain(false);
+            if (data.error) {
+                console.warn('Hourly rain fetch error:', data.error);
+                setHourlyRainData(null);
+            } else {
+                setHourlyRainData(data);
+            }
+        };
+        
+        socket.on('hourly-rain-update', onHourlyRainUpdate);
+        socket.emit('request-hourly-rain', { dayOffset: selectedDay });
+        
+        return () => {
+            socket.off('hourly-rain-update', onHourlyRainUpdate);
+        };
+    }, [selectedDay]);
 
     const refreshForecast = () => {
         socket?.emit('request-forecast');
@@ -395,6 +424,55 @@ export function ForecastPanel({ dockSlotRef }) {
                                     </div>
                                 )}
                             </div>
+                        )}
+                    </div>
+                    
+                    {/* Hourly Rain Timeline */}
+                    <div className="rain-timeline-section">
+                        <div className="rain-timeline-header">
+                            <span className="rain-timeline-title">🌧️ Hourly Rain Forecast</span>
+                        </div>
+                        {loadingRain ? (
+                            <div className="rain-timeline-loading">Loading...</div>
+                        ) : hourlyRainData && hourlyRainData.hours ? (
+                            <>
+                                {hourlyRainData.summary && (
+                                    <div className="rain-summary">{hourlyRainData.summary}</div>
+                                )}
+                                <div className="rain-timeline">
+                                    {hourlyRainData.hours.map((hour, idx) => {
+                                        const barHeight = Math.max(4, hour.probability);
+                                        const intensity = hour.intensity || 'none';
+                                        const timeLabel = hour.displayTime || `${hour.hour || 0}:00`;
+                                        return (
+                                            <div 
+                                                key={idx} 
+                                                className={`rain-bar-wrapper ${intensity !== 'none' ? 'has-rain' : ''}`}
+                                                title={`${timeLabel}: ${hour.probability}% chance${hour.amountMm > 0 ? `, ${hour.amountMm}mm` : ''}`}
+                                            >
+                                                {idx % 4 === 0 && hour.probability > 0 && (
+                                                    <span className="rain-prob-label">{hour.probability}%</span>
+                                                )}
+                                                <div 
+                                                    className={`rain-bar rain-${intensity}`}
+                                                    style={{ height: `${barHeight}%` }}
+                                                />
+                                                {idx % 4 === 0 && (
+                                                    <span className="rain-hour-label">{timeLabel}</span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="rain-legend">
+                                    <span className="rain-legend-item"><span className="legend-dot rain-none"></span>Dry</span>
+                                    <span className="rain-legend-item"><span className="legend-dot rain-light"></span>Light</span>
+                                    <span className="rain-legend-item"><span className="legend-dot rain-moderate"></span>Moderate</span>
+                                    <span className="rain-legend-item"><span className="legend-dot rain-heavy"></span>Heavy</span>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="rain-timeline-empty">No rain expected</div>
                         )}
                     </div>
                 </div>

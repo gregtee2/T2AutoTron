@@ -68,8 +68,22 @@ async function fetchLocationData() {
     return cachedLocation;
   } catch (error) {
     logger.error({ key: 'error:location', stack: error.stack }, `Error fetching location: ${error.message}`);
-    cachedLocation = { latitude: 34.0522, longitude: -118.2437, city: 'Los Angeles', timezone: 'America/Los_Angeles' };
-    logger.warn({ key: 'location:default' }, `Using default location: ${JSON.stringify(cachedLocation)}`);
+    // Final fallback: use environment variables (set from HA config or .env)
+    const fallbackLat = process.env.LOCATION_LATITUDE || process.env.HA_LATITUDE;
+    const fallbackLon = process.env.LOCATION_LONGITUDE || process.env.HA_LONGITUDE;
+    if (fallbackLat && fallbackLon) {
+      cachedLocation = { 
+        latitude: parseFloat(fallbackLat), 
+        longitude: parseFloat(fallbackLon), 
+        city: process.env.LOCATION_NAME || 'Home', 
+        timezone: process.env.TZ || 'UTC' 
+      };
+      logger.warn({ key: 'location:env-fallback' }, `Using environment location: ${JSON.stringify(cachedLocation)}`);
+    } else {
+      // Absolute last resort - use 0,0 which will be obviously wrong
+      cachedLocation = { latitude: 0, longitude: 0, city: 'Unknown (configure HA location)', timezone: 'UTC' };
+      logger.warn({ key: 'location:no-fallback' }, 'No location available - configure Home Assistant location settings');
+    }
     return cachedLocation;
   }
 }

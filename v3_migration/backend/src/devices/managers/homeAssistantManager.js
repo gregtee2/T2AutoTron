@@ -492,6 +492,77 @@ class HomeAssistantManager {
     }
     return false; // No change
   }
+
+  /**
+   * Send TTS announcement to a media_player entity
+   * @param {string} entityId - The media_player entity (e.g., 'media_player.homepod_living_room')
+   * @param {string} message - The text to speak
+   * @param {object} options - Optional: { volume, language, tts_service }
+   */
+  async speakTTS(entityId, message, options = {}) {
+    if (!this.config.token) {
+      logger.log('Cannot send TTS: No HA token configured', 'error');
+      return { success: false, error: 'No HA token configured' };
+    }
+
+    // Strip 'ha_' prefix if present
+    const cleanEntityId = entityId.startsWith('ha_') ? entityId.slice(3) : entityId;
+
+    try {
+      // Try services in order of preference:
+      // 1. tts.cloud_say (Nabu Casa)
+      // 2. tts.google_translate_say
+      // 3. tts.speak (generic)
+      
+      const ttsServices = [
+        { service: 'tts/cloud_say', payload: { entity_id: cleanEntityId, message, language: options.language || 'en-US' } },
+        { service: 'tts/google_translate_say', payload: { entity_id: cleanEntityId, message } },
+        { service: 'tts/speak', payload: { entity_id: cleanEntityId, media_player_entity_id: cleanEntityId, message } }
+      ];
+
+      logger.log(`Sending TTS to ${cleanEntityId}: "${message}"`, 'info', false, 'ha:tts');
+
+      for (const { service, payload } of ttsServices) {
+        try {
+          const response = await fetch(`${this.config.host}/api/services/${service}`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${this.config.token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+            timeout: 10000
+          });
+
+          if (response.ok) {
+            logger.log(`TTS sent successfully via ${service} to ${cleanEntityId}`, 'info', false, 'ha:tts');
+            return { success: true, service };
+          } else {
+            const errorText = await response.text();
+            logger.log(`${service} failed (${response.status}): ${errorText}`, 'warn', false, 'ha:tts');
+          }
+        } catch (err) {
+          logger.log(`${service} error: ${err.message}`, 'warn', false, 'ha:tts');
+        }
+      }
+
+      throw new Error('All TTS services failed');
+    } catch (error) {
+      logger.log(`TTS failed for ${cleanEntityId}: ${error.message}`, 'error', false, 'ha:tts');
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get all media_player entities (for TTS target selection)
+   */
+  async getMediaPlayers() {
+    const devices = await this.getDevices();
+    // Device IDs have 'ha_' prefix, so look for 'ha_media_player.'
+    const players = devices.filter(d => d.id && d.id.includes('media_player.'));
+    logger.log(`Found ${players.length} media players: ${players.map(p => p.id).join(', ')}`, 'info');
+    return players;
+  }
 }
 
 // Create singleton instance
@@ -509,6 +580,8 @@ module.exports = {
   getDevices: () => instance.getDevices(),
   shutdown: () => instance.shutdown(),
   updateConfig: () => instance.updateConfig(),
+  speakTTS: (entityId, message, options) => instance.speakTTS(entityId, message, options),
+  getMediaPlayers: () => instance.getMediaPlayers(),
   // Expose connection status for status requests
   getConnectionStatus: () => ({
     isConnected: instance.isConnected,

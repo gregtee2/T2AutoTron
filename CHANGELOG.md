@@ -1,3 +1,15 @@
+## [2.1.150] - 2025-12-31
+### Added
+- TTS Announcement node for Home Assistant media players (frontend + backend)
+- Backend TTS logic tries multiple services (cloud, google, speak)
+
+### Fixed
+- deviceManagers normalization now passes through speakTTS/getMediaPlayers
+- Media player dropdown bug in TTS node
+
+### Investigated
+- HomePod TTS not supported natively by HA; Apple TV can be used as a bridge
+- Google Translate TTS integration present but not available as a service for HomePod
 
 # Changelog
 

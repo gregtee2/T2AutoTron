@@ -1,3 +1,25 @@
+# Session Summary: Dec 31, 2025
+
+## What was done
+- Added TTS Announcement node (frontend + backend) for Home Assistant media players
+- Fixed deviceManagers normalization to pass through speakTTS/getMediaPlayers methods
+- Improved backend TTS logic to try multiple TTS services (cloud, google, speak)
+- Debugged why TTS was not working on HomePod
+  - HomePod does not natively support TTS from HA (needs AirPlay/Apple TV bridge)
+- Verified Google Translate TTS integration is present, but not available as a service (likely due to HomePod limitations)
+- Confirmed Apple TV is available as a workaround for HomePod announcements
+
+## Where we left off
+- TTS to HomePod via HA is not working (not supported natively)
+- Apple TV can be used for notifications or as an AirPlay bridge
+- Next step: Test notify or play_media to Apple TV, or use HomeKit automations for HomePod
+
+## Next steps
+- Optionally, add a warning to TTS node UI about HomePod/Apple TV limitations
+- Document Apple TV notification/announcement setup if needed
+
+## Code changes pushed
+- All changes committed and pushed to main/stable
 # Session Handoff - December 29, 2025
 
 ## Recent Fixes (v2.1.135)

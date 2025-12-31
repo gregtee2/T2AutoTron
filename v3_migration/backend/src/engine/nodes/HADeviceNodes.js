@@ -1973,6 +1973,102 @@ registry.register('HALockNode', HALockNode);
 registry.register('HueEffectNode', HueEffectNode);
 registry.register('WizEffectNode', WizEffectNode);
 
+// ============================================================================
+// TTSAnnouncementNode - Send TTS announcements to media_player entities
+// ============================================================================
+class TTSAnnouncementNode {
+  constructor(id, properties = {}) {
+    this.id = id;
+    this.type = 'TTSAnnouncementNode';
+    this.properties = {
+      mediaPlayerId: properties.mediaPlayerId || '',
+      message: properties.message || 'Hello, this is an announcement'
+    };
+    this.inputs = { trigger: null, message: null };
+    this.outputs = { success: false };
+    this._lastTrigger = undefined;
+  }
+
+  setInput(name, value) {
+    if (name in this.inputs) {
+      this.inputs[name] = value;
+    }
+  }
+
+  async process() {
+    const trigger = this.inputs.trigger;
+    const dynamicMessage = this.inputs.message;
+
+    // Detect rising edge
+    if (trigger && trigger !== this._lastTrigger) {
+      this._lastTrigger = trigger;
+
+      const message = dynamicMessage || this.properties.message;
+      const entityId = this.properties.mediaPlayerId;
+
+      if (entityId && message) {
+        try {
+          const { host, token } = getHAConfig();
+          if (!token) {
+            engineLogger.warn(`[TTSAnnouncement] No HA token configured`);
+            this.outputs.success = false;
+            return this.outputs;
+          }
+
+          engineLogger.log(`[TTSAnnouncement] Sending to ${entityId}: "${message}"`);
+
+          // Try tts.speak first
+          const response = await fetch(`${host}/api/services/tts/speak`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              entity_id: entityId,
+              media_player_entity_id: entityId,
+              message: message
+            })
+          });
+
+          if (!response.ok) {
+            // Fallback to google_translate_say
+            const fallbackResponse = await fetch(`${host}/api/services/tts/google_translate_say`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                entity_id: entityId,
+                message: message
+              })
+            });
+
+            if (!fallbackResponse.ok) {
+              engineLogger.warn(`[TTSAnnouncement] TTS service failed`);
+              this.outputs.success = false;
+              return this.outputs;
+            }
+          }
+
+          engineLogger.log(`[TTSAnnouncement] Successfully sent to ${entityId}`);
+          this.outputs.success = true;
+        } catch (err) {
+          engineLogger.warn(`[TTSAnnouncement] Error: ${err.message}`);
+          this.outputs.success = false;
+        }
+      }
+    } else if (!trigger) {
+      this._lastTrigger = undefined;
+    }
+
+    return this.outputs;
+  }
+}
+
+registry.register('TTSAnnouncementNode', TTSAnnouncementNode);
+
 module.exports = { 
   HADeviceStateNode, 
   HAServiceCallNode, 
@@ -1983,6 +2079,7 @@ module.exports = {
   HALockNode,
   HueEffectNode,
   WizEffectNode,
+  TTSAnnouncementNode,
   getHAConfig,
   bulkStateCache  // Exposed for engine reconciliation
 };
