@@ -352,7 +352,7 @@ io.on('connection', (socket) => {
   // === ELEVENLABS TTS REQUEST ===
   socket.on('request-elevenlabs-tts', async (data = {}) => {
     try {
-      const { message, voiceId, mediaPlayerId } = data;
+      const { message, voiceId, mediaPlayerId, mediaPlayerIds } = data;
       if (!message) {
         socket.emit('elevenlabs-tts-result', { success: false, error: 'No message provided' });
         return;
@@ -366,8 +366,16 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // If a media player is specified, play the audio on it via HA
-      if (mediaPlayerId) {
+      // Support both single mediaPlayerId (legacy) and mediaPlayerIds array (new)
+      let speakerIds = [];
+      if (mediaPlayerIds && Array.isArray(mediaPlayerIds) && mediaPlayerIds.length > 0) {
+        speakerIds = mediaPlayerIds;
+      } else if (mediaPlayerId) {
+        speakerIds = [mediaPlayerId];
+      }
+
+      // Play on all specified speakers
+      if (speakerIds.length > 0) {
         const haManager = deviceManagers.getManager('ha_');
         if (haManager) {
           // Build the full URL to the audio file
@@ -375,42 +383,75 @@ io.on('connection', (socket) => {
           const host = process.env.PUBLIC_URL || `http://localhost:${port}`;
           const audioUrl = `${host}${result.audioUrl}`;
           
-          // Use media_player.play_media to play the audio
-          const cleanEntityId = mediaPlayerId.startsWith('ha_') ? mediaPlayerId.slice(3) : mediaPlayerId;
-          
-          try {
-            // First, stop any current playback and clear queue to prevent stacking
-            // This helps with devices like Denon that queue multiple play requests
-            await fetch(`${process.env.HA_HOST}/api/services/media_player/media_stop`, {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${process.env.HA_TOKEN}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ entity_id: cleanEntityId })
-            });
+          // Play on each speaker
+          for (const speakerId of speakerIds) {
+            const cleanEntityId = speakerId.startsWith('ha_') ? speakerId.slice(3) : speakerId;
             
-            // Small delay to let the stop command complete
-            await new Promise(r => setTimeout(r, 200));
+            // Denon/AVR devices queue media and may repeat - need special handling
+            const isDenon = cleanEntityId.toLowerCase().includes('denon') || 
+                           cleanEntityId.toLowerCase().includes('avr') ||
+                           cleanEntityId.toLowerCase().includes('receiver') ||
+                           cleanEntityId.toLowerCase().includes('marantz');
             
-            // Now play the new audio with announce=true to hint single-play intent
-            await fetch(`${process.env.HA_HOST}/api/services/media_player/play_media`, {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${process.env.HA_TOKEN}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                entity_id: cleanEntityId,
-                media_content_id: audioUrl,
-                media_content_type: 'music',
-                announce: true,  // Hint that this is a one-shot announcement, not a playlist item
-                enqueue: 'replace'  // Replace any existing queue instead of adding
-              })
-            });
-            logger.log(`ElevenLabs TTS played on ${cleanEntityId}`, 'info');
-          } catch (playErr) {
-            logger.log(`Error playing ElevenLabs TTS: ${playErr.message}`, 'error');
+            try {
+              if (isDenon) {
+                // For Denon/HEOS: clear the queue completely before playing
+                // 1. Stop playback
+                await fetch(`${process.env.HA_HOST}/api/services/media_player/media_stop`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${process.env.HA_TOKEN}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ entity_id: cleanEntityId })
+                });
+                
+                // 2. Clear the playlist/queue
+                await fetch(`${process.env.HA_HOST}/api/services/media_player/clear_playlist`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${process.env.HA_TOKEN}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ entity_id: cleanEntityId })
+                }).catch(() => {}); // Ignore if not supported
+                
+                await new Promise(r => setTimeout(r, 500)); // Let commands complete
+                
+                // 3. Play with enqueue=replace
+                await fetch(`${process.env.HA_HOST}/api/services/media_player/play_media`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${process.env.HA_TOKEN}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    entity_id: cleanEntityId,
+                    media_content_id: audioUrl,
+                    media_content_type: 'music',
+                    enqueue: 'replace'
+                  })
+                });
+                logger.log(`ElevenLabs TTS played on ${cleanEntityId} (Denon mode)`, 'info');
+              } else {
+                // For HomePod, Sonos, etc: simple play_media works fine
+                await fetch(`${process.env.HA_HOST}/api/services/media_player/play_media`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${process.env.HA_TOKEN}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    entity_id: cleanEntityId,
+                    media_content_id: audioUrl,
+                    media_content_type: 'music'
+                  })
+                });
+                logger.log(`ElevenLabs TTS played on ${cleanEntityId}`, 'info');
+              }
+            } catch (playErr) {
+              logger.log(`Error playing ElevenLabs TTS on ${cleanEntityId}: ${playErr.message}`, 'error');
+            }
           }
         }
       }

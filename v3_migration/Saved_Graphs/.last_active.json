@@ -1,184 +1,11 @@
 {
   "nodes": [
     {
-      "id": "903c77a0660087e3",
-      "label": "Weather Logic",
-      "position": {
-        "x": 528.1481481481482,
-        "y": 355.11111129949114
-      },
-      "data": {
-        "id": "903c77a0660087e3",
-        "label": "Weather Logic",
-        "properties": {
-          "solarEnabled": true,
-          "solarThresholdHigh": 750,
-          "solarThresholdLow": 500,
-          "solarInvert": false,
-          "solarLabel": "Solar",
-          "tempEnabled": true,
-          "tempThresholdHigh": 80,
-          "tempThresholdLow": 60,
-          "tempInvert": false,
-          "tempLabel": "Temp",
-          "humidityEnabled": true,
-          "humidityThresholdHigh": 70,
-          "humidityThresholdLow": 30,
-          "humidityInvert": false,
-          "humidityLabel": "Humidity",
-          "windEnabled": true,
-          "windThresholdHigh": 15,
-          "windThresholdLow": 5,
-          "windInvert": false,
-          "windLabel": "Wind",
-          "hourlyRainEnabled": true,
-          "hourlyRainThreshold": 0.1,
-          "hourlyRainInvert": false,
-          "hourlyRainLabel": "Hourly Rain",
-          "eventRainEnabled": true,
-          "eventRainThreshold": 0.21,
-          "eventRainInvert": false,
-          "eventRainLabel": "Event Rain",
-          "dailyRainEnabled": true,
-          "dailyRainThreshold": 0.1,
-          "dailyRainInvert": false,
-          "dailyRainLabel": "Daily Rain",
-          "logicType": "OR",
-          "hysteresis": 5,
-          "_lastEval": {
-            "solar": false,
-            "temp": false,
-            "humidity": false,
-            "wind": false,
-            "hourlyRain": false,
-            "eventRain": false,
-            "dailyRain": true,
-            "all": true
-          },
-          "_lastWeather": {
-            "temp": 54.5,
-            "humidity": 94,
-            "wind": 0,
-            "hourlyRain": 0.07,
-            "eventRain": 0.11,
-            "dailyRain": 0.11,
-            "solar": 44.99
-          }
-        }
-      }
-    },
-    {
-      "id": "746b2da5166ac650",
-      "label": "Debug",
-      "position": {
-        "x": 2529.1480824015985,
-        "y": 689.625608511621
-      },
-      "data": {
-        "inputs": {
-          "input": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Input",
-            "id": "d20c2319f42e2dfd",
-            "control": null,
-            "showControl": true
-          }
-        },
-        "outputs": {
-          "output": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Output",
-            "multipleConnections": true,
-            "id": "c6d21f84a5535fe7"
-          }
-        },
-        "controls": {},
-        "label": "Debug",
-        "id": "746b2da5166ac650",
-        "width": 260,
-        "properties": {
-          "name": "",
-          "toConsole": false,
-          "maxHistory": 10,
-          "enabled": true,
-          "history": [
-            {
-              "time": "2:04:54 PM",
-              "timestamp": 1767218694386,
-              "value": true,
-              "type": "boolean"
-            },
-            {
-              "time": "2:03:30 PM",
-              "timestamp": 1767218610911,
-              "value": "Good morning Greg ,Temperature is 55 degrees, humidity 94 percent, with 0.07 inches of rain in the last hour, total rainfall today 0.11 inches.",
-              "type": "string"
-            },
-            {
-              "time": "2:03:30 PM",
-              "timestamp": 1767218610806,
-              "value": "Good morningGreg ,Temperature is 55 degrees, humidity 94 percent, with 0.07 inches of rain in the last hour, total rainfall today 0.11 inches.",
-              "type": "string"
-            },
-            {
-              "time": "2:03:30 PM",
-              "timestamp": 1767218610670,
-              "value": "Good morninGreg ,Temperature is 55 degrees, humidity 94 percent, with 0.07 inches of rain in the last hour, total rainfall today 0.11 inches.",
-              "type": "string"
-            },
-            {
-              "time": "2:03:30 PM",
-              "timestamp": 1767218610589,
-              "value": "Good morniGreg ,Temperature is 55 degrees, humidity 94 percent, with 0.07 inches of rain in the last hour, total rainfall today 0.11 inches.",
-              "type": "string"
-            },
-            {
-              "time": "2:03:30 PM",
-              "timestamp": 1767218610436,
-              "value": "Good mornGreg ,Temperature is 55 degrees, humidity 94 percent, with 0.07 inches of rain in the last hour, total rainfall today 0.11 inches.",
-              "type": "string"
-            },
-            {
-              "time": "2:03:29 PM",
-              "timestamp": 1767218609967,
-              "value": "Good morGreg ,Temperature is 55 degrees, humidity 94 percent, with 0.07 inches of rain in the last hour, total rainfall today 0.11 inches.",
-              "type": "string"
-            },
-            {
-              "time": "2:03:28 PM",
-              "timestamp": 1767218608679,
-              "value": "Good moGreg ,Temperature is 55 degrees, humidity 94 percent, with 0.07 inches of rain in the last hour, total rainfall today 0.11 inches.",
-              "type": "string"
-            },
-            {
-              "time": "2:03:28 PM",
-              "timestamp": 1767218608582,
-              "value": "Good mGreg ,Temperature is 55 degrees, humidity 94 percent, with 0.07 inches of rain in the last hour, total rainfall today 0.11 inches.",
-              "type": "string"
-            },
-            {
-              "time": "2:03:28 PM",
-              "timestamp": 1767218608057,
-              "value": "Good Greg ,Temperature is 55 degrees, humidity 94 percent, with 0.07 inches of rain in the last hour, total rainfall today 0.11 inches.",
-              "type": "string"
-            }
-          ],
-          "currentValue": true,
-          "messageCount": 16
-        },
-        "selected": false
-      }
-    },
-    {
-      "id": "3b15cfdaa68316f5",
+      "id": "11653fb6a3d52876",
       "label": "TTS Announcement",
       "position": {
-        "x": 2015.8320025181215,
-        "y": 398.53747942416436
+        "x": 693,
+        "y": 300
       },
       "data": {
         "inputs": {
@@ -187,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "02a8725fccce7281",
+            "id": "af83d49d79c62bd8",
             "control": null,
             "showControl": true
           },
@@ -196,7 +23,7 @@
               "name": "any"
             },
             "label": "Message",
-            "id": "6fa506c3434eb582",
+            "id": "4ad75a3a67de3a77",
             "control": null,
             "showControl": true
           }
@@ -208,188 +35,39 @@
             },
             "label": "Success",
             "multipleConnections": true,
-            "id": "bd30296add2d133e"
+            "id": "04be11953f381441"
           }
         },
         "controls": {},
         "label": "TTS Announcement",
-        "id": "3b15cfdaa68316f5",
+        "id": "11653fb6a3d52876",
         "width": 280,
-        "height": 220,
+        "height": 320,
         "properties": {
-          "mediaPlayerId": "media_player.homepodoffice",
+          "mediaPlayerIds": [
+            "media_player.homepodoffice",
+            "media_player.denon_avr_x1700h_2"
+          ],
+          "mediaPlayerId": "",
           "message": "Hello, this is a test announcement",
           "ttsService": "elevenlabs",
           "ttsEntityId": "tts.google_translate_en_com",
           "elevenLabsVoiceId": "uhYnkYTBc711oAY590Ea",
           "elevenLabsVoiceName": "Charlotte - Meditation & Relaxation",
-          "lastResult": true
+          "lastResult": null
         },
         "_lastTrigger": false,
-        "_lastSentTime": 1767218644448,
-        "selected": false
-      }
-    },
-    {
-      "id": "1e3f8c7fc8a11eef",
-      "label": "Toggle",
-      "position": {
-        "x": 1389.493315461956,
-        "y": 438.1988332335559
-      },
-      "data": {
-        "id": "1e3f8c7fc8a11eef",
-        "label": "Toggle",
-        "properties": {
-          "state": false,
-          "pulseMode": true,
-          "lastCommand": false
-        }
-      }
-    },
-    {
-      "id": "bb65e6d49c815a4f",
-      "label": "String Concat",
-      "position": {
-        "x": 1554.0125387387666,
-        "y": 799.5309392950389
-      },
-      "data": {
-        "inputs": {
-          "string1": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "String 1",
-            "id": "c7e74700349079ee",
-            "control": null,
-            "showControl": true
-          },
-          "string2": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "String 2",
-            "id": "550ab05bd755d274",
-            "control": null,
-            "showControl": true
-          },
-          "string3": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "String 3",
-            "id": "7cc8cf41b1fa34ac",
-            "control": null,
-            "showControl": true
-          },
-          "string4": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "String 4",
-            "id": "ca9607139a485e31",
-            "control": null,
-            "showControl": true
-          }
-        },
-        "outputs": {
-          "result": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Result",
-            "multipleConnections": true,
-            "id": "bb5cdef4e72fa142"
-          }
-        },
-        "controls": {},
-        "label": "String Concat",
-        "id": "bb65e6d49c815a4f",
-        "width": 260,
-        "height": 280,
-        "properties": {
-          "separator": " ,",
-          "prefix": "",
-          "suffix": "",
-          "skipEmpty": true
-        },
-        "selected": false
-      }
-    },
-    {
-      "id": "486bb462d49e0688",
-      "label": "Text String",
-      "position": {
-        "x": 1223.5828201924633,
-        "y": 663.7112923612051
-      },
-      "data": {
-        "inputs": {},
-        "outputs": {
-          "text": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Text",
-            "multipleConnections": true,
-            "id": "f4df4d46ec25e901"
-          }
-        },
-        "controls": {},
-        "label": "Text String",
-        "id": "486bb462d49e0688",
-        "width": 250,
-        "height": 150,
-        "properties": {
-          "text": "Good morning Greg"
-        },
-        "selected": false
+        "_lastSentTime": 0,
+        "selected": true
       }
     }
   ],
-  "connections": [
-    {
-      "id": "75a3fcebca128ab9",
-      "source": "1e3f8c7fc8a11eef",
-      "target": "3b15cfdaa68316f5",
-      "sourceOutput": "state",
-      "targetInput": "trigger"
-    },
-    {
-      "id": "9f5ea52fd2888f8a",
-      "source": "486bb462d49e0688",
-      "target": "bb65e6d49c815a4f",
-      "sourceOutput": "text",
-      "targetInput": "string1"
-    },
-    {
-      "id": "81a8bf8a79120eee",
-      "source": "903c77a0660087e3",
-      "target": "bb65e6d49c815a4f",
-      "sourceOutput": "summary_text",
-      "targetInput": "string2"
-    },
-    {
-      "id": "b581aef43d7e2c63",
-      "source": "bb65e6d49c815a4f",
-      "target": "3b15cfdaa68316f5",
-      "sourceOutput": "result",
-      "targetInput": "message"
-    },
-    {
-      "id": "ff85386591152a4a",
-      "source": "3b15cfdaa68316f5",
-      "target": "746b2da5166ac650",
-      "sourceOutput": "success",
-      "targetInput": "input"
-    }
-  ],
+  "connections": [],
   "viewport": {
-    "x": -233.65714721679785,
-    "y": -216.8412343025213,
-    "k": 0.7355878675853366
+    "x": 0,
+    "y": 0,
+    "k": 1
   },
   "autoSaved": true,
-  "timestamp": 1767218814385
+  "timestamp": 1767223520077
 }

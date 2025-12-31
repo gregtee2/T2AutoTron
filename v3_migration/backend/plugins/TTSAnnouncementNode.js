@@ -48,10 +48,11 @@
             super("TTS Announcement");
             this.changeCallback = changeCallback;
             this.width = 280;
-            this.height = 220;
+            this.height = 320;
 
             this.properties = {
-                mediaPlayerId: '',
+                mediaPlayerIds: [],  // Array of selected speaker IDs (multi-select)
+                mediaPlayerId: '',   // Legacy single player (for backwards compat)
                 message: 'Hello, this is a test announcement',
                 ttsService: 'tts/speak',
                 ttsEntityId: '', // The TTS engine entity (e.g., tts.google_translate_en_com) - required for tts.speak
@@ -72,6 +73,18 @@
             this._lastSentTime = 0;  // Debounce: prevent rapid-fire
         }
 
+        // Get the list of speakers to use (supports legacy single or new multi)
+        getSpeakerIds() {
+            if (this.properties.mediaPlayerIds && this.properties.mediaPlayerIds.length > 0) {
+                return this.properties.mediaPlayerIds;
+            }
+            // Legacy fallback
+            if (this.properties.mediaPlayerId) {
+                return [this.properties.mediaPlayerId];
+            }
+            return [];
+        }
+
         async data(inputs) {
             const trigger = inputs.trigger?.[0];
             const dynamicMessage = inputs.message?.[0];
@@ -84,6 +97,8 @@
             const now = Date.now();
             const debounceMs = 1000;
             
+            const speakerIds = this.getSpeakerIds();
+            
             if (triggerIsTrue && !wasTriggered && (now - this._lastSentTime) > debounceMs) {
                 this._lastTrigger = true;
                 this._lastSentTime = now;
@@ -94,25 +109,27 @@
                     ? dynamicMessage 
                     : this.properties.message;
                     
-                if (this.properties.mediaPlayerId && message) {
-                    // Send TTS via socket
+                if (speakerIds.length > 0 && message) {
+                    // Send TTS via socket - now supports multiple speakers
                     if (window.socket) {
                         if (this.properties.ttsService === 'elevenlabs') {
-                            // Use ElevenLabs TTS
+                            // Use ElevenLabs TTS - pass array of speakers
                             window.socket.emit('request-elevenlabs-tts', {
                                 message: message,
                                 voiceId: this.properties.elevenLabsVoiceId,
-                                mediaPlayerId: this.properties.mediaPlayerId
+                                mediaPlayerIds: speakerIds  // NEW: array of speakers
                             });
                         } else {
-                            // Use HA TTS
-                            window.socket.emit('request-tts', {
-                                entityId: this.properties.mediaPlayerId,
-                                message: message,
-                                options: { 
-                                    tts_service: this.properties.ttsService,
-                                    tts_entity_id: this.properties.ttsEntityId
-                                }
+                            // Use HA TTS - send to each speaker
+                            speakerIds.forEach(speakerId => {
+                                window.socket.emit('request-tts', {
+                                    entityId: speakerId,
+                                    message: message,
+                                    options: { 
+                                        tts_service: this.properties.ttsService,
+                                        tts_entity_id: this.properties.ttsEntityId
+                                    }
+                                });
                             });
                         }
                         this.properties.lastResult = true;
@@ -130,7 +147,8 @@
 
         serialize() {
             return {
-                mediaPlayerId: this.properties.mediaPlayerId,
+                mediaPlayerIds: this.properties.mediaPlayerIds,
+                mediaPlayerId: this.properties.mediaPlayerId,  // Keep for backwards compat
                 message: this.properties.message,
                 ttsService: this.properties.ttsService,
                 ttsEntityId: this.properties.ttsEntityId,
@@ -141,12 +159,18 @@
 
         restore(state) {
             const props = state.properties || state;
+            if (props.mediaPlayerIds !== undefined) this.properties.mediaPlayerIds = props.mediaPlayerIds;
             if (props.mediaPlayerId !== undefined) this.properties.mediaPlayerId = props.mediaPlayerId;
             if (props.message !== undefined) this.properties.message = props.message;
             if (props.ttsService !== undefined) this.properties.ttsService = props.ttsService;
             if (props.ttsEntityId !== undefined) this.properties.ttsEntityId = props.ttsEntityId;
             if (props.elevenLabsVoiceId !== undefined) this.properties.elevenLabsVoiceId = props.elevenLabsVoiceId;
             if (props.elevenLabsVoiceName !== undefined) this.properties.elevenLabsVoiceName = props.elevenLabsVoiceName;
+            
+            // Migrate legacy single player to array
+            if (!this.properties.mediaPlayerIds?.length && this.properties.mediaPlayerId) {
+                this.properties.mediaPlayerIds = [this.properties.mediaPlayerId];
+            }
         }
     }
 
@@ -155,13 +179,23 @@
         const [mediaPlayers, setMediaPlayers] = useState([]);
         const [ttsEntities, setTtsEntities] = useState([]);
         const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
-        const [selectedPlayer, setSelectedPlayer] = useState(data.properties.mediaPlayerId || '');
+        const [selectedPlayers, setSelectedPlayers] = useState(data.properties.mediaPlayerIds || []);
         const [selectedTtsEntity, setSelectedTtsEntity] = useState(data.properties.ttsEntityId || '');
         const [selectedVoice, setSelectedVoice] = useState(data.properties.elevenLabsVoiceId || '');
         const [message, setMessage] = useState(data.properties.message || '');
         const [ttsService, setTtsService] = useState(data.properties.ttsService || 'tts/speak');
         const [testStatus, setTestStatus] = useState('');
+        const [showSpeakerList, setShowSpeakerList] = useState(false);
         const { NodeHeader, HelpIcon } = window.T2Controls || {};
+
+        // Migrate legacy single player on mount
+        useEffect(() => {
+            if (data.properties.mediaPlayerId && !data.properties.mediaPlayerIds?.length) {
+                const migrated = [data.properties.mediaPlayerId];
+                setSelectedPlayers(migrated);
+                data.properties.mediaPlayerIds = migrated;
+            }
+        }, []);
 
         // Fetch media players and TTS entities on mount ONLY (empty deps = runs once)
         // Use unique event names scoped to this node instance to prevent cross-talk
@@ -242,11 +276,16 @@
             };
         }, []); // Empty deps = run once on mount, cleanup on unmount
 
-        const handlePlayerChange = (e) => {
-            const value = e.target.value;
-            setSelectedPlayer(value);
-            data.properties.mediaPlayerId = value;
-            if (data.changeCallback) data.changeCallback();
+        const handlePlayerToggle = (playerId) => {
+            setSelectedPlayers(prev => {
+                const isSelected = prev.includes(playerId);
+                const newSelection = isSelected 
+                    ? prev.filter(id => id !== playerId)
+                    : [...prev, playerId];
+                data.properties.mediaPlayerIds = newSelection;
+                if (data.changeCallback) data.changeCallback();
+                return newSelection;
+            });
         };
 
         const handleTtsEntityChange = (e) => {
@@ -277,8 +316,8 @@
         };
 
         const handleTest = () => {
-            if (!selectedPlayer) {
-                setTestStatus('Select a speaker first');
+            if (selectedPlayers.length === 0) {
+                setTestStatus('Select at least one speaker');
                 setTimeout(() => setTestStatus(''), 2000);
                 return;
             }
@@ -297,24 +336,26 @@
                 setTimeout(() => setTestStatus(''), 2000);
                 return;
             }
-            setTestStatus('Sending...');
+            setTestStatus(`Sending to ${selectedPlayers.length} speaker(s)...`);
             if (window.socket) {
                 if (ttsService === 'elevenlabs') {
-                    // Use ElevenLabs TTS
+                    // Use ElevenLabs TTS - pass array of speakers
                     window.socket.emit('request-elevenlabs-tts', {
                         message: message,
                         voiceId: selectedVoice,
-                        mediaPlayerId: selectedPlayer
+                        mediaPlayerIds: selectedPlayers
                     });
                 } else {
-                    // Use HA TTS
-                    window.socket.emit('request-tts', {
-                        entityId: selectedPlayer,
-                        message: message,
-                        options: { 
-                            tts_service: ttsService,
-                            tts_entity_id: selectedTtsEntity
-                        }
+                    // Use HA TTS - send to each speaker
+                    selectedPlayers.forEach(speakerId => {
+                        window.socket.emit('request-tts', {
+                            entityId: speakerId,
+                            message: message,
+                            options: { 
+                                tts_service: ttsService,
+                                tts_entity_id: selectedTtsEntity
+                            }
+                        });
                     });
                 }
             }
@@ -498,27 +539,71 @@
                         })
                     ])
                 ]),
-                // Media Player dropdown
+                // Media Player multi-select
                 React.createElement('div', { key: 'player-row' }, [
                     React.createElement('div', { key: 'label', style: labelStyle }, [
-                        'Speaker',
-                        HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.mediaPlayer, size: 10 })
+                        `Speakers (${selectedPlayers.length} selected)`,
+                        HelpIcon && React.createElement(HelpIcon, { key: 'help', text: 'Select one or more speakers to announce to simultaneously', size: 10 })
                     ]),
-                    React.createElement('select', {
-                        key: 'select',
-                        value: selectedPlayer,
-                        onChange: handlePlayerChange,
+                    // Toggle button to show/hide speaker list
+                    React.createElement('button', {
+                        key: 'toggle-btn',
+                        onClick: () => setShowSpeakerList(!showSpeakerList),
                         onPointerDown: (e) => e.stopPropagation(),
-                        style: selectStyle
+                        style: {
+                            ...selectStyle,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }
                     }, [
-                        React.createElement('option', { key: 'empty', value: '' }, '-- Select Speaker --'),
-                        ...mediaPlayers.map(p => {
-                            // Always show all media_player entities
-                            const id = p.id?.replace('ha_', '') || p.entity_id;
-                            const name = p.name || p.friendly_name || id;
-                            return React.createElement('option', { key: id, value: id }, name);
-                        })
-                    ])
+                        React.createElement('span', { key: 'text' }, 
+                            selectedPlayers.length === 0 ? '-- Select Speakers --' : 
+                            selectedPlayers.length === 1 ? mediaPlayers.find(p => (p.id?.replace('ha_', '') || p.entity_id) === selectedPlayers[0])?.name || selectedPlayers[0] :
+                            `${selectedPlayers.length} speakers selected`
+                        ),
+                        React.createElement('span', { key: 'arrow' }, showSpeakerList ? '▲' : '▼')
+                    ]),
+                    // Collapsible speaker list with checkboxes
+                    showSpeakerList && React.createElement('div', {
+                        key: 'speaker-list',
+                        style: {
+                            maxHeight: '150px',
+                            overflowY: 'auto',
+                            background: '#1a1a2e',
+                            border: '1px solid #444',
+                            borderTop: 'none',
+                            borderRadius: '0 0 6px 6px',
+                            padding: '4px'
+                        }
+                    }, mediaPlayers.map(p => {
+                        const id = p.id?.replace('ha_', '') || p.entity_id;
+                        const name = p.name || p.friendly_name || id;
+                        const isChecked = selectedPlayers.includes(id);
+                        return React.createElement('label', {
+                            key: id,
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '4px 6px',
+                                cursor: 'pointer',
+                                borderRadius: '4px',
+                                background: isChecked ? 'rgba(0, 217, 255, 0.15)' : 'transparent'
+                            },
+                            onPointerDown: (e) => e.stopPropagation()
+                        }, [
+                            React.createElement('input', {
+                                key: 'cb',
+                                type: 'checkbox',
+                                checked: isChecked,
+                                onChange: () => handlePlayerToggle(id),
+                                style: { accentColor: '#00d9ff' }
+                            }),
+                            React.createElement('span', { key: 'name', style: { fontSize: '11px' } }, name)
+                        ]);
+                    }))
                 ]),
 
                 // Message input

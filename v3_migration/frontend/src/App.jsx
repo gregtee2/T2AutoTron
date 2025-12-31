@@ -555,10 +555,16 @@ function App() {
     registerScheduledEvents(nodeId, []);
   }, [registerScheduledEvents]);
 
+  // Function to get current upcoming events (for UpcomingEventsNode)
+  const getUpcomingEvents = useCallback(() => {
+    return upcomingEvents || [];
+  }, [upcomingEvents]);
+
   // Expose addEventLog and toast globally for nodes to use
   useEffect(() => {
     window.addEventLog = addEventLog;
     window.setUpcomingEvents = setUpcomingEvents;
+    window.getUpcomingEvents = getUpcomingEvents;
     window.registerScheduledEvents = registerScheduledEvents;
     window.unregisterScheduledEvents = unregisterScheduledEvents;
     // Expose toast for plugins: window.T2Toast.success('message'), .error(), .warning(), .info()
@@ -571,12 +577,13 @@ function App() {
     return () => {
       delete window.addEventLog;
       delete window.setUpcomingEvents;
+      delete window.getUpcomingEvents;
       delete window.registerScheduledEvents;
       delete window.unregisterScheduledEvents;
       delete window.registerPendingCommand;
       delete window.T2Toast;
     };
-  }, [registerScheduledEvents, unregisterScheduledEvents, toast]);
+  }, [registerScheduledEvents, unregisterScheduledEvents, getUpcomingEvents, toast]);
 
   // Format time for upcoming events - shows relative time and absolute time
   const formatEventTime = (timestamp) => {
