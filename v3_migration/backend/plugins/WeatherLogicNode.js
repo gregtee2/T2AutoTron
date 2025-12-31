@@ -34,6 +34,8 @@
                 this.addOutput("hourly_rain", new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), "Hourly Rain"));
                 this.addOutput("event_rain", new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), "Event Rain"));
                 this.addOutput("daily_rain", new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), "Daily Rain"));
+                // Text outputs for TTS announcements
+                this.addOutput("summary_text", new ClassicPreset.Output(window.sockets.any || new ClassicPreset.Socket('any'), "Summary Text"));
             } catch (e) { console.error("[WeatherLogicNode] Error adding outputs:", e); }
 
             this.properties = {
@@ -51,15 +53,41 @@
         }
 
         data() {
+            const eval_ = this.properties._lastEval || {};
+            const weather = this.properties._lastWeather || {};
+            
+            // Generate summary text for TTS
+            const summaryParts = [];
+            if (weather.temp !== null && weather.temp !== undefined) {
+                summaryParts.push(`Temperature is ${Math.round(weather.temp)} degrees`);
+            }
+            if (weather.humidity !== null && weather.humidity !== undefined) {
+                summaryParts.push(`humidity ${Math.round(weather.humidity)} percent`);
+            }
+            if (weather.wind !== null && weather.wind !== undefined && weather.wind > 0) {
+                summaryParts.push(`wind ${Math.round(weather.wind)} miles per hour`);
+            }
+            if (weather.hourlyRain !== null && weather.hourlyRain !== undefined && weather.hourlyRain > 0) {
+                summaryParts.push(`with ${weather.hourlyRain.toFixed(2)} inches of rain in the last hour`);
+            }
+            if (weather.dailyRain !== null && weather.dailyRain !== undefined && weather.dailyRain > 0.01) {
+                summaryParts.push(`total rainfall today ${weather.dailyRain.toFixed(2)} inches`);
+            }
+            
+            const summaryText = summaryParts.length > 0 
+                ? summaryParts.join(', ') + '.'
+                : 'Weather data not available.';
+            
             return {
-                all: this.properties._lastEval?.all || false,
-                solar: this.properties._lastEval?.solar || false,
-                temp: this.properties._lastEval?.temp || false,
-                humidity: this.properties._lastEval?.humidity || false,
-                wind: this.properties._lastEval?.wind || false,
-                hourly_rain: this.properties._lastEval?.hourlyRain || false,
-                event_rain: this.properties._lastEval?.eventRain || false,
-                daily_rain: this.properties._lastEval?.dailyRain || false
+                all: eval_.all || false,
+                solar: eval_.solar || false,
+                temp: eval_.temp || false,
+                humidity: eval_.humidity || false,
+                wind: eval_.wind || false,
+                hourly_rain: eval_.hourlyRain || false,
+                event_rain: eval_.eventRain || false,
+                daily_rain: eval_.dailyRain || false,
+                summary_text: summaryText
             };
         }
 
@@ -138,12 +166,24 @@
             const recentData = history.filter(e => e.timestamp >= twoHoursAgo).slice(-40);
             if (recentData.length === 0 && history.length > 0) recentData.push(history[history.length - 1]);
 
-            const logMax = Math.log(max + 1);
+            // For small ranges (like rain 0-2 inches), use linear scale
+            // For large ranges (solar, temp), use logarithmic scale
+            const useLinearScale = max <= 10;
             
             return React.createElement('div', { className: "weather-metric-graph" }, 
                 recentData.map((entry, i) => {
-                    const logValue = Math.log(entry.value + 0.5);
-                    const heightPercent = Math.min(100, Math.max(0, (logValue / logMax) * 100));
+                    let heightPercent;
+                    if (useLinearScale) {
+                        // Linear scale for rain and small values
+                        heightPercent = Math.min(100, Math.max(5, (entry.value / max) * 100));
+                        // Ensure minimum visible height if value > 0
+                        if (entry.value > 0 && heightPercent < 5) heightPercent = 5;
+                    } else {
+                        // Logarithmic scale for large values
+                        const logMax = Math.log(max + 1);
+                        const logValue = Math.log(entry.value + 0.5);
+                        heightPercent = Math.min(100, Math.max(0, (logValue / logMax) * 100));
+                    }
                     const totalPoints = Math.max(recentData.length, 40); 
                     const widthPercent = 100 / totalPoints;
                     const leftPercent = i * widthPercent;
@@ -318,6 +358,16 @@
 
             setEvalResults(results);
             data.properties._lastEval = results;
+            // Store weather values for TTS text generation
+            data.properties._lastWeather = {
+                temp: currentData.temp,
+                humidity: currentData.humidity,
+                wind: currentData.wind,
+                hourlyRain: currentData.hourlyRain,
+                eventRain: currentData.eventRain,
+                dailyRain: currentData.dailyRain,
+                solar: currentData.solar
+            };
             if (data.changeCallback) data.changeCallback();
         };
 
@@ -498,7 +548,31 @@
                     singleThreshold: state.dailyRainThreshold, onSingleChange: v => updateProperty('dailyRainThreshold', v),
                     min: 0, max: 2, step: 0.01, trend: getTrend(history.dailyRain), range: getRange(history.dailyRain),
                     isActive: evalResults.dailyRain, socketKey: "daily_rain", output: data.outputs.daily_rain, emit, nodeId: data.id
-                })
+                }),
+                // Summary Text output for TTS
+                React.createElement('div', { 
+                    key: 'summary', 
+                    style: { 
+                        display: 'flex', 
+                        justifyContent: 'flex-end', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        marginTop: '10px', 
+                        padding: '8px', 
+                        background: 'rgba(0,0,0,0.3)', 
+                        borderRadius: '4px' 
+                    } 
+                }, [
+                    React.createElement('span', { 
+                        key: 'label', 
+                        style: { color: '#aaa', fontSize: '12px' } 
+                    }, "Summary Text (for TTS)"),
+                    React.createElement(RefComponent, { 
+                        key: 'socket',
+                        init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.summary_text.socket, nodeId: data.id, side: "output", key: "summary_text" } }), 
+                        unmount: ref => emit({ type: "unmount", data: { element: ref } }) 
+                    })
+                ])
             ]),
             isCollapsed && React.createElement('div', { key: 'collapsed', className: "weather-io-container" }, [
                 React.createElement('div', { key: 'spacer', style: { flex: 1 } }),

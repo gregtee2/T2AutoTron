@@ -379,6 +379,21 @@ io.on('connection', (socket) => {
           const cleanEntityId = mediaPlayerId.startsWith('ha_') ? mediaPlayerId.slice(3) : mediaPlayerId;
           
           try {
+            // First, stop any current playback and clear queue to prevent stacking
+            // This helps with devices like Denon that queue multiple play requests
+            await fetch(`${process.env.HA_HOST}/api/services/media_player/media_stop`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${process.env.HA_TOKEN}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ entity_id: cleanEntityId })
+            });
+            
+            // Small delay to let the stop command complete
+            await new Promise(r => setTimeout(r, 200));
+            
+            // Now play the new audio with announce=true to hint single-play intent
             await fetch(`${process.env.HA_HOST}/api/services/media_player/play_media`, {
               method: 'POST',
               headers: {
@@ -388,7 +403,9 @@ io.on('connection', (socket) => {
               body: JSON.stringify({
                 entity_id: cleanEntityId,
                 media_content_id: audioUrl,
-                media_content_type: 'music'
+                media_content_type: 'music',
+                announce: true,  // Hint that this is a one-shot announcement, not a playlist item
+                enqueue: 'replace'  // Replace any existing queue instead of adding
               })
             });
             logger.log(`ElevenLabs TTS played on ${cleanEntityId}`, 'info');
