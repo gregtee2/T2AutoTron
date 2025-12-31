@@ -722,6 +722,177 @@ class WatchdogNode {
   }
 }
 
+/**
+ * TextStringNode - Outputs a static text string
+ */
+class TextStringNode {
+  constructor(id, properties = {}) {
+    this.id = id;
+    this.type = 'TextStringNode';
+    this.properties = {
+      text: properties.text || ''
+    };
+    this.inputs = {};
+    this.outputs = { text: '' };
+  }
+
+  setInput(name, value) {
+    // No inputs
+  }
+
+  process() {
+    this.outputs.text = this.properties.text || '';
+    return this.outputs;
+  }
+}
+
+/**
+ * StringConcatNode - Concatenates multiple strings with separator
+ */
+class StringConcatNode {
+  constructor(id, properties = {}) {
+    this.id = id;
+    this.type = 'StringConcatNode';
+    this.properties = {
+      separator: properties.separator ?? ' ',
+      prefix: properties.prefix || '',
+      suffix: properties.suffix || '',
+      skipEmpty: properties.skipEmpty !== false
+    };
+    this.inputs = { string1: null, string2: null, string3: null, string4: null };
+    this.outputs = { result: '' };
+  }
+
+  setInput(name, value) {
+    if (name in this.inputs) {
+      this.inputs[name] = value;
+    }
+  }
+
+  process() {
+    const { separator, prefix, suffix, skipEmpty } = this.properties;
+    
+    // Collect all input strings
+    const strings = [];
+    for (let i = 1; i <= 4; i++) {
+      const input = this.inputs[`string${i}`];
+      if (input !== undefined && input !== null) {
+        const str = String(input);
+        if (!skipEmpty || str.trim() !== '') {
+          strings.push(str);
+        }
+      }
+    }
+
+    // Concatenate with separator, add prefix/suffix
+    const joined = strings.join(separator);
+    this.outputs.result = prefix + joined + suffix;
+    
+    return this.outputs;
+  }
+}
+
+/**
+ * UpcomingEventsNode (Event Announcer) - Triggers announcement before scheduled events
+ */
+class UpcomingEventsNode {
+  constructor(id, properties = {}) {
+    this.id = id;
+    this.type = 'UpcomingEventsNode';
+    this.properties = {
+      leadTime: properties.leadTime || 5,  // Seconds before event to announce
+      template: properties.template || 'action'  // 'action' or 'passive'
+    };
+    this.inputs = {};
+    this.outputs = { trigger: false, message: '', event: null };
+    this._announcedEvents = {};  // Track announced events
+    this._triggerPulse = false;  // For pulse behavior
+  }
+
+  setInput(name, value) {
+    // No inputs
+  }
+
+  // Generate unique key for an event
+  getEventKey(event) {
+    return `${event.deviceName || event.nodeId}_${event.action}_${new Date(event.time).getTime()}`;
+  }
+
+  // Generate announcement message
+  generateMessage(event, template) {
+    const deviceName = event.deviceName || event.label || 'Unknown device';
+    const action = event.action || 'activate';
+    
+    let actionWord;
+    if (action === 'on') {
+      actionWord = template === 'action' ? 'Turning on' : 'is turning on';
+    } else if (action === 'off') {
+      actionWord = template === 'action' ? 'Turning off' : 'is turning off';
+    } else {
+      actionWord = template === 'action' ? action : `is ${action}`;
+    }
+    
+    return template === 'action' 
+      ? `${actionWord} ${deviceName}` 
+      : `${deviceName} ${actionWord}`;
+  }
+
+  process() {
+    // Reset trigger after one tick (pulse behavior)
+    if (this._triggerPulse) {
+      this._triggerPulse = false;
+      this.outputs.trigger = false;
+    }
+
+    // Get events from scheduler if available
+    const scheduler = global.AutoTronScheduler;
+    if (!scheduler || typeof scheduler.getUpcomingEvents !== 'function') {
+      return this.outputs;
+    }
+
+    const events = scheduler.getUpcomingEvents() || [];
+    const now = Date.now();
+    const leadMs = this.properties.leadTime * 1000;
+
+    // Find events within announcement window
+    for (const event of events) {
+      if (!event.time) continue;
+      
+      const eventTime = new Date(event.time).getTime();
+      const timeUntil = eventTime - now;
+      
+      // Is this event within our lead time window?
+      if (timeUntil > 0 && timeUntil <= leadMs) {
+        const key = this.getEventKey(event);
+        
+        // Haven't announced this one yet?
+        if (!this._announcedEvents[key]) {
+          this._announcedEvents[key] = true;
+          
+          // Generate message and trigger
+          this.outputs.message = this.generateMessage(event, this.properties.template);
+          this.outputs.event = event;
+          this.outputs.trigger = true;
+          this._triggerPulse = true;
+          
+          // Clean up old entries (> 1 hour ago)
+          const oneHourAgo = now - 3600000;
+          for (const oldKey of Object.keys(this._announcedEvents)) {
+            const timestamp = parseInt(oldKey.split('_').pop());
+            if (timestamp < oneHourAgo) {
+              delete this._announcedEvents[oldKey];
+            }
+          }
+          
+          return this.outputs;
+        }
+      }
+    }
+
+    return this.outputs;
+  }
+}
+
 // Register all nodes
 registry.register('CounterNode', CounterNode);
 registry.register('RandomNode', RandomNode);
@@ -734,6 +905,9 @@ registry.register('SmoothNode', SmoothNode);
 registry.register('CombineNode', CombineNode);
 registry.register('SplineCurveNode', SplineCurveNode);
 registry.register('WatchdogNode', WatchdogNode);
+registry.register('TextStringNode', TextStringNode);
+registry.register('StringConcatNode', StringConcatNode);
+registry.register('UpcomingEventsNode', UpcomingEventsNode);
 
 module.exports = {
   CounterNode,
@@ -746,5 +920,8 @@ module.exports = {
   SmoothNode,
   CombineNode,
   SplineCurveNode,
-  WatchdogNode
+  WatchdogNode,
+  TextStringNode,
+  StringConcatNode,
+  UpcomingEventsNode
 };

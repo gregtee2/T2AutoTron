@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "11653fb6a3d52876",
+      "id": "33e9cab9c6092084",
       "label": "TTS Announcement",
       "position": {
-        "x": 693,
-        "y": 300
+        "x": 638,
+        "y": 313
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "af83d49d79c62bd8",
+            "id": "cf0951bc58228849",
             "control": null,
             "showControl": true
           },
@@ -23,7 +23,7 @@
               "name": "any"
             },
             "label": "Message",
-            "id": "4ad75a3a67de3a77",
+            "id": "29a47f2970b1b4d0",
             "control": null,
             "showControl": true
           }
@@ -35,18 +35,17 @@
             },
             "label": "Success",
             "multipleConnections": true,
-            "id": "04be11953f381441"
+            "id": "746eeb9f35dba335"
           }
         },
         "controls": {},
         "label": "TTS Announcement",
-        "id": "11653fb6a3d52876",
+        "id": "33e9cab9c6092084",
         "width": 280,
         "height": 320,
         "properties": {
           "mediaPlayerIds": [
-            "media_player.homepodoffice",
-            "media_player.denon_avr_x1700h_2"
+            "media_player.grotto_guest"
           ],
           "mediaPlayerId": "",
           "message": "Hello, this is a test announcement",
@@ -69,5 +68,5 @@
     "k": 1
   },
   "autoSaved": true,
-  "timestamp": 1767223520077
+  "timestamp": 1767224400749
 }
