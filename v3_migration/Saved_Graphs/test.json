@@ -1,174 +1,220 @@
 {
   "nodes": [
     {
-      "id": "117c0c4d4ab1b285",
-      "label": "HA Device Automation",
+      "id": "d2103f9c4a5b95f8",
+      "label": "TTS Announcement",
       "position": {
-        "x": 725.3735932599702,
-        "y": 920.5437086704007
+        "x": 1126.3775192483374,
+        "y": 229.88371324601857
       },
       "data": {
-        "id": "117c0c4d4ab1b285",
-        "label": "HA Device Automation",
-        "properties": {
-          "status": "Fields: value",
-          "debug": false,
-          "lastEntityType": "sensor",
-          "selectedFields": [
-            "value"
-          ],
-          "lastOutputValues": {
-            "value": 72.71
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "id": "f27e801521151862",
+            "control": null,
+            "showControl": true
           },
-          "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
-        }
-      }
-    },
-    {
-      "id": "b3009593d8f91beb",
-      "label": "HA Device State Output",
-      "position": {
-        "x": 239.1851856875321,
-        "y": 735.55531905971
-      },
-      "data": {
-        "id": "b3009593d8f91beb",
-        "label": "HA Device State Output",
-        "properties": {
-          "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
-          "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Sunshine terrace  Feels like: 72.71",
-          "debug": false,
-          "haToken": "",
-          "filterType": "Sensor",
-          "letterFilter": "All Letters"
-        }
-      }
-    },
-    {
-      "id": "b78b1040f5a1afb0",
-      "label": "Timeline Color",
-      "position": {
-        "x": 1317.921299730212,
-        "y": 295.7146779336392
-      },
-      "data": {
-        "id": "b78b1040f5a1afb0",
-        "label": "Timeline Color",
-        "properties": {
-          "points": [
-            {
-              "x": 0,
-              "y": 0.26893281510643363,
-              "id": "p0"
+          "message": {
+            "socket": {
+              "name": "any"
             },
-            {
-              "x": 1,
-              "y": 0.7218048466596311,
-              "id": "p1"
-            }
-          ],
-          "saturationPoints": [
-            {
-              "x": 0,
-              "y": 1,
-              "id": "p0"
-            },
-            {
-              "x": 1,
-              "y": 1,
-              "id": "p1"
-            }
-          ],
-          "interpolation": "catmull-rom",
-          "editMode": "brightness",
-          "collapsed": false,
-          "rangeMode": "numerical",
-          "startValue": 32,
-          "endValue": 100,
-          "startTimeHours": 8,
-          "startTimeMinutes": 0,
-          "startTimePeriod": "AM",
-          "endTimeHours": 6,
-          "endTimeMinutes": 0,
-          "endTimePeriod": "PM",
-          "timerDurationValue": 1,
-          "timerUnit": "hours",
-          "timerLoopMode": "none",
-          "outputStepInterval": 5000,
-          "colorMode": "custom",
-          "colorStops": [
-            {
-              "position": 0.11,
-              "rgb": {
-                "r": 166,
-                "g": 0,
-                "b": 255
-              }
-            },
-            {
-              "position": 0.36,
-              "rgb": {
-                "r": 23,
-                "g": 126,
-                "b": 222
-              }
-            },
-            {
-              "position": 0.53,
-              "rgb": {
-                "r": 21,
-                "g": 188,
-                "b": 63
-              }
-            },
-            {
-              "position": 0.82,
-              "rgb": {
-                "r": 255,
-                "g": 115,
-                "b": 0
-              }
-            }
-          ],
-          "editorWidth": 360,
-          "editorHeight": 180,
-          "showColorEditor": true,
-          "previewMode": false,
-          "previewPosition": 0.043893880635679956,
-          "position": 0.5986764705882353,
-          "isInRange": true,
-          "outputHue": 0.2953929539295393,
-          "outputSaturation": 0.7192982456140351,
-          "outputBrightness": 140,
-          "outputRgb": {
-            "r": 42,
-            "g": 94,
-            "b": 26
+            "label": "Message",
+            "id": "0adce987f5ae5517",
+            "control": null,
+            "showControl": true
           }
-        }
+        },
+        "outputs": {
+          "success": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Success",
+            "multipleConnections": true,
+            "id": "6d7bd5a2a18cb85b"
+          }
+        },
+        "controls": {},
+        "label": "TTS Announcement",
+        "id": "d2103f9c4a5b95f8",
+        "width": 280,
+        "height": 320,
+        "properties": {
+          "mediaPlayerIds": [
+            "media_player.homepodoffice",
+            "media_player.grotto_guest"
+          ],
+          "mediaPlayerId": "",
+          "message": "Hello, this is a test announcement",
+          "ttsService": "tts/speak",
+          "ttsEntityId": "tts.google_translate_en_com",
+          "elevenLabsVoiceId": "aRlmTYIQo6Tlg5SlulGC",
+          "elevenLabsVoiceName": "Charlotte",
+          "lastResult": true
+        },
+        "_lastTrigger": false,
+        "_lastSentTime": 1767236012542,
+        "selected": false
+      }
+    },
+    {
+      "id": "746a58177eb971d8",
+      "label": "Inject",
+      "position": {
+        "x": 369.2624620437926,
+        "y": 236.3489134399511
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {
+          "output": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Output",
+            "multipleConnections": true,
+            "id": "e51eff0d39ce94c4"
+          }
+        },
+        "controls": {},
+        "label": "Inject",
+        "id": "746a58177eb971d8",
+        "width": 220,
+        "properties": {
+          "payloadType": "string",
+          "payloadValue": "Hello",
+          "repeatMs": 0,
+          "onceDelay": 0,
+          "name": "",
+          "pulseMode": true,
+          "pulseDurationMs": 500,
+          "scheduleEnabled": true,
+          "scheduleTime": "18:56",
+          "scheduleDays": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "lastTriggerTime": 1767236012508,
+          "triggerCount": 2,
+          "isRepeating": false,
+          "onceTriggered": false,
+          "nextScheduledTime": 1767236160000,
+          "isPulsing": false,
+          "pulsePending": false,
+          "debug": false
+        },
+        "_repeatTimer": null,
+        "_onceTimer": null,
+        "_scheduleTimer": null,
+        "_scheduleCheckInterval": null,
+        "_pulseTimer": null,
+        "_shouldOutput": true,
+        "_initialized": true,
+        "selected": false
+      }
+    },
+    {
+      "id": "523b71d0c485f718",
+      "label": "Event Announcer",
+      "position": {
+        "x": 705.2111429781669,
+        "y": 374.5393059110786
+      },
+      "data": {
+        "inputs": {
+          "message": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Message",
+            "id": "177e6f2e8f6afd8a",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "multipleConnections": true,
+            "id": "b08b52de51933f43"
+          },
+          "messageOut": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Message",
+            "multipleConnections": true,
+            "id": "37c00efa86ea5c12"
+          },
+          "event": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Event",
+            "multipleConnections": true,
+            "id": "ae3b7f24bb68958b"
+          }
+        },
+        "controls": {},
+        "label": "Event Announcer",
+        "id": "523b71d0c485f718",
+        "width": 300,
+        "height": 340,
+        "properties": {
+          "leadTime": 5,
+          "template": "action",
+          "announcedEvents": {},
+          "currentMessage": "Hello",
+          "currentEvent": null,
+          "triggerActive": false,
+          "upcomingCount": 0,
+          "lastAdHocMessage": "Hello",
+          "adHocCooldownUntil": 1767236015542,
+          "isAdHocActive": false
+        },
+        "_backendEvents": [],
+        "selected": false
       }
     }
   ],
   "connections": [
     {
-      "id": "657fb0f2a269a6c3",
-      "source": "b3009593d8f91beb",
-      "target": "117c0c4d4ab1b285",
-      "sourceOutput": "device_state",
-      "targetInput": "device_state"
+      "id": "95e319433e7739d8",
+      "source": "746a58177eb971d8",
+      "target": "523b71d0c485f718",
+      "sourceOutput": "output",
+      "targetInput": "message"
     },
     {
-      "id": "4dae43a786d83c96",
-      "source": "117c0c4d4ab1b285",
-      "target": "b78b1040f5a1afb0",
-      "sourceOutput": "out_value",
-      "targetInput": "value"
+      "id": "8299943ed1298f61",
+      "source": "523b71d0c485f718",
+      "target": "d2103f9c4a5b95f8",
+      "sourceOutput": "trigger",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "bd29e14cdb1cef77",
+      "source": "523b71d0c485f718",
+      "target": "d2103f9c4a5b95f8",
+      "sourceOutput": "messageOut",
+      "targetInput": "message"
     }
   ],
   "viewport": {
-    "x": 154.2931854248047,
-    "y": 27.31609544754032,
-    "k": 0.5314410000000002
+    "x": -151.79856491088867,
+    "y": -124.3446653366089,
+    "k": 1.1391909807752107
   }
 }

@@ -135,7 +135,14 @@
             this._stopScheduleChecker();
             
             if (!this.properties.scheduleEnabled || !this.properties.scheduleTime) {
+                if (this.properties.debug) {
+                    console.log(`[InjectNode] _startScheduleChecker: NOT starting (enabled=${this.properties.scheduleEnabled}, time=${this.properties.scheduleTime})`);
+                }
                 return;
+            }
+
+            if (this.properties.debug) {
+                console.log(`[InjectNode] _startScheduleChecker: STARTING checker for ${this.properties.scheduleTime}`);
             }
 
             // Check every 1 second for precise triggering
@@ -185,6 +192,9 @@
                 // Only trigger if we haven't triggered recently (within 60 seconds)
                 const lastTrigger = this.properties.lastTriggerTime;
                 if (!lastTrigger || (Date.now() - lastTrigger) > 60000) {
+                    if (this.properties.debug) {
+                        console.log(`[InjectNode] Schedule triggered at ${currentHours}:${currentMinutes}:${currentSeconds}`);
+                    }
                     this.trigger();
                 }
             }
@@ -247,10 +257,18 @@
             this.properties.lastTriggerTime = Date.now();
             this.properties.triggerCount++;
             
+            if (this.properties.debug) {
+                console.log(`[InjectNode] trigger() called. pulseMode=${this.properties.pulseMode}, count=${this.properties.triggerCount}`);
+            }
+            
             // Handle pulse mode - set pending flag so data() delivers it
             if (this.properties.pulseMode) {
                 this.properties.pulsePending = true;  // Latch: will be cleared when data() reads it
                 this.properties.isPulsing = true;     // Visual indicator
+                
+                if (this.properties.debug) {
+                    console.log(`[InjectNode] Pulse mode: pulsePending set to TRUE`);
+                }
                 
                 // Clear any existing pulse timer
                 if (this._pulseTimer) {
@@ -265,7 +283,16 @@
                 }, this.properties.pulseDurationMs || 500);
             }
             
-            if (this.changeCallback) this.changeCallback();
+            if (this.changeCallback) {
+                if (this.properties.debug) {
+                    console.log(`[InjectNode] Calling changeCallback...`);
+                }
+                this.changeCallback();
+            } else {
+                if (this.properties.debug) {
+                    console.log(`[InjectNode] WARNING: No changeCallback!`);
+                }
+            }
         }
 
         // Start repeat timer
@@ -324,8 +351,14 @@
                     const payload = this._getPayload();
                     // Clear the latch - pulse has been delivered
                     this.properties.pulsePending = false;
+                    if (this.properties.debug) {
+                        console.log(`[InjectNode] data() - DELIVERING PULSE: ${JSON.stringify(payload)}`);
+                    }
                     return { output: payload };
                 } else {
+                    if (this.properties.debug) {
+                        console.log(`[InjectNode] data() - pulse mode, no pending pulse, returning undefined`);
+                    }
                     return { output: undefined };
                 }
             }
@@ -406,10 +439,14 @@
             return () => { data.changeCallback = originalCallback; };
         }, [data]);
 
-        // Cleanup on unmount
+        // Initialize node (start schedule checker, etc.) on mount
         useEffect(() => {
+            if (data.initialize) {
+                data.initialize();
+            }
             return () => {
                 if (data.stopRepeat) data.stopRepeat();
+                if (data._stopScheduleChecker) data._stopScheduleChecker();
             };
         }, [data]);
 
@@ -490,6 +527,12 @@
             }
             forceUpdate(n => n + 1);
         }, [data, props]);
+
+        // Debug toggle handler
+        const handleDebugToggle = useCallback(() => {
+            props.debug = !props.debug;
+            forceUpdate(n => n + 1);
+        }, [props]);
 
         const handleScheduleTimeChange = useCallback((e) => {
             props.scheduleTime = e.target.value;
@@ -922,9 +965,19 @@
                 }, '⚠️ No days selected')
             ),
 
-            // Stats
+            // Stats and Debug toggle
             React.createElement('div', { style: statsStyle },
-                `Triggers: ${props.triggerCount}`
+                `Triggers: ${props.triggerCount}`,
+                React.createElement('span', { 
+                    onClick: handleDebugToggle, 
+                    onPointerDown: stopPropagation,
+                    style: { 
+                        marginLeft: '8px', 
+                        cursor: 'pointer',
+                        color: props.debug ? THEME.warning : THEME.textMuted,
+                        fontSize: '10px'
+                    }
+                }, props.debug ? ' 🔍 Debug ON' : ' 🔍')
             ),
 
             // Output socket - must use data.outputs to get socket object

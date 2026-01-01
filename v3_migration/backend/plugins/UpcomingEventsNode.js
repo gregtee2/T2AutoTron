@@ -57,7 +57,8 @@
                 triggerActive: false,  // Whether trigger is currently firing
                 upcomingCount: 0,      // Number of upcoming events
                 // Ad-hoc message tracking
-                lastAdHocMessage: '',  // Last ad-hoc message we announced (for change detection)
+                lastAdHocMessage: '',  // Last ad-hoc message we announced
+                previousAdHocInput: undefined, // Previous input state (for edge detection)
                 adHocCooldownUntil: 0, // Timestamp when cooldown ends
                 isAdHocActive: false   // True when currently announcing ad-hoc message
             };
@@ -176,7 +177,8 @@
             }
             
             // No new announcements - clear the trigger if it was active
-            if (this.properties.triggerActive) {
+            // BUT don't clear if ad-hoc message is currently active (let it finish its pulse)
+            if (this.properties.triggerActive && !this.properties.isAdHocActive) {
                 this.properties.triggerActive = false;
             }
             
@@ -187,12 +189,23 @@
         checkAdHocMessage(inputMessage) {
             // Unwrap array if needed (Rete passes inputs as arrays)
             const msg = Array.isArray(inputMessage) ? inputMessage[0] : inputMessage;
+            const prevInput = this.properties.previousAdHocInput;
             
-            // Skip if empty, undefined, or same as last announced
+            // Update previous input tracking
+            this.properties.previousAdHocInput = msg;
+            
+            // Skip if empty, undefined
             if (!msg || typeof msg !== 'string' || msg.trim() === '') return false;
-            if (msg === this.properties.lastAdHocMessage) return false;
             
-            // New ad-hoc message detected!
+            // Detect RISING EDGE: previous was undefined/empty, now has value
+            // This allows the same message to trigger again after going back to undefined
+            const wasEmpty = !prevInput || prevInput === undefined || prevInput === '';
+            if (!wasEmpty) {
+                // Input was already a value, not a rising edge
+                return false;
+            }
+            
+            // Rising edge detected! New message coming in
             this.properties.lastAdHocMessage = msg;
             this.properties.currentMessage = msg;
             this.properties.currentEvent = null; // No event for ad-hoc
