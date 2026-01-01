@@ -281,6 +281,9 @@
             };
         }, []);
 
+        // Track last events JSON to avoid unnecessary re-renders
+        const lastEventsJsonRef = useRef('');
+        
         // Main check loop - runs every second
         useEffect(() => {
             const checkEvents = () => {
@@ -302,7 +305,17 @@
                 const mergedEvents = Array.from(eventMap.values())
                     .sort((a, b) => new Date(a.time) - new Date(b.time))
                     .slice(0, 3);
-                setNextEvents(mergedEvents);
+                
+                // Only update state if events actually changed (prevents flicker)
+                const eventsJson = JSON.stringify(mergedEvents.map(e => ({ 
+                    deviceName: e.deviceName, 
+                    action: e.action, 
+                    time: e.time 
+                })));
+                if (eventsJson !== lastEventsJsonRef.current) {
+                    lastEventsJsonRef.current = eventsJson;
+                    setNextEvents(mergedEvents);
+                }
                 
                 // Update ad-hoc state
                 setIsAdHoc(data.properties.isAdHocActive);
