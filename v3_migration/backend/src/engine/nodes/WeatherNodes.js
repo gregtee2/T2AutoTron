@@ -210,7 +210,26 @@ class WeatherLogicNode {
     // Save state for hysteresis
     p._lastEval = results;
     
+    // Extract raw values from weather data
+    const temp = weather?.temperature || weather?.temp || null;
+    const humidity = weather?.humidity || null;
+    const wind = weather?.wind_speed || weather?.wind?.speed || null;
+    const solar = weather?.solar_radiation || (weather?.uvi ? weather.uvi * 100 : null);
+    const hourlyRain = weather?.rain?.['1h'] || 0;
+    const eventRain = weather?.rain?.event || weather?.rain?.['3h'] || 0;
+    const dailyRain = weather?.rain?.daily || weather?.rain?.['24h'] || 0;
+    
+    // Generate summary text for TTS
+    const summaryParts = [];
+    if (temp !== null) summaryParts.push(`Temperature is ${Math.round(temp)} degrees`);
+    if (humidity !== null) summaryParts.push(`humidity ${Math.round(humidity)} percent`);
+    if (wind !== null && wind > 0) summaryParts.push(`wind ${Math.round(wind)} miles per hour`);
+    if (hourlyRain > 0) summaryParts.push(`with ${hourlyRain.toFixed(2)} inches of rain in the last hour`);
+    if (dailyRain > 0.01) summaryParts.push(`total rainfall today ${dailyRain.toFixed(2)} inches`);
+    const summaryText = summaryParts.length > 0 ? summaryParts.join(', ') + '.' : 'Weather data not available.';
+    
     return {
+      // Boolean condition outputs
       all,
       solar: results.solar,
       temp: results.temp,
@@ -218,7 +237,16 @@ class WeatherLogicNode {
       wind: results.wind,
       hourly_rain: results.hourlyRain,
       event_rain: results.eventRain,
-      daily_rain: results.dailyRain
+      daily_rain: results.dailyRain,
+      summary_text: summaryText,
+      // Raw value outputs
+      temp_value: temp,
+      humidity_value: humidity,
+      wind_value: wind,
+      solar_value: solar,
+      hourly_rain_value: hourlyRain,
+      event_rain_value: eventRain,
+      daily_rain_value: dailyRain
     };
   }
 }

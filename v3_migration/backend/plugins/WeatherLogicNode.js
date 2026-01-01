@@ -31,11 +31,19 @@
                 this.addOutput("temp", new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), "Temp"));
                 this.addOutput("humidity", new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), "Humidity"));
                 this.addOutput("wind", new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), "Wind"));
-                this.addOutput("hourly_rain", new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), "Hourly Rain"));
+                this.addOutput("hourly_rain", new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), "Rate/Hour"));
                 this.addOutput("event_rain", new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), "Event Rain"));
                 this.addOutput("daily_rain", new ClassicPreset.Output(window.sockets.boolean || new ClassicPreset.Socket('boolean'), "Daily Rain"));
                 // Text outputs for TTS announcements
                 this.addOutput("summary_text", new ClassicPreset.Output(window.sockets.any || new ClassicPreset.Socket('any'), "Summary Text"));
+                // Raw value outputs for threshold/logic nodes
+                this.addOutput("temp_value", new ClassicPreset.Output(window.sockets.number || new ClassicPreset.Socket('number'), "Temp °F"));
+                this.addOutput("humidity_value", new ClassicPreset.Output(window.sockets.number || new ClassicPreset.Socket('number'), "Humidity %"));
+                this.addOutput("wind_value", new ClassicPreset.Output(window.sockets.number || new ClassicPreset.Socket('number'), "Wind mph"));
+                this.addOutput("solar_value", new ClassicPreset.Output(window.sockets.number || new ClassicPreset.Socket('number'), "Solar W/m²"));
+                this.addOutput("hourly_rain_value", new ClassicPreset.Output(window.sockets.number || new ClassicPreset.Socket('number'), "Rate/hr in"));
+                this.addOutput("event_rain_value", new ClassicPreset.Output(window.sockets.number || new ClassicPreset.Socket('number'), "Event Rain in"));
+                this.addOutput("daily_rain_value", new ClassicPreset.Output(window.sockets.number || new ClassicPreset.Socket('number'), "Daily Rain in"));
             } catch (e) { console.error("[WeatherLogicNode] Error adding outputs:", e); }
 
             this.properties = {
@@ -43,7 +51,7 @@
                 tempEnabled: true, tempThresholdHigh: 80, tempThresholdLow: 60, tempInvert: false, tempLabel: "Temp",
                 humidityEnabled: true, humidityThresholdHigh: 70, humidityThresholdLow: 30, humidityInvert: false, humidityLabel: "Humidity",
                 windEnabled: true, windThresholdHigh: 15, windThresholdLow: 5, windInvert: false, windLabel: "Wind",
-                hourlyRainEnabled: true, hourlyRainThreshold: 0.1, hourlyRainInvert: false, hourlyRainLabel: "Hourly Rain",
+                hourlyRainEnabled: true, hourlyRainThreshold: 0.1, hourlyRainInvert: false, hourlyRainLabel: "Rate Per Hour",
                 eventRainEnabled: true, eventRainThreshold: 0.1, eventRainInvert: false, eventRainLabel: "Event Rain",
                 dailyRainEnabled: true, dailyRainThreshold: 0.1, dailyRainInvert: false, dailyRainLabel: "Daily Rain",
                 logicType: "OR",
@@ -68,7 +76,7 @@
                 summaryParts.push(`wind ${Math.round(weather.wind)} miles per hour`);
             }
             if (weather.hourlyRain !== null && weather.hourlyRain !== undefined && weather.hourlyRain > 0) {
-                summaryParts.push(`with ${weather.hourlyRain.toFixed(2)} inches of rain in the last hour`);
+                summaryParts.push(`rain rate ${weather.hourlyRain.toFixed(2)} inches per hour`);
             }
             if (weather.dailyRain !== null && weather.dailyRain !== undefined && weather.dailyRain > 0.01) {
                 summaryParts.push(`total rainfall today ${weather.dailyRain.toFixed(2)} inches`);
@@ -79,6 +87,7 @@
                 : 'Weather data not available.';
             
             return {
+                // Boolean condition outputs
                 all: eval_.all || false,
                 solar: eval_.solar || false,
                 temp: eval_.temp || false,
@@ -87,7 +96,15 @@
                 hourly_rain: eval_.hourlyRain || false,
                 event_rain: eval_.eventRain || false,
                 daily_rain: eval_.dailyRain || false,
-                summary_text: summaryText
+                summary_text: summaryText,
+                // Raw value outputs
+                temp_value: weather.temp ?? null,
+                humidity_value: weather.humidity ?? null,
+                wind_value: weather.wind ?? null,
+                solar_value: weather.solar ?? null,
+                hourly_rain_value: weather.hourlyRain ?? null,
+                event_rain_value: weather.eventRain ?? null,
+                daily_rain_value: weather.dailyRain ?? null
             };
         }
 
@@ -170,8 +187,68 @@
             // For large ranges (solar, temp), use logarithmic scale
             const useLinearScale = max <= 10;
             
-            return React.createElement('div', { className: "weather-metric-graph" }, 
-                recentData.map((entry, i) => {
+            // Calculate actual min/max from data for better scaling
+            const dataValues = recentData.map(e => e.value);
+            const dataMin = Math.min(...dataValues);
+            const dataMax = Math.max(...dataValues);
+            
+            // Time range labels
+            const oldestTime = recentData.length > 0 ? recentData[0].timestamp : Date.now();
+            const minutesAgo = Math.round((Date.now() - oldestTime) / 60000);
+            const timeLabel = minutesAgo > 60 ? `${Math.round(minutesAgo / 60)}h` : `${minutesAgo}m`;
+            
+            return React.createElement('div', { 
+                className: "weather-metric-graph",
+                style: { position: 'relative' }
+            }, [
+                // Y-axis labels (max at top, min at bottom)
+                React.createElement('div', {
+                    key: 'y-max',
+                    style: {
+                        position: 'absolute',
+                        top: '0',
+                        left: '-2px',
+                        fontSize: '8px',
+                        color: 'rgba(255,255,255,0.4)',
+                        transform: 'translateX(-100%)',
+                        paddingRight: '2px'
+                    }
+                }, dataMax.toFixed(step < 1 ? 1 : 0)),
+                React.createElement('div', {
+                    key: 'y-min',
+                    style: {
+                        position: 'absolute',
+                        bottom: '0',
+                        left: '-2px',
+                        fontSize: '8px',
+                        color: 'rgba(255,255,255,0.4)',
+                        transform: 'translateX(-100%)',
+                        paddingRight: '2px'
+                    }
+                }, dataMin.toFixed(step < 1 ? 1 : 0)),
+                // X-axis labels (time range)
+                React.createElement('div', {
+                    key: 'x-old',
+                    style: {
+                        position: 'absolute',
+                        bottom: '-12px',
+                        left: '0',
+                        fontSize: '8px',
+                        color: 'rgba(255,255,255,0.4)'
+                    }
+                }, `-${timeLabel}`),
+                React.createElement('div', {
+                    key: 'x-now',
+                    style: {
+                        position: 'absolute',
+                        bottom: '-12px',
+                        right: '0',
+                        fontSize: '8px',
+                        color: 'rgba(255,255,255,0.4)'
+                    }
+                }, 'now'),
+                // The actual bars
+                ...recentData.map((entry, i) => {
                     let heightPercent;
                     if (useLinearScale) {
                         // Linear scale for rain and small values
@@ -189,12 +266,13 @@
                     const leftPercent = i * widthPercent;
 
                     return React.createElement('div', { 
-                        key: i, 
+                        key: `bar-${i}`, 
                         className: "weather-bar",
-                        style: { left: `${leftPercent}%`, height: `${heightPercent}%`, width: `${widthPercent}%` }
+                        style: { left: `${leftPercent}%`, height: `${heightPercent}%`, width: `${widthPercent}%` },
+                        title: `${entry.value.toFixed(2)} ${unit} @ ${new Date(entry.timestamp).toLocaleTimeString()}`
                     });
                 })
-            );
+            ]);
         };
 
         return React.createElement('div', { className: "weather-metric-row", style: { borderColor: isActive ? '#4caf50' : 'rgba(255, 140, 0, 0.15)' } }, [
@@ -262,6 +340,7 @@
         });
         const [evalResults, setEvalResults] = useState({});
         const [isCollapsed, setIsCollapsed] = useState(false);
+        const [rawValuesExpanded, setRawValuesExpanded] = useState(false);
         const [statusColor, setStatusColor] = useState('gray');
 
         const updateProperty = (key, value) => {
@@ -526,7 +605,7 @@
                     secondaryInfo: weatherData.windDir !== null ? getCardinalDirection(weatherData.windDir) : ''
                 }),
                 React.createElement(MetricRow, { 
-                    key: 'hourlyRain', label: "Hourly Rain", value: weatherData.hourlyRain, unit: "in", history: history.hourlyRain,
+                    key: 'hourlyRain', label: "Rate Per Hour", value: weatherData.hourlyRain, unit: "in", history: history.hourlyRain,
                     enabled: state.hourlyRainEnabled, onToggle: v => updateProperty('hourlyRainEnabled', v),
                     invert: state.hourlyRainInvert, onInvert: v => updateProperty('hourlyRainInvert', v),
                     singleThreshold: state.hourlyRainThreshold, onSingleChange: v => updateProperty('hourlyRainThreshold', v),
@@ -572,6 +651,122 @@
                         init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.summary_text.socket, nodeId: data.id, side: "output", key: "summary_text" } }), 
                         unmount: ref => emit({ type: "unmount", data: { element: ref } }) 
                     })
+                ]),
+                // Collapsible Raw Values section
+                React.createElement('div', { 
+                    key: 'raw-values', 
+                    style: { 
+                        marginTop: '10px',
+                        marginRight: '-12px' // Extend to node edge for socket alignment
+                    } 
+                }, [
+                    // Clickable header to expand/collapse
+                    React.createElement('div', { 
+                        key: 'header', 
+                        onPointerDown: (e) => {
+                            e.stopPropagation();
+                            setRawValuesExpanded(!rawValuesExpanded);
+                        },
+                        style: { 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            cursor: 'pointer',
+                            padding: '6px 8px',
+                            background: 'rgba(0,0,0,0.3)',
+                            borderRadius: rawValuesExpanded ? '4px 4px 0 0' : '4px',
+                            color: '#888', 
+                            fontSize: '10px', 
+                            textTransform: 'uppercase', 
+                            letterSpacing: '1px',
+                            userSelect: 'none'
+                        } 
+                    }, [
+                        React.createElement('span', { key: 'arrow', style: { transition: 'transform 0.2s' } }, 
+                            rawValuesExpanded ? '▼' : '▶'),
+                        React.createElement('span', { key: 'label' }, "Raw Values"),
+                        React.createElement('span', { key: 'count', style: { marginLeft: 'auto', color: '#666' } }, "(7)")
+                    ]),
+                    // Expanded content - vertical list with right-aligned sockets
+                    rawValuesExpanded && React.createElement('div', { 
+                        key: 'content', 
+                        style: { 
+                            background: 'rgba(0,0,0,0.2)',
+                            borderRadius: '0 0 4px 4px',
+                            padding: '6px 0 6px 8px'
+                        } 
+                    }, [
+                        // Temp
+                        React.createElement('div', { key: 'temp', style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '4px' } }, [
+                            React.createElement('span', { key: 'l', style: { color: '#aaa', fontSize: '11px' } }, 
+                                `Temp: ${weatherData.temp !== null ? weatherData.temp.toFixed(1) : '--'}°F`),
+                            React.createElement(RefComponent, { 
+                                key: 's',
+                                init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.temp_value.socket, nodeId: data.id, side: "output", key: "temp_value" } }), 
+                                unmount: ref => emit({ type: "unmount", data: { element: ref } }) 
+                            })
+                        ]),
+                        // Humidity
+                        React.createElement('div', { key: 'humidity', style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '4px' } }, [
+                            React.createElement('span', { key: 'l', style: { color: '#aaa', fontSize: '11px' } }, 
+                                `Humidity: ${weatherData.humidity !== null ? weatherData.humidity.toFixed(0) : '--'}%`),
+                            React.createElement(RefComponent, { 
+                                key: 's',
+                                init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.humidity_value.socket, nodeId: data.id, side: "output", key: "humidity_value" } }), 
+                                unmount: ref => emit({ type: "unmount", data: { element: ref } }) 
+                            })
+                        ]),
+                        // Wind
+                        React.createElement('div', { key: 'wind', style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '4px' } }, [
+                            React.createElement('span', { key: 'l', style: { color: '#aaa', fontSize: '11px' } }, 
+                                `Wind: ${weatherData.wind !== null ? weatherData.wind.toFixed(1) : '--'} mph`),
+                            React.createElement(RefComponent, { 
+                                key: 's',
+                                init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.wind_value.socket, nodeId: data.id, side: "output", key: "wind_value" } }), 
+                                unmount: ref => emit({ type: "unmount", data: { element: ref } }) 
+                            })
+                        ]),
+                        // Solar
+                        React.createElement('div', { key: 'solar', style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '4px' } }, [
+                            React.createElement('span', { key: 'l', style: { color: '#aaa', fontSize: '11px' } }, 
+                                `Solar: ${weatherData.solar !== null ? weatherData.solar.toFixed(0) : '--'} W/m²`),
+                            React.createElement(RefComponent, { 
+                                key: 's',
+                                init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.solar_value.socket, nodeId: data.id, side: "output", key: "solar_value" } }), 
+                                unmount: ref => emit({ type: "unmount", data: { element: ref } }) 
+                            })
+                        ]),
+                        // Rain/hr
+                        React.createElement('div', { key: 'hourly', style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '4px' } }, [
+                            React.createElement('span', { key: 'l', style: { color: '#aaa', fontSize: '11px' } }, 
+                                `Rate/hr: ${weatherData.hourlyRain !== null ? weatherData.hourlyRain.toFixed(2) : '--'} in`),
+                            React.createElement(RefComponent, { 
+                                key: 's',
+                                init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.hourly_rain_value.socket, nodeId: data.id, side: "output", key: "hourly_rain_value" } }), 
+                                unmount: ref => emit({ type: "unmount", data: { element: ref } }) 
+                            })
+                        ]),
+                        // Event Rain
+                        React.createElement('div', { key: 'event', style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '4px' } }, [
+                            React.createElement('span', { key: 'l', style: { color: '#aaa', fontSize: '11px' } }, 
+                                `Event: ${weatherData.eventRain !== null ? weatherData.eventRain.toFixed(2) : '--'} in`),
+                            React.createElement(RefComponent, { 
+                                key: 's',
+                                init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.event_rain_value.socket, nodeId: data.id, side: "output", key: "event_rain_value" } }), 
+                                unmount: ref => emit({ type: "unmount", data: { element: ref } }) 
+                            })
+                        ]),
+                        // Daily Rain
+                        React.createElement('div', { key: 'daily', style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' } }, [
+                            React.createElement('span', { key: 'l', style: { color: '#aaa', fontSize: '11px' } }, 
+                                `Daily: ${weatherData.dailyRain !== null ? weatherData.dailyRain.toFixed(2) : '--'} in`),
+                            React.createElement(RefComponent, { 
+                                key: 's',
+                                init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.daily_rain_value.socket, nodeId: data.id, side: "output", key: "daily_rain_value" } }), 
+                                unmount: ref => emit({ type: "unmount", data: { element: ref } }) 
+                            })
+                        ])
+                    ])
                 ])
             ]),
             isCollapsed && React.createElement('div', { key: 'collapsed', className: "weather-io-container" }, [

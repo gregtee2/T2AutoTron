@@ -294,11 +294,7 @@ class SplineTimelineColorNode {
             } else {
                 position = 0;
                 this.properties.isInRange = false;
-                // Log warning when numerical mode has no input (but only once per null-streak to avoid spam)
-                if (!this._nullInputWarned) {
-                    console.warn(`[SplineTimelineColorNode ${this.id?.slice(0,8) || 'unknown'}] Numerical mode but value input is ${inputValue} - position forced to 0`);
-                    this._nullInputWarned = true;
-                }
+                // No input is normal when node isn't connected - don't log
             }
             
         } else if (this.properties.rangeMode === 'time') {

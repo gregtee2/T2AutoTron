@@ -101,19 +101,19 @@ async function fetchFromOpenMeteo() {
   };
   
   weatherSource = 'open-meteo';
-  logger.log('info', `Open-Meteo weather: ${transformed.tempf.toFixed(1)}°F, ${transformed.humidity}% humidity`, null, 'weather:open-meteo');
+  // Removed spammy success log - Open-Meteo just works
   
   return transformed;
 }
 
 async function fetchWeatherData(forceRefresh = false) {
   if (lastFetchTime && (Date.now() - lastFetchTime) > CACHE_TIMEOUT) {
-    logger.log('warn', 'Weather data cache expired, clearing...', null, 'weather:cache-expired');
+    // Cache expired - just clear it, no need to log
     cachedWeather = null;
   }
 
   if (cachedWeather && !forceRefresh) {
-    logger.log('info', 'Returning cached weather data', { source: weatherSource }, 'weather:cached');
+    // Returning cached data - no need to log every time
     return cachedWeather;
   }
 
@@ -123,26 +123,34 @@ async function fetchWeatherData(forceRefresh = false) {
     cachedWeather = await fetchFromAmbientWeather();
     if (cachedWeather) {
       lastFetchTime = Date.now();
-      logger.log('info', 'Weather data fetched from Ambient Weather', { data: cachedWeather }, 'weather:fetched');
+      // Success - no need to log every 3 minutes
       return cachedWeather;
     }
   } catch (error) {
-    logger.log('warn', `Ambient Weather failed: ${error.message}`, null, 'weather:ambient-error');
+    // Only log on first failure, not repeatedly
+    if (!this._ambientFailed) {
+      logger.log(`Ambient Weather failed: ${error.message}`, 'warn');
+      this._ambientFailed = true;
+    }
   }
   
   // Fallback to Open-Meteo (free, no API key needed)
   try {
     cachedWeather = await fetchFromOpenMeteo();
     lastFetchTime = Date.now();
-    logger.log('info', 'Weather data fetched from Open-Meteo (fallback)', { data: cachedWeather }, 'weather:fetched');
+    // Success - no need to log
     return cachedWeather;
   } catch (error) {
-    logger.log('error', `Open-Meteo fallback failed: ${error.message}`, { stack: error.stack }, 'weather:error');
+    logger.log(`Open-Meteo fallback failed: ${error.message}`, 'error');
   }
   
   // Return cached data if available, even if stale
   if (cachedWeather) {
-    logger.log('warn', 'Returning stale cached weather data', null, 'weather:stale');
+    // Stale data - only warn once
+    if (!this._staleWarned) {
+      logger.log('Returning stale cached weather data', 'warn');
+      this._staleWarned = true;
+    }
     return cachedWeather;
   }
   

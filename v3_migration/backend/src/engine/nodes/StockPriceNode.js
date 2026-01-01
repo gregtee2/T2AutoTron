@@ -86,6 +86,9 @@ class StockPriceNode {
       const priceChange = currentPrice - previousClose;
       const changePercent = (priceChange / previousClose) * 100;
 
+      // Only log if price changed significantly (avoid spam for unchanged values)
+      const priceChanged = Math.abs((this.properties.lastPrice || 0) - currentPrice) > 0.01;
+      
       this.properties.lastPrice = currentPrice;
       this.properties.priceChange = priceChange;
       this.properties.changePercent = changePercent;
@@ -93,7 +96,9 @@ class StockPriceNode {
       this.properties.lastUpdate = new Date().toISOString();
       this.properties.error = null;
 
-      console.log(`[StockPriceNode] ${symbol}: $${currentPrice.toFixed(2)} (${priceChange >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
+      if (priceChanged) {
+        console.log(`[StockPriceNode] ${symbol}: $${currentPrice.toFixed(2)} (${priceChange >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
+      }
 
     } catch (error) {
       console.error(`[StockPriceNode] Error fetching ${symbol}:`, error.message);

@@ -1,11 +1,18 @@
 /**
  * TextStringNode.js
  * 
- * A simple node that outputs a static text string.
- * Useful for creating fixed messages, labels, or text to concatenate.
+ * A text node that outputs a static text string, with optional trigger gating.
+ * 
+ * Inputs:
+ *   - trigger: (Optional) When connected, text only outputs when trigger is TRUE
  * 
  * Outputs:
- *   - text: The configured text string
+ *   - text: The configured text string (or undefined if trigger is FALSE)
+ * 
+ * Behavior:
+ *   - No trigger connected: Always outputs the text (backwards compatible)
+ *   - Trigger connected + TRUE: Outputs the text
+ *   - Trigger connected + FALSE/undefined: Outputs undefined (no text)
  */
 (function() {
     if (!window.Rete || !window.React || !window.sockets) {
@@ -21,9 +28,12 @@
 
     // Tooltips
     const tooltips = {
-        node: "Outputs a static text string. Use for fixed messages or text to combine with other strings.",
+        node: "Outputs a text string. Connect a trigger to gate the output - text only flows when triggered.\n\nPerfect for sending different messages based on events (rain started, motion detected, etc.)",
+        inputs: {
+            trigger: "When connected, text only outputs when this is TRUE.\n\nConnect to Edge Detector outputs to send text on state changes."
+        },
         outputs: {
-            text: "The configured text string"
+            text: "The configured text string (or undefined if trigger is FALSE)"
         },
         controls: {
             text: "Enter the text to output. Supports multi-line text."
@@ -35,20 +45,40 @@
             super("Text String");
             this.changeCallback = changeCallback;
             this.width = 250;
-            this.height = 150;
+            this.height = 180;
 
             this.properties = {
-                text: ''
+                text: '',
+                lastTriggered: false
             };
+
+            // Optional trigger input
+            this.addInput('trigger', new ClassicPreset.Input(sockets.boolean, 'Trigger'));
 
             // Output
             this.addOutput('text', new ClassicPreset.Output(sockets.any, 'Text'));
         }
 
         data(inputs) {
-            return {
-                text: this.properties.text
-            };
+            const triggerInput = inputs.trigger;
+            const hasTriggerConnection = triggerInput !== undefined && triggerInput !== null;
+            
+            // If trigger is connected, only output when TRUE
+            if (hasTriggerConnection) {
+                const triggerValue = triggerInput[0];
+                const isTriggered = triggerValue === true;
+                
+                this.properties.lastTriggered = isTriggered;
+                
+                if (isTriggered) {
+                    return { text: this.properties.text };
+                } else {
+                    return { text: undefined };
+                }
+            }
+            
+            // No trigger connected - always output (backwards compatible)
+            return { text: this.properties.text };
         }
 
         serialize() {
@@ -68,12 +98,21 @@
     // React Component
     function TextStringComponent({ data, emit }) {
         const [text, setText] = useState(data.properties.text || '');
+        const [isTriggered, setIsTriggered] = useState(false);
         const { NodeHeader, HelpIcon } = window.T2Controls || {};
 
         // Sync with node properties
         useEffect(() => {
             setText(data.properties.text || '');
         }, [data.properties.text]);
+
+        // Update triggered state for UI feedback
+        useEffect(() => {
+            const interval = setInterval(() => {
+                setIsTriggered(data.properties.lastTriggered || false);
+            }, 100);
+            return () => clearInterval(interval);
+        }, [data]);
 
         const handleTextChange = (e) => {
             const value = e.target.value;
@@ -92,16 +131,72 @@
                 borderRadius: '8px'
             }
         }, [
-            // Header
-            NodeHeader ? React.createElement(NodeHeader, {
+            // Header with status indicator
+            React.createElement('div', {
                 key: 'header',
-                icon: '📝',
-                title: 'Text String',
-                tooltip: tooltips.node
-            }) : React.createElement('div', {
-                key: 'header',
-                style: { fontWeight: 'bold', marginBottom: '8px', color: '#ffb74d' }
-            }, '📝 Text String'),
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '8px',
+                    padding: '4px 0'
+                }
+            }, [
+                React.createElement('div', {
+                    key: 'title-area',
+                    style: { display: 'flex', alignItems: 'center', gap: '8px' }
+                }, [
+                    React.createElement('span', { key: 'icon' }, '📝'),
+                    React.createElement('span', { 
+                        key: 'title',
+                        style: { fontWeight: 'bold', color: '#ffb74d' }
+                    }, 'Text String')
+                ]),
+                React.createElement('div', {
+                    key: 'status-area',
+                    style: { display: 'flex', alignItems: 'center', gap: '6px' }
+                }, [
+                    // Triggered indicator
+                    React.createElement('div', {
+                        key: 'status',
+                        title: isTriggered ? 'Triggered - Text flowing' : 'Waiting for trigger',
+                        style: {
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: isTriggered ? '#4caf50' : '#555',
+                            boxShadow: isTriggered ? '0 0 6px #4caf50' : 'none',
+                            transition: 'all 0.2s'
+                        }
+                    }),
+                    HelpIcon && React.createElement(HelpIcon, {
+                        key: 'help',
+                        text: tooltips.node,
+                        size: 14
+                    })
+                ])
+            ]),
+
+            // Trigger input socket
+            React.createElement('div', {
+                key: 'trigger-row',
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '8px'
+                }
+            }, [
+                React.createElement(RefComponent, {
+                    key: 'trigger-socket',
+                    init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.inputs.trigger.socket, nodeId: data.id, side: "input", key: "trigger" } }),
+                    unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                }),
+                React.createElement('span', {
+                    key: 'trigger-label',
+                    style: { fontSize: '11px', color: '#aaa' }
+                }, 'Trigger (optional)')
+            ]),
 
             // Text input area
             React.createElement('div', {

@@ -1,3 +1,14 @@
+## [2.1.162] - 2026-01-01
+### Fixed
+- **Backend Device Control**: Devices now properly turn off in add-on mode. Fixed 4 critical discrepancies between frontend and backend:
+  - Added `coerceBoolean()` to backend - now properly interprets `"false"` (string), `0`, and `null` as `false`
+  - Fixed edge detection logic - now uses explicit rising/falling edge detection matching frontend behavior
+  - Fixed reconcile pre-setting `lastTrigger` from device state - now lets actual input establish baseline
+  - Fixed warmup period dropping commands - now queues commands during warmup and executes after
+
+### Added
+- **Inject Node Value Input**: New optional `value_in` socket allows overriding the configured payload with a dynamic value from another node's output
+
 ## [2.1.150] - 2025-12-31
 ### Added
 - TTS Announcement node for Home Assistant media players (frontend + backend)

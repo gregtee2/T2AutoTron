@@ -46,9 +46,12 @@
 
     // Tooltip definitions
     const tooltips = {
-        node: "Inject Node: Full-featured trigger node. Manual button, scheduled time, repeat interval, and startup trigger. Supports multiple payload types.",
+        node: "Inject Node: Full-featured trigger node. Manual button, scheduled time, repeat interval, and startup trigger. Supports multiple payload types.\n\nOptional: Connect a value to the 'Value Override' input to use that instead of the configured payload.",
+        inputs: {
+            value_in: "Optional value override.\n\nWhen connected, this value replaces the configured payload value.\nUseful for passing dynamic values through the Inject node's trigger/schedule functionality."
+        },
         outputs: {
-            output: "Outputs the configured payload value when triggered."
+            output: "Outputs the configured payload value when triggered (or the Value Override input if connected)."
         },
         controls: {
             payload: "The value to output when triggered.\n• Boolean: true/false\n• Number: any numeric value\n• String: text message\n• Timestamp: current time in ms\n• Object: JSON data",
@@ -109,6 +112,12 @@
             this.addOutput("output", new ClassicPreset.Output(
                 sockets.any || new ClassicPreset.Socket('any'),
                 "Output"
+            ));
+            
+            // Optional input for value override
+            this.addInput("value_in", new ClassicPreset.Input(
+                sockets.any || new ClassicPreset.Socket('any'),
+                "Value Override"
             ));
         }
 
@@ -316,7 +325,16 @@
             this.properties.isRepeating = false;
         }
 
-        _getPayload() {
+        _getPayload(inputOverride) {
+            // If an input value is connected and has a value, use it instead of properties.payloadValue
+            if (inputOverride !== undefined && inputOverride !== null) {
+                // When using input override, use the type based on what was received
+                if (this.properties.debug) {
+                    console.log(`[InjectNode] Using input override value: ${JSON.stringify(inputOverride)}`);
+                }
+                return inputOverride;
+            }
+            
             switch (this.properties.payloadType) {
                 case 'boolean':
                     return Boolean(this.properties.payloadValue);
@@ -345,10 +363,13 @@
             // Initialize on first data() call (flow started)
             this.initialize();
             
+            // Get value override from input if connected
+            const valueOverride = inputs.value_in?.[0];
+            
             // Pulse mode: only output when pulsePending is true, then clear it
             if (this.properties.pulseMode) {
                 if (this.properties.pulsePending) {
-                    const payload = this._getPayload();
+                    const payload = this._getPayload(valueOverride);
                     // Clear the latch - pulse has been delivered
                     this.properties.pulsePending = false;
                     if (this.properties.debug) {
@@ -365,7 +386,7 @@
             
             // Non-pulse mode: always return the payload value
             // (original behavior - value stays on the wire)
-            return { output: this._getPayload() };
+            return { output: this._getPayload(valueOverride) };
         }
 
         restore(state) {
@@ -734,49 +755,89 @@
             // Payload Value (conditional based on type)
             props.payloadType === 'boolean' && React.createElement('div', { style: rowStyle },
                 React.createElement('span', { style: labelStyle }, 'Value'),
-                React.createElement('select', {
-                    style: selectStyle,
-                    value: String(props.payloadValue),
-                    onChange: handlePayloadValueChange,
-                    onPointerDown: stopPropagation
-                },
-                    React.createElement('option', { value: 'true' }, 'true'),
-                    React.createElement('option', { value: 'false' }, 'false')
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                    // Value Override input socket
+                    data.inputs.value_in && React.createElement(RefComponent, {
+                        init: ref => emit({
+                            type: "render",
+                            data: { type: "socket", element: ref, payload: data.inputs.value_in.socket, nodeId: data.id, side: "input", key: "value_in" }
+                        }),
+                        unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                    }),
+                    React.createElement('select', {
+                        style: { ...selectStyle, flex: 1 },
+                        value: String(props.payloadValue),
+                        onChange: handlePayloadValueChange,
+                        onPointerDown: stopPropagation
+                    },
+                        React.createElement('option', { value: 'true' }, 'true'),
+                        React.createElement('option', { value: 'false' }, 'false')
+                    )
                 )
             ),
 
             props.payloadType === 'number' && React.createElement('div', { style: rowStyle },
                 React.createElement('span', { style: labelStyle }, 'Value'),
-                React.createElement('input', {
-                    type: 'number',
-                    style: inputStyle,
-                    value: props.payloadValue,
-                    onChange: handlePayloadValueChange,
-                    onPointerDown: stopPropagation
-                })
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                    // Value Override input socket
+                    data.inputs.value_in && React.createElement(RefComponent, {
+                        init: ref => emit({
+                            type: "render",
+                            data: { type: "socket", element: ref, payload: data.inputs.value_in.socket, nodeId: data.id, side: "input", key: "value_in" }
+                        }),
+                        unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                    }),
+                    React.createElement('input', {
+                        type: 'number',
+                        style: { ...inputStyle, flex: 1 },
+                        value: props.payloadValue,
+                        onChange: handlePayloadValueChange,
+                        onPointerDown: stopPropagation
+                    })
+                )
             ),
 
             props.payloadType === 'string' && React.createElement('div', { style: { ...rowStyle, flexDirection: 'column', alignItems: 'stretch' } },
                 React.createElement('span', { style: labelStyle }, 'Value'),
-                React.createElement('input', {
-                    type: 'text',
-                    style: textInputStyle,
-                    value: props.payloadValue || '',
-                    onChange: handlePayloadValueChange,
-                    onPointerDown: stopPropagation,
-                    placeholder: 'Enter text...'
-                })
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                    // Value Override input socket
+                    data.inputs.value_in && React.createElement(RefComponent, {
+                        init: ref => emit({
+                            type: "render",
+                            data: { type: "socket", element: ref, payload: data.inputs.value_in.socket, nodeId: data.id, side: "input", key: "value_in" }
+                        }),
+                        unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                    }),
+                    React.createElement('input', {
+                        type: 'text',
+                        style: { ...textInputStyle, flex: 1 },
+                        value: props.payloadValue || '',
+                        onChange: handlePayloadValueChange,
+                        onPointerDown: stopPropagation,
+                        placeholder: 'Enter text...'
+                    })
+                )
             ),
 
             props.payloadType === 'object' && React.createElement('div', { style: { ...rowStyle, flexDirection: 'column', alignItems: 'stretch' } },
                 React.createElement('span', { style: labelStyle }, 'JSON'),
-                React.createElement('textarea', {
-                    style: textareaStyle,
-                    value: props.payloadValue || '{}',
-                    onChange: handlePayloadValueChange,
-                    onPointerDown: stopPropagation,
-                    placeholder: '{"key": "value"}'
-                })
+                React.createElement('div', { style: { display: 'flex', alignItems: 'flex-start', gap: '6px' } },
+                    // Value Override input socket
+                    data.inputs.value_in && React.createElement(RefComponent, {
+                        init: ref => emit({
+                            type: "render",
+                            data: { type: "socket", element: ref, payload: data.inputs.value_in.socket, nodeId: data.id, side: "input", key: "value_in" }
+                        }),
+                        unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                    }),
+                    React.createElement('textarea', {
+                        style: { ...textareaStyle, flex: 1 },
+                        value: props.payloadValue || '{}',
+                        onChange: handlePayloadValueChange,
+                        onPointerDown: stopPropagation,
+                        placeholder: '{"key": "value"}'
+                    })
+                )
             ),
 
             props.payloadType === 'timestamp' && React.createElement('div', { style: rowStyle },

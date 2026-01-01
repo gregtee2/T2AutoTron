@@ -202,7 +202,13 @@ class InjectNode {
     }
   }
 
-  _getPayload() {
+  _getPayload(inputOverride) {
+    // If an input value is connected and has a value, use it instead of properties.payloadValue
+    if (inputOverride !== undefined && inputOverride !== null) {
+      if (VERBOSE) console.log(`[InjectNode ${this.id}] Using input override value: ${JSON.stringify(inputOverride)}`);
+      return inputOverride;
+    }
+    
     switch (this.properties.payloadType) {
       case 'boolean':
         return Boolean(this.properties.payloadValue);
@@ -324,10 +330,13 @@ class InjectNode {
   }
 
   data(inputs) {
+    // Get value override from input if connected
+    const valueOverride = inputs.value_in?.[0];
+    
     // Pulse mode: only output when pulsePending is true, then clear it
     if (this.properties.pulseMode) {
       if (this.properties.pulsePending) {
-        const output = this._getPayload();
+        const output = this._getPayload(valueOverride);
         if (VERBOSE) console.log(`[InjectNode ${this.id}] data() DELIVERING pulse: "${output}"`);
         // Clear the latch - pulse has been delivered
         this.properties.pulsePending = false;
@@ -337,7 +346,7 @@ class InjectNode {
     }
     
     // Non-pulse mode: always return the payload value (original behavior)
-    return { output: this._getPayload() };
+    return { output: this._getPayload(valueOverride) };
   }
 
   destroy() {

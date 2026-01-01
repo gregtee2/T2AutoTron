@@ -2,13 +2,12 @@
 const logger = require('../logging/logger');
 const { fetchWeatherData } = require('../weather/weatherService');
 const { fetchForecastData } = require('../weather/forecastService');
-const { normalizeState } = require('../utils/normalizeState');
-const { deviceToggleSchema, haTokenSchema, logEventSchema, validate } = require('./middleware/validationSchemas');
+const { deviceToggleSchema, validate } = require('./middleware/validationSchemas');
 const authManager = require('./middleware/authMiddleware');
 
 module.exports = (deviceService) => (socket) => {
-    // Handle request for Hue connection status
-    socket.on('request-hue-status', () => {
+    // Helper to get Hue connection status (used in multiple places)
+    const getHueStatus = () => {
       let connected = false;
       let bridgeIp = process.env.HUE_BRIDGE_IP || null;
       let deviceCount = 0;
@@ -20,33 +19,18 @@ module.exports = (deviceService) => (socket) => {
       } catch (e) {
         // fallback: not connected
       }
-      socket.emit('hue-connection-status', {
-        connected,
-        bridgeIp,
-        deviceCount
-      });
+      return { connected, bridgeIp, deviceCount };
+    };
+
+    // Handle request for Hue connection status
+    socket.on('request-hue-status', () => {
+      socket.emit('hue-connection-status', getHueStatus());
     });
-  logger.log(`Socket.IO client connected: ${socket.id}`, 'info', false, `socket:connect:${socket.id}`);
+
+  // Note: Connect is also logged in server.js - don't duplicate
 
   // Automatically emit Hue status to the newly connected client
-  {
-    let connected = false;
-    let bridgeIp = process.env.HUE_BRIDGE_IP || null;
-    let deviceCount = 0;
-    try {
-      const allDevices = deviceService.getAllDevices();
-      const hueLights = allDevices['hue_'] || [];
-      deviceCount = hueLights.length;
-      connected = deviceCount > 0;
-    } catch (e) {
-      // fallback: not connected
-    }
-    socket.emit('hue-connection-status', {
-      connected,
-      bridgeIp,
-      deviceCount
-    });
-  }
+  socket.emit('hue-connection-status', getHueStatus());
 
   // Emit initial device list
   const emitDeviceList = () => {
@@ -245,28 +229,8 @@ module.exports = (deviceService) => (socket) => {
   };
   socket.on('request-device-list', handleDeviceListRequest);
   socket.on('request-devices', handleDeviceListRequest);
-
-  // Handle forecast request (requires authentication)
-  socket.on('request-forecast', async () => {
-    if (!authManager.isAuthenticated(socket)) {
-      socket.emit('error', { message: 'Authentication required' });
-      return;
-    }
-    const forecastData = await fetchForecastData(true);
-    if (forecastData) socket.emit('forecast-update', forecastData);
-  });
-
-  // Handle weather/forecast updates (requires authentication)
-  socket.on('request-weather-update', async () => {
-    if (!authManager.isAuthenticated(socket)) {
-      socket.emit('error', { message: 'Authentication required' });
-      return;
-    }
-    const weatherData = await fetchWeatherData(true);
-    const forecastData = await fetchForecastData(true);
-    if (weatherData) socket.emit('weather-update', weatherData);
-    if (forecastData) socket.emit('forecast-update', forecastData);
-  });
+  // Note: request-forecast and request-weather-update handlers are defined in server.js
+  // to ensure they're available before auth. Don't duplicate here.
 
   // Handle request for upcoming scheduled events from backend engine
   socket.on('request-upcoming-events', () => {
@@ -281,7 +245,7 @@ module.exports = (deviceService) => (socket) => {
 
   socket.on('disconnect', (reason) => {
     authManager.deauthenticate(socket);
-    logger.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`, 'warn', false, `socket:disconnect:${socket.id}`);
+    // Note: Disconnect is also logged in server.js - don't duplicate
   });
 
   socket.on('error', (err) => {

@@ -180,10 +180,9 @@ async function checkForUpdates(forceCheck = false) {
         };
         lastCheckTime = now;
         
+        // Only log when there's actually an update (silent when up-to-date)
         if (hasUpdate) {
             console.log(`[UpdateService] Update available: ${localVersion} → ${remoteVersion}`);
-        } else {
-            console.log(`[UpdateService] Up to date (${localVersion})`);
         }
         
         return cachedUpdateInfo;

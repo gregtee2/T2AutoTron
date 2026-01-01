@@ -723,7 +723,18 @@ class WatchdogNode {
 }
 
 /**
- * TextStringNode - Outputs a static text string
+ * TextStringNode - Outputs a text string with optional trigger gating
+ * 
+ * Inputs:
+ *   - trigger: (Optional) When connected, text only outputs when trigger is TRUE
+ * 
+ * Outputs:
+ *   - text: The configured text string (or undefined if trigger is FALSE)
+ * 
+ * Behavior:
+ *   - No trigger connected: Always outputs the text (backwards compatible)
+ *   - Trigger connected + TRUE: Outputs the text
+ *   - Trigger connected + FALSE/undefined: Outputs undefined
  */
 class TextStringNode {
   constructor(id, properties = {}) {
@@ -732,16 +743,32 @@ class TextStringNode {
     this.properties = {
       text: properties.text || ''
     };
-    this.inputs = {};
+    this.inputs = { trigger: undefined };
     this.outputs = { text: '' };
+    this.hasReceivedTrigger = false;
   }
 
   setInput(name, value) {
-    // No inputs
+    if (name === 'trigger') {
+      this.inputs.trigger = value;
+      this.hasReceivedTrigger = true;
+    }
   }
 
   process() {
-    this.outputs.text = this.properties.text || '';
+    // If trigger input has been connected, only output when TRUE
+    if (this.hasReceivedTrigger && this.inputs.trigger !== undefined) {
+      const isTriggered = this.inputs.trigger === true;
+      if (isTriggered) {
+        this.outputs.text = this.properties.text || '';
+      } else {
+        this.outputs.text = undefined;
+      }
+    } else {
+      // No trigger connected - always output (backwards compatible)
+      this.outputs.text = this.properties.text || '';
+    }
+    
     return this.outputs;
   }
 }

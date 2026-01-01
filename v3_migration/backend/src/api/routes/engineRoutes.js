@@ -432,12 +432,10 @@ router.get('/last-active', async (req, res) => {
  * Save the current graph as the last active graph (for auto-load on reconnect)
  */
 router.post('/save-active', async (req, res) => {
-  console.log('[Engine API] POST /save-active called');
   try {
     const fs = require('fs').promises;
     const savedGraphsDir = getGraphsDir();
     const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
-    console.log('[Engine API] Saving to:', lastActivePath);
     
     // Ensure directory exists
     await fs.mkdir(savedGraphsDir, { recursive: true });
@@ -452,8 +450,6 @@ router.post('/save-active', async (req, res) => {
     }
     
     await fs.writeFile(lastActivePath, JSON.stringify(graphData, null, 2), 'utf-8');
-    
-    console.log(`[Engine API] Saved last active graph (${graphData.nodes?.length || 0} nodes)`);
     
     // Also hot-reload into engine if it's running
     try {

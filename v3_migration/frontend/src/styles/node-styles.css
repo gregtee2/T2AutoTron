@@ -1087,14 +1087,15 @@
 }
 
 .weather-metric-graph {
-  width: 100%;
+  width: calc(100% - 28px);
   height: 40px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(var(--node-weather-color-rgb), 0.1);
   border-radius: 2px;
   position: relative;
-  overflow: hidden;
-  margin-bottom: 8px;
+  overflow: visible;
+  margin-bottom: 16px;
+  margin-left: 24px;
   flex-shrink: 0;
 }
 

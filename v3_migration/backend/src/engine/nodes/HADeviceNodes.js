@@ -26,6 +26,23 @@ const fetch = globalThis.fetch || require('node-fetch');
 const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 
 // ============================================================================
+// Utility: coerceBoolean - Convert various input types to proper boolean
+// Matches frontend behavior to ensure consistent edge detection
+// ============================================================================
+function coerceBoolean(value) {
+  if (value === undefined) return undefined;  // Preserve undefined (no connection)
+  if (value === null) return false;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const s = value.trim().toLowerCase();
+    if (s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no' || s === 'n') return false;
+    if (s === '1' || s === 'true' || s === 'on' || s === 'yes' || s === 'y') return true;
+  }
+  return !!value;
+}
+
+// ============================================================================
 // HSV Update Tracker - Periodic summary logging (every 60s) - only when VERBOSE
 // ============================================================================
 const hsvUpdateTracker = {
@@ -675,16 +692,18 @@ class HAGenericDeviceNode {
       results.push({ entityId, state: state.state, isOn });
     }
 
-    // Pre-set lastTrigger based on majority state (or true if any are on)
-    // This prevents "trigger changed from undefined" on first tick
+    // DON'T pre-set lastTrigger from device state - let actual input establish baseline
+    // This fixes bug where devices wouldn't turn off because lastTrigger was set to match device state
+    // Instead, we just populate deviceStates and let the first tick establish lastTrigger from input
     const anyOn = onCount > 0;
-    this.lastTrigger = anyOn;
+    // this.lastTrigger stays undefined - will be set from actual input on first tick
+    this.reconciled = true;  // Flag that we've seen device states
     
     // Mark warmup as complete - we've already reconciled
     this.warmupComplete = true;
     this.tickCount = 11; // Past warmup period
     
-    engineLogger.log('HA-RECONCILE', `${this.label || this.id}: ${onCount} ON, ${offCount} OFF → lastTrigger=${anyOn}`, {
+    engineLogger.log('HA-RECONCILE', `${this.label || this.id}: ${onCount} ON, ${offCount} OFF (lastTrigger left undefined for input to set)`, {
       nodeId: this.id,
       devices: results.slice(0, 5), // Log first 5 devices
       totalDevices: entityIds.length
@@ -784,11 +803,16 @@ class HAGenericDeviceNode {
   }
 
   async data(inputs) {
-    const trigger = inputs.trigger?.[0];
+    const triggerRaw = inputs.trigger?.[0];
     const hsv = inputs.hsv_info?.[0];
     
+    // Coerce trigger to proper boolean (matches frontend behavior)
+    // This ensures "false" (string), 0, null are properly interpreted
+    const trigger = coerceBoolean(triggerRaw);
+    const hasConnection = triggerRaw !== undefined;
+    
     // Store inputs for command tracking (helps answer "why did this trigger?")
-    this.lastInputs = { trigger, hsv: hsv ? 'present' : 'none' };
+    this.lastInputs = { trigger, triggerRaw, hsv: hsv ? 'present' : 'none' };
     
     // Track ticks for warmup period
     if (this.tickCount === undefined) {
@@ -827,22 +851,52 @@ class HAGenericDeviceNode {
     
     // Warmup period: Skip first 10 ticks (1 second at 100ms/tick)
     // This ensures all Sender→Receiver→Consumer chains have stabilized
-    // During warmup, just record state without sending commands
+    // During warmup, QUEUE commands instead of dropping them
     const WARMUP_TICKS = 10;
     if (this.tickCount <= WARMUP_TICKS) {
       engineLogger.logWarmup(this.id || 'HAGenericDevice', this.tickCount, trigger, this.lastTrigger);
-      // Record current trigger value without taking action
+      
+      // Queue any state changes during warmup (instead of ignoring them)
+      if (trigger !== undefined && trigger !== this.lastTrigger) {
+        this.pendingWarmupCommand = { trigger, hsv, hasConnection };
+        engineLogger.log('HA-WARMUP-QUEUE', `Queued command during warmup tick ${this.tickCount}`, { 
+          trigger, 
+          lastTrigger: this.lastTrigger 
+        });
+      }
+      
+      // Record current trigger value for tracking
       if (trigger !== undefined) {
         this.lastTrigger = trigger;
       }
+      this.hadConnection = hasConnection;
       return { is_on: !!trigger || !!this.lastTrigger };
     }
     
     // Mark warmup complete on first post-warmup tick
     if (!this.warmupComplete) {
       this.warmupComplete = true;
-      // On first real tick, DON'T treat current state as a "change"
-      // Just record it and wait for actual changes
+      
+      // Process any command that was queued during warmup
+      if (this.pendingWarmupCommand) {
+        const cmd = this.pendingWarmupCommand;
+        this.pendingWarmupCommand = null;
+        engineLogger.log('HA-WARMUP-PROCESS', 'Processing queued warmup command', { 
+          trigger: cmd.trigger,
+          entities: entityIds 
+        });
+        
+        // Execute the queued command
+        const mode = this.properties.triggerMode || 'Follow';
+        for (const entityId of entityIds) {
+          if (mode === 'Follow') {
+            await this.controlDevice(entityId, !!cmd.trigger, cmd.trigger ? cmd.hsv : null);
+            this.deviceStates[entityId] = !!cmd.trigger;
+          }
+        }
+      }
+      
+      // Record initial state
       if (trigger !== undefined) {
         this.lastTrigger = trigger;
         engineLogger.log('HA-DEVICE', 'Warmup complete, initial state recorded', { 
@@ -851,6 +905,7 @@ class HAGenericDeviceNode {
           mode: this.properties.triggerMode || 'Follow'
         });
       }
+      this.hadConnection = hasConnection;
       return { is_on: !!trigger };
     }
 
@@ -915,9 +970,19 @@ class HAGenericDeviceNode {
     }
 
     // Handle trigger changes based on mode
-    if (trigger !== this.lastTrigger) {
-      engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, 'CHANGE DETECTED');
-      const wasTriggered = this.lastTrigger;
+    // Use explicit edge detection (matches frontend behavior)
+    const triggerBool = !!trigger;
+    const lastBool = !!this.lastTrigger;
+    const risingEdge = triggerBool && !lastBool;
+    const fallingEdge = !triggerBool && lastBool;
+    const newConnection = hasConnection && !this.hadConnection;
+    
+    // Track connection state for next tick
+    this.hadConnection = hasConnection;
+    
+    if (risingEdge || fallingEdge || newConnection) {
+      engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, 
+        risingEdge ? 'RISING_EDGE' : fallingEdge ? 'FALLING_EDGE' : 'NEW_CONNECTION');
       this.lastTrigger = trigger;
       
       const mode = this.properties.triggerMode || 'Follow';
@@ -934,8 +999,8 @@ class HAGenericDeviceNode {
             this.lastTriggerReason = reason;
             break;
           case 'Toggle':
-            // Toggle on rising edge only
-            if (trigger && !wasTriggered) {
+            // Toggle on rising edge only (already detected above)
+            if (risingEdge) {
               this.deviceStates[entityId] = !this.deviceStates[entityId];
               shouldTurnOn = this.deviceStates[entityId];
               reason = `Toggle mode: rising edge → ${shouldTurnOn ? 'ON' : 'OFF'}`;
@@ -943,7 +1008,7 @@ class HAGenericDeviceNode {
               engineLogger.log('HA-DECISION', reason, { entityId });
               await this.controlDevice(entityId, shouldTurnOn, hsv);
             } else {
-              reason = `Toggle mode: no rising edge (trigger=${trigger}, was=${wasTriggered})`;
+              reason = `Toggle mode: no rising edge (fallingEdge=${fallingEdge}, newConnection=${newConnection})`;
               engineLogger.log('HA-DECISION', reason, { entityId });
             }
             continue;  // Skip normal control
@@ -1234,11 +1299,7 @@ class HADeviceAutomationNode {
     const result = {};
     
     if (!inputData) {
-      // Log warning when input goes null (but only once per null-streak)
-      if (!this._nullInputWarned) {
-        console.warn(`[HADeviceAutomationNode ${this.id?.slice(0,8) || 'unknown'}] No device_state input - returning nulls for all fields`);
-        this._nullInputWarned = true;
-      }
+      // No input is normal when node isn't connected - don't log (too spammy)
       // Return null for all outputs when no input
       this.outputs.forEach(outputKey => {
         result[outputKey] = null;

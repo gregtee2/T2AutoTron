@@ -1,5 +1,65 @@
 # Session Handoff - January 1, 2026
 
+## Session 17: Backend Engine Device Control Fixes
+
+### What was done (Claude Opus 4)
+
+**Current Version: 2.1.162**
+
+#### 🔴 Root Cause Analysis: Why Devices Didn't Turn Off in Add-on
+
+User reported that after running the add-on overnight, some devices in HAGenericDeviceNode didn't turn off. Loading the same graph in native/desktop version fixed them immediately. This indicated a discrepancy between frontend and backend implementations.
+
+**Investigation via subagent found 4 critical differences:**
+
+#### ✅ Fix 1: Missing coerceBoolean in Backend (v2.1.162)
+- **Problem**: Frontend has `coerceBoolean()` that converts `"false"` (string), `0`, `null` to proper boolean. Backend was using raw values.
+- **Impact**: If trigger source sent `"false"` as string, backend didn't interpret it as `false`
+- **Fix**: Added identical `coerceBoolean()` function to `HADeviceNodes.js` and applied it to trigger input
+- **Files**: `backend/src/engine/nodes/HADeviceNodes.js`
+
+#### ✅ Fix 2: Wrong Edge Detection Logic (v2.1.162)
+- **Problem**: Frontend used explicit rising/falling edge detection. Backend used simple `!==` comparison which could miss cases where both values are falsy (`null` vs `false` vs `undefined`)
+- **Fix**: Replaced `if (trigger !== this.lastTrigger)` with explicit edge detection matching frontend:
+  - `risingEdge = triggerBool && !lastBool`
+  - `fallingEdge = !triggerBool && lastBool`
+  - `newConnection = hasConnection && !this.hadConnection`
+- **Files**: `backend/src/engine/nodes/HADeviceNodes.js`
+
+#### ✅ Fix 3: Reconcile Pre-setting lastTrigger Wrong (v2.1.162)
+- **Problem**: `reconcile()` was setting `lastTrigger = anyOn` based on device state, not input. This caused mismatch between what engine thought trigger was vs actual input
+- **Fix**: Don't pre-set `lastTrigger` from device state. Leave it undefined and let actual input establish baseline on first tick
+- **Files**: `backend/src/engine/nodes/HADeviceNodes.js`
+
+#### ✅ Fix 4: Warmup Period Dropping Commands (v2.1.162)
+- **Problem**: First 10 ticks (1 second) of warmup period would DROP any commands instead of executing them
+- **Impact**: If trigger went `true → false` during warmup, the turn-off command was lost
+- **Fix**: Queue commands during warmup in `pendingWarmupCommand`, process after warmup completes
+- **Files**: `backend/src/engine/nodes/HADeviceNodes.js`
+
+#### ✨ Feature: Inject Node Value Input Socket (v2.1.162)
+- **Request**: User wanted to override Inject node's payload with value from another node
+- **Implementation**: Added optional `value_in` input socket to Inject node
+  - When connected, uses input value instead of configured payload
+  - Works with all modes (regular, pulse, scheduled)
+- **Files**: `backend/plugins/InjectNode.js`, `backend/src/engine/nodes/DelayNode.js`
+
+### 🦴 Caveman Summary
+1. **Boolean Translator Missing**: Backend couldn't understand `"false"` as false - now it can
+2. **Edge Detection Wrong**: Backend was looking for "is it different?" instead of "did it go ON→OFF?" - now fixed
+3. **Startup Confusion**: Backend was setting initial trigger based on device state, not actual input - now waits for input
+4. **Warmup Commands Lost**: Commands during first second were ignored - now they're queued and executed
+5. **Inject Value Override**: You can now wire another node's output into Inject node's value
+
+### Files Changed (Session 17)
+- `v3_migration/backend/src/engine/nodes/HADeviceNodes.js` - All 4 fixes
+- `v3_migration/backend/plugins/InjectNode.js` - Value input socket
+- `v3_migration/backend/src/engine/nodes/DelayNode.js` - Backend InjectNode value input
+- `v3_migration/backend/package.json` - v2.1.162
+- `home-assistant-addons/t2autotron/config.yaml` - v2.1.162
+
+---
+
 ## Session 16: Inject Node Pulse Mode & Event Announcer Fixes
 
 ### What was done (Claude Opus 4.5)

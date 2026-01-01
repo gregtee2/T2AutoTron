@@ -218,9 +218,16 @@ class BackendEngine {
           console.error(`[BackendEngine] Failed to instantiate ${nodeType}: ${error.message}`);
         }
       } else {
-        // Only warn, don't fail - frontend nodes like Debug won't run on backend
-        console.log(`[BackendEngine] Skipping unregistered node type: ${nodeData.label || nodeType || 'unknown'}`);
+        // Track skipped nodes for summary instead of individual logs
+        if (!this._skippedNodeTypes) this._skippedNodeTypes = new Set();
+        this._skippedNodeTypes.add(nodeData.label || nodeType || 'unknown');
       }
+    }
+
+    // Log summary of skipped node types (if any)
+    if (this._skippedNodeTypes && this._skippedNodeTypes.size > 0) {
+      console.log(`[BackendEngine] Skipped ${this._skippedNodeTypes.size} unregistered node types: ${Array.from(this._skippedNodeTypes).join(', ')}`);
+      this._skippedNodeTypes.clear();
     }
 
     // Store connections
