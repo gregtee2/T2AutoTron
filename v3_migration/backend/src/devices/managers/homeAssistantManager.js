@@ -431,6 +431,40 @@ class HomeAssistantManager {
     return this.updateState(id, state);
   }
 
+  /**
+   * Call any Home Assistant service
+   * @param {string} domain - Service domain (e.g., 'media_player', 'light', 'switch')
+   * @param {string} service - Service name (e.g., 'play_media', 'turn_on')
+   * @param {object} data - Service data payload
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  async callService(domain, service, data) {
+    this.updateConfig();
+
+    try {
+      const response = await fetch(`${this.config.host}/api/services/${domain}/${service}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.config.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+        timeout: 10000
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`HA API error: ${response.status}: ${response.statusText}, Body: ${errorBody}`);
+      }
+
+      await logger.log(`HA service call succeeded: ${domain}.${service}`, 'info', false, `ha:service:${domain}`);
+      return { success: true };
+    } catch (error) {
+      await logger.log(`HA service call failed: ${domain}.${service} - ${error.message}`, 'error', false, `ha:service:${domain}`);
+      return { success: false, error: error.message };
+    }
+  }
+
   getDevices() {
     // Check cache first
     if (this.deviceCache && Date.now() < this.deviceCache.expiry) {
@@ -649,6 +683,7 @@ module.exports = {
   speakTTS: (entityId, message, options) => instance.speakTTS(entityId, message, options),
   getMediaPlayers: () => instance.getMediaPlayers(),
   getTtsEntities: () => instance.getTtsEntities(),
+  callService: (domain, service, data) => instance.callService(domain, service, data),
   // Expose connection status for status requests
   getConnectionStatus: () => ({
     isConnected: instance.isConnected,

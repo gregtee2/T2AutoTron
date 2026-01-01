@@ -788,6 +788,10 @@ app.use('/api/stock', stockRoutes);
 const debugRoutes = require('./api/routes/debugRoutes');
 app.use('/api/debug', debugRoutes);
 
+// Media player routes (Internet Radio, streaming)
+const createMediaRoutes = require('./api/routes/mediaRoutes');
+app.use('/api/media', createMediaRoutes(io));
+
 // Initialize DeviceService
 debug('Initializing DeviceService...');
 async function initializeDeviceService() {
