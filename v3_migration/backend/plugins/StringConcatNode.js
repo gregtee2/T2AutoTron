@@ -181,7 +181,9 @@
             style: {
                 padding: '8px',
                 fontFamily: 'Arial, sans-serif',
-                minWidth: '240px'
+                minWidth: '240px',
+                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                borderRadius: '8px'
             }
         }, [
             // Header

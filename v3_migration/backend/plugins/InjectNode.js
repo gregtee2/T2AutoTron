@@ -80,7 +80,7 @@
                 onceDelay: 0, // 0 = disabled, otherwise seconds after start to inject once
                 name: '',     // Optional name for identification
                 pulseMode: false, // When true, output is undefined except during pulse
-                pulseDurationMs: 500, // How long pulse lasts
+                pulseDurationMs: 500, // How long pulse lasts (visual indicator only)
                 // Schedule settings
                 scheduleEnabled: false,
                 scheduleTime: '',      // HH:MM format (24-hour)
@@ -91,7 +91,8 @@
                 isRepeating: false,
                 onceTriggered: false,
                 nextScheduledTime: null,
-                isPulsing: false,      // True during active pulse
+                isPulsing: false,      // True during active pulse (visual)
+                pulsePending: false,   // True when pulse needs to be delivered via data()
                 debug: false
             };
 
@@ -246,18 +247,19 @@
             this.properties.lastTriggerTime = Date.now();
             this.properties.triggerCount++;
             
-            // Handle pulse mode - output value briefly then go back to undefined
+            // Handle pulse mode - set pending flag so data() delivers it
             if (this.properties.pulseMode) {
-                this.properties.isPulsing = true;
+                this.properties.pulsePending = true;  // Latch: will be cleared when data() reads it
+                this.properties.isPulsing = true;     // Visual indicator
                 
                 // Clear any existing pulse timer
                 if (this._pulseTimer) {
                     clearTimeout(this._pulseTimer);
                 }
                 
-                // End pulse after duration
+                // End visual pulse indicator after duration (but pulsePending stays until read)
                 this._pulseTimer = setTimeout(() => {
-                    this.properties.isPulsing = false;
+                    this.properties.isPulsing = false;  // Visual only
                     this._pulseTimer = null;
                     if (this.changeCallback) this.changeCallback();
                 }, this.properties.pulseDurationMs || 500);
@@ -316,10 +318,13 @@
             // Initialize on first data() call (flow started)
             this.initialize();
             
-            // Pulse mode: only output during active pulse, undefined otherwise
+            // Pulse mode: only output when pulsePending is true, then clear it
             if (this.properties.pulseMode) {
-                if (this.properties.isPulsing) {
-                    return { output: this._getPayload() };
+                if (this.properties.pulsePending) {
+                    const payload = this._getPayload();
+                    // Clear the latch - pulse has been delivered
+                    this.properties.pulsePending = false;
+                    return { output: payload };
                 } else {
                     return { output: undefined };
                 }
@@ -350,6 +355,7 @@
                 this.properties.onceTriggered = false;
                 this.properties.nextScheduledTime = null;
                 this.properties.isPulsing = false;
+                this.properties.pulsePending = false;
             }
             this._initialized = false;
         }

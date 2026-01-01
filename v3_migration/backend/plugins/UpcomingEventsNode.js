@@ -255,13 +255,11 @@
             const socket = window.socket;
             if (!socket) return;
 
-            // Handler for backend events
+            // Handler for backend events - just store them, display handled in check loop
             const handleBackendEvents = (events) => {
                 if (data.setBackendEvents) {
                     data.setBackendEvents(events);
                 }
-                // Also store for display
-                setNextEvents((events || []).slice(0, 3));  // Show up to 3 events
             };
 
             socket.on('upcoming-events', handleBackendEvents);
@@ -282,7 +280,7 @@
         }, []);
 
         // Track last events JSON to avoid unnecessary re-renders
-        const lastEventsJsonRef = useRef('');
+        const lastEventsJsonRef = useRef('[]');
         
         // Main check loop - runs every second
         useEffect(() => {

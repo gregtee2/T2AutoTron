@@ -157,7 +157,8 @@ class InjectNode {
       
       // Runtime state
       lastTriggerTime: null,
-      isPulsing: false
+      isPulsing: false,
+      pulsePending: false       // Latch: pulse waits to be delivered via data()
     };
     
     this._repeatTimer = null;
@@ -190,7 +191,7 @@ class InjectNode {
       }
     }
     
-    if (VERBOSE) console.log(`[InjectNode] After restore - scheduleEnabled: ${this.properties.scheduleEnabled}, scheduleTime: ${this.properties.scheduleTime}, pulseMode: ${this.properties.pulseMode}`);
+    if (VERBOSE) console.log(`[InjectNode ${this.id}] restore - type: ${this.properties.payloadType}, value: "${this.properties.payloadValue}", pulse: ${this.properties.pulseMode}, schedule: ${this.properties.scheduleEnabled} @ ${this.properties.scheduleTime}`);
     
     // Start schedule checker if enabled
     this._startScheduleChecker();
@@ -226,24 +227,25 @@ class InjectNode {
   }
 
   trigger() {
-    if (VERBOSE) console.log(`[InjectNode] trigger() called, pulseMode: ${this.properties.pulseMode}`);
+    if (VERBOSE) console.log(`[InjectNode ${this.id}] TRIGGER! type: ${this.properties.payloadType}, pulseMode: ${this.properties.pulseMode}`);
     this.properties.lastTriggerTime = Date.now();
     
     if (this.properties.pulseMode) {
-      // Set pulsing state
-      this.properties.isPulsing = true;
-      if (VERBOSE) console.log(`[InjectNode] Starting pulse, isPulsing: true`);
+      // Set pending latch - will be cleared when data() reads it
+      this.properties.pulsePending = true;
+      this.properties.isPulsing = true;  // Visual indicator
+      if (VERBOSE) console.log(`[InjectNode ${this.id}] Pulse LATCHED, value: "${this._getPayload()}"`);
       
       // Clear any existing pulse timer
       if (this._pulseTimer) {
         clearTimeout(this._pulseTimer);
       }
       
-      // End pulse after duration
+      // End visual indicator after duration (pulsePending stays until read)
       this._pulseTimer = setTimeout(() => {
         this.properties.isPulsing = false;
         this._pulseTimer = null;
-        if (VERBOSE) console.log(`[InjectNode] Pulse ended, isPulsing: false`);
+        if (VERBOSE) console.log(`[InjectNode ${this.id}] Pulse visual ended (pulsePending: ${this.properties.pulsePending})`);
       }, this.properties.pulseDurationMs || 500);
     }
   }
@@ -322,11 +324,16 @@ class InjectNode {
   }
 
   data(inputs) {
-    // Pulse mode: only output during active pulse, undefined otherwise
+    // Pulse mode: only output when pulsePending is true, then clear it
     if (this.properties.pulseMode) {
-      const output = this.properties.isPulsing ? this._getPayload() : undefined;
-      // Only log when pulse state changes or starts (avoid spam on every tick)
-      return { output };
+      if (this.properties.pulsePending) {
+        const output = this._getPayload();
+        if (VERBOSE) console.log(`[InjectNode ${this.id}] data() DELIVERING pulse: "${output}"`);
+        // Clear the latch - pulse has been delivered
+        this.properties.pulsePending = false;
+        return { output };
+      }
+      return { output: undefined };
     }
     
     // Non-pulse mode: always return the payload value (original behavior)
