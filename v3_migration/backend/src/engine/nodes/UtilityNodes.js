@@ -794,6 +794,7 @@ class StringConcatNode {
 
 /**
  * UpcomingEventsNode (Event Announcer) - Triggers announcement before scheduled events
+ * Also accepts ad-hoc messages via input that jump ahead of scheduled events
  */
 class UpcomingEventsNode {
   constructor(id, properties = {}) {
@@ -803,14 +804,18 @@ class UpcomingEventsNode {
       leadTime: properties.leadTime || 5,  // Seconds before event to announce
       template: properties.template || 'action'  // 'action' or 'passive'
     };
-    this.inputs = {};
-    this.outputs = { trigger: false, message: '', event: null };
+    this.inputs = { message: undefined };  // Ad-hoc message input
+    this.outputs = { trigger: false, messageOut: '', event: null };
     this._announcedEvents = {};  // Track announced events
     this._triggerPulse = false;  // For pulse behavior
+    this._lastAdHocMessage = '';  // For change detection
+    this._adHocCooldownUntil = 0;  // Timestamp when cooldown ends
   }
 
   setInput(name, value) {
-    // No inputs
+    if (name === 'message') {
+      this.inputs.message = value;
+    }
   }
 
   // Generate unique key for an event
@@ -838,10 +843,32 @@ class UpcomingEventsNode {
   }
 
   process() {
+    const now = Date.now();
+    
     // Reset trigger after one tick (pulse behavior)
     if (this._triggerPulse) {
       this._triggerPulse = false;
       this.outputs.trigger = false;
+    }
+
+    // Check for ad-hoc message first (priority)
+    const adHocMsg = this.inputs.message;
+    if (adHocMsg && typeof adHocMsg === 'string' && adHocMsg.trim() !== '') {
+      // Only trigger if message changed
+      if (adHocMsg !== this._lastAdHocMessage) {
+        this._lastAdHocMessage = adHocMsg;
+        this.outputs.messageOut = adHocMsg;
+        this.outputs.event = null;
+        this.outputs.trigger = true;
+        this._triggerPulse = true;
+        this._adHocCooldownUntil = now + 3000;  // 3 second cooldown
+        return this.outputs;
+      }
+    }
+    
+    // If in cooldown from ad-hoc, skip scheduled events
+    if (now < this._adHocCooldownUntil) {
+      return this.outputs;
     }
 
     // Get events from engine's scheduled events registry
@@ -851,7 +878,6 @@ class UpcomingEventsNode {
     }
 
     const events = engine.getUpcomingEvents() || [];
-    const now = Date.now();
     const leadMs = this.properties.leadTime * 1000;
 
     // Find events within announcement window
@@ -870,7 +896,7 @@ class UpcomingEventsNode {
           this._announcedEvents[key] = true;
           
           // Generate message and trigger
-          this.outputs.message = this.generateMessage(event, this.properties.template);
+          this.outputs.messageOut = this.generateMessage(event, this.properties.template);
           this.outputs.event = event;
           this.outputs.trigger = true;
           this._triggerPulse = true;

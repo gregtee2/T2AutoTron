@@ -26,15 +26,18 @@
 
     // Tooltips
     const tooltips = {
-        node: "Announces each scheduled event X seconds before it fires. Connect 'Trigger' to TTS Enable and 'Message' to TTS Message.",
+        node: "Announces scheduled events AND ad-hoc messages. Connect anything to the 'message' input for priority announcements that jump ahead of the schedule.",
+        inputs: {
+            message: "Ad-hoc message input - when this changes, it's announced IMMEDIATELY (priority over scheduled events)"
+        },
         outputs: {
             trigger: "Boolean pulse - true when announcing, then false",
-            message: "The announcement text (e.g., 'Turning Kitchen Counter Lights on')",
-            event: "The event object that's about to fire"
+            message: "The announcement text (scheduled or ad-hoc)",
+            event: "The event object (null for ad-hoc messages)"
         },
         controls: {
-            leadTime: "How many seconds before the event to make the announcement",
-            template: "Customize the announcement wording"
+            leadTime: "How many seconds before scheduled events to announce",
+            template: "Customize the announcement wording for scheduled events"
         }
     };
 
@@ -43,7 +46,7 @@
             super("Event Announcer");
             this.changeCallback = changeCallback;
             this.width = 300;
-            this.height = 280;
+            this.height = 340;  // Increased for input socket section
 
             this.properties = {
                 leadTime: 5,           // Seconds before event to announce
@@ -52,12 +55,19 @@
                 currentMessage: '',    // Current announcement message
                 currentEvent: null,    // Current event being announced
                 triggerActive: false,  // Whether trigger is currently firing
-                upcomingCount: 0       // Number of upcoming events
+                upcomingCount: 0,      // Number of upcoming events
+                // Ad-hoc message tracking
+                lastAdHocMessage: '',  // Last ad-hoc message we announced (for change detection)
+                adHocCooldownUntil: 0, // Timestamp when cooldown ends
+                isAdHocActive: false   // True when currently announcing ad-hoc message
             };
 
+            // Input for ad-hoc messages
+            this.addInput('message', new ClassicPreset.Input(sockets.any, 'Message'));
+            
             // Outputs
             this.addOutput('trigger', new ClassicPreset.Output(sockets.boolean, 'Trigger'));
-            this.addOutput('message', new ClassicPreset.Output(sockets.any, 'Message'));
+            this.addOutput('messageOut', new ClassicPreset.Output(sockets.any, 'Message'));
             this.addOutput('event', new ClassicPreset.Output(sockets.any, 'Event'));
             
             // Backend events cache (populated via socket)
@@ -124,6 +134,12 @@
             // Update count
             this.properties.upcomingCount = events.length;
             
+            // If in ad-hoc cooldown, skip scheduled announcements
+            if (now < this.properties.adHocCooldownUntil) {
+                return null; // Still in cooldown from ad-hoc message
+            }
+            this.properties.isAdHocActive = false; // Cooldown over
+            
             // Find events that are within our lead time window
             for (const event of events) {
                 if (!event.time) continue;
@@ -167,10 +183,36 @@
             return null;
         }
 
+        // Check for ad-hoc message and handle it
+        checkAdHocMessage(inputMessage) {
+            // Unwrap array if needed (Rete passes inputs as arrays)
+            const msg = Array.isArray(inputMessage) ? inputMessage[0] : inputMessage;
+            
+            // Skip if empty, undefined, or same as last announced
+            if (!msg || typeof msg !== 'string' || msg.trim() === '') return false;
+            if (msg === this.properties.lastAdHocMessage) return false;
+            
+            // New ad-hoc message detected!
+            this.properties.lastAdHocMessage = msg;
+            this.properties.currentMessage = msg;
+            this.properties.currentEvent = null; // No event for ad-hoc
+            this.properties.triggerActive = true;
+            this.properties.isAdHocActive = true;
+            this.properties.adHocCooldownUntil = Date.now() + 3000; // 3 second cooldown
+            
+            return true; // Announced
+        }
+
         data(inputs) {
+            // Check for ad-hoc message input first (priority)
+            const adHocMsg = inputs.message;
+            if (adHocMsg !== undefined) {
+                this.checkAdHocMessage(adHocMsg);
+            }
+            
             return {
                 trigger: this.properties.triggerActive,
-                message: this.properties.currentMessage,
+                messageOut: this.properties.currentMessage,
                 event: this.properties.currentEvent
             };
         }
@@ -202,6 +244,7 @@
         const [upcomingCount, setUpcomingCount] = useState(0);
         const [lastAnnouncement, setLastAnnouncement] = useState('');
         const [isTriggered, setIsTriggered] = useState(false);
+        const [isAdHoc, setIsAdHoc] = useState(false);  // True when announcing ad-hoc message
         const [nextEvents, setNextEvents] = useState([]);  // Preview of next events
         const intervalRef = useRef(null);
         const backendPollRef = useRef(null);
@@ -261,6 +304,9 @@
                     .slice(0, 3);
                 setNextEvents(mergedEvents);
                 
+                // Update ad-hoc state
+                setIsAdHoc(data.properties.isAdHocActive);
+                
                 if (announced) {
                     setLastAnnouncement(data.properties.currentMessage);
                     setIsTriggered(true);
@@ -269,6 +315,21 @@
                     if (data.changeCallback) data.changeCallback();
                     
                     // Reset trigger after a brief pulse (100ms)
+                    setTimeout(() => {
+                        data.properties.triggerActive = false;
+                        setIsTriggered(false);
+                        if (data.changeCallback) data.changeCallback();
+                    }, 100);
+                }
+                
+                // Also check if ad-hoc triggered (not from checkAndAnnounce but from data() flow)
+                if (data.properties.isAdHocActive && data.properties.triggerActive) {
+                    setLastAnnouncement(data.properties.currentMessage);
+                    setIsTriggered(true);
+                    setIsAdHoc(true);
+                    
+                    if (data.changeCallback) data.changeCallback();
+                    
                     setTimeout(() => {
                         data.properties.triggerActive = false;
                         setIsTriggered(false);
@@ -358,7 +419,20 @@
                         borderRadius: '12px',
                         fontSize: '11px'
                     }
-                }, `${upcomingCount} upcoming`),
+                }, `${upcomingCount} scheduled`),
+                
+                // Ad-hoc indicator (shows when message input is connected or used)
+                isAdHoc && React.createElement('div', {
+                    key: 'adhoc',
+                    style: {
+                        display: 'inline-block',
+                        padding: '2px 8px',
+                        background: 'rgba(156, 39, 176, 0.3)',
+                        color: '#ce93d8',
+                        borderRadius: '12px',
+                        fontSize: '11px'
+                    }
+                }, '⚡ Priority'),
                 
                 // Trigger indicator
                 isTriggered && React.createElement('div', {
@@ -366,13 +440,13 @@
                     style: {
                         display: 'inline-block',
                         padding: '2px 8px',
-                        background: 'rgba(255, 152, 0, 0.3)',
-                        color: '#ff9800',
+                        background: isAdHoc ? 'rgba(156, 39, 176, 0.3)' : 'rgba(255, 152, 0, 0.3)',
+                        color: isAdHoc ? '#ce93d8' : '#ff9800',
                         borderRadius: '12px',
                         fontSize: '11px',
                         animation: 'pulse 0.5s ease-out'
                     }
-                }, '🔔 Announcing!')
+                }, isAdHoc ? '⚡ Announcing!' : '🔔 Announcing!')
             ]),
 
             // Next events preview
@@ -466,23 +540,45 @@
                 ])
             ]),
 
+            // Input socket for ad-hoc messages
+            React.createElement('div', {
+                key: 'inputs',
+                style: { borderTop: '1px solid #333', paddingTop: '8px', marginBottom: '8px' }
+            }, [
+                React.createElement('div', {
+                    key: 'message-in',
+                    style: { display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '8px' }
+                }, [
+                    React.createElement(RefComponent, {
+                        key: 's',
+                        init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.inputs.message.socket, nodeId: data.id, side: "input", key: "message" } }),
+                        unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                    }),
+                    React.createElement('span', { 
+                        key: 'l', 
+                        style: { fontSize: '11px', color: '#ce93d8' } 
+                    }, '⚡ Priority Message'),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'h', text: tooltips.inputs.message, size: 10 })
+                ])
+            ]),
+
             // Last announcement preview
             React.createElement('div', {
                 key: 'preview',
                 style: {
                     padding: '6px',
-                    background: lastAnnouncement ? 'rgba(76, 175, 80, 0.15)' : 'rgba(0,0,0,0.3)',
+                    background: lastAnnouncement ? (isAdHoc ? 'rgba(156, 39, 176, 0.15)' : 'rgba(76, 175, 80, 0.15)') : 'rgba(0,0,0,0.3)',
                     borderRadius: '4px',
                     fontSize: '11px',
-                    color: lastAnnouncement ? '#4caf50' : '#666',
+                    color: lastAnnouncement ? (isAdHoc ? '#ce93d8' : '#4caf50') : '#666',
                     marginBottom: '8px',
                     fontStyle: lastAnnouncement ? 'normal' : 'italic',
-                    borderLeft: lastAnnouncement ? '3px solid #4caf50' : 'none',
+                    borderLeft: lastAnnouncement ? `3px solid ${isAdHoc ? '#ce93d8' : '#4caf50'}` : 'none',
                     paddingLeft: lastAnnouncement ? '8px' : '6px'
                 }
             }, [
                 React.createElement('div', { key: 'l', style: { fontSize: '9px', color: '#888', marginBottom: '2px' } }, 
-                    lastAnnouncement ? 'Last announcement:' : 'Waiting for events...'),
+                    lastAnnouncement ? (isAdHoc ? 'Priority message:' : 'Last announcement:') : 'Waiting for events...'),
                 lastAnnouncement || 'No announcements yet'
             ]),
 
@@ -512,7 +608,7 @@
                     React.createElement('span', { key: 'l', style: { fontSize: '11px', color: '#ffb74d' } }, 'Message'),
                     React.createElement(RefComponent, {
                         key: 's',
-                        init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.message.socket, nodeId: data.id, side: "output", key: "message" } }),
+                        init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs.messageOut.socket, nodeId: data.id, side: "output", key: "messageOut" } }),
                         unmount: ref => emit({ type: "unmount", data: { element: ref } })
                     })
                 ]),
