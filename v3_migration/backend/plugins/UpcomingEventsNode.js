@@ -387,7 +387,9 @@
             style: {
                 padding: '8px',
                 fontFamily: 'Arial, sans-serif',
-                minWidth: '280px'
+                width: '280px',
+                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                borderRadius: '8px'
             }
         }, [
             // Header
@@ -449,17 +451,18 @@
                 }, isAdHoc ? '⚡ Announcing!' : '🔔 Announcing!')
             ]),
 
-            // Next events preview
-            nextEvents.length > 0 && React.createElement('div', {
+            // Next events preview - always render container for stable height
+            React.createElement('div', {
                 key: 'next-events',
                 style: {
                     marginBottom: '8px',
                     padding: '6px',
                     background: 'rgba(0,0,0,0.2)',
                     borderRadius: '4px',
-                    fontSize: '10px'
+                    fontSize: '10px',
+                    minHeight: '60px'
                 }
-            }, [
+            }, nextEvents.length > 0 ? [
                 React.createElement('div', { 
                     key: 'title',
                     style: { color: '#888', marginBottom: '4px', fontSize: '9px' }
@@ -491,6 +494,11 @@
                         }, `${timeStr} (${countdown})`)
                     ]);
                 })
+            ] : [
+                React.createElement('div', { 
+                    key: 'empty',
+                    style: { color: '#666', fontStyle: 'italic', textAlign: 'center', paddingTop: '15px' }
+                }, 'No scheduled events')
             ]),
 
             // Lead time control
