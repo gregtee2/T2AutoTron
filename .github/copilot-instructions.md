@@ -84,6 +84,24 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
+#### Inject Node Pulse Timing (2026-01-01)
+- **What broke**: Inject node with Schedule + Pulse Mode would never trigger downstream nodes even though the schedule fired correctly.
+- **Why it broke**: Rete.js batches UI updates. By the time the engine called `data()` to read the output, the 500ms pulse had already ended and `isPulsing` was false. The message disappeared before anyone could read it.
+- **The fix**: Implemented "pulse latch" - `pulsePending` flag stays true until `data()` actually reads it, then clears. Like a sticky note that stays on the fridge until someone takes it.
+- **Now it works because**: The pulse waits to be read instead of disappearing after 500ms.
+
+#### Event Announcer Same Message Bug (2026-01-01)
+- **What broke**: Clicking the Inject button 10 times with "Hello" only triggered the Event Announcer once.
+- **Why it broke**: Event Announcer checked "Is this the same message as before?" If yes, ignored. But that defeats the purpose of clicking the button multiple times!
+- **The fix**: Changed from "value comparison" to "rising edge detection". Now it detects when input goes from empty/undefined → value. Same message CAN trigger again if it went away and came back.
+- **Now it works because**: We detect the EDGE (nothing → something), not just compare values.
+
+#### Event Announcer Ad-Hoc Trigger Protection (2026-01-01)
+- **What broke**: Inject pulse mode worked in empty graph, but stopped working when full graph loaded with scheduled events.
+- **Why it broke**: `checkAndAnnounce()` runs every 1 second to check for scheduled events. When it found no new scheduled events, it cleared `triggerActive = false` - even when an ad-hoc message was trying to use it! Like a janitor cleaning up while someone is still eating.
+- **The fix**: Added protection: only clear `triggerActive` if there's NO ad-hoc message happening (`!isAdHocActive`).
+- **Now it works because**: The scheduled event checker leaves the ad-hoc trigger alone until it's done.
+
 #### HAGenericDeviceNode HA-Only Refactor (2025-12-19)
 - **What broke**: The node was a confusing "Swiss Army knife" trying to talk directly to Kasa, Hue, AND Home Assistant. It had 3 different code paths for the same operation.
 - **Why it broke**: Original design assumed direct device control. But HA already integrates with Kasa/Hue devices, and there are dedicated `KasaLightNode` and `HueLightNode` for direct control.

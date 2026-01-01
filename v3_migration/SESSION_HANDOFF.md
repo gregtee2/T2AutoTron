@@ -1,3 +1,95 @@
+# Session Handoff - January 1, 2026
+
+## Session 16: Inject Node Pulse Mode & Event Announcer Fixes
+
+### What was done (Claude Opus 4.5)
+
+**Current Version: 2.1.161**
+
+#### ✅ Fix 1: Inject Node Pulse Mode Timing (v2.1.160)
+- **Symptom**: Inject node with Schedule + Pulse Mode enabled would never trigger downstream nodes
+- **Root Cause**: Pulse lasted 500ms, but Rete.js batches updates. By the time `data()` was called, `isPulsing` was already false
+- **Fix**: Implemented "pulse latch" mechanism using `pulsePending` property:
+  - `trigger()` sets `pulsePending = true` (latch)
+  - `data()` checks `pulsePending`, returns payload, then clears `pulsePending = false`
+  - This ensures the pulse is delivered regardless of timing
+- **Files**: `backend/plugins/InjectNode.js`, `backend/src/engine/nodes/DelayNode.js`
+
+#### ✅ Fix 2: Inject Button - Same Message Only Triggers Once (v2.1.160)
+- **Symptom**: Clicking Inject button 10 times with same text only triggered Event Announcer once
+- **Root Cause**: Event Announcer compared current message to last message - if same, ignored
+- **Fix**: Implemented "rising edge" detection using `previousAdHocInput` property:
+  - Track previous input value
+  - Trigger on transition from undefined/empty → value (rising edge)
+  - Same message CAN trigger again after going back to undefined
+- **Files**: `backend/plugins/UpcomingEventsNode.js`, `backend/src/engine/nodes/UtilityNodes.js`
+
+#### ✅ Fix 3: Event Announcer Ad-Hoc Trigger Protection (v2.1.161)
+- **Symptom**: Inject pulse mode worked in empty graph, but not when full graph loaded with scheduled events
+- **Root Cause**: `checkAndAnnounce()` runs every 1 second and was clearing `triggerActive` even when ad-hoc message was trying to fire
+- **Fix**: Added protection: `if (triggerActive && !isAdHocActive)` before clearing trigger
+- **Files**: `backend/plugins/UpcomingEventsNode.js`, `backend/src/engine/nodes/UtilityNodes.js`
+
+#### ✅ Fix 4: Text Node Backgrounds (v2.1.160)
+- **Symptom**: TextStringNode and StringConcatNode had transparent/clear backgrounds
+- **Fix**: Added gradient background styling matching other nodes
+- **Files**: `backend/plugins/TextStringNode.js`, `backend/plugins/StringConcatNode.js`
+
+### 🚨 ACTIVE BUG: Scheduled Event Announcements Not Working
+
+**Symptom**: After fixing ad-hoc/priority messages, the regular scheduled event announcements stopped working
+
+**Debug Status**:
+- Added debug logging to `checkAndAnnounce()` method
+- Debug is currently enabled by default (`debug: true` in properties)
+- User should refresh browser and check console for:
+  - `[EventAnnouncer] checkAndAnnounce: frontend=X, backend=Y` - Event counts
+  - `[EventAnnouncer] Event in window: ...` - When event is about to fire
+  - `[EventAnnouncer] In ad-hoc cooldown, skipping...` - If being blocked
+
+**Possible Causes**:
+1. Ad-hoc cooldown blocking scheduled events (3 second cooldown still active?)
+2. Events not being registered properly in `window.getUpcomingEvents()` or `_backendEvents`
+3. Timing issue with `triggerActive` being cleared too quickly
+
+**Files with debug logging**:
+- `backend/plugins/UpcomingEventsNode.js` - Lines ~115, ~145, ~165
+
+### Debug Features Added
+
+**Inject Node** (`InjectNode.js`):
+- Click 🔍 icon next to "Triggers: X" to toggle debug mode
+- Shows: trigger calls, pulse pending state, data() delivery, schedule triggers
+
+**Event Announcer** (`UpcomingEventsNode.js`):
+- `debug: true` property (currently enabled by default - SET TO FALSE after debugging)
+- Shows: event counts, cooldown status, events in announcement window
+
+### 🦴 Caveman Summary
+1. **Pulse Latch**: The message now "sticks" until someone reads it, instead of disappearing after 500ms
+2. **Rising Edge**: We detect when the input goes from "nothing" → "something", not just if it changed
+3. **Trigger Protection**: The scheduled event checker now respects when ad-hoc messages are happening
+4. **Still Broken**: But now scheduled events stopped working - need to check why
+
+### Next Agent Tasks
+1. **Check console output** when a scheduled event should fire
+2. **Determine if events are being found** (frontend vs backend count)
+3. **Check cooldown logic** - is it blocking scheduled events incorrectly?
+4. **Turn off debug logging** once fixed (`debug: false`)
+5. **Sync backend engine** version if fixes are made
+
+### Files Changed (Session 16)
+- `v3_migration/backend/plugins/InjectNode.js` - Pulse latch, debug toggle, schedule checker init on mount
+- `v3_migration/backend/plugins/UpcomingEventsNode.js` - Rising edge detection, ad-hoc protection, debug logging
+- `v3_migration/backend/plugins/TextStringNode.js` - Gradient background
+- `v3_migration/backend/plugins/StringConcatNode.js` - Gradient background
+- `v3_migration/backend/src/engine/nodes/DelayNode.js` - Backend InjectNode pulse latch
+- `v3_migration/backend/src/engine/nodes/UtilityNodes.js` - Backend UpcomingEventsNode rising edge fix
+- `v3_migration/backend/package.json` - v2.1.161
+- `home-assistant-addons/t2autotron/config.yaml` - v2.1.161
+
+---
+
 # Session Summary: Dec 31, 2025
 
 ## What was done

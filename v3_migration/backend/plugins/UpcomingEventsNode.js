@@ -60,7 +60,8 @@
                 lastAdHocMessage: '',  // Last ad-hoc message we announced
                 previousAdHocInput: undefined, // Previous input state (for edge detection)
                 adHocCooldownUntil: 0, // Timestamp when cooldown ends
-                isAdHocActive: false   // True when currently announcing ad-hoc message
+                isAdHocActive: false,  // True when currently announcing ad-hoc message
+                debug: true            // Enable debug logging (TEMP)
             };
 
             // Input for ad-hoc messages
@@ -115,6 +116,11 @@
             const frontendEvents = (window.getUpcomingEvents && window.getUpcomingEvents()) || [];
             const backendEvents = this._backendEvents || [];
             
+            // Debug: log event counts
+            if (this.properties.debug) {
+                console.log(`[EventAnnouncer] checkAndAnnounce: frontend=${frontendEvents.length}, backend=${backendEvents.length}, isAdHocActive=${this.properties.isAdHocActive}`);
+            }
+            
             // Merge and deduplicate events (prefer by time)
             const eventMap = new Map();
             [...frontendEvents, ...backendEvents].forEach(e => {
@@ -137,6 +143,9 @@
             
             // If in ad-hoc cooldown, skip scheduled announcements
             if (now < this.properties.adHocCooldownUntil) {
+                if (this.properties.debug) {
+                    console.log(`[EventAnnouncer] In ad-hoc cooldown, skipping scheduled. Cooldown ends in ${(this.properties.adHocCooldownUntil - now) / 1000}s`);
+                }
                 return null; // Still in cooldown from ad-hoc message
             }
             this.properties.isAdHocActive = false; // Cooldown over
@@ -151,6 +160,10 @@
                 // Is this event within our announcement window? (leadTime seconds before, up until it fires)
                 if (timeUntil > 0 && timeUntil <= leadMs) {
                     const key = this.getEventKey(event);
+                    
+                    if (this.properties.debug) {
+                        console.log(`[EventAnnouncer] Event in window: ${key}, timeUntil=${timeUntil}ms, announced=${!!this.properties.announcedEvents[key]}`);
+                    }
                     
                     // Have we already announced this specific event?
                     if (!this.properties.announcedEvents[key]) {
