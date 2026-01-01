@@ -59,6 +59,14 @@
             this.addOutput('trigger', new ClassicPreset.Output(sockets.boolean, 'Trigger'));
             this.addOutput('message', new ClassicPreset.Output(sockets.any, 'Message'));
             this.addOutput('event', new ClassicPreset.Output(sockets.any, 'Event'));
+            
+            // Backend events cache (populated via socket)
+            this._backendEvents = [];
+        }
+
+        // Set backend events (called from component when socket receives events)
+        setBackendEvents(events) {
+            this._backendEvents = events || [];
         }
 
         // Generate unique key for an event (to track if we've announced it)
@@ -92,9 +100,24 @@
 
         // Check if any event should be announced NOW
         checkAndAnnounce() {
-            if (!window.getUpcomingEvents) return null;
+            // Get events from both frontend registry AND backend
+            const frontendEvents = (window.getUpcomingEvents && window.getUpcomingEvents()) || [];
+            const backendEvents = this._backendEvents || [];
             
-            const events = window.getUpcomingEvents() || [];
+            // Merge and deduplicate events (prefer by time)
+            const eventMap = new Map();
+            [...frontendEvents, ...backendEvents].forEach(e => {
+                if (e && e.time) {
+                    const key = this.getEventKey(e);
+                    if (!eventMap.has(key)) {
+                        eventMap.set(key, e);
+                    }
+                }
+            });
+            
+            const events = Array.from(eventMap.values())
+                .sort((a, b) => new Date(a.time) - new Date(b.time));
+            
             const now = Date.now();
             const leadMs = this.properties.leadTime * 1000;
             
@@ -180,7 +203,37 @@
         const [lastAnnouncement, setLastAnnouncement] = useState('');
         const [isTriggered, setIsTriggered] = useState(false);
         const intervalRef = useRef(null);
+        const backendPollRef = useRef(null);
         const { NodeHeader, HelpIcon } = window.T2Controls || {};
+
+        // Request backend events via socket
+        useEffect(() => {
+            const socket = window.socket;
+            if (!socket) return;
+
+            // Handler for backend events
+            const handleBackendEvents = (events) => {
+                if (data.setBackendEvents) {
+                    data.setBackendEvents(events);
+                }
+            };
+
+            socket.on('upcoming-events', handleBackendEvents);
+
+            // Request backend events every 5 seconds
+            const requestEvents = () => {
+                socket.emit('request-upcoming-events');
+            };
+            requestEvents(); // Request immediately
+            backendPollRef.current = setInterval(requestEvents, 5000);
+
+            return () => {
+                socket.off('upcoming-events', handleBackendEvents);
+                if (backendPollRef.current) {
+                    clearInterval(backendPollRef.current);
+                }
+            };
+        }, []);
 
         // Main check loop - runs every second
         useEffect(() => {

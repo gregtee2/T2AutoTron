@@ -268,6 +268,17 @@ module.exports = (deviceService) => (socket) => {
     if (forecastData) socket.emit('forecast-update', forecastData);
   });
 
+  // Handle request for upcoming scheduled events from backend engine
+  socket.on('request-upcoming-events', () => {
+    const engine = global.backendEngine;
+    if (engine && typeof engine.getUpcomingEvents === 'function') {
+      const events = engine.getUpcomingEvents();
+      socket.emit('upcoming-events', events);
+    } else {
+      socket.emit('upcoming-events', []);
+    }
+  });
+
   socket.on('disconnect', (reason) => {
     authManager.deauthenticate(socket);
     logger.log(`Socket.IO client disconnected: ${socket.id}, Reason: ${reason}`, 'warn', false, `socket:disconnect:${socket.id}`);
