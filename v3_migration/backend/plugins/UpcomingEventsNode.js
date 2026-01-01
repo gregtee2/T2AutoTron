@@ -202,6 +202,7 @@
         const [upcomingCount, setUpcomingCount] = useState(0);
         const [lastAnnouncement, setLastAnnouncement] = useState('');
         const [isTriggered, setIsTriggered] = useState(false);
+        const [nextEvents, setNextEvents] = useState([]);  // Preview of next events
         const intervalRef = useRef(null);
         const backendPollRef = useRef(null);
         const { NodeHeader, HelpIcon } = window.T2Controls || {};
@@ -216,6 +217,8 @@
                 if (data.setBackendEvents) {
                     data.setBackendEvents(events);
                 }
+                // Also store for display
+                setNextEvents((events || []).slice(0, 3));  // Show up to 3 events
             };
 
             socket.on('upcoming-events', handleBackendEvents);
@@ -242,6 +245,21 @@
                 
                 // Update local state
                 setUpcomingCount(data.properties.upcomingCount);
+                
+                // Update display of next events (merge frontend + backend)
+                const frontendEvts = (window.getUpcomingEvents && window.getUpcomingEvents()) || [];
+                const backendEvts = data._backendEvents || [];
+                const eventMap = new Map();
+                [...frontendEvts, ...backendEvts].forEach(e => {
+                    if (e && e.time) {
+                        const key = `${e.deviceName || ''}_${e.action || ''}_${new Date(e.time).getTime()}`;
+                        if (!eventMap.has(key)) eventMap.set(key, e);
+                    }
+                });
+                const mergedEvents = Array.from(eventMap.values())
+                    .sort((a, b) => new Date(a.time) - new Date(b.time))
+                    .slice(0, 3);
+                setNextEvents(mergedEvents);
                 
                 if (announced) {
                     setLastAnnouncement(data.properties.currentMessage);
@@ -355,6 +373,50 @@
                         animation: 'pulse 0.5s ease-out'
                     }
                 }, '🔔 Announcing!')
+            ]),
+
+            // Next events preview
+            nextEvents.length > 0 && React.createElement('div', {
+                key: 'next-events',
+                style: {
+                    marginBottom: '8px',
+                    padding: '6px',
+                    background: 'rgba(0,0,0,0.2)',
+                    borderRadius: '4px',
+                    fontSize: '10px'
+                }
+            }, [
+                React.createElement('div', { 
+                    key: 'title',
+                    style: { color: '#888', marginBottom: '4px', fontSize: '9px' }
+                }, 'Next events:'),
+                ...nextEvents.map((event, i) => {
+                    const time = new Date(event.time);
+                    const timeStr = time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                    const now = Date.now();
+                    const msUntil = time.getTime() - now;
+                    const minsUntil = Math.floor(msUntil / 60000);
+                    const countdown = minsUntil < 1 ? '<1m' : minsUntil < 60 ? `${minsUntil}m` : `${Math.floor(minsUntil/60)}h ${minsUntil%60}m`;
+                    
+                    return React.createElement('div', {
+                        key: i,
+                        style: { 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            padding: '2px 0',
+                            borderBottom: i < nextEvents.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none'
+                        }
+                    }, [
+                        React.createElement('span', { 
+                            key: 'name',
+                            style: { color: '#ccc' }
+                        }, `${event.action === 'on' ? '🟢' : '🔴'} ${event.deviceName || 'Event'}`),
+                        React.createElement('span', { 
+                            key: 'time',
+                            style: { color: '#888' }
+                        }, `${timeStr} (${countdown})`)
+                    ]);
+                })
             ]),
 
             // Lead time control
