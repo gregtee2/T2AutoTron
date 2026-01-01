@@ -4,6 +4,8 @@ const fetch = require('node-fetch');
 let cachedWeather = null;
 let lastFetchTime = null;
 let weatherSource = null; // Track which source provided the data
+let ambientFailed = false; // Track if we've already logged Ambient failure
+let staleWarned = false; // Track if we've warned about stale data
 const CACHE_TIMEOUT = 15 * 60 * 1000;
 
 /**
@@ -128,9 +130,9 @@ async function fetchWeatherData(forceRefresh = false) {
     }
   } catch (error) {
     // Only log on first failure, not repeatedly
-    if (!this._ambientFailed) {
+    if (!ambientFailed) {
       logger.log(`Ambient Weather failed: ${error.message}`, 'warn');
-      this._ambientFailed = true;
+      ambientFailed = true;
     }
   }
   
@@ -147,9 +149,9 @@ async function fetchWeatherData(forceRefresh = false) {
   // Return cached data if available, even if stale
   if (cachedWeather) {
     // Stale data - only warn once
-    if (!this._staleWarned) {
+    if (!staleWarned) {
       logger.log('Returning stale cached weather data', 'warn');
-      this._staleWarned = true;
+      staleWarned = true;
     }
     return cachedWeather;
   }

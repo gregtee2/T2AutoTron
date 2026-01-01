@@ -175,8 +175,13 @@ async function fetchForecastData(forceRefresh = false, haToken = null) {
           // Convert Open-Meteo format to our standard format
           const daily = omData.daily.time.slice(0, 5).map((dateStr, i) => {
             const weatherInfo = weatherCodeToCondition(omData.daily.weathercode[i]);
+            // Parse date string as local midnight to avoid timezone issues
+            // Open-Meteo returns "2026-01-01" which JS parses as midnight UTC
+            // In US timezones, this would show as Dec 31st. Fix by parsing manually.
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const localDate = new Date(year, month - 1, day, 12, 0, 0); // noon local time
             return {
-              date: new Date(dateStr).getTime(),
+              date: localDate.getTime(),
               high: Math.round(omData.daily.temperature_2m_max[i] * 9/5 + 32), // C to F
               low: Math.round(omData.daily.temperature_2m_min[i] * 9/5 + 32),
               condition: weatherInfo.condition,

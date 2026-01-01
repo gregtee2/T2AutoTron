@@ -163,6 +163,7 @@ class BackendNodeRegistry {
       'Smooth': 'SmoothNode',
       'Combine': 'CombineNode',
       'Watchdog': 'CounterNode',  // Use Counter as fallback
+      'Sub-Graph': 'SubGraphNode',
       
       // Buffer/wireless connection nodes - MUST run on backend
       'Sender': 'SenderNode',

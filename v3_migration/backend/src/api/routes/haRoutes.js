@@ -2,6 +2,7 @@ const express = require('express');
 const Joi = require('joi');
 const chalk = require('chalk');
 const homeAssistantManager = require('../../devices/managers/homeAssistantManager');
+const commandTracker = require('../../engine/commandTracker');
 
 // In-memory cache for device states
 const stateCache = new Map();
@@ -160,6 +161,17 @@ module.exports = function (io) {
         update.position = undefined;
       }
       logWithTimestamp(`Cleaned update for HA device ${id}: ${JSON.stringify(update)}`, 'info');
+      
+      // Log to command tracker so incoming state changes can be correlated to this app
+      commandTracker.logOutgoingCommand({
+        entityId: id.replace('ha_', ''),
+        action: update.on === false ? 'turn_off' : 'turn_on',
+        payload: update,
+        nodeId: 'API',
+        nodeType: 'HAGenericDeviceNode',
+        reason: 'User triggered via UI'
+      });
+      
       const result = await homeAssistantManager.updateState(id, update);
       if (!result.success) {
         logWithTimestamp(`Error updating HA device ${id}: ${result.error}`, 'error');

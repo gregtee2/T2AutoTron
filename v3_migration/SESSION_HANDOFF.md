@@ -1,5 +1,41 @@
 # Session Handoff - January 1, 2026
 
+## Session 18: server.js Modularization
+
+### What was done (Claude Opus 4.5)
+
+**Current Version: 2.1.166**
+
+#### ✅ Refactor: Extract API Routes from server.js
+
+Reduced server.js from **1,482 lines to 984 lines** (-34%) by extracting API endpoints into dedicated route files:
+
+| New File | Purpose | Endpoints |
+|----------|---------|-----------|
+| `settingsRoutes.js` | Settings management | `GET/POST /api/settings`, `POST /api/settings/test` |
+| `telegramRoutes.js` | Telegram bot | `POST /api/telegram/send` |
+| `debugRoutes.js` | Debug dashboard APIs | `/api/debug/*`, `/api/engine/logs/*` |
+
+**Why this matters**:
+- Easier to find and fix bugs (each concern in its own file)
+- Safer edits (changing settings can't break Telegram)
+- Better for AI agents (200-line files load faster than 1,500-line ones)
+- Pattern for future extractions (engine routes, device routes, etc.)
+
+**Files Created**:
+- `backend/src/api/routes/settingsRoutes.js` (~200 lines)
+- `backend/src/api/routes/telegramRoutes.js` (~50 lines)
+- `backend/src/api/routes/debugRoutes.js` (~150 lines)
+
+**Files Modified**:
+- `backend/src/server.js` - Removed extracted code, added route imports
+- `backend/package.json` - v2.1.166
+
+### 🦴 Caveman Summary
+server.js was a giant junk drawer with everything thrown in. Now it's an organized toolbox - settings stuff in one drawer, Telegram in another, debug tools in a third. Much easier to find things!
+
+---
+
 ## Session 17: Backend Engine Device Control Fixes
 
 ### What was done (Claude Opus 4)

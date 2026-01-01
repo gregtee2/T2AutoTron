@@ -460,8 +460,15 @@ const IS_HA_ADDON = window.location.pathname.includes('/api/hassio/ingress/');
 v3_migration/
 ├── backend/
 │   ├── plugins/        ← ALL node plugins go here (NOT frontend/src/nodes/)
-│   ├── src/server.js   ← Express + Socket.IO server
+│   ├── src/server.js   ← Express + Socket.IO server (984 lines after v2.1.166 refactor)
 │   ├── src/api/        ← REST API routes
+│   │   └── routes/
+│   │       ├── settingsRoutes.js  ← GET/POST /api/settings, connection tests
+│   │       ├── telegramRoutes.js  ← POST /api/telegram/send
+│   │       ├── debugRoutes.js     ← /api/debug/*, /api/engine/logs/*
+│   │       ├── haRoutes.js        ← Home Assistant device control
+│   │       ├── hueRoutes.js       ← Philips Hue bridge API
+│   │       └── engineRoutes.js    ← /api/engine/* (start/stop/status)
 │   └── .env            ← Environment config (see below)
 └── frontend/
     ├── src/Editor.jsx  ← Core Rete.js editor (PROTECTED)
@@ -1217,7 +1224,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.109 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.166 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -1240,17 +1247,17 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 10 | Getting Started guide | ✅ Done | `GETTING_STARTED.md` exists |
 | 11 | Graph validation | ✅ Done | `graphValidation.js` with repair function |
 | 12 | Auto-save | ✅ Done | Every 2 minutes, shows toast on save |
+| 13 | **Modularize server.js** | ✅ Done | v2.1.166 - Settings, Telegram, Debug routes extracted (1482→984 lines) |
 
 ### 🟠 REMAINING - Nice to Have
 
 | # | Task | Status | Effort |
 |---|------|--------|--------|
 | 1 | Add test coverage | ⏳ Not started | 8-12h |
-| 2 | Modularize server.js | ⏳ Not started | 4h (working fine as-is) |
-| 3 | Refactor plugins to T2Node | ⏳ Partial | Some use it, not all |
-| 4 | Event Log App filter | 🔴 Broken | App events not showing - needs investigation |
+| 2 | Refactor plugins to T2Node | ⏳ Partial | Some use it, not all |
+| 3 | Event Log App filter | 🔴 Broken | App events not showing - needs investigation |
 
-### 🟢 RECENTLY ADDED (2.1.55 - 2.1.107)
+### 🟢 RECENTLY ADDED (2.1.55 - 2.1.166)
 
 | # | Feature | Notes |
 |---|---------|-------|
@@ -1287,6 +1294,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 31 | **HueEffectNode** | v2.1.106 - Trigger built-in Hue effects (candle, fire, prism, etc.) with multi-light selection |
 | 32 | **Smart HSV Exclusion** | v2.1.106 - Effect lights auto-excluded from downstream HSV commands via metadata |
 | 33 | **Group Navigation Buttons** | v2.1.107 - Quick-jump buttons in Event Log header to zoom to Backdrop groups |
+| 34 | **server.js Modularization** | v2.1.166 - Extracted Settings, Telegram, Debug routes (1482→984 lines, -34%) |
 
 ### 🟢 RECENTLY FIXED
 

@@ -111,6 +111,11 @@ export function Editor() {
     // Undo stack for deleted nodes
     const undoStackRef = useRef([]);
     
+    // Sub-graph navigation stack: [{nodeId, name, graphData: {nodes, connections}}]
+    // When entering a sub-graph, we push the current main graph state and load the sub-graph's internal nodes
+    const [subGraphStack, setSubGraphStack] = useState([]);
+    const mainGraphDataRef = useRef(null);  // Stores the main graph when we enter a sub-graph
+    
     // Fast context menu state
     const [contextMenu, setContextMenu] = useState({
         visible: false,
@@ -2343,37 +2348,80 @@ export function Editor() {
         if (!container || !editorInstance || !areaInstance) return;
 
         const handleContextMenu = (e) => {
-            // Check if right-clicking on a node
-            const nodeElement = e.target.closest('[data-testid="node"]');
+            // Find if we clicked inside any node by checking against areaInstance.nodeViews
+            let clickedNodeId = null;
+            let clickedNodeElement = null;
             
-            if (nodeElement) {
+            // First try the data-testid approach
+            const testIdNode = e.target.closest('[data-testid="node"]');
+            if (testIdNode) {
+                clickedNodeElement = testIdNode;
+                clickedNodeId = testIdNode.dataset.nodeId;
+            }
+            
+            // If not found, iterate through node views to find which one contains the click target
+            if (!clickedNodeId && areaInstance?.nodeViews) {
+                for (const [nodeId, view] of areaInstance.nodeViews.entries()) {
+                    if (view.element && view.element.contains(e.target)) {
+                        clickedNodeId = nodeId;
+                        clickedNodeElement = view.element;
+                        break;
+                    }
+                }
+            }
+            
+            console.log('[ContextMenu] clickedNodeId:', clickedNodeId);
+            console.log('[ContextMenu] lassoSelectedNodesRef:', lassoSelectedNodesRef.current.size, Array.from(lassoSelectedNodesRef.current));
+            
+            if (clickedNodeId) {
                 // Right-click on a node - show node context menu
                 e.preventDefault();
-                const nodeId = nodeElement.dataset.nodeId || 
-                    Array.from(areaInstance.nodeViews.entries())
-                        .find(([id, view]) => view.element === nodeElement)?.[0];
+                const node = editorInstance.getNode(clickedNodeId);
+                const selectedNodes = lassoSelectedNodesRef.current;
+                const hasMultipleSelected = selectedNodes.size > 1 && selectedNodes.has(clickedNodeId);
                 
-                if (nodeId) {
-                    const node = editorInstance.getNode(nodeId);
-                    setContextMenu({
-                        visible: true,
-                        position: { x: e.clientX, y: e.clientY },
-                        items: [
-                            {
-                                label: 'Delete',
-                                handler: async () => {
-                                    const connections = editorInstance.getConnections()
-                                        .filter(c => c.source === nodeId || c.target === nodeId);
-                                    for (const conn of connections) {
-                                        await editorInstance.removeConnection(conn.id);
-                                    }
-                                    await editorInstance.removeNode(nodeId);
-                                }
-                            }
-                        ],
-                        nodeContext: node
+                // Build context menu items
+                const menuItems = [];
+                
+                // Convert to Sub-Graph (only when multiple nodes selected)
+                if (hasMultipleSelected) {
+                    menuItems.push({
+                        label: '📦 Convert to Sub-Graph',
+                        handler: async () => {
+                            const nodesToConvert = Array.from(selectedNodes);
+                            await convertToSubGraph(nodesToConvert);
+                        }
                     });
+                    menuItems.push({ separator: true });
                 }
+                
+                // Delete option
+                menuItems.push({
+                    label: 'Delete',
+                    handler: async () => {
+                        // If multiple selected, delete all selected
+                        const nodesToDelete = hasMultipleSelected 
+                            ? Array.from(selectedNodes) 
+                            : [clickedNodeId];
+                        
+                        for (const id of nodesToDelete) {
+                            const connections = editorInstance.getConnections()
+                                .filter(c => c.source === id || c.target === id);
+                            for (const conn of connections) {
+                                await editorInstance.removeConnection(conn.id);
+                            }
+                            await editorInstance.removeNode(id);
+                        }
+                        selectedNodes.clear();
+                    }
+                });
+                
+                setContextMenu({
+                    visible: true,
+                    position: { x: e.clientX, y: e.clientY },
+                    items: menuItems,
+                    nodeContext: node
+                });
             } else {
                 // Right-click on empty area - show add node menu
                 e.preventDefault();
@@ -2392,6 +2440,424 @@ export function Editor() {
         return () => {
             container.removeEventListener('contextmenu', handleContextMenu);
         };
+    }, [editorInstance, areaInstance]);
+
+    // =========================================================================
+    // Sub-Graph Navigation - Enter/Exit sub-graphs
+    // =========================================================================
+    useEffect(() => {
+        if (!editorInstance || !areaInstance) return;
+        
+        // Helper to serialize current graph state
+        const serializeCurrentGraph = () => {
+            const nodes = editorInstance.getNodes().map(n => {
+                const view = areaInstance.nodeViews.get(n.id);
+                return {
+                    id: n.id,
+                    name: n.constructor.name,
+                    label: n.label,
+                    properties: n.properties ? { ...n.properties } : {},
+                    position: view ? [view.position.x, view.position.y] : [0, 0]
+                };
+            });
+            const connections = editorInstance.getConnections().map(c => ({
+                id: c.id,
+                source: c.source,
+                sourceOutput: c.sourceOutput,
+                target: c.target,
+                targetInput: c.targetInput
+            }));
+            return { nodes, connections };
+        };
+        
+        // Helper to load a graph (similar to handleLoad but without file I/O)
+        const loadGraphData = async (graphData, centerView = true) => {
+            // Clear existing
+            const connections = editorInstance.getConnections();
+            const nodes = editorInstance.getNodes();
+            for (const conn of connections) {
+                await editorInstance.removeConnection(conn.id);
+            }
+            for (const node of nodes) {
+                await editorInstance.removeNode(node.id);
+            }
+            
+            // Add nodes
+            for (const nodeData of graphData.nodes) {
+                const def = nodeRegistry.getByLabel(nodeData.label);
+                if (!def) {
+                    console.warn('[SubGraph] Unknown node type:', nodeData.label);
+                    continue;
+                }
+                
+                const node = def.factory(() => {
+                    if (areaInstance) areaInstance.update("node", nodeData.id);
+                    if (window._t2Process) window._t2Process();
+                });
+                
+                node.id = nodeData.id;
+                if (nodeData.properties && typeof node.restore === 'function') {
+                    node.restore({ properties: nodeData.properties });
+                } else if (nodeData.properties) {
+                    Object.assign(node.properties || {}, nodeData.properties);
+                }
+                
+                await editorInstance.addNode(node);
+                
+                // Position the node - handle both [x,y] array and {x,y} object formats
+                const pos = nodeData.position;
+                const x = Array.isArray(pos) ? pos[0] : (pos?.x || 0);
+                const y = Array.isArray(pos) ? pos[1] : (pos?.y || 0);
+                await areaInstance.translate(node.id, { x, y });
+            }
+            
+            // Add connections
+            for (const connData of graphData.connections) {
+                const sourceNode = editorInstance.getNode(connData.source);
+                const targetNode = editorInstance.getNode(connData.target);
+                if (!sourceNode || !targetNode) continue;
+                
+                const sourceSocket = sourceNode.outputs?.[connData.sourceOutput];
+                const targetSocket = targetNode.inputs?.[connData.targetInput];
+                if (!sourceSocket || !targetSocket) continue;
+                
+                const conn = new (window.Rete.ClassicPreset.Connection)(
+                    sourceNode, connData.sourceOutput,
+                    targetNode, connData.targetInput
+                );
+                conn.id = connData.id;
+                await editorInstance.addConnection(conn);
+            }
+            
+            // Center view on the loaded nodes
+            if (centerView && areaInstance?.area) {
+                setTimeout(() => {
+                    try {
+                        AreaExtensions.zoomAt(areaInstance, editorInstance.getNodes());
+                    } catch (e) {
+                        console.warn('[SubGraph] zoomAt failed:', e);
+                    }
+                }, 100);
+            }
+        };
+        
+        // Enter a sub-graph (called when double-clicking a SubGraphNode)
+        window.enterSubGraph = async (nodeId, properties) => {
+            console.log('[SubGraph] Entering sub-graph:', nodeId, properties?.name);
+            
+            if (!properties?.internalNodes || properties.internalNodes.length === 0) {
+                if (window.T2Toast) {
+                    window.T2Toast.info('This sub-graph is empty');
+                }
+                return;
+            }
+            
+            // Save current graph state before entering
+            const currentGraph = serializeCurrentGraph();
+            
+            // If this is the first level (entering from main graph), save main graph reference
+            if (subGraphStack.length === 0) {
+                mainGraphDataRef.current = currentGraph;
+            }
+            
+            // Push to navigation stack
+            setSubGraphStack(prev => [...prev, {
+                nodeId,
+                name: properties.name || 'Sub-Graph',
+                graphData: currentGraph  // Save parent graph state
+            }]);
+            
+            // Load the sub-graph's internal nodes
+            const internalGraph = {
+                nodes: properties.internalNodes || [],
+                connections: properties.internalConnections || []
+            };
+            
+            await loadGraphData(internalGraph);
+            
+            if (window.T2Toast) {
+                window.T2Toast.success(`Entered: ${properties.name || 'Sub-Graph'}`);
+            }
+        };
+        
+        // Exit current sub-graph (go back to parent)
+        window.exitSubGraph = async () => {
+            if (subGraphStack.length === 0) {
+                console.warn('[SubGraph] Already at top level');
+                return;
+            }
+            
+            // Get current sub-graph's state (to save changes back to the SubGraphNode)
+            const currentInternalGraph = serializeCurrentGraph();
+            
+            // Scan for SubGraph Input/Output nodes to build exposed ports
+            const exposedInputs = [];
+            const exposedOutputs = [];
+            
+            currentInternalGraph.nodes.forEach((nodeData, idx) => {
+                if (nodeData.label === 'SubGraph Input') {
+                    exposedInputs.push({
+                        key: `in_${idx}`,
+                        label: nodeData.properties?.portName || 'input',
+                        type: nodeData.properties?.portType || 'any',
+                        internalNodeId: nodeData.id,
+                        internalPort: 'value'
+                    });
+                } else if (nodeData.label === 'SubGraph Output') {
+                    exposedOutputs.push({
+                        key: `out_${idx}`,
+                        label: nodeData.properties?.portName || 'output',
+                        type: nodeData.properties?.portType || 'any',
+                        internalNodeId: nodeData.id,
+                        internalPort: 'value'
+                    });
+                }
+            });
+            
+            console.log('[SubGraph] Detected exposed ports:', { 
+                inputs: exposedInputs.length, 
+                outputs: exposedOutputs.length 
+            });
+            
+            // Pop from stack
+            const stack = [...subGraphStack];
+            const exiting = stack.pop();
+            setSubGraphStack(stack);
+            
+            // Find the SubGraphNode in the parent and update its internal graph
+            // This saves any edits made while inside the sub-graph
+            const parentGraph = exiting.graphData;
+            const subGraphNodeData = parentGraph.nodes.find(n => n.id === exiting.nodeId);
+            if (subGraphNodeData && subGraphNodeData.properties) {
+                subGraphNodeData.properties.internalNodes = currentInternalGraph.nodes;
+                subGraphNodeData.properties.internalConnections = currentInternalGraph.connections;
+                subGraphNodeData.properties.exposedInputs = exposedInputs;
+                subGraphNodeData.properties.exposedOutputs = exposedOutputs;
+            }
+            
+            // Load the parent graph
+            await loadGraphData(parentGraph);
+            
+            // After loading, find the SubGraphNode and rebuild its sockets
+            setTimeout(() => {
+                const subGraphNode = editorInstance?.getNode(exiting.nodeId);
+                if (subGraphNode && typeof subGraphNode.rebuildSockets === 'function') {
+                    subGraphNode.rebuildSockets();
+                    if (areaInstance) {
+                        areaInstance.update('node', exiting.nodeId);
+                    }
+                    console.log('[SubGraph] Rebuilt sockets on parent node');
+                }
+            }, 200);
+            
+            if (window.T2Toast) {
+                window.T2Toast.info(`Returned to parent graph`);
+            }
+        };
+        
+        // Exit all the way to main graph
+        window.exitToMainGraph = async () => {
+            if (subGraphStack.length === 0) return;
+            
+            // TODO: Save changes at each level
+            // For now, just restore the main graph
+            if (mainGraphDataRef.current) {
+                await loadGraphData(mainGraphDataRef.current);
+            }
+            
+            setSubGraphStack([]);
+            mainGraphDataRef.current = null;
+            
+            if (window.T2Toast) {
+                window.T2Toast.info('Returned to main graph');
+            }
+        };
+        
+        return () => {
+            delete window.enterSubGraph;
+            delete window.exitSubGraph;
+            delete window.exitToMainGraph;
+        };
+    }, [editorInstance, areaInstance, subGraphStack]);
+
+    // =========================================================================
+    // Convert selected nodes to a Sub-Graph
+    // =========================================================================
+    const convertToSubGraph = useCallback(async (nodeIds) => {
+        if (!editorInstance || !areaInstance || nodeIds.length < 2) {
+            if (window.T2Toast) {
+                window.T2Toast.warn('Select at least 2 nodes to create a sub-graph');
+            }
+            return;
+        }
+        
+        try {
+            // 1. Collect the nodes and their positions
+            const nodes = nodeIds.map(id => editorInstance.getNode(id)).filter(Boolean);
+            const nodeViews = nodeIds.map(id => areaInstance.nodeViews.get(id)).filter(Boolean);
+            
+            // 2. Calculate center position for the new sub-graph node
+            let sumX = 0, sumY = 0;
+            nodeViews.forEach(view => {
+                sumX += view.position.x;
+                sumY += view.position.y;
+            });
+            const centerX = sumX / nodeViews.length;
+            const centerY = sumY / nodeViews.length;
+            
+            // 3. Serialize the selected nodes (relative positions)
+            const internalNodes = nodes.map((node, i) => {
+                const view = nodeViews[i];
+                return {
+                    id: node.id,
+                    name: node.constructor.name,
+                    label: node.label,
+                    properties: node.properties ? { ...node.properties } : {},
+                    position: [
+                        view.position.x - centerX,  // Relative to center
+                        view.position.y - centerY
+                    ]
+                };
+            });
+            
+            // 4. Find connections WITHIN the selected nodes
+            const allConnections = editorInstance.getConnections();
+            const nodeIdSet = new Set(nodeIds);
+            
+            const internalConnections = allConnections
+                .filter(c => nodeIdSet.has(c.source) && nodeIdSet.has(c.target))
+                .map(c => ({
+                    id: c.id,
+                    source: c.source,
+                    sourceOutput: c.sourceOutput,
+                    target: c.target,
+                    targetInput: c.targetInput
+                }));
+            
+            // 5. Find connections that cross the boundary (will become exposed ports)
+            const externalInputs = [];  // Connections coming INTO the selected nodes
+            const externalOutputs = []; // Connections going OUT of the selected nodes
+            
+            allConnections.forEach(c => {
+                if (nodeIdSet.has(c.target) && !nodeIdSet.has(c.source)) {
+                    externalInputs.push({
+                        originalConnection: c,
+                        internalNodeId: c.target,
+                        internalPort: c.targetInput
+                    });
+                }
+                if (nodeIdSet.has(c.source) && !nodeIdSet.has(c.target)) {
+                    externalOutputs.push({
+                        originalConnection: c,
+                        internalNodeId: c.source,
+                        internalPort: c.sourceOutput
+                    });
+                }
+            });
+            
+            // 6. Create exposed port definitions
+            const exposedInputs = externalInputs.map((ext, i) => ({
+                key: `in_${i}`,
+                label: ext.internalPort,
+                type: 'any',
+                internalNodeId: ext.internalNodeId,
+                internalPort: ext.internalPort
+            }));
+            
+            const exposedOutputs = externalOutputs.map((ext, i) => ({
+                key: `out_${i}`,
+                label: ext.internalPort,
+                type: 'any',
+                internalNodeId: ext.internalNodeId,
+                internalPort: ext.internalPort
+            }));
+            
+            // 7. Create the SubGraphNode
+            const subGraphDef = nodeRegistry.get('SubGraphNode');
+            if (!subGraphDef) {
+                throw new Error('SubGraphNode not registered');
+            }
+            
+            const subGraphNode = subGraphDef.factory(() => {
+                if (processImmediateRef.current) processImmediateRef.current();
+            });
+            subGraphNode.properties = {
+                name: `Sub-Graph (${nodes.length} nodes)`,
+                description: '',
+                icon: '📦',
+                internalNodes,
+                internalConnections,
+                exposedInputs,
+                exposedOutputs
+            };
+            subGraphNode.rebuildSockets();
+            
+            // 8. Add the sub-graph node
+            await editorInstance.addNode(subGraphNode);
+            await areaInstance.translate(subGraphNode.id, { x: centerX, y: centerY });
+            
+            // 9. Rewire external connections to the sub-graph node
+            // First, remove old connections
+            for (const ext of [...externalInputs, ...externalOutputs]) {
+                await editorInstance.removeConnection(ext.originalConnection.id);
+            }
+            
+            // Wire external inputs to sub-graph
+            for (let i = 0; i < externalInputs.length; i++) {
+                const ext = externalInputs[i];
+                const sourceNode = editorInstance.getNode(ext.originalConnection.source);
+                if (sourceNode) {
+                    const conn = new ClassicPreset.Connection(
+                        sourceNode,
+                        ext.originalConnection.sourceOutput,
+                        subGraphNode,
+                        `exp_in_${i}`
+                    );
+                    await editorInstance.addConnection(conn);
+                }
+            }
+            
+            // Wire sub-graph outputs to external targets
+            for (let i = 0; i < externalOutputs.length; i++) {
+                const ext = externalOutputs[i];
+                const targetNode = editorInstance.getNode(ext.originalConnection.target);
+                if (targetNode) {
+                    const conn = new ClassicPreset.Connection(
+                        subGraphNode,
+                        `exp_out_${i}`,
+                        targetNode,
+                        ext.originalConnection.targetInput
+                    );
+                    await editorInstance.addConnection(conn);
+                }
+            }
+            
+            // 10. Remove the original nodes
+            for (const nodeId of nodeIds) {
+                // Remove any remaining connections
+                const nodeConns = editorInstance.getConnections()
+                    .filter(c => c.source === nodeId || c.target === nodeId);
+                for (const conn of nodeConns) {
+                    await editorInstance.removeConnection(conn.id);
+                }
+                await editorInstance.removeNode(nodeId);
+            }
+            
+            // Clear selection
+            lassoSelectedNodesRef.current.clear();
+            
+            if (window.T2Toast) {
+                window.T2Toast.success(`Created sub-graph with ${nodes.length} nodes`);
+            }
+            
+            debug(`[SubGraph] Created sub-graph with ${internalNodes.length} nodes, ${internalConnections.length} internal connections, ${exposedInputs.length} inputs, ${exposedOutputs.length} outputs`);
+            
+        } catch (error) {
+            console.error('[SubGraph] Conversion failed:', error);
+            if (window.T2Toast) {
+                window.T2Toast.error(`Sub-graph creation failed: ${error.message}`);
+            }
+        }
     }, [editorInstance, areaInstance]);
 
     // Context menu handlers
@@ -3358,6 +3824,67 @@ export function Editor() {
                 onRemoveFavorite={removeFavoriteLabel}
                 onCreateNode={createNodeFromLabelAtCenter}
             />
+            {/* Sub-Graph Breadcrumb Navigation */}
+            {subGraphStack.length > 0 && (
+                <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    left: `${FAVORITES_WIDTH + 20}px`,
+                    zIndex: 1000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'rgba(30, 40, 50, 0.95)',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #3d6070',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                }}>
+                    <button
+                        onClick={() => window.exitToMainGraph?.()}
+                        style={{
+                            background: '#2a4858',
+                            border: '1px solid #4a7080',
+                            borderRadius: '4px',
+                            color: '#8ab',
+                            padding: '4px 8px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                        }}
+                        title="Return to main graph"
+                    >
+                        🏠 Main
+                    </button>
+                    {subGraphStack.map((level, idx) => (
+                        <React.Fragment key={idx}>
+                            <span style={{ color: '#556' }}>›</span>
+                            <span style={{ 
+                                color: idx === subGraphStack.length - 1 ? '#fff' : '#8ab',
+                                fontWeight: idx === subGraphStack.length - 1 ? 'bold' : 'normal',
+                                fontSize: '13px'
+                            }}>
+                                📦 {level.name}
+                            </span>
+                        </React.Fragment>
+                    ))}
+                    <button
+                        onClick={() => window.exitSubGraph?.()}
+                        style={{
+                            background: '#4a5868',
+                            border: '1px solid #6a7888',
+                            borderRadius: '4px',
+                            color: '#cde',
+                            padding: '4px 12px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            marginLeft: '12px'
+                        }}
+                        title="Go back to parent graph"
+                    >
+                        ← Back
+                    </button>
+                </div>
+            )}
             <div ref={ref} className="rete-editor" style={{ width: "100%", height: "100%", marginRight: "320px", marginLeft: `${FAVORITES_WIDTH}px` }} />
             <div ref={dockOverlaySlotRef} />
             {(() => {

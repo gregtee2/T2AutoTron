@@ -116,8 +116,9 @@ function logOutgoingCommand({ entityId, action, payload, nodeId, nodeType, reaso
   };
   
   // Store for correlation with incoming state changes
+  // Note: Use a different key name to avoid collision with entry.timestamp (ISO string)
   recentCommands.set(rawEntityId, {
-    timestamp: Date.now(),
+    sentAt: Date.now(),  // Numeric timestamp for correlation window check
     ...entry
   });
   
@@ -145,7 +146,9 @@ function logIncomingStateChange({ entityId, oldState, newState, context, attribu
   
   // Check if WE recently sent a command to this entity
   const ourCommand = recentCommands.get(rawEntityId);
-  const wasUs = ourCommand && (Date.now() - ourCommand.timestamp) < CORRELATION_WINDOW;
+  const now = Date.now();
+  const timeSinceCommand = ourCommand ? (now - ourCommand.sentAt) : null;
+  const wasUs = ourCommand && timeSinceCommand < CORRELATION_WINDOW;
   
   // Determine source based on context and correlation
   let source = 'Unknown';

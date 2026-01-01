@@ -359,9 +359,8 @@ export function ForecastPanel({ dockSlotRef }) {
         if (isNaN(date.getTime())) return { day: dateStr, date: '' };
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        // Use UTC methods to avoid timezone offset issues with date-only values
-        // (Open-Meteo returns dates as "2024-12-17" which JS parses as midnight UTC)
-        return { day: `${days[date.getUTCDay()]}, ${months[date.getUTCMonth()]}`, date: `${date.getUTCDate()}` };
+        // Use local methods - backend now sends dates as local noon to avoid timezone issues
+        return { day: `${days[date.getDay()]}, ${months[date.getMonth()]}`, date: `${date.getDate()}` };
     };
 
     const renderForecast = () => {
