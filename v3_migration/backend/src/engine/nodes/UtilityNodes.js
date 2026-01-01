@@ -844,13 +844,13 @@ class UpcomingEventsNode {
       this.outputs.trigger = false;
     }
 
-    // Get events from scheduler if available
-    const scheduler = global.AutoTronScheduler;
-    if (!scheduler || typeof scheduler.getUpcomingEvents !== 'function') {
+    // Get events from engine's scheduled events registry
+    const engine = global.backendEngine;
+    if (!engine || typeof engine.getUpcomingEvents !== 'function') {
       return this.outputs;
     }
 
-    const events = scheduler.getUpcomingEvents() || [];
+    const events = engine.getUpcomingEvents() || [];
     const now = Date.now();
     const leadMs = this.properties.leadTime * 1000;
 

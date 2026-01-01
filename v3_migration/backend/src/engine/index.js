@@ -15,6 +15,9 @@ const registry = require('./BackendNodeRegistry');
 const path = require('path');
 const fs = require('fs').promises;
 
+// Set global reference so nodes can access the engine
+global.backendEngine = engine;
+
 // Load built-in backend nodes
 async function loadBuiltinNodes() {
   const nodesDir = path.join(__dirname, 'nodes');

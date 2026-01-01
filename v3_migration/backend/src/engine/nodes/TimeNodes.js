@@ -153,6 +153,10 @@ class TimeOfDayNode {
     if (this.properties.pulseMode || this.properties.mode === 'pulse') {
       const trigger = inRange && this.lastState !== true;
       this.lastState = inRange;
+      
+      // Register scheduled events with the engine for UpcomingEventsNode
+      this.registerUpcomingEvents(startMinutes, endMinutes, inRange);
+      
       return { 
         state: trigger, 
         active: trigger,
@@ -169,6 +173,9 @@ class TimeOfDayNode {
     this.lastState = inRange;
     this.properties.currentState = inRange;  // Keep in sync
     
+    // Register scheduled events with the engine for UpcomingEventsNode
+    this.registerUpcomingEvents(startMinutes, endMinutes, inRange);
+    
     // Return startTime and endTime outputs for downstream nodes like SplineTimelineColor
     return { 
       state: inRange, 
@@ -176,6 +183,53 @@ class TimeOfDayNode {
       startTime: formatMinutesToTime(startMinutes),
       endTime: formatMinutesToTime(endMinutes)
     };
+  }
+
+  /**
+   * Register upcoming events with the engine's scheduler
+   * This allows UpcomingEventsNode to work in headless mode
+   */
+  registerUpcomingEvents(startMinutes, endMinutes, inRange) {
+    // Get engine reference (set by BackendEngine during graph loading)
+    const engine = global.backendEngine;
+    if (!engine || !engine.registerScheduledEvents) return;
+
+    const events = [];
+    const nodeName = this.properties.customName || this.label || 'Time of Day';
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Calculate next start time
+    const startEnabled = this.properties.start_enabled !== false;
+    const stopEnabled = this.properties.stop_enabled !== false;
+    
+    if (startEnabled) {
+      const startDate = new Date(today.getTime() + startMinutes * 60000);
+      // If start already passed today, schedule for tomorrow
+      if (startDate <= now) {
+        startDate.setDate(startDate.getDate() + 1);
+      }
+      events.push({
+        time: startDate.toISOString(),
+        action: 'on',
+        deviceName: `${nodeName}`
+      });
+    }
+    
+    if (stopEnabled) {
+      const endDate = new Date(today.getTime() + endMinutes * 60000);
+      // If end already passed today, schedule for tomorrow
+      if (endDate <= now) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      events.push({
+        time: endDate.toISOString(),
+        action: 'off',
+        deviceName: `${nodeName}`
+      });
+    }
+    
+    engine.registerScheduledEvents(this.id, events);
   }
 }
 

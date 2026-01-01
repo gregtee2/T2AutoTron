@@ -231,6 +231,9 @@ class SunriseSunsetNode {
       return `${h12}:${minutes} ${ampm}`;
     };
     
+    // Register scheduled events with the engine for UpcomingEventsNode
+    this.registerUpcomingEvents(onTime, offTime);
+    
     return {
       state,
       startTime: formatTime(onTime),
@@ -238,6 +241,36 @@ class SunriseSunsetNode {
       sunrise: formatTime(sunrise),
       sunset: formatTime(sunset)
     };
+  }
+
+  /**
+   * Register upcoming events with the engine's scheduler
+   */
+  registerUpcomingEvents(onTime, offTime) {
+    const engine = global.backendEngine;
+    if (!engine || !engine.registerScheduledEvents) return;
+
+    const events = [];
+    const nodeName = this.properties.customName || this.label || 'Sunrise/Sunset';
+    const now = new Date();
+    
+    if (onTime && onTime > now) {
+      events.push({
+        time: onTime.toISOString(),
+        action: 'on',
+        deviceName: nodeName
+      });
+    }
+    
+    if (offTime && offTime > now) {
+      events.push({
+        time: offTime.toISOString(),
+        action: 'off',
+        deviceName: nodeName
+      });
+    }
+    
+    engine.registerScheduledEvents(this.id, events);
   }
 }
 

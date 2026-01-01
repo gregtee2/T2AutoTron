@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "33e9cab9c6092084",
+      "id": "fed5231878dc6de9",
       "label": "TTS Announcement",
       "position": {
-        "x": 638,
-        "y": 313
+        "x": 1191,
+        "y": 309
       },
       "data": {
         "inputs": {
@@ -14,7 +14,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "cf0951bc58228849",
+            "id": "45ca149d0eb115eb",
             "control": null,
             "showControl": true
           },
@@ -23,7 +23,7 @@
               "name": "any"
             },
             "label": "Message",
-            "id": "29a47f2970b1b4d0",
+            "id": "a669c70cb4765bc1",
             "control": null,
             "showControl": true
           }
@@ -35,38 +35,149 @@
             },
             "label": "Success",
             "multipleConnections": true,
-            "id": "746eeb9f35dba335"
+            "id": "43f3c7b659dd2f3b"
           }
         },
         "controls": {},
         "label": "TTS Announcement",
-        "id": "33e9cab9c6092084",
+        "id": "fed5231878dc6de9",
         "width": 280,
         "height": 320,
         "properties": {
           "mediaPlayerIds": [
+            "media_player.homepodoffice",
             "media_player.grotto_guest"
           ],
           "mediaPlayerId": "",
           "message": "Hello, this is a test announcement",
           "ttsService": "elevenlabs",
           "ttsEntityId": "tts.google_translate_en_com",
-          "elevenLabsVoiceId": "uhYnkYTBc711oAY590Ea",
-          "elevenLabsVoiceName": "Charlotte - Meditation & Relaxation",
-          "lastResult": null
+          "elevenLabsVoiceId": "aRlmTYIQo6Tlg5SlulGC",
+          "elevenLabsVoiceName": "Charlotte",
+          "lastResult": true
         },
         "_lastTrigger": false,
-        "_lastSentTime": 0,
+        "_lastSentTime": 1767226195733,
         "selected": true
+      }
+    },
+    {
+      "id": "ba534b349bb63989",
+      "label": "Event Announcer",
+      "position": {
+        "x": 642,
+        "y": 192
+      },
+      "data": {
+        "inputs": {},
+        "outputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "multipleConnections": true,
+            "id": "f31665874d3a0cd5"
+          },
+          "message": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Message",
+            "multipleConnections": true,
+            "id": "e348526d7b1c6b76"
+          },
+          "event": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Event",
+            "multipleConnections": true,
+            "id": "c7f7b49f7694a325"
+          }
+        },
+        "controls": {},
+        "label": "Event Announcer",
+        "id": "ba534b349bb63989",
+        "width": 300,
+        "height": 280,
+        "properties": {
+          "leadTime": 5,
+          "template": "action",
+          "announcedEvents": {
+            "Time of Day - Start_on_1767226200000": true
+          },
+          "currentMessage": "Turning on Time of Day - Start",
+          "currentEvent": {
+            "time": "2026-01-01T00:10:00.000Z",
+            "action": "on",
+            "deviceName": "Time of Day - Start",
+            "nodeId": "153ba125279067da"
+          },
+          "triggerActive": false,
+          "upcomingCount": 2
+        },
+        "selected": false
+      }
+    },
+    {
+      "id": "153ba125279067da",
+      "label": "Time of Day",
+      "position": {
+        "x": 86,
+        "y": 59
+      },
+      "data": {
+        "id": "153ba125279067da",
+        "label": "Time of Day",
+        "properties": {
+          "customName": "",
+          "start_hour": 4,
+          "start_minute": 10,
+          "start_ampm": "PM",
+          "start_enabled": true,
+          "stop_hour": 6,
+          "stop_minute": 0,
+          "stop_ampm": "PM",
+          "stop_enabled": true,
+          "cycle_hour": 4,
+          "cycle_minute": 45,
+          "cycle_ampm": "AM",
+          "cycle_duration": 10,
+          "cycle_enabled": false,
+          "timezone": "America/Los_Angeles",
+          "next_on_date": "2026-01-02T00:10:00.000Z",
+          "next_off_date": "2026-01-01T02:00:00.000Z",
+          "next_cycle_date": null,
+          "currentState": true,
+          "status": "Initializing...",
+          "debug": false,
+          "pulseMode": false
+        }
       }
     }
   ],
-  "connections": [],
+  "connections": [
+    {
+      "id": "7368a9fd2a601beb",
+      "source": "ba534b349bb63989",
+      "target": "fed5231878dc6de9",
+      "sourceOutput": "trigger",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "03de1ec541dd7457",
+      "source": "ba534b349bb63989",
+      "target": "fed5231878dc6de9",
+      "sourceOutput": "message",
+      "targetInput": "message"
+    }
+  ],
   "viewport": {
     "x": 0,
     "y": 0,
     "k": 1
   },
   "autoSaved": true,
-  "timestamp": 1767224400749
+  "timestamp": 1767226214614
 }

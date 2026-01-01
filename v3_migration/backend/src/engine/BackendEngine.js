@@ -29,6 +29,44 @@ class BackendEngine {
     // This prevents the engine and UI from fighting over device control
     this.frontendActive = false;
     this.frontendLastSeen = null;
+    
+    // Scheduled events registry - nodes register their upcoming events here
+    // This enables UpcomingEventsNode to work in headless mode
+    this.scheduledEventsRegistry = new Map();  // nodeId → [{time, action, deviceName}]
+  }
+
+  /**
+   * Register scheduled events for a node
+   * @param {string} nodeId - The node ID
+   * @param {Array} events - Array of {time: Date, action: string, deviceName: string}
+   */
+  registerScheduledEvents(nodeId, events) {
+    if (!events || events.length === 0) {
+      this.scheduledEventsRegistry.delete(nodeId);
+    } else {
+      this.scheduledEventsRegistry.set(nodeId, events.map(e => ({ ...e, nodeId })));
+    }
+  }
+
+  /**
+   * Get all upcoming events from all nodes, sorted by time
+   * @returns {Array} - Array of upcoming events
+   */
+  getUpcomingEvents() {
+    const now = Date.now();
+    const allEvents = [];
+    
+    for (const [nodeId, events] of this.scheduledEventsRegistry) {
+      if (Array.isArray(events)) {
+        allEvents.push(...events);
+      }
+    }
+    
+    // Sort by time (soonest first) and filter out past events
+    return allEvents
+      .filter(e => e.time && new Date(e.time).getTime() > now)
+      .sort((a, b) => new Date(a.time) - new Date(b.time))
+      .slice(0, 50);  // Limit to 50 events
   }
 
   /**
