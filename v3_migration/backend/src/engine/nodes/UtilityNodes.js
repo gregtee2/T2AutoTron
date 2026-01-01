@@ -808,8 +808,10 @@ class UpcomingEventsNode {
     this.outputs = { trigger: false, messageOut: '', event: null };
     this._announcedEvents = {};  // Track announced events
     this._triggerPulse = false;  // For pulse behavior
-    this._lastAdHocMessage = '';  // For change detection
+    this._lastAdHocMessage = '';  // For tracking last message
+    this._previousAdHocInput = undefined;  // For rising-edge detection
     this._adHocCooldownUntil = 0;  // Timestamp when cooldown ends
+    this._isAdHocActive = false;  // True when ad-hoc message is active
   }
 
   setInput(name, value) {
@@ -851,17 +853,24 @@ class UpcomingEventsNode {
       this.outputs.trigger = false;
     }
 
-    // Check for ad-hoc message first (priority)
+    // Check for ad-hoc message first (priority) - using rising-edge detection
     const adHocMsg = this.inputs.message;
+    const prevInput = this._previousAdHocInput;
+    this._previousAdHocInput = adHocMsg;  // Track for next tick
+    
     if (adHocMsg && typeof adHocMsg === 'string' && adHocMsg.trim() !== '') {
-      // Only trigger if message changed
-      if (adHocMsg !== this._lastAdHocMessage) {
+      // Detect RISING EDGE: previous was empty/undefined, now has value
+      const wasEmpty = !prevInput || prevInput === undefined || prevInput === '';
+      
+      if (wasEmpty) {
+        // Rising edge detected! Trigger the ad-hoc message
         this._lastAdHocMessage = adHocMsg;
         this.outputs.messageOut = adHocMsg;
         this.outputs.event = null;
         this.outputs.trigger = true;
         this._triggerPulse = true;
         this._adHocCooldownUntil = now + 3000;  // 3 second cooldown
+        this._isAdHocActive = true;
         return this.outputs;
       }
     }
@@ -870,6 +879,7 @@ class UpcomingEventsNode {
     if (now < this._adHocCooldownUntil) {
       return this.outputs;
     }
+    this._isAdHocActive = false;  // Cooldown over
 
     // Get events from engine's scheduled events registry
     const engine = global.backendEngine;
