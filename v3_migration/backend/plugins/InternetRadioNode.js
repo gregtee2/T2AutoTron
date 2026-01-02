@@ -222,38 +222,33 @@
 
         const { NodeHeader, HelpIcon } = window.T2Controls || {};
 
-        // Fetch media players from HA
+        // Fetch media players from HA (same pattern as TTSAnnouncementNode)
         useEffect(() => {
-            const fetchSpeakers = () => {
-                if (window.socket) {
-                    window.socket.emit('request-ha-devices');
-                }
-            };
+            if (!window.socket) return;
 
-            const handleDevices = (devices) => {
-                const mediaPlayers = devices.filter(d => 
-                    d.id?.includes('media_player') || 
-                    d.type === 'media_player'
-                );
-                setSpeakers(mediaPlayers);
+            const onMediaPlayers = (players) => {
+                console.log('[InternetRadio] Received media players:', players?.length);
+                setSpeakers(players || []);
 
                 // Auto-select first speaker if none selected
-                if (!selectedSpeaker && mediaPlayers.length > 0) {
-                    const firstSpeaker = mediaPlayers[0].id?.replace('ha_', '') || mediaPlayers[0].entity_id;
-                    setSelectedSpeaker(firstSpeaker);
-                    data.properties.selectedSpeaker = firstSpeaker;
+                if (!selectedSpeaker && players?.length > 0) {
+                    const firstSpeaker = players[0].entity_id || players[0].id?.replace('ha_', '');
+                    if (firstSpeaker) {
+                        setSelectedSpeaker(firstSpeaker);
+                        data.properties.selectedSpeaker = firstSpeaker;
+                    }
                 }
             };
 
-            if (window.socket) {
-                window.socket.on('ha-devices', handleDevices);
-                fetchSpeakers();
-            }
+            // Clean up any existing listeners first
+            window.socket.off('media-players', onMediaPlayers);
+            window.socket.on('media-players', onMediaPlayers);
+            
+            // Request media players list
+            window.socket.emit('request-media-players');
 
             return () => {
-                if (window.socket) {
-                    window.socket.off('ha-devices', handleDevices);
-                }
+                window.socket.off('media-players', onMediaPlayers);
             };
         }, []);
 
@@ -440,8 +435,8 @@
                     speakers.map((speaker, idx) => 
                         React.createElement('option', {
                             key: idx,
-                            value: speaker.id?.replace('ha_', '') || speaker.entity_id
-                        }, speaker.name || speaker.id || speaker.entity_id)
+                            value: speaker.entity_id
+                        }, speaker.friendly_name || speaker.entity_id)
                     )
                 )
             ),

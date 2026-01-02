@@ -154,13 +154,13 @@
             "all": true
           },
           "_lastWeather": {
-            "temp": 63.3,
+            "temp": 62.4,
             "humidity": 78,
-            "wind": 0.67,
+            "wind": 0.45,
             "hourlyRain": 0,
             "eventRain": 2.65,
             "dailyRain": 1.8,
-            "solar": 59.48
+            "solar": 49.16
           }
         }
       }
@@ -2016,13 +2016,13 @@
         "properties": {
           "bufferName": "Office Colors",
           "lastValue": {
-            "hue": 0.08414239482200647,
-            "saturation": 0.5754189944134078,
-            "brightness": 79,
+            "hue": 0.08558558558558559,
+            "saturation": 0.6065573770491803,
+            "brightness": 78,
             "rgb": {
-              "r": 55,
-              "g": 40,
-              "b": 24
+              "r": 56,
+              "g": 39,
+              "b": 22
             }
           },
           "registeredName": "[HSV]Office Colors",
@@ -2060,13 +2060,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Office Colors",
           "lastValue": {
-            "hue": 0.08414239482200647,
-            "saturation": 0.5754189944134078,
-            "brightness": 79,
+            "hue": 0.08558558558558559,
+            "saturation": 0.6065573770491803,
+            "brightness": 78,
             "rgb": {
-              "r": 55,
-              "g": 40,
-              "b": 24
+              "r": 56,
+              "g": 39,
+              "b": 22
             }
           },
           "lastTriggerSource": "Office Colors"
@@ -2244,13 +2244,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Temps",
           "lastValue": {
-            "hue": 0.45422535211267606,
-            "saturation": 0.8658536585365854,
-            "brightness": 121,
+            "hue": 0.48271604938271606,
+            "saturation": 0.8598726114649681,
+            "brightness": 118,
             "rgb": {
               "r": 10,
-              "g": 78,
-              "b": 59
+              "g": 73,
+              "b": 66
             }
           },
           "lastTriggerSource": "Temps"
@@ -3465,7 +3465,7 @@
             "value"
           ],
           "lastOutputValues": {
-            "value": 63.5
+            "value": 62.2
           },
           "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
         }
@@ -3484,7 +3484,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
           "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Sunshine terrace  Feels like: 63.5",
+          "status": "✅ Sunshine terrace  Feels like: 62.2",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -3583,15 +3583,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.043893880635679956,
-          "position": 0.4632352941176471,
+          "position": 0.44411764705882356,
           "isInRange": true,
-          "outputHue": 0.45422535211267606,
-          "outputSaturation": 0.8658536585365854,
-          "outputBrightness": 121,
+          "outputHue": 0.48271604938271606,
+          "outputSaturation": 0.8598726114649681,
+          "outputBrightness": 118,
           "outputRgb": {
             "r": 10,
-            "g": 78,
-            "b": 59
+            "g": 73,
+            "b": 66
           }
         }
       }
@@ -3609,13 +3609,13 @@
         "properties": {
           "bufferName": "Temps",
           "lastValue": {
-            "hue": 0.45422535211267606,
-            "saturation": 0.8658536585365854,
-            "brightness": 121,
+            "hue": 0.48271604938271606,
+            "saturation": 0.8598726114649681,
+            "brightness": 118,
             "rgb": {
               "r": 10,
-              "g": 78,
-              "b": 59
+              "g": 73,
+              "b": 66
             }
           },
           "registeredName": "[HSV]Temps",
@@ -3767,15 +3767,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.04122530107064291,
-          "position": 0.5678473754789272,
+          "position": 0.5821488697318008,
           "isInRange": true,
-          "outputHue": 0.08414239482200647,
-          "outputSaturation": 0.5754189944134078,
-          "outputBrightness": 79,
+          "outputHue": 0.08558558558558559,
+          "outputSaturation": 0.6065573770491803,
+          "outputBrightness": 78,
           "outputRgb": {
-            "r": 55,
-            "g": 40,
-            "b": 24
+            "r": 56,
+            "g": 39,
+            "b": 22
           }
         }
       }
@@ -3901,7 +3901,7 @@
           "priceChange": -4.560000000000002,
           "changePercent": -6.6106117715279815,
           "isUp": false,
-          "lastUpdate": "3:43:27 PM",
+          "lastUpdate": "3:56:27 PM",
           "status": "OK",
           "error": null
         }
@@ -5065,7 +5065,7 @@
           "deviceId": "ha_sensor.sunshine_terrace_irradiance",
           "deviceName": "Sunshine terrace  Irradiance",
           "field": "state",
-          "lastValue": "53.98",
+          "lastValue": "43.01",
           "filterType": "Sensor",
           "letterFilter": "STU",
           "searchText": ""
@@ -5798,8 +5798,8 @@
       "id": "6d0a4043c3cc86ac",
       "label": "TTS Announcement",
       "position": {
-        "x": 8060.948868158201,
-        "y": 3800.954250626344
+        "x": 8063.859188001633,
+        "y": 3783.492331565749
       },
       "data": {
         "inputs": {
@@ -5851,7 +5851,8 @@
           "lastResult": null
         },
         "_lastTrigger": false,
-        "_lastSentTime": 0
+        "_lastSentTime": 0,
+        "selected": false
       }
     },
     {
@@ -6268,7 +6269,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "Forecast",
-          "lastValue": "Temperature is 63 degrees, humidity 78 percent, wind 1 miles per hour, total rainfall today 1.80 inches.",
+          "lastValue": "Temperature is 62 degrees, humidity 78 percent, wind 0 miles per hour, total rainfall today 1.80 inches.",
           "registeredName": "[String]Forecast",
           "finalName": "[String]Forecast"
         }
@@ -6286,7 +6287,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[String]Forecast",
-          "lastValue": "Temperature is 63 degrees, humidity 78 percent, wind 1 miles per hour, total rainfall today 1.80 inches.",
+          "lastValue": "Temperature is 62 degrees, humidity 78 percent, wind 0 miles per hour, total rainfall today 1.80 inches.",
           "lastTriggerSource": "Forecast"
         }
       }
@@ -6640,7 +6641,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "Wind Speed",
-          "lastValue": 0.67,
+          "lastValue": 0.45,
           "registeredName": "[Number]Wind Speed",
           "finalName": "[Number]Wind Speed"
         }
@@ -6658,7 +6659,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Number]Wind Speed",
-          "lastValue": 0.67,
+          "lastValue": 0.45,
           "lastTriggerSource": "Wind Speed"
         }
       }
@@ -8082,8 +8083,8 @@
     }
   ],
   "viewport": {
-    "x": -5612.373463204783,
-    "y": -3165.4646250175006,
-    "k": 0.9426744731018709
+    "x": -4284.836207345407,
+    "y": -2174.457715837813,
+    "k": 0.6872096908912639
   }
 }
