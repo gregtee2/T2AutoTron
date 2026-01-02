@@ -85,7 +85,7 @@
                 streamEnabled: false,  // Master toggle
                 
                 // Pause/resume coordination
-                resumeDelay: 3000,  // ms to wait after TTS before resuming stream
+                resumeDelay: 5000,  // ms to wait after TTS before resuming stream (5 sec default)
                 wasStreamingBeforeTTS: false
             };
 
@@ -132,24 +132,41 @@
                 return false;
             }
 
+            console.log(`[AudioOutput] ▶️ Playing stream on ${speakerIds.length} speaker(s):`, speakerIds);
+
             try {
-                // Play on all selected speakers
-                for (const speaker of speakerIds) {
-                    await (window.apiFetch || fetch)('/api/media/play', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            entityId: speaker,
-                            mediaUrl: streamUrl,
-                            mediaType: 'music',
-                            volume: this.properties.streamVolume / 100
-                        })
-                    });
-                }
-                this.properties.isStreaming = true;
-                console.log(`[AudioOutput] ▶️ Playing stream on ${speakerIds.length} speaker(s)`);
+                // Play on all selected speakers - use Promise.all for parallel execution
+                const playPromises = speakerIds.map(async (speaker) => {
+                    try {
+                        const response = await (window.apiFetch || fetch)('/api/media/play', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                entityId: speaker,
+                                mediaUrl: streamUrl,
+                                mediaType: 'music',
+                                volume: this.properties.streamVolume / 100
+                            })
+                        });
+                        if (response.ok) {
+                            console.log(`[AudioOutput] ✓ Stream started on ${speaker}`);
+                        } else {
+                            console.warn(`[AudioOutput] ✗ Failed to start stream on ${speaker}: ${response.status}`);
+                        }
+                        return response.ok;
+                    } catch (err) {
+                        console.error(`[AudioOutput] ✗ Error starting stream on ${speaker}:`, err);
+                        return false;
+                    }
+                });
+
+                const results = await Promise.all(playPromises);
+                const successCount = results.filter(r => r).length;
+                
+                this.properties.isStreaming = successCount > 0;
+                console.log(`[AudioOutput] Stream started on ${successCount}/${speakerIds.length} speakers`);
                 if (this.changeCallback) this.changeCallback();
-                return true;
+                return successCount > 0;
             } catch (err) {
                 console.error('[AudioOutput] Play error:', err);
                 return false;
@@ -160,16 +177,29 @@
             const speakerIds = this.getSpeakerIds();
             if (speakerIds.length === 0) return;
 
+            console.log(`[AudioOutput] ⏹️ Stopping stream on ${speakerIds.length} speaker(s):`, speakerIds);
+
             try {
-                for (const speaker of speakerIds) {
-                    await (window.apiFetch || fetch)('/api/media/stop', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ entityId: speaker })
-                    });
-                }
+                // Stop on all speakers in parallel
+                const stopPromises = speakerIds.map(async (speaker) => {
+                    try {
+                        const response = await (window.apiFetch || fetch)('/api/media/stop', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ entityId: speaker })
+                        });
+                        if (response.ok) {
+                            console.log(`[AudioOutput] ✓ Stopped ${speaker}`);
+                        }
+                        return response.ok;
+                    } catch (err) {
+                        console.error(`[AudioOutput] ✗ Error stopping ${speaker}:`, err);
+                        return false;
+                    }
+                });
+
+                await Promise.all(stopPromises);
                 this.properties.isStreaming = false;
-                console.log(`[AudioOutput] ⏹️ Stopped stream`);
                 if (this.changeCallback) this.changeCallback();
             } catch (err) {
                 console.error('[AudioOutput] Stop error:', err);
@@ -178,6 +208,7 @@
 
         async pauseStreamForTTS() {
             if (this.properties.isStreaming) {
+                console.log(`[AudioOutput] ⏸️ Pausing stream for TTS (will resume in ${this.properties.resumeDelay}ms)`);
                 this.properties.wasStreamingBeforeTTS = true;
                 await this.stopStream();
             }
@@ -189,11 +220,18 @@
                 clearTimeout(this._resumeTimeout);
             }
             
+            const speakerIds = this.getSpeakerIds();
+            console.log(`[AudioOutput] 📢 TTS sent. Scheduling stream resume in ${this.properties.resumeDelay}ms for ${speakerIds.length} speaker(s)`);
+            
             // Wait for TTS to finish, then resume
             this._resumeTimeout = setTimeout(async () => {
+                console.log(`[AudioOutput] ⏰ Resume timer fired. wasStreaming=${this.properties.wasStreamingBeforeTTS}, streamEnabled=${this.properties.streamEnabled}`);
                 if (this.properties.wasStreamingBeforeTTS && this.properties.streamEnabled) {
+                    console.log(`[AudioOutput] 🔄 Resuming stream on speakers:`, this.getSpeakerIds());
                     await this.playStream();
                     this.properties.wasStreamingBeforeTTS = false;
+                } else {
+                    console.log(`[AudioOutput] ⏭️ Skipping resume (wasStreaming=${this.properties.wasStreamingBeforeTTS}, enabled=${this.properties.streamEnabled})`);
                 }
             }, this.properties.resumeDelay);
         }
