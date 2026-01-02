@@ -2035,28 +2035,41 @@ registry.register('HueEffectNode', HueEffectNode);
 registry.register('WizEffectNode', WizEffectNode);
 
 // ============================================================================
-// TTSAnnouncementNode - Send TTS announcements to media_player entities
-// Supports multi-speaker and ElevenLabs
+// TTSAnnouncementNode (Audio Output) - TTS + Background Streaming
+// Supports multi-speaker, ElevenLabs, and internet radio streams
 // ============================================================================
 class TTSAnnouncementNode {
   constructor(id, properties = {}) {
     this.id = id;
     this.type = 'TTSAnnouncementNode';
     this.properties = {
-      mediaPlayerIds: properties.mediaPlayerIds || [],  // NEW: array of speakers
-      mediaPlayerId: properties.mediaPlayerId || '',    // Legacy single speaker
+      // TTS properties
+      mediaPlayerIds: properties.mediaPlayerIds || [],
+      mediaPlayerId: properties.mediaPlayerId || '',
       message: properties.message || 'Hello, this is an announcement',
-      ttsService: properties.ttsService || 'tts/speak',  // 'tts/speak', 'tts/google_translate_say', 'elevenlabs'
-      ttsEntityId: properties.ttsEntityId || '',  // TTS engine entity for tts.speak
-      elevenLabsVoiceId: properties.elevenLabsVoiceId || ''  // ElevenLabs voice ID
+      ttsService: properties.ttsService || 'tts/speak',
+      ttsEntityId: properties.ttsEntityId || '',
+      elevenLabsVoiceId: properties.elevenLabsVoiceId || '',
+      
+      // Streaming properties
+      stations: properties.stations || [],
+      selectedStation: properties.selectedStation || 0,
+      customStreamUrl: properties.customStreamUrl || '',
+      streamVolume: properties.streamVolume || 50,
+      streamEnabled: properties.streamEnabled || false,
+      resumeDelay: properties.resumeDelay || 3000,
+      
+      // Runtime state
+      isStreaming: false,
+      wasStreamingBeforeTTS: false
     };
-    this.inputs = { trigger: null, message: null };
-    this.outputs = { success: false };
+    this.inputs = { trigger: null, message: null, streamUrl: null };
+    this.outputs = { success: false, streaming: false };
     this._lastTrigger = undefined;
     this._lastSentTime = 0;
+    this._resumeTimeout = null;
   }
 
-  // Get speaker IDs (supports legacy single or new multi)
   getSpeakerIds() {
     if (this.properties.mediaPlayerIds && this.properties.mediaPlayerIds.length > 0) {
       return this.properties.mediaPlayerIds;
@@ -2065,6 +2078,72 @@ class TTSAnnouncementNode {
       return [this.properties.mediaPlayerId];
     }
     return [];
+  }
+
+  getStreamUrl() {
+    if (this.properties.customStreamUrl) {
+      return this.properties.customStreamUrl;
+    }
+    const station = this.properties.stations[this.properties.selectedStation];
+    return station?.url || '';
+  }
+
+  async playStream() {
+    const speakerIds = this.getSpeakerIds();
+    const streamUrl = this.getStreamUrl();
+    
+    if (!streamUrl || speakerIds.length === 0) return false;
+    
+    try {
+      const { host, token } = getHAConfig();
+      if (!token) return false;
+      
+      for (const entityId of speakerIds) {
+        // Set volume
+        await fetch(`${host}/api/services/media_player/volume_set`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entity_id: entityId, volume_level: this.properties.streamVolume / 100 })
+        });
+        
+        // Play stream
+        await fetch(`${host}/api/services/media_player/play_media`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entity_id: entityId, media_content_id: streamUrl, media_content_type: 'music' })
+        });
+      }
+      
+      this.properties.isStreaming = true;
+      engineLogger.log(`[AudioOutput] ▶️ Playing stream on ${speakerIds.length} speaker(s)`);
+      return true;
+    } catch (err) {
+      engineLogger.warn(`[AudioOutput] Play error: ${err.message}`);
+      return false;
+    }
+  }
+
+  async stopStream() {
+    const speakerIds = this.getSpeakerIds();
+    if (speakerIds.length === 0) return;
+    
+    try {
+      const { host, token } = getHAConfig();
+      if (!token) return;
+      
+      for (const entityId of speakerIds) {
+        await fetch(`${host}/api/services/media_player/media_stop`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entity_id: entityId })
+        });
+      }
+      
+      this.properties.isStreaming = false;
+      engineLogger.log(`[AudioOutput] ⏹️ Stopped stream`);
+    } catch (err) {
+      engineLogger.warn(`[AudioOutput] Stop error: ${err.message}`);
+    }
   }
 
   setInput(name, value) {
@@ -2076,12 +2155,21 @@ class TTSAnnouncementNode {
   async process() {
     const trigger = this.inputs.trigger;
     const dynamicMessage = this.inputs.message;
+    const dynamicStreamUrl = this.inputs.streamUrl;
+
+    // Handle dynamic stream URL input
+    if (dynamicStreamUrl && dynamicStreamUrl !== this.properties.customStreamUrl) {
+      this.properties.customStreamUrl = dynamicStreamUrl;
+      if (this.properties.streamEnabled && this.properties.isStreaming) {
+        await this.playStream();
+      }
+    }
 
     // Debounce
     const now = Date.now();
     const debounceMs = 1000;
 
-    // Detect rising edge
+    // Detect rising edge for TTS
     if (trigger && trigger !== this._lastTrigger && (now - this._lastSentTime) > debounceMs) {
       this._lastTrigger = trigger;
       this._lastSentTime = now;
@@ -2092,56 +2180,39 @@ class TTSAnnouncementNode {
       const speakerIds = this.getSpeakerIds();
 
       if (speakerIds.length > 0 && message) {
+        // Pause stream if playing
+        if (this.properties.isStreaming) {
+          this.properties.wasStreamingBeforeTTS = true;
+          await this.stopStream();
+        }
+
         try {
           const { host, token } = getHAConfig();
           if (!token) {
-            engineLogger.warn(`[TTSAnnouncement] No HA token configured`);
+            engineLogger.warn(`[AudioOutput] No HA token configured`);
             this.outputs.success = false;
-            return this.outputs;
-          }
-
-          // Check if using ElevenLabs
-          if (this.properties.ttsService === 'elevenlabs') {
-            // ElevenLabs requires the main server's HTTP endpoint
-            // The backend engine calls the local API endpoint
+          } else if (this.properties.ttsService === 'elevenlabs') {
             const publicUrl = process.env.PUBLIC_URL || 'http://localhost:3000';
+            engineLogger.log(`[AudioOutput] Sending ElevenLabs TTS to ${speakerIds.length} speaker(s)`);
             
-            engineLogger.log(`[TTSAnnouncement] Sending ElevenLabs TTS to ${speakerIds.length} speaker(s): "${message.substring(0, 50)}..."`);
+            const response = await fetch(`${publicUrl}/api/tts/elevenlabs`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                message: message,
+                voiceId: this.properties.elevenLabsVoiceId,
+                mediaPlayerIds: speakerIds
+              })
+            });
             
-            try {
-              const response = await fetch(`${publicUrl}/api/tts/elevenlabs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  message: message,
-                  voiceId: this.properties.elevenLabsVoiceId,
-                  mediaPlayerIds: speakerIds
-                })
-              });
-              
-              if (response.ok) {
-                engineLogger.log(`[TTSAnnouncement] ElevenLabs TTS sent successfully`);
-                this.outputs.success = true;
-              } else {
-                engineLogger.warn(`[TTSAnnouncement] ElevenLabs TTS failed: ${response.status}`);
-                this.outputs.success = false;
-              }
-            } catch (fetchErr) {
-              engineLogger.warn(`[TTSAnnouncement] ElevenLabs fetch error: ${fetchErr.message}`);
-              this.outputs.success = false;
-            }
+            this.outputs.success = response.ok;
           } else {
-            // Use HA TTS - send to each speaker
-            engineLogger.log(`[TTSAnnouncement] Sending HA TTS to ${speakerIds.length} speaker(s): "${message.substring(0, 50)}..."`);
+            engineLogger.log(`[AudioOutput] Sending HA TTS to ${speakerIds.length} speaker(s)`);
             
             for (const entityId of speakerIds) {
-              // Try tts.speak first
               const response = await fetch(`${host}/api/services/tts/speak`, {
                 method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   entity_id: this.properties.ttsEntityId || entityId,
                   media_player_entity_id: entityId,
@@ -2150,26 +2221,27 @@ class TTSAnnouncementNode {
               });
 
               if (!response.ok) {
-                // Fallback to google_translate_say
                 await fetch(`${host}/api/services/tts/google_translate_say`, {
                   method: 'POST',
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    entity_id: entityId,
-                    message: message
-                  })
+                  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ entity_id: entityId, message: message })
                 });
               }
             }
-
-            engineLogger.log(`[TTSAnnouncement] HA TTS sent successfully`);
+            
             this.outputs.success = true;
           }
+
+          // Schedule stream resume after TTS
+          if (this.properties.wasStreamingBeforeTTS && this.properties.streamEnabled) {
+            if (this._resumeTimeout) clearTimeout(this._resumeTimeout);
+            this._resumeTimeout = setTimeout(async () => {
+              await this.playStream();
+              this.properties.wasStreamingBeforeTTS = false;
+            }, this.properties.resumeDelay);
+          }
         } catch (err) {
-          engineLogger.warn(`[TTSAnnouncement] Error: ${err.message}`);
+          engineLogger.warn(`[AudioOutput] Error: ${err.message}`);
           this.outputs.success = false;
         }
       }
@@ -2177,6 +2249,7 @@ class TTSAnnouncementNode {
       this._lastTrigger = undefined;
     }
 
+    this.outputs.streaming = this.properties.isStreaming;
     return this.outputs;
   }
 }

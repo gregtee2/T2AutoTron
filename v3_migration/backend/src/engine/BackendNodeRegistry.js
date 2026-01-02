@@ -149,7 +149,8 @@ class BackendNodeRegistry {
       'Kasa Lights': 'KasaLightNode',
       'Kasa Plug': 'KasaPlugNode',
       'Kasa Plug Control': 'KasaPlugNode',
-      'Internet Radio': 'InternetRadioNode',
+      'Audio Output': 'TTSAnnouncementNode',
+      'TTS Announcement': 'TTSAnnouncementNode',
       
       // Utility nodes
       'Delay': 'DelayNode',
