@@ -3,9 +3,20 @@ const TelegramBot = require('node-telegram-bot-api');
 const EventEmitter = require('events');
 const chalk = require('chalk');
 
-// Console logger
+// Timezone for local timestamps - reads from user's Control Panel settings
+// LOCATION_TIMEZONE is set via Settings > Location in the UI
+const TIMEZONE = process.env.LOCATION_TIMEZONE || process.env.ENGINE_TIMEZONE || 'America/Los_Angeles';
+
+// Console logger with LOCAL time
 const log = (msg, level = 'info') => {
-  const timestamp = `[${new Date().toISOString()}]`;
+  const localTime = new Date().toLocaleString('en-US', {
+    timeZone: TIMEZONE,
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+  const timestamp = `[${localTime}]`;
   const colors = { error: 'red', warn: 'yellow', info: 'green' };
   console.log(chalk[colors[level] || 'white'](`${timestamp} ${msg}`));
 };

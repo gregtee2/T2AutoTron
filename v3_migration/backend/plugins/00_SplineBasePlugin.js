@@ -256,7 +256,9 @@
             minY = 0,
             maxY = 1,
             lockEndpoints = true,
-            readOnly = false
+            readOnly = false,
+            playheadPosition = null,  // 0-1 position, null = no playhead
+            playheadColor = '#ff6600'
         } = props;
 
         const canvasRef = useRef(null);
@@ -401,6 +403,33 @@
                 ctx.stroke();
             });
 
+            // Draw playhead indicator
+            if (playheadPosition !== null && playheadPosition !== undefined) {
+                const playX = toCanvasX(clamp(playheadPosition, 0, 1));
+                
+                // Vertical line
+                ctx.beginPath();
+                ctx.moveTo(playX, PADDING);
+                ctx.lineTo(playX, height - PADDING);
+                ctx.strokeStyle = playheadColor;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Current value dot on curve
+                const currentY = evaluate(points, playheadPosition, interpolation);
+                const dotPos = toCanvas(playheadPosition, currentY);
+                
+                ctx.beginPath();
+                ctx.arc(dotPos.x, dotPos.y, 6, 0, Math.PI * 2);
+                ctx.fillStyle = playheadColor;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
             // Labels
             if (showLabels) {
                 ctx.fillStyle = 'rgba(255,255,255,0.5)';
@@ -413,7 +442,7 @@
 
         }, [points, width, height, interpolation, gridLines, showGrid, 
             curveColor, pointColor, backgroundColor, gradientBackground,
-            minY, maxY, hovered, showLabels]);
+            minY, maxY, hovered, showLabels, playheadPosition, playheadColor]);
 
         // Pointer down - start drag or add point
         const handlePointerDown = (e) => {

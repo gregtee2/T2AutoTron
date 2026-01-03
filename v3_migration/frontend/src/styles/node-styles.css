@@ -3026,3 +3026,138 @@
 .ha-device-field-node .value-display {
   transition: border-color 0.3s ease;
 }
+
+/* ============================================================================
+   STATION SELECTOR NODE (Media category)
+   ============================================================================ */
+
+.station-selector-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #ab47bc;
+  box-shadow: 0 0 15px rgba(171, 71, 188, 0.2),
+              inset 0 0 20px rgba(171, 71, 188, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+  overflow: hidden;
+}
+
+.station-selector-node:hover {
+  box-shadow: 0 0 25px rgba(171, 71, 188, 0.4),
+              inset 0 0 30px rgba(171, 71, 188, 0.1);
+  border-color: #ce93d8;
+}
+
+/* Header */
+.ssn-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(90deg, rgba(171, 71, 188, 0.15), transparent);
+  border-bottom: 1px solid rgba(171, 71, 188, 0.3);
+}
+
+.ssn-icon {
+  font-size: 14px;
+}
+
+.ssn-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ce93d8;
+  text-shadow: 0 0 8px rgba(171, 71, 188, 0.6);
+}
+
+/* IO Container */
+.ssn-io-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(171, 71, 188, 0.15);
+}
+
+.ssn-inputs,
+.ssn-outputs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ssn-socket-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ssn-socket-row-right {
+  flex-direction: row-reverse;
+}
+
+.ssn-socket-label {
+  font-size: 9px;
+  color: var(--node-device-text-secondary, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Controls Section */
+.ssn-controls {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ssn-control-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ssn-label {
+  width: 55px;
+  font-size: 10px;
+  color: var(--node-device-text-secondary, #888);
+}
+
+.ssn-select {
+  flex: 1;
+  background: #1a1a2e;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.ssn-select:hover {
+  border-color: #ab47bc;
+}
+
+.ssn-select:focus {
+  outline: none;
+  border-color: #ce93d8;
+  box-shadow: 0 0 5px rgba(171, 71, 188, 0.4);
+}
+
+/* Preview */
+.ssn-preview {
+  font-size: 9px;
+  color: #888;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  border: 1px solid rgba(171, 71, 188, 0.2);
+}

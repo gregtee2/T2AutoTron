@@ -16,13 +16,7 @@
 const express = require('express');
 const router = express.Router();
 const homeAssistantManager = require('../../devices/managers/homeAssistantManager');
-const logger = require('../../logging/logger');
-
-function logWithTimestamp(message, level = 'info') {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${message}`);
-    logger.log(message, level).catch(() => {});
-}
+const logWithTimestamp = require('../../logging/logWithTimestamp');
 
 /**
  * Initialize media routes

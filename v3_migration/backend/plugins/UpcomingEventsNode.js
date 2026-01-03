@@ -674,7 +674,7 @@
 
     window.nodeRegistry.register('UpcomingEventsNode', {
         label: 'Event Announcer',
-        category: 'Timer/Event',
+        category: 'Media',
         nodeClass: UpcomingEventsNode,
         factory: (cb) => new UpcomingEventsNode(cb),
         component: UpcomingEventsComponent

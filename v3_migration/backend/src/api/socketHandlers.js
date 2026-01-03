@@ -243,6 +243,34 @@ module.exports = (deviceService) => (socket) => {
     }
   });
 
+  // Handle request for entity state (used by Audio Output node to detect TTS completion)
+  socket.on('get-entity-state', async (data, callback) => {
+    const { entityId } = data || {};
+    if (!entityId) {
+      if (callback) callback({ error: 'No entityId provided' });
+      return;
+    }
+    
+    try {
+      // Get state from Home Assistant
+      const homeAssistantManager = require('../devices/managers/homeAssistantManager');
+      const rawEntityId = entityId.replace('ha_', '');
+      const stateResult = await homeAssistantManager.getState(rawEntityId);
+      
+      if (stateResult && stateResult.state) {
+        if (callback) callback({ 
+          state: stateResult.state,
+          attributes: stateResult.attributes || {}
+        });
+      } else {
+        if (callback) callback({ state: 'unknown', error: 'Could not get state' });
+      }
+    } catch (error) {
+      logger.log(`Error getting entity state for ${entityId}: ${error.message}`, 'error', false, `error:entity-state:${entityId}`);
+      if (callback) callback({ state: 'unknown', error: error.message });
+    }
+  });
+
   socket.on('disconnect', (reason) => {
     authManager.deauthenticate(socket);
     // Note: Disconnect is also logged in server.js - don't duplicate

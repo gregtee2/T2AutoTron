@@ -8,29 +8,11 @@ const commandTracker = require('../../engine/commandTracker');
 const stateCache = new Map();
 const CACHE_TTL = 5000; // 5 seconds
 
-// Only log errors/warnings by default. Set VERBOSE_LOGGING=true for detailed output.
-const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+// Use central logger with local timezone
+const logWithTimestamp = require('../../logging/logWithTimestamp');
 
-const logWithTimestamp = (message, level = 'info') => {
-  // Only log info/debug when VERBOSE_LOGGING is enabled
-  if (level === 'info' && !VERBOSE) return;
-  
-  const timestamp = `[${new Date().toISOString()}]`;
-  let formattedMessage = `${timestamp} `;
-  switch (level) {
-    case 'error':
-      formattedMessage += `${chalk.red('❌ ' + message)}`;
-      break;
-    case 'warn':
-      formattedMessage += `${chalk.yellow('⚠️ ' + message)}`;
-      break;
-    case 'info':
-    default:
-      formattedMessage += `${chalk.green('✅ ' + message)}`;
-      break;
-  }
-  console.log(formattedMessage);
-};
+// Verbose logging gate - routine operations only log when VERBOSE_LOGGING=true
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 
 module.exports = function (io) {
   const router = express.Router();
@@ -65,7 +47,8 @@ module.exports = function (io) {
   router.get('/', (req, res) => {
     try {
       const devices = homeAssistantManager.getDevices();
-      logWithTimestamp(`Fetched ${devices.length} HA devices`, 'info');
+      // Only log in verbose mode - this gets called many times during graph load
+      if (VERBOSE) logWithTimestamp(`Fetched ${devices.length} HA devices`, 'info');
       res.json({ success: true, devices });
     } catch (error) {
       logWithTimestamp(`Error fetching HA devices: ${error.message}`, 'error');

@@ -980,7 +980,25 @@ class HAGenericDeviceNode {
     // Track connection state for next tick
     this.hadConnection = hasConnection;
     
-    if (risingEdge || fallingEdge || newConnection) {
+    // IMPORTANT: On new connection, only act if trigger is TRUE
+    // This prevents the "turn everything OFF on startup" bug where:
+    // 1. Graph loads, all connections are detected as "new"
+    // 2. Upstream nodes haven't computed yet, so trigger = false
+    // 3. Follow mode sends turn_off to all devices
+    // Fix: Only act on newConnection if it's a TRUE value (turn ON, not OFF)
+    const shouldActOnNewConnection = newConnection && triggerBool;
+    
+    // If new connection with false trigger, just record state without sending OFF command
+    if (newConnection && !triggerBool) {
+      engineLogger.log('HA-NEW-CONN-SKIP', `New connection with trigger=false, skipping OFF command (will act on next rising edge)`, {
+        entities: entityIds,
+        mode: this.properties.triggerMode || 'Follow'
+      });
+      this.lastTrigger = trigger;  // Record state for edge detection
+      return { is_on: false };
+    }
+    
+    if (risingEdge || fallingEdge || shouldActOnNewConnection) {
       engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, 
         risingEdge ? 'RISING_EDGE' : fallingEdge ? 'FALLING_EDGE' : 'NEW_CONNECTION');
       this.lastTrigger = trigger;
@@ -1041,8 +1059,9 @@ class HAGenericDeviceNode {
         this.deviceStates[entityId] = shouldTurnOn;
       }
     } else {
-      // No trigger change - log this for debugging
-      if (this.tickCount % 50 === 0) {  // Only log every 50 ticks to avoid spam
+      // No trigger change - only log in verbose mode to avoid spam
+      // (This was logging thousands of entries per hour with no value)
+      if (VERBOSE && this.tickCount % 100 === 0) {
         engineLogger.log('HA-NO-CHANGE', `trigger=${trigger} (unchanged)`, { 
           tick: this.tickCount, 
           entities: entityIds 
@@ -1124,13 +1143,8 @@ class HAGenericDeviceNode {
         }
       }
       // Removed HA-HSV-WAITING log - summary tracker provides periodic updates
-    } else if (!this.lastTrigger && this.tickCount % 600 === 0 && hsv) {
-      // Log every 60 seconds when we have HSV but trigger is off
-      engineLogger.log('HA-HSV-SKIP', `HSV available but trigger=${this.lastTrigger}`, { 
-        entities: entityIds,
-        triggerMode: this.properties.triggerMode
-      });
     }
+    // Removed noisy HA-HSV-SKIP log - not useful for normal operation
 
     return { is_on: !!this.lastTrigger };
   }

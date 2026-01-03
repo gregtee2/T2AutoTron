@@ -1,28 +1,7 @@
 const express = require('express');
 const Joi = require('joi');
-const chalk = require('chalk');
 const homeAssistantMediaPlayerManager = require('../../devices/managers/homeAssistantMediaPlayerManager');
-
-const logWithTimestamp = (message, level = 'info') => {
-  const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
-  const timestamp = `[${new Date().toISOString()}]`;
-  let formattedMessage = `${timestamp} `;
-  if (['error'].includes(level) || (LOG_LEVEL === 'info' && ['info', 'warn'].includes(level)) || LOG_LEVEL === level) {
-    switch (level) {
-      case 'error':
-        formattedMessage += `${chalk.red('❌ ' + message)}`;
-        break;
-      case 'warn':
-        formattedMessage += `${chalk.yellow('⚠️ ' + message)}`;
-        break;
-      case 'info':
-      default:
-        formattedMessage += `${chalk.green('✅ ' + message)}`;
-        break;
-    }
-    console.log(formattedMessage);
-  }
-};
+const logWithTimestamp = require('../../logging/logWithTimestamp');
 
 module.exports = function (io) {
   const router = express.Router();

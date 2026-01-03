@@ -2265,6 +2265,15 @@ export function Editor() {
                         }
                     }
                     
+                    // Force node updates to ensure connection visibility for dynamic sockets
+                    // (e.g., TTSAnnouncementNode volume inputs)
+                    setTimeout(() => {
+                        for (const oldId of Object.keys(idMap)) {
+                            const newId = idMap[oldId];
+                            if (area) area.update('node', newId);
+                        }
+                    }, 100);
+                    
                     debug('Pasted from clipboard');
 
                 } catch (err) {
@@ -3709,6 +3718,19 @@ export function Editor() {
                     const source = editorInstance.getNode(connData.source);
                     const target = editorInstance.getNode(connData.target);
                     if (source && target) {
+                        // Check if the sockets actually exist on both nodes
+                        const sourceOutput = source.outputs?.[connData.sourceOutput];
+                        const targetInput = target.inputs?.[connData.targetInput];
+                        
+                        if (!sourceOutput) {
+                            console.warn(`[handleImport] Connection skipped - source output '${connData.sourceOutput}' not found on node ${source.label}`);
+                            continue;
+                        }
+                        if (!targetInput) {
+                            console.warn(`[handleImport] Connection skipped - target input '${connData.targetInput}' not found on node ${target.label}`);
+                            continue;
+                        }
+                        
                         importConnectionPromises.push(
                             editorInstance.addConnection(new ClassicPreset.Connection(
                                 source,
@@ -3756,6 +3778,16 @@ export function Editor() {
                     if (processImmediateRef.current) {
                         debug('[handleImport] Running processImmediate to sync node states');
                         processImmediateRef.current();
+                    }
+                    
+                    // Force all nodes to update their visuals - this fixes wire visibility
+                    // for nodes with dynamic sockets (like TTSAnnouncementNode)
+                    if (areaInstance && editorInstance) {
+                        const allNodes = editorInstance.getNodes();
+                        debug(`[handleImport] Updating ${allNodes.length} nodes for connection visibility`);
+                        allNodes.forEach(node => {
+                            areaInstance.update('node', node.id);
+                        });
                     }
                     
                     // Run again after a longer delay to catch any slow async operations

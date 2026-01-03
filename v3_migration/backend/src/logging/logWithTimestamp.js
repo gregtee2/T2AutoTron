@@ -7,6 +7,22 @@ const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB max log file size
 let lastRotationCheck = 0;
 const ROTATION_CHECK_INTERVAL = 60000; // Check every minute
 
+// Timezone for local timestamps - matches server.js
+const TIMEZONE = process.env.LOCATION_TIMEZONE || process.env.ENGINE_TIMEZONE || 'America/Los_Angeles';
+
+// Format timestamp in local time (not UTC)
+const formatLocalTimestamp = () => {
+  return new Date().toLocaleString('en-US', {
+    timeZone: TIMEZONE,
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+};
+
 async function rotateLogIfNeeded(logFile) {
   const now = Date.now();
   if (now - lastRotationCheck < ROTATION_CHECK_INTERVAL) return;
@@ -30,7 +46,7 @@ async function rotateLogIfNeeded(logFile) {
 }
 
 module.exports = async (message, level = 'info', noDelay = false) => {
-  const timestamp = `[${new Date().toISOString()}]`;
+  const timestamp = `[${formatLocalTimestamp()}]`;
   let formattedMessage = `${timestamp} `;
   switch (level) {
     case 'error':

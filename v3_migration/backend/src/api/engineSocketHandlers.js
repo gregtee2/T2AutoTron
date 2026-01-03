@@ -190,9 +190,9 @@ function setupEngineEventListeners() {
  * Call this during server startup
  * 
  * Controlled by ENGINE_AUTO_START env var:
- * - 'true' or '1': Auto-start (default for HA addon)
+ * - 'true' or '1': Auto-start (default behavior)
  * - 'false' or '0': Don't auto-start (user must start manually)
- * - undefined: Auto-start only if HA addon (SUPERVISOR_TOKEN present)
+ * - undefined: Auto-start always (both HA addon and local/desktop)
  */
 async function autoStartEngine() {
   try {
@@ -207,26 +207,16 @@ async function autoStartEngine() {
     // Check if auto-start is enabled
     // Support both ENGINE_AUTO_START and ENGINE_AUTOSTART for compatibility
     const autoStartEnv = process.env.ENGINE_AUTO_START || process.env.ENGINE_AUTOSTART;
-    const isHAAddon = !!process.env.SUPERVISOR_TOKEN;
     
-    console.log(`[Engine] Auto-start check: ENGINE_AUTO_START=${process.env.ENGINE_AUTO_START}, ENGINE_AUTOSTART=${process.env.ENGINE_AUTOSTART}, SUPERVISOR_TOKEN=${isHAAddon ? 'present' : 'absent'}`);
-    
-    // If explicitly set, use that value. Otherwise, auto-start only in HA addon mode.
-    let shouldAutoStart = false;
-    if (autoStartEnv === 'true' || autoStartEnv === '1') {
-      shouldAutoStart = true;
-      console.log('[Engine] Auto-start enabled via env var');
-    } else if (autoStartEnv === 'false' || autoStartEnv === '0') {
+    // Default: always auto-start unless explicitly disabled
+    let shouldAutoStart = true;
+    if (autoStartEnv === 'false' || autoStartEnv === '0') {
       shouldAutoStart = false;
       console.log('[Engine] Auto-start disabled via env var');
-    } else {
-      // Default: auto-start in HA addon, don't auto-start on desktop
-      shouldAutoStart = isHAAddon;
-      console.log(`[Engine] Auto-start default: ${shouldAutoStart} (isHAAddon=${isHAAddon})`);
     }
     
     if (!shouldAutoStart) {
-      console.log('[Engine] Auto-start disabled (set ENGINE_AUTO_START=true to enable)');
+      console.log('[Engine] Auto-start disabled (remove ENGINE_AUTO_START=false to enable)');
       return;
     }
     

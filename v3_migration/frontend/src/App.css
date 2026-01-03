@@ -684,8 +684,8 @@ div[style*="position: fixed"] input::placeholder {
 
 /* Base socket styling - applies to all sockets */
 .rete-socket {
-  width: 18px !important;
-  height: 18px !important;
+  width: 12px !important;
+  height: 12px !important;
   border-radius: 50% !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   position: relative !important;
@@ -693,20 +693,20 @@ div[style*="position: fixed"] input::placeholder {
   /* Default gray background if no type matches */
   background: linear-gradient(145deg, #64748b, #475569) !important;
   border: 2px solid #94a3b8 !important;
-  box-shadow: 0 0 10px rgba(100, 116, 139, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 0 8px rgba(100, 116, 139, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Socket outer glow ring */
 .rete-socket::before {
   content: '' !important;
   position: absolute !important;
-  top: -4px !important;
-  left: -4px !important;
-  right: -4px !important;
-  bottom: -4px !important;
+  top: -3px !important;
+  left: -3px !important;
+  right: -3px !important;
+  bottom: -3px !important;
   border-radius: 50% !important;
   background: transparent !important;
-  border: 2px solid transparent !important;
+  border: 1px solid transparent !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 

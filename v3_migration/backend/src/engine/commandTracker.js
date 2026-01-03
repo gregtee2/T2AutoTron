@@ -28,6 +28,11 @@ const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB max
 const recentCommands = new Map();
 const CORRELATION_WINDOW = 10000; // 10 seconds - if we sent a command, expect state change within this
 
+// Console deduplication - prevent spam for same device in quick succession
+// entityId → lastConsoleLogTime
+const lastConsoleLogs = new Map();
+const CONSOLE_DEDUP_WINDOW = 2000; // 2 seconds - don't log same device to console within this window
+
 // In-memory history for API access (last 1000 events)
 const commandHistory = [];
 const MAX_HISTORY = 1000;
@@ -124,9 +129,14 @@ function logOutgoingCommand({ entityId, action, payload, nodeId, nodeType, reaso
   
   writeLog(entry);
   
-  // Console log for visibility
-  const shortEntity = rawEntityId.split('.').pop();
-  console.log(`[CMD→] ${shortEntity}: ${action} (${nodeType || 'unknown'}) - ${reason || 'triggered'}`);
+  // Console log for visibility - with deduplication to reduce spam
+  const now = Date.now();
+  const lastLog = lastConsoleLogs.get(rawEntityId);
+  if (!lastLog || (now - lastLog) > CONSOLE_DEDUP_WINDOW) {
+    const shortEntity = rawEntityId.split('.').pop();
+    console.log(`[CMD→] ${shortEntity}: ${action} (${nodeType || 'unknown'}) - ${reason || 'triggered'}`);
+    lastConsoleLogs.set(rawEntityId, now);
+  }
 }
 
 /**
@@ -151,7 +161,7 @@ function logIncomingStateChange({ entityId, oldState, newState, context, attribu
   const wasUs = ourCommand && timeSinceCommand < CORRELATION_WINDOW;
   
   // Determine source based on context and correlation
-  let source = 'Unknown';
+  let source = 'External (no context)';  // Default when HA doesn't provide context
   let sourceDetails = null;
   
   if (wasUs) {

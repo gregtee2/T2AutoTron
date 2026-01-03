@@ -91,25 +91,23 @@ class BackendEngine {
 
   /**
    * Check if device commands should be skipped (frontend is controlling)
-   * Includes a 60-second timeout failsafe - if no heartbeat, assume frontend is gone
-   * @returns {boolean}
+   * 
+   * UPDATE 2026-01-02: DISABLED frontend skip logic entirely.
+   * Problem: When Chrome wakes from sleep, it sends heartbeats but the Rete.js
+   * graph engine isn't actually running. The backend waits for a frontend that
+   * isn't doing anything, so lights don't get controlled.
+   * 
+   * Solution: Backend always controls devices. The frontend graph engine is
+   * just for visualization/editing, not for 24/7 automation.
+   * 
+   * @returns {boolean} Always returns false (never skip)
    */
   shouldSkipDeviceCommands() {
-    if (!this.frontendActive) return false;
-    
-    // Failsafe: if frontend hasn't been seen in 60 seconds, assume it's gone
-    const FRONTEND_TIMEOUT = 60 * 1000; // 60 seconds
-    if (this.frontendLastSeen && Date.now() - this.frontendLastSeen > FRONTEND_TIMEOUT) {
-      console.log(`[BackendEngine] Frontend timeout - no heartbeat for ${Math.floor((Date.now() - this.frontendLastSeen) / 1000)}s, resuming device control`);
-      engineLogger.logEngineEvent('FRONTEND-TIMEOUT', { 
-        lastSeen: this.frontendLastSeen,
-        timeout: FRONTEND_TIMEOUT 
-      });
-      this.frontendActive = false;
-      return false;
-    }
-    
-    return true;
+    // DISABLED 2026-01-02: Always let backend control devices
+    // Problem: Chrome wakes from sleep, sends heartbeats, but Rete.js engine
+    // isn't running. Backend waits for frontend that isn't doing anything.
+    // Solution: Backend always controls devices - it's the source of truth.
+    return false;
   }
 
   /**

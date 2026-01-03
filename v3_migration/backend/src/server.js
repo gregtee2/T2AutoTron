@@ -1,7 +1,24 @@
 const path = require('path');
 
+// Timezone for local timestamps - reads from user's Control Panel settings
+// LOCATION_TIMEZONE is set via Settings > Location in the UI
+const TIMEZONE = process.env.LOCATION_TIMEZONE || process.env.ENGINE_TIMEZONE || 'America/Los_Angeles';
+
+// Helper function for local time formatting
+const formatLocalTime = (date = new Date()) => {
+  return date.toLocaleString('en-US', {
+    timeZone: TIMEZONE,
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
 // Identify this server instance clearly (helps when multiple servers are accidentally running)
 console.log(`[Startup] PID=${process.pid} CWD=${process.cwd()}`);
+console.log(`[Startup] Local time: ${formatLocalTime()} (${TIMEZONE})`);
 
 // ============================================
 // CRITICAL: Start keep-alive IMMEDIATELY to prevent premature exit
@@ -85,6 +102,7 @@ const deviceManagers = require('./devices/managers/deviceManagers');
 const mongoose = require('mongoose');
 const fs = require('fs').promises;
 const requireLocalOrPin = require('./api/middleware/requireLocalOrPin');
+const fetch = globalThis.fetch || require('node-fetch');
 
 debug('Weather imports:', {
   fetchWeatherData: typeof fetchWeatherData,
@@ -279,16 +297,21 @@ io.on('connection', (socket) => {
   socket.on('request-tts', async (data = {}) => {
     try {
       const { entityId, message, options } = data;
+      logger.log(`[TTS] Received request: entityId=${entityId}, message="${message?.substring(0, 50)}...", service=${options?.tts_service}, tts_entity=${options?.tts_entity_id}`, 'info');
+      
       if (!entityId || !message) {
+        logger.log(`[TTS] Missing entityId or message`, 'error');
         socket.emit('tts-result', { success: false, error: 'Missing entityId or message' });
         return;
       }
       const haManager = deviceManagers.getManager('ha_');
       if (!haManager || !haManager.speakTTS) {
+        logger.log(`[TTS] HA manager not available`, 'error');
         socket.emit('tts-result', { success: false, error: 'HA manager not available' });
         return;
       }
       const result = await haManager.speakTTS(entityId, message, options || {});
+      logger.log(`[TTS] Result: ${JSON.stringify(result)}`, 'info');
       socket.emit('tts-result', result);
     } catch (err) {
       logger.log(`TTS request failed: ${err.message}`, 'error');
@@ -747,6 +770,112 @@ app.get('/api/sun/times', async (req, res) => {
   } catch (error) {
     logger.log(`Failed to fetch sun times: ${error.message}`, 'error', false, 'sun:fetch');
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// RADIO STREAM SEARCH API - Proxy to radio-browser.info (avoids CORS)
+// ============================================================================
+const RADIO_API_SERVERS = [
+  'https://de1.api.radio-browser.info',
+  'https://nl1.api.radio-browser.info', 
+  'https://at1.api.radio-browser.info',
+  'https://de2.api.radio-browser.info'
+];
+
+app.get('/api/streams/search', async (req, res) => {
+  try {
+    const { q, tag, limit = 25 } = req.query;
+    let path;
+    
+    if (tag) {
+      path = `/json/stations/bytag/${encodeURIComponent(tag)}?limit=${limit}&hidebroken=true&order=votes&reverse=true`;
+    } else if (q) {
+      // Use 'search' endpoint for fuzzy name matching (finds all SomaFM channels, etc.)
+      path = `/json/stations/search?name=${encodeURIComponent(q)}&limit=${limit}&hidebroken=true&order=votes&reverse=true`;
+    } else {
+      path = `/json/stations/topvote?limit=${limit}&hidebroken=true`;
+    }
+    
+    // Try each server until one works
+    let lastError;
+    for (const server of RADIO_API_SERVERS) {
+      try {
+        const response = await fetch(server + path, {
+          headers: { 'User-Agent': 'T2AutoTron/2.1' },
+          signal: AbortSignal.timeout(5000) // 5 second timeout per server
+        });
+        
+        if (!response.ok) {
+          lastError = new Error(`${server} returned ${response.status}`);
+          continue; // Try next server
+        }
+        
+        const results = await response.json();
+        
+        // Filter and transform results
+        const stations = results
+          .filter(s => s.url_resolved && s.codec)
+          .map(s => ({
+            name: s.name,
+            url: s.url_resolved,
+            country: s.country,
+            tags: s.tags,
+            codec: s.codec,
+            bitrate: s.bitrate,
+            votes: s.votes,
+            favicon: s.favicon
+          }));
+        
+        return res.json({ success: true, stations });
+      } catch (err) {
+        lastError = err;
+        // Continue to next server
+      }
+    }
+    
+    // All servers failed
+    throw lastError || new Error('All radio API servers unavailable');
+  } catch (error) {
+    logger.log(`Stream search error: ${error.message}`, 'error');
+    res.status(500).json({ success: false, error: error.message, stations: [] });
+  }
+});
+
+// SomaFM channels - direct from their official API
+app.get('/api/streams/somafm', async (req, res) => {
+  try {
+    const response = await fetch('https://somafm.com/channels.json', {
+      headers: { 'User-Agent': 'T2AutoTron/2.1' },
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`SomaFM API returned ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Transform to our station format
+    const stations = data.channels.map(ch => {
+      // Always use the known good direct stream URL pattern
+      // SomaFM's API returns playlist URLs (.pls) but we want direct MP3 streams
+      const streamUrl = `https://ice1.somafm.com/${ch.id}-128-mp3`;
+      
+      return {
+        name: `SomaFM ${ch.title}`,
+        url: streamUrl,
+        description: ch.description,
+        genre: ch.genre,
+        listeners: ch.listeners,
+        image: ch.largeimage || ch.image
+      };
+    });
+    
+    res.json({ success: true, stations });
+  } catch (error) {
+    logger.log(`SomaFM fetch error: ${error.message}`, 'error');
+    res.status(500).json({ success: false, error: error.message, stations: [] });
   }
 });
 

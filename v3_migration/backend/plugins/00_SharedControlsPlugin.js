@@ -102,6 +102,7 @@
     const DEFAULT_CATEGORY_THEMES = {
         'Home Assistant': { accent: '#4fc3f7', icon: '🏠' },      // Light blue
         'Direct Devices': { accent: '#64b5f6', icon: '💡' },      // Blue - Hue, Kasa, etc.
+        'Media': { accent: '#ab47bc', icon: '🎵' },               // Purple - Audio/Streaming
         'Weather': { accent: '#ffb74d', icon: '🌤️' },             // Amber/orange
         'Logic': { accent: '#81c784', icon: '🔀' },               // Green
         'Timer/Event': { accent: '#ce93d8', icon: '⏱️' },         // Purple

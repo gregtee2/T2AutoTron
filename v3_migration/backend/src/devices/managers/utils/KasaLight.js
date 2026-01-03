@@ -1,26 +1,6 @@
 // src/utils/KasaLight.js - Kasa Light Class
 
-const chalk = require('chalk');
-const logWithTimestamp = (message, level = 'info') => {
-  const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
-  const timestamp = `[${new Date().toISOString()}]`;
-  let formattedMessage = `${timestamp} `;
-  if (['error'].includes(level) || (LOG_LEVEL === 'info' && ['info', 'warn'].includes(level)) || LOG_LEVEL === level) {
-    switch (level) {
-      case 'error':
-        formattedMessage += `${chalk.red('❌ ' + message)}`;
-        break;
-      case 'warn':
-        formattedMessage += `${chalk.yellow('⚠️ ' + message)}`;
-        break;
-      case 'info':
-      default:
-        formattedMessage += `${chalk.green('✅ ' + message)}`;
-        break;
-    }
-    console.log(formattedMessage);
-  }
-};
+const logWithTimestamp = require('../../../logging/logWithTimestamp');
 
 class KasaLight {
   constructor(device) {
