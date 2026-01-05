@@ -100,4 +100,33 @@ router.get('/all', async (req, res) => {
   }
 });
 
+// GET /api/debug/unhealthy - Get list of unhealthy devices being skipped
+router.get('/unhealthy', async (req, res) => {
+  try {
+    const haManager = require('../../devices/managers/homeAssistantManager');
+    const unhealthy = haManager.getUnhealthyDevices();
+    res.json({
+      success: true,
+      count: unhealthy.length,
+      devices: unhealthy,
+      retryInterval: haManager.UNHEALTHY_RETRY_INTERVAL,
+      failureThreshold: haManager.FAILURE_THRESHOLD
+    });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/debug/reset-health - Reset health status for all devices
+router.post('/reset-health', async (req, res) => {
+  try {
+    const haManager = require('../../devices/managers/homeAssistantManager');
+    const count = haManager.deviceHealth.size;
+    haManager.deviceHealth.clear();
+    res.json({ success: true, message: `Cleared health status for ${count} devices` });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

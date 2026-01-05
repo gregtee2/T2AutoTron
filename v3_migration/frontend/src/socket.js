@@ -20,6 +20,14 @@ export const socket = io(URL, {
     transports: ['websocket', 'polling'],
 });
 
+// CRITICAL: Send editor-active immediately on any connect event
+// This runs at the socket module level, before React mounts, ensuring
+// the backend ALWAYS knows when frontend is active
+socket.on('connect', () => {
+    console.log('[Socket] Connected - sending editor-active');
+    socket.emit('editor-active');
+});
+
 export const connectSocket = () => {
     if (!socket.connected) {
         socket.connect();

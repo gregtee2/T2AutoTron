@@ -236,6 +236,11 @@
                 this.checkAdHocMessage(adHocMsg);
             }
             
+            // DEBUG: Log outputs when trigger is active
+            if (this.properties.triggerActive) {
+                console.log(`[EventAnnouncer] 📤 OUTPUT: trigger=${this.properties.triggerActive}, message="${(this.properties.currentMessage || '').substring(0, 50)}..."`);
+            }
+            
             return {
                 trigger: this.properties.triggerActive,
                 messageOut: this.properties.currentMessage,
@@ -360,18 +365,27 @@
                 }
                 
                 // Also check if ad-hoc triggered (not from checkAndAnnounce but from data() flow)
-                if (data.properties.isAdHocActive && data.properties.triggerActive) {
+                // IMPORTANT: Only handle ONCE per ad-hoc message to prevent duplicate engine triggers
+                if (data.properties.isAdHocActive && data.properties.triggerActive && !data._adHocHandled) {
+                    data._adHocHandled = true;  // Prevent duplicate handling in next interval tick
                     setLastAnnouncement(data.properties.currentMessage);
                     setIsTriggered(true);
                     setIsAdHoc(true);
                     
-                    if (data.changeCallback) data.changeCallback();
+                    // DON'T call changeCallback here - the data() flow already triggered the engine!
+                    // We just update the UI state
                     
                     setTimeout(() => {
                         data.properties.triggerActive = false;
                         setIsTriggered(false);
-                        if (data.changeCallback) data.changeCallback();
+                        // DON'T call changeCallback here either - avoid triggering second engine pass
+                        // The ad-hoc message has already been processed
                     }, 100);
+                }
+                
+                // Reset ad-hoc handled flag when cooldown ends
+                if (!data.properties.isAdHocActive) {
+                    data._adHocHandled = false;
                 }
             };
 

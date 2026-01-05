@@ -49,18 +49,25 @@
         }
 
         data(inputs) {
-            // If station number input is connected, use it
+            // Check if input socket is connected (has an entry in inputs object, even if value is undefined)
+            const inputConnected = 'stationNum' in inputs;
             const stationNumInput = inputs.stationNum?.[0];
-            if (stationNumInput !== undefined && stationNumInput !== null) {
-                const idx = Math.max(0, Math.min(this.properties.stations.length - 1, Math.floor(stationNumInput)));
-                if (idx !== this.properties.selectedStation) {
+            
+            if (inputConnected) {
+                // Input is connected - only output when we receive an actual value
+                if (stationNumInput !== undefined && stationNumInput !== null) {
+                    // Valid value received - update and output the station index
+                    const idx = Math.max(0, Math.min(this.properties.stations.length - 1, Math.floor(stationNumInput)));
                     this.properties.selectedStation = idx;
+                    return { station: idx };
+                } else {
+                    // Connected but no value yet (pulse hasn't fired) - output null
+                    return { station: null };
                 }
+            } else {
+                // No input connected - act as constant, always output selected station
+                return { station: this.properties.selectedStation };
             }
-
-            return {
-                station: this.properties.selectedStation
-            };
         }
 
         serialize() {

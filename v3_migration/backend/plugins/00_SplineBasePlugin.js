@@ -258,7 +258,11 @@
             lockEndpoints = true,
             readOnly = false,
             playheadPosition = null,  // 0-1 position, null = no playhead
-            playheadColor = '#ff6600'
+            playheadColor = '#ff6600',
+            // Time label props
+            timeLabels = null,  // { startHours, startMinutes, startPeriod, endHours, endMinutes, endPeriod } or null for no time labels
+            // Lock endpoints Y-values together (for wrap-around timelines like 24-hour clock)
+            lockEndpointValues = false
         } = props;
 
         const canvasRef = useRef(null);
@@ -440,9 +444,95 @@
                 ctx.fillText(minY.toFixed(1), 2, height - PADDING);
             }
 
+            // Time labels along X-axis
+            if (timeLabels) {
+                const drawAreaLeft = PADDING;
+                const drawAreaRight = width - PADDING;
+                const drawAreaBottom = height - PADDING;
+                const drawWidth = drawAreaRight - drawAreaLeft;
+                
+                // Helper: convert 12-hour to minutes since midnight
+                const to24Hr = (h, m, p) => {
+                    let hr = parseInt(h, 10);
+                    if (p === 'PM' && hr < 12) hr += 12;
+                    if (p === 'AM' && hr === 12) hr = 0;
+                    return hr * 60 + parseInt(m, 10);
+                };
+                
+                // Helper: convert minutes back to 12-hour format
+                const to12Hr = (totalMins) => {
+                    let hr = Math.floor(totalMins / 60) % 24;
+                    const min = totalMins % 60;
+                    const pd = hr >= 12 ? 'PM' : 'AM';
+                    if (hr === 0) hr = 12;
+                    else if (hr > 12) hr -= 12;
+                    return { hr, min, pd };
+                };
+                
+                const { startHours, startMinutes, startPeriod, endHours, endMinutes, endPeriod } = timeLabels;
+                
+                let startTotal = to24Hr(startHours, startMinutes, startPeriod);
+                let endTotal = to24Hr(endHours, endMinutes, endPeriod);
+                
+                // Handle wrap-around midnight
+                if (endTotal <= startTotal) {
+                    endTotal += 24 * 60;
+                }
+                
+                const totalSpan = endTotal - startTotal;
+                
+                // Draw scale background for time labels
+                ctx.fillStyle = 'rgba(26, 26, 46, 0.8)';
+                ctx.fillRect(drawAreaLeft - 5, drawAreaBottom + 2, drawWidth + 10, 14);
+                
+                // Draw start and end labels
+                ctx.fillStyle = '#c9d1d9';
+                ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                const startLabel = `${startHours}:${String(startMinutes).padStart(2, '0')}${startPeriod}`;
+                ctx.fillText(startLabel, drawAreaLeft, height - 5);
+                
+                ctx.textAlign = 'right';
+                const endLabel = `${endHours}:${String(endMinutes).padStart(2, '0')}${endPeriod}`;
+                ctx.fillText(endLabel, drawAreaRight, height - 5);
+                
+                // Draw intermediate time markers
+                const interval = totalSpan > 6 * 60 ? 60 : 30;  // 60 min for spans > 6 hours
+                
+                let firstMarker = Math.ceil(startTotal / interval) * interval;
+                if (firstMarker === startTotal) firstMarker += interval;
+                
+                ctx.font = '500 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.fillStyle = 'rgba(201, 209, 217, 0.7)';
+                ctx.textAlign = 'center';
+                
+                for (let markerMins = firstMarker; markerMins < endTotal; markerMins += interval) {
+                    const t = (markerMins - startTotal) / totalSpan;
+                    if (t <= 0.08 || t >= 0.92) continue;  // Skip if too close to edges
+                    
+                    const x = drawAreaLeft + t * drawWidth;
+                    const { hr, min, pd } = to12Hr(markerMins % (24 * 60));
+                    
+                    // Draw tick mark
+                    ctx.strokeStyle = 'rgba(160, 174, 192, 0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x, drawAreaBottom);
+                    ctx.lineTo(x, drawAreaBottom + 5);
+                    ctx.stroke();
+                    
+                    // Draw time label
+                    const label = min === 0 ? `${hr}${pd}` : `${hr}:${String(min).padStart(2, '0')}`;
+                    ctx.fillText(label, x, height - 5);
+                }
+                
+                ctx.textAlign = 'left';  // Reset
+            }
+
         }, [points, width, height, interpolation, gridLines, showGrid, 
             curveColor, pointColor, backgroundColor, gradientBackground,
-            minY, maxY, hovered, showLabels, playheadPosition, playheadColor]);
+            minY, maxY, hovered, showLabels, playheadPosition, playheadColor, timeLabels]);
 
         // Pointer down - start drag or add point
         const handlePointerDown = (e) => {
@@ -492,6 +582,24 @@
                     
                     return { ...p, x: newX, y: newY };
                 });
+                
+                // If lockEndpointValues is enabled, sync endpoint Y values
+                if (lockEndpointValues && newPoints.length >= 2) {
+                    const dragIdx = draggingRef.current;
+                    if (dragIdx === 0) {
+                        // Dragging first point - sync last point's Y
+                        newPoints[newPoints.length - 1] = { 
+                            ...newPoints[newPoints.length - 1], 
+                            y: newPoints[0].y 
+                        };
+                    } else if (dragIdx === newPoints.length - 1) {
+                        // Dragging last point - sync first point's Y
+                        newPoints[0] = { 
+                            ...newPoints[0], 
+                            y: newPoints[newPoints.length - 1].y 
+                        };
+                    }
+                }
                 
                 onChange && onChange(newPoints);
             } else {

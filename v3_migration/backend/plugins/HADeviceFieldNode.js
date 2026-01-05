@@ -26,7 +26,7 @@
 
     // Get shared controls and utilities
     const { DropdownControl, InputControl, HelpIcon } = window.T2Controls;
-    const { filterTypeMap, filterDevices } = window.T2HAUtils;
+    const { filterTypeMap, filterDevices, isSameDevice } = window.T2HAUtils;
 
     // Field options by domain
     const FIELD_OPTIONS = {
@@ -406,16 +406,17 @@
         handleDeviceStateUpdate(data) {
             if (!this.properties.deviceId) return;
             
-            const updateId = data.id || `ha_${data.entity_id}`;
-            if (updateId === this.properties.deviceId) {
-                this.cachedDeviceState = { 
-                    id: this.properties.deviceId, 
-                    state: data.state,
-                    ...data.attributes,
-                    ...data
-                };
-                this.extractAndUpdateValue();
-            }
+            // Socket sends entity_id without prefix, our deviceId may have ha_ prefix
+            const socketId = data.id || data.entity_id;
+            if (!isSameDevice(socketId, this.properties.deviceId)) return;
+            
+            this.cachedDeviceState = { 
+                id: this.properties.deviceId, 
+                state: data.state,
+                ...data.attributes,
+                ...data
+            };
+            this.extractAndUpdateValue();
         }
 
         extractAndUpdateValue() {

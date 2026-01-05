@@ -182,33 +182,29 @@ async function auditAndLog() {
     return results;
   }
 
-  // Log summary
+  // Log summary - but be quiet unless there are RECENT mismatches
   const summary = `${results.matches}/${results.total} OK, ${results.mismatches.length} mismatches`;
   
-  if (results.mismatches.length === 0) {
-    // All good - brief log
+  // Only care about mismatches where we sent a command recently (< 30 min ago)
+  // Stale mismatches (600+ min) mean user manually changed something - not our problem
+  const STALE_THRESHOLD = 30 * 60 * 1000; // 30 minutes
+  const freshMismatches = results.mismatches.filter(m => m.staleness < STALE_THRESHOLD);
+  
+  if (freshMismatches.length === 0) {
+    // All good (or only stale mismatches) - log to file only, not console
     engineLogger.log('AUDIT-OK', summary);
-    console.log(`[AUDIT] ✅ ${summary}`);
+    // Removed console.log - too noisy. Check engineLogger for details.
   } else {
-    // Mismatches found - detailed log
-    engineLogger.log('AUDIT-MISMATCH', summary, { mismatches: results.mismatches });
+    // Fresh mismatches found - log to console (but compact format)
+    engineLogger.log('AUDIT-MISMATCH', summary, { mismatches: freshMismatches });
     
-    console.log('');
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log(`[AUDIT] ⚠️ DEVICE MISMATCHES: ${results.mismatches.length}`);
-    console.log('═══════════════════════════════════════════════════════════════');
-    
-    for (const m of results.mismatches) {
+    console.log(`[AUDIT] ⚠️ ${freshMismatches.length} device mismatches (recent):`);
+    for (const m of freshMismatches) {
       const shortName = m.entityId.replace('light.', '').replace('switch.', '');
-      console.log(`  ❌ ${shortName}:`);
-      for (const issue of m.issues) {
-        console.log(`     • ${issue}`);
-      }
       const staleMin = Math.round(m.staleness / 60000);
-      console.log(`     (Last engine command: ${staleMin} min ago)`);
+      const issues = m.issues.join(', ');
+      console.log(`  • ${shortName}: ${issues} (${staleMin}min ago)`);
     }
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('');
   }
 
   return results;

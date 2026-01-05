@@ -113,14 +113,54 @@
     function getDeviceApiInfo(id) {
         if (!id) return null;
         if (id.startsWith('ha_')) {
-            return { endpoint: '/api/lights/ha', cleanId: id.replace('ha_', '') };
+            return { endpoint: '/api/lights/ha', cleanId: id.replace('ha_', ''), type: 'ha' };
         } else if (id.startsWith('kasa_')) {
-            return { endpoint: '/api/lights/kasa', cleanId: id.replace('kasa_', '') };
+            return { endpoint: '/api/lights/kasa', cleanId: id.replace('kasa_', ''), type: 'kasa' };
         } else if (id.startsWith('hue_')) {
-            return { endpoint: '/api/lights/hue', cleanId: id.replace('hue_', '') };
+            return { endpoint: '/api/lights/hue', cleanId: id.replace('hue_', ''), type: 'hue' };
         }
         // Default to HA endpoint for unrecognized prefixes
-        return { endpoint: '/api/lights/ha', cleanId: id };
+        return { endpoint: '/api/lights/ha', cleanId: id, type: 'ha' };
+    }
+
+    /**
+     * Normalize device ID to internal format (with ha_ prefix)
+     * Handles: "light.xxx" -> "ha_light.xxx", "ha_light.xxx" -> "ha_light.xxx"
+     * @param {string} id - Device ID in any format
+     * @returns {string} - Normalized ID with ha_ prefix
+     */
+    function normalizeDeviceId(id) {
+        if (!id || typeof id !== 'string') return id;
+        if (id.startsWith('ha_') || id.startsWith('kasa_') || id.startsWith('hue_')) {
+            return id; // Already has prefix
+        }
+        // Assume HA entity if no prefix
+        return `ha_${id}`;
+    }
+
+    /**
+     * Strip device ID prefix for API calls
+     * Handles: "ha_light.xxx" -> "light.xxx", "light.xxx" -> "light.xxx"
+     * @param {string} id - Device ID with or without prefix
+     * @returns {string} - Raw entity ID for API calls
+     */
+    function stripDevicePrefix(id) {
+        if (!id || typeof id !== 'string') return id;
+        if (id.startsWith('ha_')) return id.slice(3);
+        if (id.startsWith('kasa_')) return id.slice(5);
+        if (id.startsWith('hue_')) return id.slice(4);
+        return id;
+    }
+
+    /**
+     * Check if two device IDs refer to the same device (ignoring prefix differences)
+     * @param {string} id1 - First device ID
+     * @param {string} id2 - Second device ID
+     * @returns {boolean} - True if they're the same device
+     */
+    function isSameDevice(id1, id2) {
+        if (!id1 || !id2) return false;
+        return stripDevicePrefix(id1) === stripDevicePrefix(id2);
     }
 
     /**
@@ -461,6 +501,11 @@
         normalizeHADevice,
         getFieldsForEntityType,
         createLogger,
+        
+        // ID normalization helpers (IMPORTANT: Use these to avoid ID format mismatches!)
+        normalizeDeviceId,   // Ensures ha_ prefix: "light.xxx" -> "ha_light.xxx"
+        stripDevicePrefix,   // Removes prefix for API: "ha_light.xxx" -> "light.xxx"
+        isSameDevice,        // Compares ignoring prefix: isSameDevice("ha_light.x", "light.x") = true
         
         // Socket.io helpers
         initializeSocketListeners,

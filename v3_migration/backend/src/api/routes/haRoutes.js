@@ -88,8 +88,8 @@ module.exports = function (io) {
     const { id } = req.params;
     const body = req.body;
     
-    // Debug: Log incoming request details
-    logWithTimestamp(`PUT /${id}/state - Body: ${JSON.stringify(body)}, Content-Type: ${req.headers['content-type']}`, 'info');
+    // Debug: Log incoming request details (only in verbose mode)
+    if (VERBOSE) logWithTimestamp(`PUT /${id}/state - Body: ${JSON.stringify(body)}, Content-Type: ${req.headers['content-type']}`, 'info');
     
     // Check if body is empty (common issue with body parsing)
     if (!body || Object.keys(body).length === 0) {
@@ -143,7 +143,7 @@ module.exports = function (io) {
         update.percentage = undefined;
         update.position = undefined;
       }
-      logWithTimestamp(`Cleaned update for HA device ${id}: ${JSON.stringify(update)}`, 'info');
+      if (VERBOSE) logWithTimestamp(`Cleaned update for HA device ${id}: ${JSON.stringify(update)}`, 'info');
       
       // Log to command tracker so incoming state changes can be correlated to this app
       commandTracker.logOutgoingCommand({
@@ -190,9 +190,9 @@ module.exports = function (io) {
             } : {})
           };
           io.emit('device-state-update', state);
-          logWithTimestamp(`Emitted device-state-update for ${id}: ${JSON.stringify(state)}`, 'info');
+          if (VERBOSE) logWithTimestamp(`Emitted device-state-update for ${id}: ${JSON.stringify(state)}`, 'info');
         }
-        logWithTimestamp(`Successfully updated HA device ${id} to ${stateResult.state.on || stateResult.state.state}`, 'info');
+        if (VERBOSE) logWithTimestamp(`Successfully updated HA device ${id} to ${stateResult.state.on || stateResult.state.state}`, 'info');
       } else {
         logWithTimestamp(`State verification failed for HA device ${id}: ${stateResult.error}`, 'error');
       }

@@ -317,17 +317,22 @@ class ComparisonNode {
   }
   
   process(inputs) {
-    const inputVal = inputs.in;
+    // Unwrap array if backend engine wrapped it
+    let inputVal = Array.isArray(inputs.in) ? inputs.in[0] : inputs.in;
     const compareVal = this.properties.compareValue;
     const operator = this.properties.operator;
     
-    if (inputVal === undefined) return { result: false };
+    // Treat undefined, null, or NaN as "no data" - return false
+    if (inputVal === undefined || inputVal === null) return { result: false };
     
     let result = false;
     const numInput = parseFloat(inputVal);
     const numCompare = parseFloat(compareVal);
     
-    if (!isNaN(numInput) && !isNaN(numCompare)) {
+    // If input is NaN after parse, treat as no data
+    if (isNaN(numInput)) return { result: false };
+    
+    if (!isNaN(numCompare)) {
       switch (operator) {
         case "=":  result = numInput === numCompare; break;
         case "!=": result = numInput !== numCompare; break;
@@ -795,6 +800,117 @@ class PushbuttonNode {
 }
 
 // ============================================================================
+// STATION SELECTOR NODE
+// ============================================================================
+class StationSelectorNode {
+  static type = 'StationSelectorNode';
+  
+  constructor(id, properties = {}) {
+    this.id = id;
+    this.type = StationSelectorNode.type;
+    this.properties = {
+      stations: [],
+      selectedStation: 0,
+      ...properties
+    };
+    this.inputs = ['stationNum'];
+    this.outputs = ['station'];
+  }
+  
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+  
+  process(inputs) {
+    // Check if input socket is connected
+    const stationNumInput = inputs.stationNum?.[0];
+    
+    if (stationNumInput !== undefined && stationNumInput !== null) {
+      // Input connected with value - use that station
+      const maxIdx = Math.max(0, this.properties.stations.length - 1);
+      const idx = Math.max(0, Math.min(maxIdx, Math.floor(stationNumInput)));
+      this.properties.selectedStation = idx;
+      return { station: idx };
+    } else if ('stationNum' in inputs) {
+      // Input connected but no value yet (pulse hasn't fired)
+      return { station: null };
+    } else {
+      // No input connected - output selected station
+      return { station: this.properties.selectedStation };
+    }
+  }
+}
+
+// ============================================================================
+// STATION SCHEDULE NODE
+// ============================================================================
+class StationScheduleNode {
+  static type = 'StationScheduleNode';
+  
+  constructor(id, properties = {}) {
+    this.id = id;
+    this.type = StationScheduleNode.type;
+    this.properties = {
+      stations: [],
+      schedule: [
+        { time: "06:00", stationIndex: 0 },
+        { time: "12:00", stationIndex: 1 },
+        { time: "18:00", stationIndex: 2 }
+      ],
+      lastOutputStation: null,
+      ...properties
+    };
+    this.inputs = [];
+    this.outputs = ['station'];
+  }
+  
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+  
+  /**
+   * Returns the station index that should be playing at the current time.
+   */
+  getCurrentStationIndex() {
+    const schedule = this.properties.schedule;
+    if (!schedule || schedule.length === 0) return 0;
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Sort schedule by time
+    const sorted = [...schedule].sort((a, b) => {
+      const [aH, aM] = a.time.split(':').map(Number);
+      const [bH, bM] = b.time.split(':').map(Number);
+      return (aH * 60 + aM) - (bH * 60 + bM);
+    });
+
+    // Find the most recent entry that has passed
+    let activeEntry = sorted[sorted.length - 1]; // Default to last (wraps from previous day)
+    
+    for (const entry of sorted) {
+      const [h, m] = entry.time.split(':').map(Number);
+      const entryMinutes = h * 60 + m;
+      if (entryMinutes <= currentMinutes) {
+        activeEntry = entry;
+      }
+    }
+
+    return activeEntry.stationIndex;
+  }
+  
+  process(inputs) {
+    const stationIndex = this.getCurrentStationIndex();
+    this.properties.lastOutputStation = stationIndex;
+    return { station: stationIndex };
+  }
+}
+
+// ============================================================================
 // REGISTER ALL NODES
 // ============================================================================
 function register(registry) {
@@ -813,6 +929,8 @@ function register(registry) {
   registry.register('PushbuttonNode', PushbuttonNode);
   // Also register as "Toggle" alias
   registry.register('Toggle', PushbuttonNode);
+  registry.register('StationSelectorNode', StationSelectorNode);
+  registry.register('StationScheduleNode', StationScheduleNode);
 }
 
 module.exports = {
@@ -828,5 +946,7 @@ module.exports = {
   LogicConditionNode,
   LogicOperationsNode,
   PushbuttonNode,
+  StationSelectorNode,
+  StationScheduleNode,
   ColorUtils
 };

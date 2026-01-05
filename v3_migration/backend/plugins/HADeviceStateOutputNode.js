@@ -34,7 +34,8 @@
         filterDevices,
         normalizeHADevice,
         initializeSocketListeners,
-        removeSocketListeners
+        removeSocketListeners,
+        isSameDevice
     } = window.T2HAUtils;
 
     // -------------------------------------------------------------------------
@@ -422,10 +423,13 @@
         }
 
         handleDeviceStateUpdate(data) {
-            const deviceId = data.id ? data.id.replace("ha_", "") : data.entity_id;
-            if (deviceId !== this.properties.selectedDeviceId) return;
+            // Socket sends entity_id without prefix, our selectedDeviceId may have ha_ prefix
+            const socketId = data.id || data.entity_id;
+            if (!isSameDevice(socketId, this.properties.selectedDeviceId)) return;
             
-            const entityType = deviceId.split(".")[0];
+            // Use the stored ID for consistency
+            const deviceId = this.properties.selectedDeviceId;
+            const entityType = deviceId.replace(/^ha_/, '').split(".")[0];
             let stateValue, attributes;
             
             switch (entityType) {

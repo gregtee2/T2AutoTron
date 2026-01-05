@@ -30,6 +30,15 @@ echo  Killing any existing Node.js processes...
 taskkill /IM node.exe /F >nul 2>&1
 timeout /t 2 /nobreak >nul
 
+REM Start Chatterbox TTS server (if installed)
+if exist "C:\Chatterbox\server.py" (
+    echo  Starting Chatterbox TTS server...
+    start "Chatterbox TTS" /D "C:\Chatterbox" cmd /k "C:\Chatterbox\venv\Scripts\python.exe" server.py
+    timeout /t 2 /nobreak >nul
+) else (
+    echo  Chatterbox not installed - skipping local TTS
+)
+
 echo  Starting backend server...
 echo  Backend dir: %BACKEND_DIR%
 start "T2AutoTron Backend" /D "%BACKEND_DIR%" cmd /k npm start

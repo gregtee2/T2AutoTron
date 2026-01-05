@@ -1,3 +1,12 @@
+## [2.1.196] - 2026-01-04
+### Fixed
+- **TTS Triple-Play Bug**: Fixed TTS playing 2-3 times per button click. Chatterbox WAV files now auto-cleanup after 30 seconds. Added `enqueue: 'replace'` to HA play_media calls.
+- **TTS Stream Double-Pause**: Fixed redundant engine triggers from EventAnnouncer interval. Removed unnecessary forceStop on resume. Added 1.5s settling delay for Denon/AVR devices.
+- **Frontend Editor-Active on Refresh**: Fixed backend engine taking over when frontend was open after page refresh. Now sends `editor-active` even if socket already connected.
+
+### Changed
+- Improved Denon AVR compatibility with stream resume timing
+
 ## [2.1.162] - 2026-01-01
 ### Fixed
 - **Backend Device Control**: Devices now properly turn off in add-on mode. Fixed 4 critical discrepancies between frontend and backend:

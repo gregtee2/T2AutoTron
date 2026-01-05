@@ -543,10 +543,30 @@
         constructor(data) {
             super();
             this.data = data;
+            this._version = 0;
+        }
+        // Call this after updating data to trigger React re-render
+        notifyChange() {
+            this._version++;
         }
     }
 
     function ColorBarControlComponent({ data }) {
+        // Use useState to force re-renders when control data changes
+        const [, forceUpdate] = useState(0);
+        
+        // Subscribe to control changes via polling (Rete doesn't have a subscription system)
+        useEffect(() => {
+            let lastVersion = data._version || 0;
+            const interval = setInterval(() => {
+                if (data._version !== lastVersion) {
+                    lastVersion = data._version;
+                    forceUpdate(n => n + 1);
+                }
+            }, 100); // Check every 100ms
+            return () => clearInterval(interval);
+        }, [data]);
+        
         const { brightness, hs_color, entityType, state, on } = data.data || {};
         
         // Check if device is ON - must explicitly be 'on' or true
@@ -686,10 +706,30 @@
             super();
             this.deviceId = deviceId;
             this.getState = getState;
+            this._version = 0;
+        }
+        // Call this after updating state to trigger React re-render
+        notifyChange() {
+            this._version++;
         }
     }
 
     function DeviceStateControlComponent({ data }) {
+        // Use useState to force re-renders when control data changes
+        const [, forceUpdate] = useState(0);
+        
+        // Subscribe to control changes via polling (Rete doesn't have a subscription system)
+        useEffect(() => {
+            let lastVersion = data._version || 0;
+            const interval = setInterval(() => {
+                if (data._version !== lastVersion) {
+                    lastVersion = data._version;
+                    forceUpdate(n => n + 1);
+                }
+            }, 100); // Check every 100ms
+            return () => clearInterval(interval);
+        }, [data]);
+        
         const state = data.getState ? data.getState(data.deviceId) : null;
         
         // DEBUG: Log what we're receiving

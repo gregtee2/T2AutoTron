@@ -10,6 +10,73 @@ import { getStoredPin } from './auth/authClient';
 import './App.css';
 import './styles/performance-mode.css'; // Performance mode overrides
 
+// ============================================================================
+// SYNC-ON-CLOSE: Push graph to backend when browser closes
+// This runs at module load time (not in React) for maximum reliability
+// ============================================================================
+const syncGraphToBackend = (event) => {
+  // For visibilitychange, only sync when page becomes hidden
+  if (event?.type === 'visibilitychange' && document.visibilityState !== 'hidden') {
+    return;
+  }
+  
+  if (window._t2SyncDone) return; // Prevent double-sync
+  window._t2SyncDone = true;
+  
+  console.log(`[App] Sync triggered by: ${event?.type || 'unknown'}`);
+  
+  if (window._t2GetGraphData) {
+    try {
+      const graphData = window._t2GetGraphData();
+      if (graphData && graphData.nodes && graphData.nodes.length > 0) {
+        const jsonString = JSON.stringify(graphData);
+        // Use port 3000 (backend) not 5173 (vite dev server)
+        const apiBase = window.location.port === '5173' 
+          ? 'http://localhost:3000' 
+          : window.location.origin;
+        
+        // Use synchronous XHR - only reliable method during page close
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${apiBase}/api/engine/save-active`, false); // false = synchronous
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(jsonString);
+        
+        console.log(`[App] Synced graph on close (${graphData.nodes.length} nodes, status=${xhr.status})`);
+      }
+    } catch (e) {
+      console.warn('[App] Failed to sync graph on close:', e);
+    }
+  }
+  
+  // Signal editor inactive
+  if (window.socket?.connected) {
+    window.socket.emit('editor-inactive');
+  }
+  
+  // Reset flag after a moment (in case page doesn't actually close)
+  setTimeout(() => { window._t2SyncDone = false; }, 2000);
+};
+
+// ============================================================================
+// RESUME-ON-WAKE: Tell backend we're back when browser wakes up
+// ============================================================================
+const resumeOnWake = () => {
+  if (document.visibilityState === 'visible') {
+    console.log(`[App] Browser woke up - sending editor-active`);
+    if (window.socket?.connected) {
+      window.socket.emit('editor-active');
+    }
+  }
+};
+
+// Register at module load time - outside React lifecycle
+// visibilitychange is most reliable - fires when tab becomes hidden
+document.addEventListener('visibilitychange', syncGraphToBackend);
+document.addEventListener('visibilitychange', resumeOnWake); // Also handle wake-up
+window.addEventListener('beforeunload', syncGraphToBackend);
+window.addEventListener('pagehide', syncGraphToBackend);
+window.addEventListener('unload', syncGraphToBackend);
+
 // Apply performance mode from localStorage on page load
 const applyPerformanceModeFromStorage = () => {
   try {
@@ -467,15 +534,14 @@ function App() {
 
     window.addEventListener('t2-pin-changed', onPinChanged);
 
-    // Signal editor is closing when page unloads (so engine can resume)
-    const onBeforeUnload = () => {
-      if (socket.connected) {
-        socket.emit('editor-inactive');
-      }
-    };
-    window.addEventListener('beforeunload', onBeforeUnload);
-
     connectSocket();
+
+    // If socket is already connected (e.g., page refresh with persistent socket),
+    // send editor-active immediately since onConnect won't fire
+    if (socket.connected) {
+      socket.emit('editor-active');
+      setIsConnected(true);
+    }
 
     // Send heartbeat every 30 seconds to keep frontend-active status alive
     // This prevents stale "frontend active" status if browser crashes without disconnect
@@ -506,7 +572,6 @@ function App() {
       socket.off('trigger_event', onTriggerEvent);
       socket.off('update-available', onUpdateAvailable);
       window.removeEventListener('t2-pin-changed', onPinChanged);
-      window.removeEventListener('beforeunload', onBeforeUnload);
       disconnectSocket();
     };
   }, []);

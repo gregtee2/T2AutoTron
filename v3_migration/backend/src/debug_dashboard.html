@@ -707,6 +707,11 @@
         let lastBugCount = 0;
         let notificationsEnabled = false;
         
+        // Store anomalies and activity for export
+        let currentAnomalies = [];
+        let currentActivity = [];
+        let currentComparison = [];
+        
         // Track server uptime to detect restarts
         let lastKnownUptime = null;
         let serverRestarts = [];
@@ -1487,6 +1492,12 @@
                 }
                 
                 const { anomalies, activity } = detectAnomalies(events, comparison);
+                
+                // Store for export
+                currentAnomalies = anomalies;
+                currentActivity = activity;
+                currentComparison = comparison;
+                
                 renderAnomalies(anomalies);
                 renderActivity(activity);
                 renderComparison(comparison, triggerBuffers);
@@ -1835,34 +1846,60 @@
         }
         
         function exportLogs() {
-            if (eventLogData.length === 0) {
-                alert('No events loaded. Click "Events" first.');
+            if (eventLogData.length === 0 && currentAnomalies.length === 0) {
+                alert('No data loaded. Click "Compare" or "Events" first.');
                 return;
             }
             
             const exportData = {
                 exportTime: new Date().toISOString(),
                 hoursWindow: selectedHours,
+                
+                // Anomalies and issues (THE IMPORTANT STUFF)
+                anomalies: currentAnomalies,
+                anomalyCount: currentAnomalies.length,
+                criticalCount: currentAnomalies.filter(a => a.type === 'critical').length,
+                warningCount: currentAnomalies.filter(a => a.type === 'warning').length,
+                
+                // Activity (informational, not problems)
+                activity: currentActivity,
+                
+                // Device comparison (engine vs HA reality)
+                comparison: currentComparison,
+                
+                // Event log
                 eventCount: eventLogData.length,
                 events: eventLogData,
+                
+                // Current state
                 buffers: data.buffers,
                 lights: data.lights?.map(l => ({
                     id: l.id,
                     name: l.name,
-                    state: l.state
+                    state: l.state,
+                    brightness: l.brightness,
+                    hs_color: l.hs_color
                 })),
-                engine: data.engine
+                engine: data.engine,
+                
+                // Server restart history
+                serverRestarts: serverRestarts
             };
             
             const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `t2_debug_${new Date().toISOString().slice(0, 10)}.json`;
+            // Include anomaly count in filename for quick reference
+            const anomalyLabel = currentAnomalies.length > 0 ? `_${currentAnomalies.length}issues` : '_clean';
+            a.download = `t2_debug_${new Date().toISOString().slice(0, 10)}${anomalyLabel}.json`;
             a.click();
             URL.revokeObjectURL(url);
             
-            showToast('Logs exported!', 'success');
+            const msg = currentAnomalies.length > 0 
+                ? `Exported with ${currentAnomalies.length} anomalies!` 
+                : 'Logs exported (no anomalies)!';
+            showToast(msg, 'success');
         }
         
         // Auto-connect if URL is saved

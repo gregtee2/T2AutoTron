@@ -4,6 +4,9 @@ const { LightState } = require('node-hue-api').v3.lightStates;
 const Joi = require('joi');
 const logWithTimestamp = require('../../logging/logWithTimestamp');
 
+// Verbose logging flag
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+
 module.exports = function (hueApi, hueLights, io) { // Added io parameter
     const router = express.Router();
 
@@ -80,7 +83,7 @@ module.exports = function (hueApi, hueLights, io) { // Added io parameter
     router.put('/:id/state', async (req, res) => {
         const { id } = req.params;
         const { on, hue, sat, bri, effect, transitiontime } = req.body;
-        logWithTimestamp(`PUT /api/lights/hue/${id}/state: ${JSON.stringify(req.body)}`, 'info');
+        if (VERBOSE) logWithTimestamp(`PUT /api/lights/hue/${id}/state: ${JSON.stringify(req.body)}`, 'info');
 
         const { error } = stateSchema.validate(req.body);
         if (error) {

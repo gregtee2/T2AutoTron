@@ -17,6 +17,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// Verbose logging flag
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+
 // Log file location
 const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
 const LOG_DIR = IS_HA_ADDON ? '/data' : path.join(__dirname, '..', '..', '..', 'crashes');
@@ -129,13 +132,15 @@ function logOutgoingCommand({ entityId, action, payload, nodeId, nodeType, reaso
   
   writeLog(entry);
   
-  // Console log for visibility - with deduplication to reduce spam
-  const now = Date.now();
-  const lastLog = lastConsoleLogs.get(rawEntityId);
-  if (!lastLog || (now - lastLog) > CONSOLE_DEDUP_WINDOW) {
-    const shortEntity = rawEntityId.split('.').pop();
-    console.log(`[CMD→] ${shortEntity}: ${action} (${nodeType || 'unknown'}) - ${reason || 'triggered'}`);
-    lastConsoleLogs.set(rawEntityId, now);
+  // Console log for visibility - only when VERBOSE is enabled
+  if (VERBOSE) {
+    const now = Date.now();
+    const lastLog = lastConsoleLogs.get(rawEntityId);
+    if (!lastLog || (now - lastLog) > CONSOLE_DEDUP_WINDOW) {
+      const shortEntity = rawEntityId.split('.').pop();
+      console.log(`[CMD→] ${shortEntity}: ${action} (${nodeType || 'unknown'}) - ${reason || 'triggered'}`);
+      lastConsoleLogs.set(rawEntityId, now);
+    }
   }
 }
 
@@ -200,11 +205,17 @@ function logIncomingStateChange({ entityId, oldState, newState, context, attribu
   
   writeLog(entry);
   
-  // Console log for visibility (only state changes, not attribute-only updates)
+  // Console log for visibility - only when VERBOSE or for T2-confirmed changes
+  // Transient state flaps (off→unavailable→off) are noisy, keep in log file only
   if (oldState !== newState) {
-    const shortEntity = rawEntityId.split('.').pop();
-    const emoji = getStateEmoji(rawEntityId, newState);
-    console.log(`[←STATE] ${emoji} ${shortEntity}: ${oldState} → ${newState} | Source: ${source}`);
+    const isTransient = (oldState === 'unavailable' || newState === 'unavailable');
+    const isT2Confirmed = source.includes('T2AutoTron');
+    
+    if (VERBOSE || (isT2Confirmed && !isTransient)) {
+      const shortEntity = rawEntityId.split('.').pop();
+      const emoji = getStateEmoji(rawEntityId, newState);
+      console.log(`[←STATE] ${emoji} ${shortEntity}: ${oldState} → ${newState} | Source: ${source}`);
+    }
   }
   
   return { wasUs, source, sourceDetails };

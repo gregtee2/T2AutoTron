@@ -10,6 +10,15 @@ const engineLogger = require('../engineLogger');
 const deviceAudit = require('../deviceAudit');
 const commandTracker = require('../commandTracker');
 
+// Lazy-load homeAssistantManager for health tracking
+let _haManager = null;
+function getHAManager() {
+  if (!_haManager) {
+    _haManager = require('../../devices/managers/homeAssistantManager');
+  }
+  return _haManager;
+}
+
 // Lazy-load engine to avoid circular dependency
 let _engine = null;
 function getEngine() {
@@ -192,12 +201,7 @@ const bulkStateCache = {
         }
         
         this.lastFetchTime = Date.now();
-        
-        // Log cache refresh rarely (every 10 minutes) - too noisy otherwise
-        if (!this._lastLogTime || Date.now() - this._lastLogTime > 600000) {
-          this._lastLogTime = Date.now();
-          console.log(`[BulkStateCache] ✅ Cache refreshed: ${this.states.size} entities`);
-        }
+        // Success logs removed - too noisy. Only log errors.
       } catch (error) {
         console.error(`[BulkStateCache] Error fetching states: ${error.message}`);
       } finally {
@@ -703,6 +707,10 @@ class HAGenericDeviceNode {
     this.warmupComplete = true;
     this.tickCount = 11; // Past warmup period
     
+    // CRITICAL: Set hadConnection = true so first tick doesn't treat all connections as "new"
+    // Without this, first tick sees hadConnection=undefined → newConnection=true → skips OFF commands
+    this.hadConnection = true;
+
     engineLogger.log('HA-RECONCILE', `${this.label || this.id}: ${onCount} ON, ${offCount} OFF (lastTrigger left undefined for input to set)`, {
       nodeId: this.id,
       devices: results.slice(0, 5), // Log first 5 devices
@@ -947,7 +955,7 @@ class HAGenericDeviceNode {
         
         if (shouldSend && timeSinceLastSend >= minInterval) {
           const reason = !this.lastSentHsv ? 'hsv_only_first' : 'hsv_only_significant';
-          engineLogger.log('HA-HSV-ONLY', `No trigger connected, applying HSV to ON devices`, { 
+          engineLogger.log('HA-HSV-ONLY', `No trigger connected, applying HSV to ON devices only`, { 
             entities: entityIds,
             reason: reason,
             timeSinceLastSend: Math.round(timeSinceLastSend / 1000) + 's'
@@ -957,9 +965,14 @@ class HAGenericDeviceNode {
           this.lastSendTime = now;
           
           for (const entityId of entityIds) {
-            // Only apply HSV if device is currently ON (uses deviceStates cache or assumes ON)
-            // Note: We send turn_on with color - HA will apply color if device is on, ignore if off
-            await this.controlDevice(entityId, true, hsv);
+            // Only apply HSV to devices that are ALREADY ON
+            // Check device state from cache - don't turn on devices just to apply color!
+            const isCurrentlyOn = this.deviceStates[`ha_${entityId}`] || this.deviceStates[entityId];
+            if (isCurrentlyOn) {
+              // Send turn_on with color - HA interprets this as "apply color to this already-on light"
+              await this.controlDevice(entityId, true, hsv);
+            }
+            // If device is OFF, skip it - don't turn it on just to apply a color
           }
         }
       } else if (engineLogger.getLogLevel() >= 2) {
@@ -976,6 +989,22 @@ class HAGenericDeviceNode {
     const risingEdge = triggerBool && !lastBool;
     const fallingEdge = !triggerBool && lastBool;
     const newConnection = hasConnection && !this.hadConnection;
+    
+    // Check if device is ON but trigger says OFF (mismatch after reconcile)
+    // This handles the case where device was ON when graph loaded, but trigger input is FALSE
+    // In this case, we need to send OFF even though there's no "falling edge" (lastTrigger was undefined)
+    let deviceMismatch = false;
+    if (!triggerBool && this.lastTrigger === undefined && this.reconciled) {
+      // First tick after reconcile with trigger=false - check if any device is ON
+      for (const entityId of entityIds) {
+        const isDeviceOn = this.deviceStates[`ha_${entityId}`] || this.deviceStates[entityId];
+        if (isDeviceOn) {
+          deviceMismatch = true;
+          engineLogger.log('HA-MISMATCH', `Device ${entityId} is ON but trigger is FALSE - will send OFF`, {});
+          break;
+        }
+      }
+    }
     
     // Track connection state for next tick
     this.hadConnection = hasConnection;
@@ -998,9 +1027,9 @@ class HAGenericDeviceNode {
       return { is_on: false };
     }
     
-    if (risingEdge || fallingEdge || shouldActOnNewConnection) {
+    if (risingEdge || fallingEdge || shouldActOnNewConnection || deviceMismatch) {
       engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, 
-        risingEdge ? 'RISING_EDGE' : fallingEdge ? 'FALLING_EDGE' : 'NEW_CONNECTION');
+        risingEdge ? 'RISING_EDGE' : fallingEdge ? 'FALLING_EDGE' : deviceMismatch ? 'DEVICE_MISMATCH' : 'NEW_CONNECTION');
       this.lastTrigger = trigger;
       
       const mode = this.properties.triggerMode || 'Follow';
@@ -2073,15 +2102,27 @@ class TTSAnnouncementNode {
       streamEnabled: properties.streamEnabled || false,
       resumeDelay: properties.resumeDelay || 3000,
       
+      // Per-speaker settings (from frontend)
+      speakerStations: properties.speakerStations || {},
+      speakerCustomUrls: properties.speakerCustomUrls || {},
+      speakerVolumes: properties.speakerVolumes || {},
+      
       // Runtime state
       isStreaming: false,
       wasStreamingBeforeTTS: false
     };
+    // Dynamic inputs include station_* for each speaker
     this.inputs = { trigger: null, message: null, streamUrl: null };
     this.outputs = { success: false, streaming: false };
     this._lastTrigger = undefined;
     this._lastSentTime = 0;
     this._resumeTimeout = null;
+    this._initialized = false;
+    this._lastStationInputs = {}; // Track station input values for edge detection
+    
+    // Settling period on graph load - prevent TTS on initial trigger
+    this._initTime = Date.now();
+    this._settlingMs = 2000;
   }
 
   getSpeakerIds() {
@@ -2094,45 +2135,155 @@ class TTSAnnouncementNode {
     return [];
   }
 
-  getStreamUrl() {
+  getStreamUrlForSpeaker(speakerId) {
+    // Check per-speaker custom URL first
+    const customUrl = this.properties.speakerCustomUrls?.[speakerId];
+    if (customUrl) return customUrl;
+    
+    // Check per-speaker station index
+    const stationIndex = this.properties.speakerStations?.[speakerId];
+    if (stationIndex !== undefined && this.properties.stations[stationIndex]) {
+      return this.properties.stations[stationIndex].url;
+    }
+    
+    // Fall back to global custom URL
     if (this.properties.customStreamUrl) {
       return this.properties.customStreamUrl;
     }
+    
+    // Fall back to global selected station
     const station = this.properties.stations[this.properties.selectedStation];
     return station?.url || '';
   }
 
+  getVolumeForSpeaker(speakerId) {
+    // Check per-speaker volume, fall back to global
+    return this.properties.speakerVolumes?.[speakerId] ?? this.properties.streamVolume ?? 50;
+  }
+
   async playStream() {
     const speakerIds = this.getSpeakerIds();
-    const streamUrl = this.getStreamUrl();
+    if (speakerIds.length === 0) return false;
     
-    if (!streamUrl || speakerIds.length === 0) return false;
+    try {
+      const { host, token } = getHAConfig();
+      if (!token) {
+        engineLogger.warn(`[AudioOutput] No HA token configured`);
+        return false;
+      }
+      
+      const haManager = getHAManager();
+      let anySuccess = false;
+      
+      for (const entityId of speakerIds) {
+        // Check device health before attempting command
+        if (haManager && !haManager.isDeviceHealthy(entityId)) {
+          engineLogger.log(`[AudioOutput] ⏭️ Skipping unhealthy speaker: ${entityId}`);
+          continue;
+        }
+        
+        const streamUrl = this.getStreamUrlForSpeaker(entityId);
+        const volume = this.getVolumeForSpeaker(entityId);
+        
+        if (!streamUrl) {
+          engineLogger.log(`[AudioOutput] No stream URL for ${entityId}, skipping`);
+          continue;
+        }
+        
+        try {
+          // Set volume
+          await fetch(`${host}/api/services/media_player/volume_set`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entity_id: entityId, volume_level: volume / 100 })
+          });
+          
+          // Play stream
+          const response = await fetch(`${host}/api/services/media_player/play_media`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entity_id: entityId, media_content_id: streamUrl, media_content_type: 'music' })
+          });
+          
+          if (response.ok) {
+            anySuccess = true;
+            if (haManager) haManager.recordDeviceSuccess(entityId);
+            const stationName = this.properties.stations.find(s => s.url === streamUrl)?.name || 'custom stream';
+            engineLogger.log(`[AudioOutput] ▶️ ${entityId} → ${stationName} (vol: ${volume}%)`);
+          } else {
+            if (haManager) haManager.recordDeviceFailure(entityId, `HTTP ${response.status}`);
+          }
+        } catch (speakerErr) {
+          // Record failure for this specific speaker
+          if (haManager) haManager.recordDeviceFailure(entityId, speakerErr.message);
+          engineLogger.warn(`[AudioOutput] Failed to play on ${entityId}: ${speakerErr.message}`);
+        }
+      }
+      
+      this.properties.isStreaming = anySuccess;
+      return anySuccess;
+    } catch (err) {
+      engineLogger.warn(`[AudioOutput] Play error: ${err.message}`);
+      return false;
+    }
+  }
+
+  async playSingleSpeaker(speakerId, streamUrl = null, forceStop = false) {
+    const url = streamUrl || this.getStreamUrlForSpeaker(speakerId);
+    const volume = this.getVolumeForSpeaker(speakerId);
+    
+    if (!url) {
+      engineLogger.log(`[AudioOutput] No stream URL for ${speakerId}`);
+      return false;
+    }
+    
+    // Check device health before attempting
+    const haManager = getHAManager();
+    if (haManager && !haManager.isDeviceHealthy(speakerId)) {
+      engineLogger.log(`[AudioOutput] ⏭️ Skipping unhealthy speaker: ${speakerId}`);
+      return false;
+    }
     
     try {
       const { host, token } = getHAConfig();
       if (!token) return false;
       
-      for (const entityId of speakerIds) {
-        // Set volume
-        await fetch(`${host}/api/services/media_player/volume_set`, {
+      // For Apple devices, stop first to ensure stream change takes effect
+      if (forceStop) {
+        await fetch(`${host}/api/services/media_player/media_stop`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ entity_id: entityId, volume_level: this.properties.streamVolume / 100 })
+          body: JSON.stringify({ entity_id: speakerId })
         });
-        
-        // Play stream
-        await fetch(`${host}/api/services/media_player/play_media`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ entity_id: entityId, media_content_id: streamUrl, media_content_type: 'music' })
-        });
+        await new Promise(r => setTimeout(r, 500)); // Brief pause
       }
       
-      this.properties.isStreaming = true;
-      engineLogger.log(`[AudioOutput] ▶️ Playing stream on ${speakerIds.length} speaker(s)`);
-      return true;
+      // Set volume
+      await fetch(`${host}/api/services/media_player/volume_set`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity_id: speakerId, volume_level: volume / 100 })
+      });
+      
+      // Play stream
+      const response = await fetch(`${host}/api/services/media_player/play_media`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity_id: speakerId, media_content_id: url, media_content_type: 'music' })
+      });
+      
+      if (response.ok) {
+        if (haManager) haManager.recordDeviceSuccess(speakerId);
+        const stationName = this.properties.stations.find(s => s.url === url)?.name || 'stream';
+        engineLogger.log(`[AudioOutput] ▶️ ${speakerId} → ${stationName}`);
+        return true;
+      } else {
+        if (haManager) haManager.recordDeviceFailure(speakerId, `HTTP ${response.status}`);
+      }
+      return false;
     } catch (err) {
-      engineLogger.warn(`[AudioOutput] Play error: ${err.message}`);
+      if (haManager) haManager.recordDeviceFailure(speakerId, err.message);
+      engineLogger.warn(`[AudioOutput] Play single error: ${err.message}`);
       return false;
     }
   }
@@ -2161,7 +2312,8 @@ class TTSAnnouncementNode {
   }
 
   setInput(name, value) {
-    if (name in this.inputs) {
+    // Support dynamic station inputs (station_*)
+    if (name in this.inputs || name.startsWith('station_')) {
       this.inputs[name] = value;
     }
   }
@@ -2170,6 +2322,61 @@ class TTSAnnouncementNode {
     const trigger = this.inputs.trigger;
     const dynamicMessage = this.inputs.message;
     const dynamicStreamUrl = this.inputs.streamUrl;
+
+    // On first process tick, start streaming if streamEnabled is true
+    if (!this._initialized) {
+      this._initialized = true;
+      if (this.properties.streamEnabled && this.getSpeakerIds().length > 0) {
+        engineLogger.log(`[AudioOutput] 🚀 Initializing streams on ${this.getSpeakerIds().length} speaker(s)`);
+        await this.playStream();
+      }
+    }
+
+    // Handle per-speaker station inputs with edge detection
+    for (const speakerId of this.getSpeakerIds()) {
+      const inputKey = `station_${speakerId.replace('media_player.', '')}`;
+      const stationInput = this.inputs[inputKey];
+      
+      if (stationInput !== undefined && stationInput !== null) {
+        // Edge detection: only process if input value changed
+        const lastValue = this._lastStationInputs[speakerId];
+        if (stationInput === lastValue) continue;
+        
+        this._lastStationInputs[speakerId] = stationInput;
+        
+        let stationIndex = null;
+        let customUrl = null;
+        
+        if (typeof stationInput === 'number') {
+          stationIndex = Math.max(0, Math.min(this.properties.stations.length - 1, Math.floor(stationInput)));
+        } else if (typeof stationInput === 'string') {
+          if (stationInput.startsWith('http')) {
+            customUrl = stationInput;
+          } else {
+            const foundIdx = this.properties.stations.findIndex(s => 
+              s.name.toLowerCase() === stationInput.toLowerCase()
+            );
+            if (foundIdx >= 0) stationIndex = foundIdx;
+          }
+        }
+        
+        if (customUrl) {
+          this.properties.speakerCustomUrls[speakerId] = customUrl;
+          engineLogger.log(`[AudioOutput] 📻 Station input: custom URL for ${speakerId}`);
+          if (this.properties.isStreaming) {
+            await this.playSingleSpeaker(speakerId, customUrl, true);
+          }
+        } else if (stationIndex !== null) {
+          delete this.properties.speakerCustomUrls[speakerId];
+          this.properties.speakerStations[speakerId] = stationIndex;
+          const stationName = this.properties.stations[stationIndex]?.name || `Station ${stationIndex}`;
+          engineLogger.log(`[AudioOutput] 📻 Station input: ${speakerId} → ${stationName}`);
+          if (this.properties.isStreaming) {
+            await this.playSingleSpeaker(speakerId, null, true);
+          }
+        }
+      }
+    }
 
     // Handle dynamic stream URL input
     if (dynamicStreamUrl && dynamicStreamUrl !== this.properties.customStreamUrl) {
@@ -2182,11 +2389,35 @@ class TTSAnnouncementNode {
     // Debounce
     const now = Date.now();
     const debounceMs = 1000;
+    
+    // Settling period check - skip TTS triggers during graph load
+    const elapsed = now - this._initTime;
+    const isSettling = elapsed < this._settlingMs;
 
     // Detect rising edge for TTS
     if (trigger && trigger !== this._lastTrigger && (now - this._lastSentTime) > debounceMs) {
       this._lastTrigger = trigger;
       this._lastSentTime = now;
+      
+      // Skip TTS during settling period (graph load)
+      if (isSettling) {
+        engineLogger.log(`[AudioOutput] ⏳ Backend settling: skipping TTS trigger (${elapsed}ms since init)`);
+        this.outputs.streaming = this.properties.isStreaming;
+        return this.outputs;
+      }
+      
+      // Skip TTS if frontend is active (let frontend handle it)
+      const engine = getEngine();
+      const shouldSkip = engine && engine.shouldSkipDeviceCommands();
+      console.log(`[AudioOutput-DEBUG] TTS trigger detected. engine=${!!engine}, frontendActive=${engine?.frontendActive}, shouldSkip=${shouldSkip}`);
+      
+      if (shouldSkip) {
+        console.log(`[AudioOutput] 🖥️ Frontend active: skipping backend TTS`);
+        this.outputs.streaming = this.properties.isStreaming;
+        return this.outputs;
+      }
+      
+      console.log(`[AudioOutput] 🔊 Backend TTS proceeding (frontend not active)`);
 
       const message = (dynamicMessage !== undefined && dynamicMessage !== null && dynamicMessage !== '')
         ? dynamicMessage 
@@ -2284,3 +2515,4 @@ module.exports = {
   getHAConfig,
   bulkStateCache  // Exposed for engine reconciliation
 };
+

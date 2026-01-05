@@ -84,6 +84,42 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
+#### TTS Triple-Play Bug / Audio File Accumulation (2026-01-04) - v2.1.191
+- **What broke**: Clicking the TTS test button once would play the announcement 2-3 times in a row.
+- **Why it broke**: Two problems: (1) Chatterbox TTS generates WAV files but never deleted them - 92 files had accumulated! (2) Home Assistant's `play_media` service was QUEUING audio instead of replacing. So when we sent a new TTS, HA played all the old queued files first.
+- **The fix**: Added auto-cleanup in `chatterboxService.js` - deletes any TTS file older than 30 seconds after each generation. Also added `enqueue: 'replace'` to the HA play_media call so new audio replaces any queued audio.
+- **Now it works because**: Old files get cleaned up automatically, and HA plays only the latest audio (not a backlog of old announcements).
+
+#### TTS Stream Double-Pause on Denon AVR (2026-01-04) - v2.1.191
+- **What broke**: After TTS played and stream resumed, there was a brief second pause (~1 second) before the stream continued. Only happened on Denon AVR, not Apple devices.
+- **Why it broke**: Multiple issues: (1) EventAnnouncer's 1-second interval was calling `changeCallback()` redundantly, triggering extra engine evaluations. (2) Resume code was doing `forceStop=true` before playing stream (redundant - already stopped for TTS). (3) Denon AVRs need extra time to clear their buffers before accepting new streams.
+- **The fix**: (1) Added `_adHocHandled` flag to prevent duplicate changeCallback in UpcomingEventsNode. (2) Removed redundant forceStop on resume. (3) Added 1.5s settling delay specifically for AVR devices before sending play command.
+- **Now it works because**: No redundant engine triggers, no redundant stop commands, and AVRs get extra time to settle. Note: Some brief rebuffering may still occur - this is Denon hardware behavior, not T2 code.
+
+#### Frontend Editor-Active Not Sent on Refresh (2026-01-04) - v2.1.191
+- **What broke**: After page refresh, backend engine would control devices even though frontend was open. Backend showed `frontendActive: false`.
+- **Why it broke**: Socket might already be connected when React's useEffect runs. The `onConnect` callback only fires on NEW connections, not if already connected. So `editor-active` was never sent on refresh.
+- **The fix**: Added check in App.jsx: if socket is already connected when useEffect runs, immediately send `editor-active`.
+- **Now it works because**: Whether socket connects fresh OR is already connected, we always tell the backend "I'm here, you can pause device commands."
+
+#### HA Device State Mismatch / Optimistic Update (2026-01-03) - v2.1.190
+- **What broke**: HA Generic Device node would briefly show wrong state right after sending a command (e.g., shows "off" when you just turned it "on"). Input says `true` but device shows `off`.
+- **Why it broke**: After sending "turn on" to a Zigbee light, T2 immediately asked HA "what's the light status?" But Zigbee is slow (1-3 seconds). HA replied with the OLD state (off) before the light had time to respond. Like checking if your pizza is ready 2 seconds after ordering.
+- **The fix**: Added **optimistic update** - when we send a command, immediately trust it worked and update the UI. Also added **command lock** - ignore any HA state updates for 3 seconds after sending a command (they're stale). After 2.5 seconds, we fetch the REAL state to confirm.
+- **Now it works because**: We trust what we sent, ignore stale news, then verify later. Pizza order example: assume it's cooking, don't listen to "no pizza yet" for a few minutes, then check if it's really done.
+
+#### Sync-on-Close Feature (2026-01-03) - v2.1.189
+- **What broke**: When user closed browser tab, any unsaved graph changes were lost. Backend would continue running the OLD graph.
+- **Why it broke**: Modern browsers block `beforeunload` and `pagehide` events for security/performance. Our sync code never ran.
+- **The fix**: Used `visibilitychange` event instead - fires when you switch tabs, minimize, or hide the page. Graph syncs every time you look away, so closing the tab is already synced.
+- **Now it works because**: Instead of waiting for "I'm leaving!" (which browsers block), we listen for "I'm going to the background!" (which browsers allow). The last tab-switch already synced your changes.
+
+#### Device Sync Settling Delay (2026-01-03) - v2.1.187
+- **What broke**: When loading a graph with device nodes, lights would flash ON then OFF (or wrong color then correct color) for about 1 second.
+- **Why it broke**: Backend engine started sending commands immediately, but the graph wasn't fully loaded yet. It sent "default" values first, then the real values.
+- **The fix**: Added 1-second settling delay after graph load before backend sends any device commands.
+- **Now it works because**: We wait for the graph to "settle" (all nodes initialized) before sending commands. No more flicker.
+
 #### Inject Node Pulse Timing (2026-01-01)
 - **What broke**: Inject node with Schedule + Pulse Mode would never trigger downstream nodes even though the schedule fired correctly.
 - **Why it broke**: Rete.js batches UI updates. By the time the engine called `data()` to read the output, the 500ms pulse had already ended and `isPulsing` was false. The message disappeared before anyone could read it.
@@ -503,7 +539,137 @@ Debug logging is **disabled by default**. To enable verbose logging:
 **Frontend (sockets.js):** Set `SOCKET_DEBUG = true` at top of file
 **Plugins:** Use `this.properties.debug = true` per-node
 
-## Device ID Prefixes
+---
+
+## 🚨 LOGGING GUIDELINES (CRITICAL - READ BEFORE ADDING console.log)
+
+**Problem**: AI agents frequently add `console.log` statements for debugging, then forget to remove them or gate them behind `VERBOSE`. This causes server logs to become unreadable with thousands of routine messages per hour.
+
+### ⚠️ BEFORE Adding ANY console.log:
+
+1. **Ask yourself**: Is this an ERROR or just routine operation info?
+2. **Errors**: Always log (use `console.error` or `logWithTimestamp(..., 'error')`)
+3. **Routine operations**: MUST be gated behind `VERBOSE` flag
+4. **Temporary debugging**: Remove before committing, or gate behind `VERBOSE`
+
+### The VERBOSE Pattern
+
+Every file that needs routine logging should have this at the top:
+```javascript
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+```
+
+Then gate routine logs:
+```javascript
+// ❌ WRONG - logs on every request, floods console
+logWithTimestamp(`PUT /${id}/state - Body: ${JSON.stringify(body)}`, 'info');
+
+// ✅ CORRECT - only logs when debugging
+if (VERBOSE) logWithTimestamp(`PUT /${id}/state - Body: ${JSON.stringify(body)}`, 'info');
+```
+
+### What Should ALWAYS Log (No VERBOSE Check)
+
+| Log Type | Example | Why |
+|----------|---------|-----|
+| Errors | `❌ HA service call failed` | Need to see failures |
+| Startup messages | `✓ Server running on port 3000` | Confirms startup worked |
+| Warnings | `⚠️ Token expired, refreshing` | Actionable issues |
+| User-triggered events | `Telegram: 💡 Light turned ON` | User notifications |
+| Critical state changes | `[BackendEngine] PAUSING device commands` | Mode changes |
+
+### What Should NEVER Log by Default (Gate Behind VERBOSE)
+
+| Log Type | Example | Why |
+|----------|---------|-----|
+| Every API request | `PUT /light.xxx/state` | Hundreds per hour |
+| Every device update | `Successfully updated HA device` | Redundant with request |
+| Every state sync | `Cache refreshed: 1090 entities` | Routine maintenance |
+| Every command sent | `[CMD→] light: turn_on` | Hundreds per hour |
+| Every state received | `[←STATE] light: on → off` | Hundreds per hour |
+| Periodic health checks | `Uptime: X minutes` | Once is enough |
+| Success confirmations | `✅ Emitted device-state-update` | Routine operation |
+
+### Files That Already Have VERBOSE Gating
+
+These files have the pattern implemented - use them as examples:
+- `src/api/routes/haRoutes.js` - Device update logs
+- `src/api/routes/hueRoutes.js` - Hue update logs
+- `src/api/routes/mediaRoutes.js` - Media play/stop logs
+- `src/engine/commandTracker.js` - CMD→ and ←STATE logs
+- `src/engine/nodes/HADeviceNodes.js` - BulkStateCache logs
+
+### The deviceAudit.js Pattern (Smart Filtering)
+
+For periodic status logs, don't just gate behind VERBOSE - be smart about what's worth logging:
+
+```javascript
+// Only log mismatches that are FRESH (< 30 min old)
+// Stale mismatches (600+ min) mean user manually changed something - not our problem
+const STALE_THRESHOLD = 30 * 60 * 1000;
+const freshMismatches = results.mismatches.filter(m => m.staleness < STALE_THRESHOLD);
+
+if (freshMismatches.length === 0) {
+  // All good - log to FILE only, not console
+  engineLogger.log('AUDIT-OK', summary);
+} else {
+  // Fresh issues - worth logging to console
+  console.log(`[AUDIT] ⚠️ ${freshMismatches.length} device mismatches`);
+}
+```
+
+### Logging Cleanup Checklist (After Any Debug Session)
+
+Before committing code that added `console.log`:
+- [ ] Did I remove temporary debug logs?
+- [ ] Are remaining logs gated behind `VERBOSE`?
+- [ ] Did I use the right log level (error vs info)?
+- [ ] Will this log flood the console during normal operation?
+- [ ] Run server for 5 minutes - is the output readable?
+
+### 🦴 Caveman Version
+
+**Logs are like a security camera.** You want to record important events (break-ins, fires), not every person walking by. If your logs show thousands of "person walked by" messages per hour, you'll never notice the actual break-in.
+
+**Rule of thumb**: If a log message appears more than once per minute during normal operation, it should be behind `VERBOSE`.
+
+---
+
+## Device ID System (CRITICAL)
+
+### The Problem We Solved
+Different parts of the system used different ID formats, causing state sync failures:
+- Socket sends `light.living_room` (raw HA format)
+- Nodes store `ha_light.living_room` (prefixed format)
+- Comparisons failed, state updates were ignored
+
+### The Solution: Centralized Device Registry
+
+**Backend (Node.js):** `src/devices/managers/deviceManagers.js`
+```javascript
+const { normalizeDeviceId, stripDevicePrefix, isSameDevice, getDeviceApiInfo } = require('./deviceManagers');
+
+// Normalize to internal format (adds ha_ prefix if missing)
+normalizeDeviceId('light.xxx')      // → 'ha_light.xxx'
+normalizeDeviceId('ha_light.xxx')   // → 'ha_light.xxx'
+
+// Strip prefix for API calls
+stripDevicePrefix('ha_light.xxx')   // → 'light.xxx'
+
+// Compare across formats
+isSameDevice('ha_light.xxx', 'light.xxx')  // → true
+
+// Get API info
+getDeviceApiInfo('ha_light.xxx')    // → { endpoint: '/api/lights/ha', cleanId: 'light.xxx', source: 'ha' }
+```
+
+**Frontend (Plugins):** `window.T2HAUtils` (from 00_HABasePlugin.js)
+```javascript
+const { normalizeDeviceId, stripDevicePrefix, isSameDevice } = window.T2HAUtils;
+// Same functions available in browser context
+```
+
+### Device ID Prefixes
 
 All device IDs use prefixes to identify their source system:
 - `ha_` → Home Assistant entities (e.g., `ha_light.living_room`)
@@ -511,7 +677,20 @@ All device IDs use prefixes to identify their source system:
 - `hue_` → Philips Hue lights
 - `shelly_` → Shelly devices
 
-The `T2HAUtils.getDeviceApiInfo(id)` helper parses these prefixes to route API calls correctly.
+### ⚠️ ALWAYS Use the Helpers!
+
+When comparing device IDs, **NEVER** do this:
+```javascript
+// ❌ WRONG - will fail if formats differ
+if (selectedDeviceIds.includes(socketEntityId)) { ... }
+```
+
+**ALWAYS** use the helper:
+```javascript
+// ✅ CORRECT - handles format differences
+const matchedId = selectedDeviceIds.find(devId => isSameDevice(devId, socketEntityId));
+if (matchedId) { ... }
+```
 
 ## Brightness Scale Normalization
 
@@ -1119,6 +1298,28 @@ Move automation execution from browser → server. The backend engine:
 5. **User can close browser** → automations keep running
 6. **User reopens browser** → sees live engine status, can edit graph
 
+### 🔄 Frontend/Backend Handoff (v2.1.189+)
+
+**The Problem**: When user closes browser, unsaved graph changes would be lost.
+
+**The Solution**: Multi-layer sync system:
+
+| Layer | Mechanism | Frequency | Purpose |
+|-------|-----------|-----------|----------|
+| 1. Heartbeat | Socket.IO `editor-heartbeat` | Every 30 sec | Backend knows frontend is alive |
+| 2. Auto-save | POST `/api/engine/save-active` | Every 2 min | Periodic sync of current graph |
+| 3. Visibility sync | `visibilitychange` event | On tab switch | Sync before user leaves |
+| 4. Backend takeover | Heartbeat timeout | After 30 sec silence | Backend resumes device control |
+
+**Key Files:**
+- `frontend/src/App.jsx` - `syncGraphToBackend()` function at module level (not in React)
+- `frontend/src/Editor.jsx` - `window._t2GetGraphData()` serialization helper
+- `backend/src/api/routes/engineRoutes.js` - `/save-active` endpoint with hot-reload
+
+**Why Module Level?**: Browser events inside React `useEffect` don't fire reliably on tab close. Registering at module load time (outside React) ensures handlers are attached immediately.
+
+**⚠️ Browser Limitation**: Modern browsers BLOCK `beforeunload` and `pagehide` for security. We use `visibilitychange` instead - fires when tab becomes hidden (before close).
+
 ### 🐳 Home Assistant Add-on Flow
 
 ```
@@ -1224,7 +1425,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.166 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.175 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -1257,11 +1458,12 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 2 | Refactor plugins to T2Node | ⏳ Partial | Some use it, not all |
 | 3 | Event Log App filter | 🔴 Broken | App events not showing - needs investigation |
 
-### 🟢 RECENTLY ADDED (2.1.55 - 2.1.166)
+### 🟢 RECENTLY ADDED (2.1.55 - 2.1.189)
 
 | # | Feature | Notes |
 |---|---------|-------|
-| 1 | **Camera Panel** | Collapsible panel in Dock for IP camera streams (MJPEG/snapshot) |
+| 1 | **Sync-on-Close** | v2.1.189 - Graph auto-syncs to backend when you switch tabs or close browser. Uses `visibilitychange` event. |
+| 2 | **Camera Panel** | Collapsible panel in Dock for IP camera streams (MJPEG/snapshot) |
 | 2 | **Update System** | Auto-check for updates from `stable` branch, toast notifications, one-click apply |
 | 3 | **Check for Updates Button** | Manual update check button in Control Panel Settings section |
 | 4 | **Performance Mode** | Toggle in Settings to reduce GPU usage (disables blur, glow, animations) |
@@ -1329,6 +1531,10 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 27 | **Group nav zoom centering** | v2.1.108 - Group navigation buttons now properly center viewport on the selected group. |
 | 28 | **Console log spam** | v2.1.108 - Removed debug logging from DeviceStateControl that was spamming browser console. |
 | 29 | **HueEffectNode add-on discovery** | v2.1.109 - Fixed light discovery in HA add-on. Was using raw `fetch()` instead of `window.apiFetch()`. |
+| 30 | **Backend audio not starting** | v2.1.173 - TTSAnnouncementNode backend never started streaming on graph load. Added `_initialized` flag to call `playStream()` on first tick. |
+| 31 | **Server log spam cleanup** | v2.1.175 - Gated ALL routine logs behind `VERBOSE_LOGGING`. Removed: PUT logs, device update logs, CMD→/←STATE logs, cache refresh logs, audit OK logs, uptime logs. See LOGGING GUIDELINES section. |
+| 32 | **Device sync settling delay** | v2.1.187 - Lights no longer flash ON→OFF on graph load. Added 1-second settling delay before backend sends commands. |
+| 33 | **Browser close sync blocked** | v2.1.189 - Browsers block `beforeunload`/`pagehide`. Now uses `visibilitychange` to sync before close. |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 

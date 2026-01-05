@@ -956,12 +956,23 @@
                             gridLines: 4,
                             showGrid: true,
                             playheadPosition: displayPosition,
-                            playheadColor: '#ff6600'
+                            playheadColor: '#ff6600',
+                            // Pass time labels when in time mode
+                            timeLabels: rangeMode === 'time' ? {
+                                startHours: startTimeHours,
+                                startMinutes: startTimeMinutes,
+                                startPeriod: startTimePeriod,
+                                endHours: endTimeHours,
+                                endMinutes: endTimeMinutes,
+                                endPeriod: endTimePeriod
+                            } : null,
+                            // Lock endpoint Y values together in time mode for smooth midnight wrap-around
+                            lockEndpointValues: rangeMode === 'time'
                         })
                     ]),
                     
-                    // X-axis label
-                    el('div', { 
+                    // X-axis label (only show for non-time modes since time mode has labels in canvas)
+                    rangeMode !== 'time' && el('div', { 
                         key: 'x-label',
                         style: { textAlign: 'center', fontSize: '9px', color: '#666', marginTop: '2px', marginLeft: '15px' }
                     }, getTimeAxisLabel())

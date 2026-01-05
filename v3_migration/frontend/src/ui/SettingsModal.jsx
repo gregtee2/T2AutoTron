@@ -231,6 +231,14 @@ const SETTINGS_CONFIG = [
         ]
     },
     {
+        category: 'Chatterbox TTS',
+        icon: '🤖',
+        description: 'Local AI voice generation (requires GPU server)',
+        settings: [
+            { key: 'CHATTERBOX_URL', label: 'Server URL', placeholder: 'http://localhost:8100', type: 'text', hint: 'URL of Chatterbox server (local or remote GPU machine)' }
+        ]
+    },
+    {
         category: 'Location',
         icon: '📍',
         description: 'Your location for sunrise/sunset calculations and weather',

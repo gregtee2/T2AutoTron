@@ -27,7 +27,7 @@
     // -------------------------------------------------------------------------
     // Import shared HA utilities from T2HAUtils (DRY)
     // -------------------------------------------------------------------------
-    const { fieldMapping, getFieldsForEntityType } = window.T2HAUtils;
+    const { fieldMapping, getFieldsForEntityType, isSameDevice } = window.T2HAUtils;
 
     // -------------------------------------------------------------------------
     // TOOLTIPS
@@ -93,9 +93,9 @@
                 // Listen for ANY device state update - we'll check if it affects our input
                 this._onDeviceStateUpdate = (data) => {
                     // If we're tracking a device and this update is for it, trigger refresh
-                    const deviceId = data.id ? data.id.replace("ha_", "") : data.entity_id;
-                    if (this.properties.lastInputDeviceId && deviceId === this.properties.lastInputDeviceId) {
-                        this.log("socket", `Received update for tracked device: ${deviceId}`, false);
+                    const socketId = data.id || data.entity_id;
+                    if (this.properties.lastInputDeviceId && isSameDevice(socketId, this.properties.lastInputDeviceId)) {
+                        this.log("socket", `Received update for tracked device: ${socketId}`, false);
                         if (this.changeCallback) this.changeCallback();
                     }
                 };

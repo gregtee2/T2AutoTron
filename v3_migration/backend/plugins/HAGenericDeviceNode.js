@@ -41,7 +41,10 @@
         getDeviceApiInfo,
         compareNames,
         isAuxiliaryEntity,
-        filterDevices
+        filterDevices,
+        normalizeDeviceId,
+        stripDevicePrefix,
+        isSameDevice
     } = window.T2HAUtils;
 
     // -------------------------------------------------------------------------
@@ -510,6 +513,13 @@
                 const newConnection = hasConnection && !this.hadConnection;
                 const mode = this.properties.triggerMode || "Follow";
 
+                // DEBUG: Log sync decisions on newConnection
+                if (newConnection && mode === "Follow") {
+                    const nodeTitle = this.properties.customTitle || this.label;
+                    const firstDevice = this.properties.selectedDeviceNames?.[0] || 'unknown';
+                    console.log(`[SYNC] ${nodeTitle} (${firstDevice}): trigger=${trigger}, lastTrigger=${this.lastTriggerValue}, action=${trigger ? 'ON' : 'OFF'}`);
+                }
+
                 if (mode === "Toggle" && risingEdge) { await this.onTrigger(); needsUpdate = true; }
                 else if (mode === "Follow" && (risingEdge || fallingEdge || newConnection)) { 
                     // Pass HSV input when turning on so color is included in the command
@@ -621,20 +631,16 @@
                     // Reset the skip flag so next data() call records the trigger state
                     this.skipInitialTrigger = true;
                     
-                    // Trigger engine update - this will cascade through the graph
-                    // and set lastTriggerValue/hadConnection from the actual inputs
+                    // First update - records lastTriggerValue and hadConnection
                     this.triggerUpdate();
 
-                    // IMPORTANT: schedule a second evaluation shortly after load.
-                    // This allows Follow mode to see "newConnection" and perform an
-                    // initial sync (turning devices OFF if the trigger is FALSE).
+                    // SETTLING DELAY: Wait 1 second before syncing devices
+                    // This allows all nodes (especially Receiver nodes reading buffers)
+                    // to process their inputs. Without this delay, devices may briefly
+                    // turn ON then OFF because Receivers haven't read their buffer values yet.
                     setTimeout(() => {
                         try { this.triggerUpdate(); } catch (e) {}
-                    }, 120);
-                    
-                    // DO NOT sync devices on graph load - this was causing devices to turn on
-                    // The device state should only change when the user explicitly triggers
-                    // or when input values actually change AFTER the graph is loaded
+                    }, 1000);
                 };
                 
                 // Register for device cache updates (socket-based, shared across all nodes)
@@ -1004,7 +1010,7 @@
                 if (data.success && data.state) {
                     this.perDeviceState[id] = data.state;
                     this.updateDeviceControls(id, data.state);
-                    this.triggerUpdate();
+                    // updateDeviceControls already calls triggerUpdate and _t2Area.update
                 }
             } catch (e) { console.error("Failed to fetch state for", id, e); }
         }
@@ -1180,8 +1186,32 @@
                         console.error(`Set state failed for ${id} (HTTP ${res.status})`);
                         continue;
                     }
-                    // Fetch authoritative state so UI matches reality
-                    await this.fetchDeviceState(id);
+                    
+                    // OPTIMISTIC UPDATE: Trust the command we just sent
+                    // Don't wait for HA to confirm - Zigbee devices can take 1-3 seconds
+                    // This prevents the UI showing "off" when we just sent "on"
+                    const brightnessPercent = brightness !== null ? Math.round((brightness / 255) * 100) : (this.perDeviceState[id]?.brightness || 0);
+                    this.perDeviceState[id] = {
+                        ...this.perDeviceState[id],
+                        on: turnOn,
+                        state: turnOn ? "on" : "off",
+                        ...(hs_color ? { hs_color } : {}),
+                        ...(brightnessPercent ? { brightness: brightnessPercent } : {})
+                    };
+                    this.updateDeviceControls(id, this.perDeviceState[id]);
+                    
+                    // COMMAND LOCK: Prevent incoming HA socket updates from overwriting our optimistic state
+                    // Lock expires after 3 seconds, giving device time to respond
+                    if (!this._commandLocks) this._commandLocks = {};
+                    this._commandLocks[id] = Date.now() + 3000;
+                    
+                    // Fetch confirmation after a delay to let device respond
+                    // This will correct any mismatches once device actually responds
+                    setTimeout(() => {
+                        // Clear the lock before fetching - we want to accept this update
+                        if (this._commandLocks) delete this._commandLocks[id];
+                        this.fetchDeviceState(id);
+                    }, 2500);
                 } catch (e) { console.error(`Set state failed for ${id}`, e); }
                 
                 // Small delay between requests to prevent API flood
@@ -1260,10 +1290,22 @@
                 state = { ...data, state: data.state || (data.on ? "on" : "off") };
             }
             
-            if (id && this.properties.selectedDeviceIds.includes(id)) {
-                this.perDeviceState[id] = { ...this.perDeviceState[id], ...state };
-                this.updateDeviceControls(id, state);
+            if (!id) return;
+            
+            // Find matching device using normalized comparison (handles ha_ prefix mismatch)
+            const matchedId = this.properties.selectedDeviceIds.find(devId => isSameDevice(devId, id));
+            
+            if (!matchedId) return; // Not a device we're tracking
+            
+            // Skip updates for devices we recently commanded (optimistic lock)
+            // This prevents stale HA state from overwriting our optimistic update
+            if (this._commandLocks?.[matchedId] && Date.now() < this._commandLocks[matchedId]) {
+                // Still within lock period - ignore this update
+                return;
             }
+            
+            this.perDeviceState[matchedId] = { ...this.perDeviceState[matchedId], ...state };
+            this.updateDeviceControls(matchedId, state);
         }
 
         updateDeviceControls(id, state) {
@@ -1275,18 +1317,28 @@
                 const colorbar = this.controls[`${base}colorbar`];
                 const power = this.controls[`${base}power`];
                 if (indicator) indicator.data = { state: state.state || (state.on ? "on" : "off") };
-                if (colorbar) colorbar.data = { 
-                    brightness: state.brightness ?? 0, 
-                    hs_color: state.hs_color ?? [0, 0], 
-                    entityType: id.split('.')[0],
-                    state: state.state || (state.on ? "on" : "off"),
-                    on: state.on
-                };
+                if (colorbar) {
+                    colorbar.data = { 
+                        brightness: state.brightness ?? 0, 
+                        hs_color: state.hs_color ?? [0, 0], 
+                        entityType: id.split('.')[0],
+                        state: state.state || (state.on ? "on" : "off"),
+                        on: state.on
+                    };
+                    // CRITICAL: Notify the control that data changed so React re-renders
+                    if (colorbar.notifyChange) colorbar.notifyChange();
+                }
                 if (power) power.data = { power: state.power ?? null, energy: state.energy ?? null };
                 updated = true;
             });
-            // Force React re-render to show updated state (only trigger ONCE)
-            if (updated) this.triggerUpdate();
+            // Force React re-render AND Rete node update to show updated state
+            if (updated) {
+                this.triggerUpdate();
+                // CRITICAL: Tell Rete to re-render this node so controls show updated data
+                if (typeof window !== 'undefined' && window._t2Area && this.id) {
+                    try { window._t2Area.update("node", this.id); } catch (e) { /* ignore */ }
+                }
+            }
         }
 
         // -------------------------------------------------------------------------

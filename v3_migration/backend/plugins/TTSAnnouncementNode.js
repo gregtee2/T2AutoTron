@@ -75,6 +75,8 @@
                 ttsEntityId: '',
                 elevenLabsVoiceId: '',
                 elevenLabsVoiceName: '',
+                chatterboxVoiceId: '',
+                chatterboxVoiceName: '',
                 lastResult: null,
                 
                 // Streaming properties
@@ -91,8 +93,30 @@
                 
                 // Pause/resume coordination
                 // Buffer after TTS finishes before resuming stream
-                resumeDelay: 2000,  // ms buffer after TTS ends before resuming (2s to avoid truncation)
-                wasStreamingBeforeTTS: false
+                resumeDelay: 500,  // ms buffer after TTS ends before resuming
+                wasStreamingBeforeTTS: false,
+                
+                // Duck mode: lower volume instead of pausing
+                duckMode: false,
+                duckVolumePercent: 25,  // Volume during TTS (percentage of normal)
+                preDuckVolumes: {},  // Store original volumes to restore after TTS
+                // Track which speakers were stopped vs ducked (for smart duck mode)
+                stoppedSpeakerIds: [],
+                duckedSpeakerIds: [],
+                
+                // Mixer Mode: Use T2 audio mixer for seamless TTS injection
+                // When enabled, speakers should play http://T2-IP:3000/api/audio/stream
+                // TTS gets mixed into the stream without interruption
+                useMixerMode: false,
+                mixerStreamUrl: '',  // LAN IP for mixer stream (e.g., http://192.168.1.100:3000/api/audio/stream)
+                
+                // TTS Volume: Set speaker volume before playing TTS (0 = use current volume)
+                ttsVolume: 75,  // Default to 75% for TTS announcements
+                
+                // TTS Quiet Hours: Disable TTS during these hours (e.g., sleeping)
+                quietHoursEnabled: false,
+                quietHoursStart: 23,  // 11 PM (0-23)
+                quietHoursEnd: 7      // 7 AM (0-23)
             };
 
             // Inputs
@@ -114,7 +138,76 @@
             this._stationInputKeys = []; // Track dynamic station input keys
             this._lastActiveStates = {}; // Track last active state per speaker for edge detection
             this._lastStationInputs = {}; // Track last station input values for edge detection ("last write wins")
+            
+            // Lock to prevent duplicate play commands (fixes AirPlay "already streaming" error)
+            this._playInProgress = false;
+            this._lastPlayTime = 0;
             this._needsVolumeSync = false; // Force volume sync after restore
+            this._lastTTSDurationMs = null; // Actual audio duration from Chatterbox (for accurate timing)
+            
+            // TTS queue to prevent overlapping TTS operations
+            this._ttsQueue = [];
+            this._ttsInProgress = false;
+            this._lastPlayedMessage = null;  // Last TTS message played (for deduplication)
+            this._lastPlayedTime = 0;        // When it was played
+        }
+
+        // Detect if a speaker is an Apple/AirPlay device that can't mix audio
+        // These devices need stop/resume instead of true ducking
+        isAppleDevice(speakerId) {
+            const id = (speakerId || '').toLowerCase();
+            // Apple devices: HomePod, AirPlay, Airport
+            // These can only play ONE audio source at a time
+            return id.includes('homepod') || 
+                   id.includes('airplay') || 
+                   id.includes('airport') ||
+                   id.includes('apple_tv') ||
+                   id.includes('appletv');
+        }
+
+        // Detect if a device requires stop/restart (can't mix audio streams)
+        // Includes Apple devices and AVR receivers
+        requiresStopForTTS(speakerId) {
+            const id = (speakerId || '').toLowerCase();
+            
+            // Apple devices: HomePod, AirPlay, Airport, Apple TV
+            if (id.includes('homepod') || 
+                id.includes('airplay') || 
+                id.includes('airport') ||
+                id.includes('apple_tv') ||
+                id.includes('appletv')) {
+                return true;
+            }
+            
+            // AVR Receivers: Denon, Yamaha, Onkyo, Marantz, Pioneer, Sony STR
+            // These play ONE source at a time (HDMI, optical, network) - can't mix
+            if (id.includes('denon') || 
+                id.includes('yamaha') ||
+                id.includes('onkyo') ||
+                id.includes('marantz') ||
+                id.includes('pioneer') ||
+                id.includes('avr') ||
+                id.includes('receiver')) {
+                return true;
+            }
+            
+            return false;
+        }
+
+        // Split speakers into stop-required and duckable
+        splitSpeakersByType(speakerIds) {
+            const stopRequired = [];
+            const duckableDevices = [];
+            
+            for (const id of speakerIds) {
+                if (this.requiresStopForTTS(id)) {
+                    stopRequired.push(id);
+                } else {
+                    duckableDevices.push(id);
+                }
+            }
+            
+            return { appleDevices: stopRequired, duckableDevices };
         }
 
         // Update dynamic volume inputs based on selected speakers
@@ -219,6 +312,31 @@
             return station?.url || '';
         }
 
+        // Get the T2 mixer stream URL
+        // IMPORTANT: Must be a LAN IP that speakers can reach, NOT localhost
+        _getMixerStreamUrl() {
+            // If user has set a custom mixer URL, use that
+            if (this.properties.mixerStreamUrl) {
+                return this.properties.mixerStreamUrl;
+            }
+            
+            // Try to derive from current location
+            if (typeof window !== 'undefined' && window.location) {
+                const hostname = window.location.hostname;
+                
+                // If it's localhost or 127.0.0.1, we need to warn - speakers can't reach this
+                if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                    console.warn('[AudioOutput] ⚠️ Mixer URL is localhost - speakers cannot reach this!');
+                    console.warn('[AudioOutput] 💡 Set your LAN IP in the Mixer URL field (e.g., http://192.168.1.100:3000/api/audio/stream)');
+                }
+                
+                // Use port 3000 (T2 backend)
+                return `http://${hostname}:3000/api/audio/stream`;
+            }
+            // Fallback for non-browser contexts
+            return 'http://localhost:3000/api/audio/stream';
+        }
+
         // Get stream URL for a specific speaker (uses per-speaker station if set)
         getStreamUrlForSpeaker(speakerId) {
             // Node-wide custom URL takes priority over everything
@@ -300,13 +418,100 @@
 
         async playStream() {
             const speakerIds = this.getSpeakerIds();
+            
+            console.log(`[AudioOutput] 🎵 playStream called. useMixerMode=${this.properties.useMixerMode}, speakers=${speakerIds.length}`);
 
             if (speakerIds.length === 0) {
                 console.warn('[AudioOutput] No speaker selected');
                 return false;
             }
+            
+            // LOCK: Prevent duplicate play commands (fixes AirPlay "already streaming" crash)
+            const now = Date.now();
+            if (this._playInProgress) {
+                console.log('[AudioOutput] ⏳ Play already in progress, skipping duplicate call');
+                return false;
+            }
+            // Also prevent rapid-fire calls (minimum 2 seconds between plays)
+            if (now - this._lastPlayTime < 2000) {
+                console.log(`[AudioOutput] ⏳ Too soon since last play (${now - this._lastPlayTime}ms), skipping`);
+                return false;
+            }
+            
+            this._playInProgress = true;
+            this._lastPlayTime = now;
 
+            // MIXER MODE: Start T2 audio mixer and point ALL speakers to the mixer stream
+            if (this.properties.useMixerMode) {
+                console.log(`[AudioOutput] 🎛️ Mixer Mode: Starting unified stream...`);
+                
+                // Get the station URL to feed into the mixer
+                const sourceUrl = this.getStreamUrl();
+                if (!sourceUrl) {
+                    console.warn('[AudioOutput] No source URL for mixer');
+                    return false;
+                }
+                
+                // Determine mixer URL (same host as T2 server)
+                const mixerUrl = this._getMixerStreamUrl();
+                console.log(`[AudioOutput] 🎛️ Mixer source: ${sourceUrl}`);
+                console.log(`[AudioOutput] 🎛️ Mixer output: ${mixerUrl}`);
+                
+                try {
+                    // Start the mixer with our station as source
+                    const startResponse = await (window.apiFetch || fetch)('/api/audio/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sourceUrl })
+                    });
+                    
+                    if (!startResponse.ok) {
+                        console.error('[AudioOutput] ❌ Failed to start mixer');
+                        return false;
+                    }
+                    
+                    console.log(`[AudioOutput] ✅ Mixer started, now pointing ${speakerIds.length} speaker(s) to it...`);
+                    
+                    // Point all speakers to the mixer stream
+                    const results = [];
+                    for (let i = 0; i < speakerIds.length; i++) {
+                        if (i > 0) await new Promise(r => setTimeout(r, 300));
+                        const success = await this.playSingleSpeaker(speakerIds[i], mixerUrl);
+                        results.push(success);
+                    }
+                    
+                    const successCount = results.filter(r => r).length;
+                    this.properties.isStreaming = successCount > 0;
+                    console.log(`[AudioOutput] 🎛️ Mixer stream started on ${successCount}/${speakerIds.length} speakers`);
+                    if (this.changeCallback) this.changeCallback();
+                    this._playInProgress = false;
+                    return successCount > 0;
+                    
+                } catch (err) {
+                    console.error('[AudioOutput] Mixer start error:', err);
+                    this._playInProgress = false;
+                    return false;
+                }
+            }
+
+            // STANDARD MODE: Per-speaker station URLs
             console.log(`[AudioOutput] ▶️ Playing stream on ${speakerIds.length} speaker(s):`, speakerIds);
+            
+            // ALWAYS stop first for AirPlay devices (fixes "already streaming" crash)
+            console.log(`[AudioOutput] ⏹️ Stopping speakers before starting stream...`);
+            for (const speaker of speakerIds) {
+                try {
+                    await (window.apiFetch || fetch)('/api/media/stop', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entityId: speaker })
+                    });
+                } catch (e) {
+                    // Ignore stop errors
+                }
+            }
+            // Wait for AirPlay devices to fully stop (they're slow)
+            await new Promise(r => setTimeout(r, 1500));
 
             try {
                 // Stagger requests slightly to avoid overwhelming HA
@@ -328,9 +533,11 @@
                 this.properties.isStreaming = successCount > 0;
                 console.log(`[AudioOutput] Stream started on ${successCount}/${speakerIds.length} speakers`);
                 if (this.changeCallback) this.changeCallback();
+                this._playInProgress = false;
                 return successCount > 0;
             } catch (err) {
                 console.error('[AudioOutput] Play error:', err);
+                this._playInProgress = false;
                 return false;
             }
         }
@@ -372,6 +579,16 @@
             console.log(`[AudioOutput] ⏹️ Stopping stream on ${speakerIds.length} speaker(s):`, speakerIds);
 
             try {
+                // If using mixer mode, also stop the mixer
+                if (this.properties.useMixerMode) {
+                    console.log(`[AudioOutput] 🎛️ Stopping mixer...`);
+                    try {
+                        await (window.apiFetch || fetch)('/api/audio/stop', { method: 'POST' });
+                    } catch (err) {
+                        console.warn('[AudioOutput] Mixer stop failed:', err.message);
+                    }
+                }
+                
                 // Stop on all speakers with staggered timing (same as play)
                 const results = [];
                 for (let i = 0; i < speakerIds.length; i++) {
@@ -473,21 +690,72 @@
         }
 
         async pauseStreamForTTS(ttsSpeakerIds) {
-            if (this.properties.isStreaming && ttsSpeakerIds?.length > 0) {
-                console.log(`[AudioOutput] ⏸️ Pausing stream on TTS-enabled speakers only:`, ttsSpeakerIds);
+            // Check if we need to pause: either we're actively streaming, 
+            // OR streamEnabled is true (stream may have been started by backend/restore)
+            const needsToPause = (this.properties.isStreaming || this.properties.streamEnabled) && ttsSpeakerIds?.length > 0;
+            
+            console.log(`[AudioOutput] pauseStreamForTTS check: isStreaming=${this.properties.isStreaming}, streamEnabled=${this.properties.streamEnabled}, speakerCount=${ttsSpeakerIds?.length || 0} → needsToPause=${needsToPause}`);
+            
+            if (needsToPause) {
                 this.properties.wasStreamingBeforeTTS = true;
-                this.properties.pausedSpeakerIds = ttsSpeakerIds;  // Remember which ones we paused
+                this.properties.pausedSpeakerIds = ttsSpeakerIds;
+                this.properties.stoppedSpeakerIds = [];
+                this.properties.duckedSpeakerIds = [];
                 
-                // Only stop the TTS-enabled speakers, leave others playing
-                for (let i = 0; i < ttsSpeakerIds.length; i++) {
-                    if (i > 0) await new Promise(r => setTimeout(r, 300));
-                    await this.stopSingleSpeaker(ttsSpeakerIds[i]);
+                if (this.properties.duckMode) {
+                    // SMART DUCK MODE: Single-source devices get stopped, multi-source get ducked
+                    const { appleDevices: stopRequired, duckableDevices } = this.splitSpeakersByType(ttsSpeakerIds);
+                    
+                    // Single-source devices (Apple, AVRs): STOP (they can't mix audio)
+                    if (stopRequired.length > 0) {
+                        console.log(`[AudioOutput] ⏹️ Stop required (can't mix audio):`, stopRequired);
+                        for (let i = 0; i < stopRequired.length; i++) {
+                            if (i > 0) await new Promise(r => setTimeout(r, 300));
+                            await this.stopSingleSpeaker(stopRequired[i]);
+                        }
+                        this.properties.stoppedSpeakerIds = stopRequired;
+                        
+                        // AirPlay/Apple devices need longer delay before they can accept new audio
+                        // Also helps AVRs clear their queue before receiving TTS
+                        const hasAppleDevices = stopRequired.some(id => this.isAppleDevice(id));
+                        const readyDelay = hasAppleDevices ? 1500 : 500;
+                        console.log(`[AudioOutput] ⏳ Waiting ${readyDelay}ms for stopped devices to be ready...`);
+                        await new Promise(r => setTimeout(r, readyDelay));
+                    }
+                    
+                    // Multi-source devices (Sonos, Chromecast, etc.): TRUE DUCK (lower volume)
+                    if (duckableDevices.length > 0) {
+                        console.log(`[AudioOutput] 🦆 Duck mode: lowering volume to ${this.properties.duckVolumePercent}% on:`, duckableDevices);
+                        this.properties.preDuckVolumes = {};
+                        
+                        for (let i = 0; i < duckableDevices.length; i++) {
+                            const speakerId = duckableDevices[i];
+                            const currentVol = this.getSpeakerVolume(speakerId);
+                            this.properties.preDuckVolumes[speakerId] = currentVol;
+                            const duckedVol = Math.round(currentVol * (this.properties.duckVolumePercent / 100));
+                            
+                            if (i > 0) await new Promise(r => setTimeout(r, 100));
+                            await this.setVolume(speakerId, duckedVol);
+                        }
+                        this.properties.duckedSpeakerIds = duckableDevices;
+                        
+                        // Brief pause for volume change to take effect
+                        await new Promise(r => setTimeout(r, 300));
+                    }
+                } else {
+                    // NORMAL MODE: Stop the stream on all speakers
+                    console.log(`[AudioOutput] ⏸️ Pausing stream on TTS-enabled speakers only:`, ttsSpeakerIds);
+                    
+                    for (let i = 0; i < ttsSpeakerIds.length; i++) {
+                        if (i > 0) await new Promise(r => setTimeout(r, 300));
+                        await this.stopSingleSpeaker(ttsSpeakerIds[i]);
+                    }
+                    this.properties.stoppedSpeakerIds = ttsSpeakerIds;
+                    
+                    // Brief pause for speaker to be ready for TTS
+                    console.log(`[AudioOutput] ⏳ Brief pause for speaker readiness...`);
+                    await new Promise(r => setTimeout(r, 300));
                 }
-                
-                // Give speaker time to fully stop and be ready for TTS
-                // Denon/receivers need ~1s to switch audio modes
-                console.log(`[AudioOutput] ⏳ Waiting 1s for speaker to be ready...`);
-                await new Promise(r => setTimeout(r, 1000));
             }
         }
 
@@ -579,8 +847,8 @@
                     }
                 };
                 
-                // Start polling after a brief delay to let TTS start
-                setTimeout(checkState, 1000);
+                // Start polling quickly - TTS command is already sent
+                setTimeout(checkState, 300);
             });
         }
 
@@ -590,35 +858,88 @@
                 clearTimeout(this._resumeTimeout);
             }
             
-            console.log(`[AudioOutput] 📢 TTS sent. Waiting for actual playback completion...`);
-            
             // Get speaker IDs - use passed ones or fall back to node's speakers
             const speakers = speakerIds || this.getSpeakerIds();
             
-            // Wait for TTS to actually finish on the first speaker (they should all finish ~same time)
-            const primarySpeaker = speakers[0];
-            if (primarySpeaker) {
-                await this.waitForTTSCompletion(primarySpeaker);
+            // SMART TIMING: Use actual audio duration when available (Chatterbox)
+            // This is MORE RELIABLE than state polling, especially for Apple devices
+            let usedDurationTiming = false;
+            if (this._lastTTSDurationMs && this._lastTTSDurationMs > 0) {
+                // We know the exact audio duration - use it!
+                // Add 2.5s buffer for AirPlay latency (audio starts ~2s after play_media call)
+                const waitMs = this._lastTTSDurationMs + 2500;
+                console.log(`[AudioOutput] ⏱️ Using actual audio duration: ${Math.round(this._lastTTSDurationMs/1000)}s + 2.5s AirPlay buffer = ${Math.round(waitMs/1000)}s total`);
+                this._lastTTSDurationMs = null; // Clear for next time
+                await new Promise(r => setTimeout(r, waitMs));
+                usedDurationTiming = true; // Skip extra buffer - already included
+            } else if (this.properties.duckMode) {
+                // DUCK MODE without known duration: estimate from word count
+                const wordCount = (message || '').split(/\s+/).length;
+                const waitMs = Math.max(3000, wordCount * 180); // 180ms/word, min 3s
+                console.log(`[AudioOutput] 🦆 Duck mode: waiting ~${Math.round(waitMs/1000)}s for TTS (${wordCount} words estimated)`);
+                await new Promise(r => setTimeout(r, waitMs));
+            } else {
+                // NORMAL MODE without known duration: Poll for TTS completion
+                // This is the least reliable method (Apple devices report state poorly)
+                console.log(`[AudioOutput] 📢 TTS sent. Polling for completion (may be slow on Apple devices)...`);
+                const primarySpeaker = speakers[0];
+                if (primarySpeaker) {
+                    await this.waitForTTSCompletion(primarySpeaker);
+                }
             }
             
-            // Add small buffer after TTS ends
-            console.log(`[AudioOutput] ⏳ TTS done. Waiting ${this.properties.resumeDelay}ms buffer before resuming stream...`);
-            await new Promise(r => setTimeout(r, this.properties.resumeDelay));
+            // Add small buffer after TTS ends (only if we didn't use duration timing, which has buffer built-in)
+            if (!usedDurationTiming && this.properties.resumeDelay > 0) {
+                console.log(`[AudioOutput] ⏳ TTS done. Waiting ${this.properties.resumeDelay}ms buffer before resuming...`);
+                await new Promise(r => setTimeout(r, this.properties.resumeDelay));
+            }
             
-            // Now resume - only on the speakers we paused (TTS-enabled ones)
+            // Now resume - handle stopped vs ducked speakers separately
             if (this.properties.wasStreamingBeforeTTS && this.properties.streamEnabled) {
-                const pausedSpeakers = this.properties.pausedSpeakerIds || speakers;
-                console.log(`[AudioOutput] 🔄 Resuming stream on paused speakers:`, pausedSpeakers);
+                const stoppedSpeakers = this.properties.stoppedSpeakerIds || [];
+                const duckedSpeakers = this.properties.duckedSpeakerIds || [];
                 
-                // Resume only the paused speakers with their per-speaker URLs
-                for (let i = 0; i < pausedSpeakers.length; i++) {
-                    if (i > 0) await new Promise(r => setTimeout(r, 300));
-                    const streamUrl = this.getStreamUrlForSpeaker(pausedSpeakers[i]);
-                    await this.playSingleSpeaker(pausedSpeakers[i], streamUrl);
+                // For backwards compatibility, if neither array is populated, use pausedSpeakerIds
+                const legacyPaused = this.properties.pausedSpeakerIds || speakers;
+                const hasSmartTracking = stoppedSpeakers.length > 0 || duckedSpeakers.length > 0;
+                
+                // Resume STOPPED speakers (restart stream)
+                const toRestart = hasSmartTracking ? stoppedSpeakers : (this.properties.duckMode ? [] : legacyPaused);
+                if (toRestart.length > 0) {
+                    // Extra delay for AVR devices - they need time to fully clear state before new stream
+                    const hasAVR = toRestart.some(id => id.includes('denon') || id.includes('avr') || id.includes('receiver'));
+                    if (hasAVR) {
+                        console.log(`[AudioOutput] ⏳ AVR detected - waiting extra 1.5s for device to settle...`);
+                        await new Promise(r => setTimeout(r, 1500));
+                    }
+                    
+                    console.log(`[AudioOutput] 🔄 Resuming stream on stopped speakers:`, toRestart);
+                    for (let i = 0; i < toRestart.length; i++) {
+                        if (i > 0) await new Promise(r => setTimeout(r, 300));
+                        const streamUrl = this.getStreamUrlForSpeaker(toRestart[i]);
+                        // NO forceStop needed here - speaker was already stopped for TTS, 
+                        // and we use enqueue:'replace' which clears queued audio anyway
+                        await this.playSingleSpeaker(toRestart[i], streamUrl, 1, false);
+                    }
+                }
+                
+                // Resume DUCKED speakers (restore volume)
+                const toUnduck = hasSmartTracking ? duckedSpeakers : (this.properties.duckMode ? legacyPaused : []);
+                if (toUnduck.length > 0) {
+                    console.log(`[AudioOutput] 🦆 Restoring volumes on ducked speakers:`, toUnduck);
+                    for (let i = 0; i < toUnduck.length; i++) {
+                        const speakerId = toUnduck[i];
+                        const originalVol = this.properties.preDuckVolumes?.[speakerId] ?? this.getSpeakerVolume(speakerId);
+                        if (i > 0) await new Promise(r => setTimeout(r, 100));
+                        await this.setVolume(speakerId, originalVol);
+                    }
+                    this.properties.preDuckVolumes = {};
                 }
                 
                 this.properties.wasStreamingBeforeTTS = false;
                 this.properties.pausedSpeakerIds = null;
+                this.properties.stoppedSpeakerIds = [];
+                this.properties.duckedSpeakerIds = [];
             } else {
                 console.log(`[AudioOutput] ⏭️ Skipping resume (wasStreaming=${this.properties.wasStreamingBeforeTTS}, enabled=${this.properties.streamEnabled})`);
             }
@@ -628,7 +949,7 @@
             if (!window.socket) return false;
             
             console.log(`[AudioOutput] 🎤 Sending TTS to ${speakerIds.length} speaker(s): "${message.substring(0, 50)}..."`);
-            console.log(`[AudioOutput] 🎙️ TTS service: ${this.properties.ttsService}, ElevenLabs voiceId: "${this.properties.elevenLabsVoiceId || '(none)'}"`);
+            console.log(`[AudioOutput] 🎙️ TTS service: ${this.properties.ttsService}`);
             
             if (this.properties.ttsService === 'elevenlabs') {
                 // Set up one-time listener for the result
@@ -660,6 +981,38 @@
                 });
                 
                 return await resultPromise;
+            } else if (this.properties.ttsService === 'chatterbox') {
+                // Chatterbox local TTS
+                const resultPromise = new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        console.log(`[AudioOutput] ⏰ Chatterbox result timeout (60s)`);
+                        window.socket.off('chatterbox-tts-result', handler);
+                        resolve(false);
+                    }, 60000); // Chatterbox can take longer for generation
+                    
+                    const handler = (result) => {
+                        clearTimeout(timeout);
+                        window.socket.off('chatterbox-tts-result', handler);
+                        if (result.success) {
+                            console.log(`[AudioOutput] ✅ Chatterbox TTS success (duration: ${result.durationMs}ms)`);
+                            // Store duration for accurate duck mode timing
+                            this._lastTTSDurationMs = result.durationMs || 5000;
+                            resolve(true);
+                        } else {
+                            console.log(`[AudioOutput] ❌ Chatterbox TTS failed: ${result.error}`);
+                            resolve(false);
+                        }
+                    };
+                    window.socket.on('chatterbox-tts-result', handler);
+                });
+                
+                window.socket.emit('request-chatterbox-tts', {
+                    message: message,
+                    voiceId: this.properties.chatterboxVoiceId,
+                    mediaPlayerIds: speakerIds
+                });
+                
+                return await resultPromise;
             } else {
                 // Send TTS to each speaker with small stagger
                 for (let i = 0; i < speakerIds.length; i++) {
@@ -679,6 +1032,196 @@
                     }
                 }
             }
+            return true;
+        }
+
+        // Optimized Chatterbox flow: Generate audio FIRST (while stream plays),
+        // THEN pause stream, play pre-generated audio, resume.
+        // This minimizes silence before TTS plays.
+        async sendChatterboxOptimized(message, speakerIds) {
+            // Queue-level deduplication: Don't queue same message if already in queue or just played
+            const isDuplicate = this._ttsQueue.some(item => item.message === message);
+            const recentlyPlayed = this._lastPlayedMessage === message && 
+                                   (Date.now() - this._lastPlayedTime) < 5000; // 5 second cooldown per message
+            
+            if (isDuplicate) {
+                console.log(`[AudioOutput] ⚠️ Duplicate TTS in queue, skipping: "${message.substring(0, 30)}..."`);
+                return Promise.resolve(true); // Return success to not block
+            }
+            
+            if (recentlyPlayed) {
+                console.log(`[AudioOutput] ⚠️ Same message played ${Math.round((Date.now() - this._lastPlayedTime)/1000)}s ago, skipping`);
+                return Promise.resolve(true);
+            }
+            
+            console.log(`[AudioOutput] 📋 Queuing TTS (queue size: ${this._ttsQueue.length}): "${message.substring(0, 30)}..."`);
+            
+            // Queue the TTS request to prevent race conditions
+            return new Promise((resolve) => {
+                this._ttsQueue.push({ message, speakerIds, resolve });
+                this._processNextTTS();
+            });
+        }
+        
+        async _processNextTTS() {
+            // If already processing, the queue will be handled when current finishes
+            if (this._ttsInProgress || this._ttsQueue.length === 0) return;
+            
+            // Check Quiet Hours - skip TTS if within quiet period
+            if (this.properties.quietHoursEnabled) {
+                const now = new Date();
+                const currentHour = now.getHours();
+                const start = this.properties.quietHoursStart;
+                const end = this.properties.quietHoursEnd;
+                
+                // Handle overnight ranges (e.g., 23:00 to 7:00)
+                let isQuietTime = false;
+                if (start <= end) {
+                    // Same-day range (e.g., 14:00 to 18:00)
+                    isQuietTime = currentHour >= start && currentHour < end;
+                } else {
+                    // Overnight range (e.g., 23:00 to 7:00)
+                    isQuietTime = currentHour >= start || currentHour < end;
+                }
+                
+                if (isQuietTime) {
+                    console.log(`[AudioOutput] 🌙 Quiet Hours active (${start}:00-${end}:00). Skipping TTS.`);
+                    // Clear the queue during quiet hours
+                    while (this._ttsQueue.length > 0) {
+                        const { resolve } = this._ttsQueue.shift();
+                        resolve(false); // Resolve as "not played"
+                    }
+                    return;
+                }
+            }
+            
+            this._ttsInProgress = true;
+            const { message, speakerIds, resolve } = this._ttsQueue.shift();
+            
+            // Track what we're playing for deduplication
+            this._lastPlayedMessage = message;
+            this._lastPlayedTime = Date.now();
+            
+            try {
+                const success = await this._executeTTS(message, speakerIds);
+                resolve(success);
+            } catch (err) {
+                console.log(`[AudioOutput] ❌ TTS execution error: ${err.message}`);
+                resolve(false);
+            } finally {
+                this._ttsInProgress = false;
+                // Process next in queue if any
+                if (this._ttsQueue.length > 0) {
+                    console.log(`[AudioOutput] 📋 Processing next TTS in queue (${this._ttsQueue.length} remaining)`);
+                    this._processNextTTS();
+                }
+            }
+        }
+        
+        async _executeTTS(message, speakerIds) {
+            if (!window.socket) return false;
+            
+            // MIXER MODE: Use the unified T2 audio stream with seamless TTS injection
+            // When mixer mode is enabled, speakers are already playing the T2 mixer stream
+            // We just tell the mixer to inject TTS, no per-speaker volume juggling needed
+            if (this.properties.useMixerMode) {
+                console.log(`[AudioOutput] 🎛️ Mixer Mode: Sending TTS to unified stream...`);
+                console.log(`[AudioOutput] 🎙️ Message: "${message.substring(0, 50)}..."`);
+                
+                const result = await new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        console.log(`[AudioOutput] ⏰ Mixer TTS timeout (60s)`);
+                        window.socket.off('mixer-tts-result', handler);
+                        resolve({ success: false, error: 'Mixer TTS timeout' });
+                    }, 60000);
+                    
+                    const handler = (result) => {
+                        clearTimeout(timeout);
+                        window.socket.off('mixer-tts-result', handler);
+                        resolve(result);
+                    };
+                    window.socket.on('mixer-tts-result', handler);
+                    
+                    window.socket.emit('mixer-tts', {
+                        message: message,
+                        voiceId: this.properties.chatterboxVoiceId
+                    });
+                });
+                
+                if (result.success) {
+                    console.log(`[AudioOutput] ✅ Mixer TTS complete - seamlessly injected into stream`);
+                    return true;
+                } else {
+                    console.log(`[AudioOutput] ❌ Mixer TTS failed: ${result.error || 'Unknown error'}`);
+                    return false;
+                }
+            }
+            
+            // STANDARD MODE: Per-speaker TTS with volume juggling
+            console.log(`[AudioOutput] 🎤 Chatterbox optimized: generating audio first...`);
+            console.log(`[AudioOutput] 🎙️ Message: "${message.substring(0, 50)}..."`);
+            
+            // Step 1: Generate audio (stream keeps playing!)
+            const generateResult = await new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    console.log(`[AudioOutput] ⏰ Chatterbox generate timeout (60s)`);
+                    window.socket.off('chatterbox-generated', handler);
+                    resolve({ success: false, error: 'Generation timeout' });
+                }, 60000);
+                
+                const handler = (result) => {
+                    clearTimeout(timeout);
+                    window.socket.off('chatterbox-generated', handler);
+                    resolve(result);
+                };
+                window.socket.on('chatterbox-generated', handler);
+                
+                window.socket.emit('generate-chatterbox-tts', {
+                    message: message,
+                    voiceId: this.properties.chatterboxVoiceId
+                });
+            });
+            
+            if (!generateResult.success) {
+                console.log(`[AudioOutput] ❌ Chatterbox generation failed: ${generateResult.error}`);
+                return false;
+            }
+            
+            console.log(`[AudioOutput] ✅ Audio generated (${generateResult.durationMs}ms). Now pausing stream...`);
+            this._lastTTSDurationMs = generateResult.durationMs || 5000;
+            
+            // Step 2: NOW pause the stream (audio is ready to play immediately)
+            await this.pauseStreamForTTS(speakerIds);
+            
+            // Step 3: Play the pre-generated audio
+            console.log(`[AudioOutput] ▶️ Playing pre-generated audio on speakers...`);
+            const playResult = await new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    console.log(`[AudioOutput] ⏰ Play media timeout (10s)`);
+                    window.socket.off('play-media-result', handler);
+                    resolve({ success: false });
+                }, 10000);
+                
+                const handler = (result) => {
+                    clearTimeout(timeout);
+                    window.socket.off('play-media-result', handler);
+                    resolve(result);
+                };
+                window.socket.on('play-media-result', handler);
+                
+                window.socket.emit('play-media-on-speakers', {
+                    audioUrl: generateResult.audioUrl,
+                    mediaPlayerIds: speakerIds
+                });
+            });
+            
+            if (!playResult.success) {
+                console.log(`[AudioOutput] ⚠️ Play media may have failed, but continuing with resume...`);
+            }
+            
+            // Step 4: Wait for audio to finish and resume stream
+            await this.resumeStreamAfterTTS(message, speakerIds);
+            
             return true;
         }
 
@@ -839,6 +1382,11 @@
             const debounceMs = 1000;
             const ttsSpeakerIds = this.getTTSSpeakerIds();  // Only TTS-enabled speakers
 
+            // DEBUG: Log every trigger evaluation
+            if (triggerIsTrue || wasTriggered) {
+                console.log(`[AudioOutput] 🔍 TTS TRIGGER CHECK: trigger=${triggerIsTrue}, wasTriggered=${wasTriggered}, debounceOk=${(now - this._lastSentTime) > debounceMs}, dynamicMessage="${(dynamicMessage || '').substring(0, 30)}..."`);
+            }
+
             if (triggerIsTrue && !wasTriggered && (now - this._lastSentTime) > debounceMs) {
                 this._lastTrigger = true;
                 this._lastSentTime = now;
@@ -846,14 +1394,24 @@
                 const message = (dynamicMessage !== undefined && dynamicMessage !== null && dynamicMessage !== '')
                     ? dynamicMessage
                     : this.properties.message;
+                
+                console.log(`[AudioOutput] ✅ TTS TRIGGER FIRING! Message: "${message.substring(0, 50)}..."`);
+                console.log(`[AudioOutput]    Source: dynamicMessage=${dynamicMessage ? 'yes' : 'no'}, properties.message="${(this.properties.message || '').substring(0, 30)}..."`);
+
 
                 if (ttsSpeakerIds.length > 0 && message) {
-                    // Pause stream, send TTS, wait for completion, resume
-                    await this.pauseStreamForTTS(ttsSpeakerIds);
-                    const success = await this.sendTTS(message, ttsSpeakerIds);
-                    this.properties.lastResult = success;
-                    // Don't await - let it run in background so data() returns immediately
-                    this.resumeStreamAfterTTS(message, ttsSpeakerIds);
+                    // Use optimized flow for Chatterbox: generate first, then pause/play/resume
+                    if (this.properties.ttsService === 'chatterbox') {
+                        const success = await this.sendChatterboxOptimized(message, ttsSpeakerIds);
+                        this.properties.lastResult = success;
+                    } else {
+                        // Legacy flow for other TTS services: pause first, then generate/play
+                        await this.pauseStreamForTTS(ttsSpeakerIds);
+                        const success = await this.sendTTS(message, ttsSpeakerIds);
+                        this.properties.lastResult = success;
+                        // Await resume to prevent race conditions with concurrent TTS
+                        await this.resumeStreamAfterTTS(message, ttsSpeakerIds);
+                    }
                 }
             } else if (!triggerIsTrue) {
                 this._lastTrigger = false;
@@ -875,6 +1433,8 @@
                 ttsEntityId: this.properties.ttsEntityId,
                 elevenLabsVoiceId: this.properties.elevenLabsVoiceId,
                 elevenLabsVoiceName: this.properties.elevenLabsVoiceName,
+                chatterboxVoiceId: this.properties.chatterboxVoiceId,
+                chatterboxVoiceName: this.properties.chatterboxVoiceName,
                 stations: this.properties.stations,
                 selectedStation: this.properties.selectedStation,
                 speakerStations: this.properties.speakerStations,
@@ -883,10 +1443,20 @@
                 streamVolume: this.properties.streamVolume,
                 speakerVolumes: this.properties.speakerVolumes,
                 linkVolumes: this.properties.linkVolumes,
+                duckMode: this.properties.duckMode,
+                duckVolumePercent: this.properties.duckVolumePercent,
                 streamEnabled: this.properties.streamEnabled,
                 resumeDelay: this.properties.resumeDelay,
                 nodeWidth: this.properties.nodeWidth,
                 nodeHeight: this.properties.nodeHeight,
+                // TTS Volume and Quiet Hours
+                ttsVolume: this.properties.ttsVolume,
+                quietHoursEnabled: this.properties.quietHoursEnabled,
+                quietHoursStart: this.properties.quietHoursStart,
+                quietHoursEnd: this.properties.quietHoursEnd,
+                // Mixer Mode
+                useMixerMode: this.properties.useMixerMode,
+                mixerStreamUrl: this.properties.mixerStreamUrl,
                 // UI section states
                 showIOSection: this.properties.showIOSection,
                 showSpeakersSection: this.properties.showSpeakersSection,
@@ -905,6 +1475,8 @@
             if (props.ttsEntityId !== undefined) this.properties.ttsEntityId = props.ttsEntityId;
             if (props.elevenLabsVoiceId !== undefined) this.properties.elevenLabsVoiceId = props.elevenLabsVoiceId;
             if (props.elevenLabsVoiceName !== undefined) this.properties.elevenLabsVoiceName = props.elevenLabsVoiceName;
+            if (props.chatterboxVoiceId !== undefined) this.properties.chatterboxVoiceId = props.chatterboxVoiceId;
+            if (props.chatterboxVoiceName !== undefined) this.properties.chatterboxVoiceName = props.chatterboxVoiceName;
             if (props.stations !== undefined) this.properties.stations = props.stations;
             if (props.selectedStation !== undefined) this.properties.selectedStation = props.selectedStation;
             if (props.speakerStations !== undefined) this.properties.speakerStations = props.speakerStations;
@@ -913,10 +1485,20 @@
             if (props.streamVolume !== undefined) this.properties.streamVolume = props.streamVolume;
             if (props.speakerVolumes !== undefined) this.properties.speakerVolumes = props.speakerVolumes;
             if (props.linkVolumes !== undefined) this.properties.linkVolumes = props.linkVolumes;
+            if (props.duckMode !== undefined) this.properties.duckMode = props.duckMode;
+            if (props.duckVolumePercent !== undefined) this.properties.duckVolumePercent = props.duckVolumePercent;
             if (props.streamEnabled !== undefined) this.properties.streamEnabled = props.streamEnabled;
             if (props.resumeDelay !== undefined) this.properties.resumeDelay = props.resumeDelay;
             if (props.nodeWidth !== undefined) this.properties.nodeWidth = props.nodeWidth;
             if (props.nodeHeight !== undefined) this.properties.nodeHeight = props.nodeHeight;
+            // TTS Volume and Quiet Hours
+            if (props.ttsVolume !== undefined) this.properties.ttsVolume = props.ttsVolume;
+            if (props.quietHoursEnabled !== undefined) this.properties.quietHoursEnabled = props.quietHoursEnabled;
+            if (props.quietHoursStart !== undefined) this.properties.quietHoursStart = props.quietHoursStart;
+            if (props.quietHoursEnd !== undefined) this.properties.quietHoursEnd = props.quietHoursEnd;
+            // Mixer Mode
+            if (props.useMixerMode !== undefined) this.properties.useMixerMode = props.useMixerMode;
+            if (props.mixerStreamUrl !== undefined) this.properties.mixerStreamUrl = props.mixerStreamUrl;
             // UI section states
             if (props.showIOSection !== undefined) this.properties.showIOSection = props.showIOSection;
             if (props.showSpeakersSection !== undefined) this.properties.showSpeakersSection = props.showSpeakersSection;
@@ -951,9 +1533,12 @@
         const [mediaPlayers, setMediaPlayers] = useState([]);
         const [ttsEntities, setTtsEntities] = useState([]);
         const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
+        const [chatterboxVoices, setChatterboxVoices] = useState([]);
+        const [chatterboxStatus, setChatterboxStatus] = useState({ available: false });
         const [selectedPlayers, setSelectedPlayers] = useState(data.properties.mediaPlayerIds || []);
         const [selectedTtsEntity, setSelectedTtsEntity] = useState(data.properties.ttsEntityId || '');
         const [selectedVoice, setSelectedVoice] = useState(data.properties.elevenLabsVoiceId || '');
+        const [selectedChatterboxVoice, setSelectedChatterboxVoice] = useState(data.properties.chatterboxVoiceId || '');
         const [message, setMessage] = useState(data.properties.message || '');
         const [ttsService, setTtsService] = useState(data.properties.ttsService || 'tts/speak');
         const [testStatus, setTestStatus] = useState('');
@@ -967,10 +1552,21 @@
         const [customStreamUrl, setCustomStreamUrl] = useState(data.properties.customStreamUrl || '');
         const [speakerVolumes, setSpeakerVolumes] = useState(data.properties.speakerVolumes || {});
         const [linkVolumes, setLinkVolumes] = useState(data.properties.linkVolumes || false);
+        const [duckMode, setDuckMode] = useState(data.properties.duckMode || false);
         const [streamEnabled, setStreamEnabled] = useState(data.properties.streamEnabled || false);
         const [isStreaming, setIsStreaming] = useState(data.properties.isStreaming || false);
         const [showStationEditor, setShowStationEditor] = useState(false);
         const [editingStation, setEditingStation] = useState(null);
+        
+        // TTS Volume and Quiet Hours
+        const [ttsVolume, setTtsVolume] = useState(data.properties.ttsVolume ?? 75);
+        const [quietHoursEnabled, setQuietHoursEnabled] = useState(data.properties.quietHoursEnabled || false);
+        const [quietHoursStart, setQuietHoursStart] = useState(data.properties.quietHoursStart ?? 23);
+        const [quietHoursEnd, setQuietHoursEnd] = useState(data.properties.quietHoursEnd ?? 7);
+        
+        // Mixer Mode - use unified T2 audio stream instead of per-speaker streams
+        const [useMixerMode, setUseMixerMode] = useState(data.properties.useMixerMode || false);
+        const [mixerStreamUrl, setMixerStreamUrl] = useState(data.properties.mixerStreamUrl || '');
         
         // Stream discovery state
         const [stationEditorMode, setStationEditorMode] = useState('browse'); // 'manual' or 'browse'
@@ -1101,7 +1697,45 @@
             }
         }, []);  // Only on mount
 
-        // Publish stations to global registry for other nodes (like Station Selector)
+        // Detect if speakers are currently playing (for UI sync after restart)
+        useEffect(() => {
+            if (selectedPlayers.length === 0 || !window.socket) return;
+            
+            const checkPlayState = () => {
+                let playingCount = 0;
+                let checked = 0;
+                
+                selectedPlayers.forEach(speakerId => {
+                    window.socket.emit('get-entity-state', { entityId: speakerId }, (response) => {
+                        checked++;
+                        // Handle both formats: response.state could be string or object with .state property
+                        const stateValue = typeof response?.state === 'string' 
+                            ? response.state 
+                            : response?.state?.state;
+                        const state = stateValue?.toLowerCase?.() || '';
+                        
+                        // Check for playing states (HA uses 'playing', some devices might use variants)
+                        if (state === 'playing' || state === 'buffering' || state === 'on') {
+                            playingCount++;
+                        }
+                        // After checking all speakers, update isStreaming if any are playing
+                        if (checked === selectedPlayers.length) {
+                            if (playingCount > 0 && !isStreaming) {
+                                console.log(`[AudioOutput] Detected ${playingCount}/${selectedPlayers.length} speakers already playing`);
+                                setIsStreaming(true);
+                                data.properties.isStreaming = true;
+                            }
+                        }
+                    });
+                });
+            };
+            
+            // Check on mount after a short delay
+            const timer = setTimeout(checkPlayState, 1000);
+            return () => clearTimeout(timer);
+        }, [selectedPlayers.length]);  // Re-check when speakers change
+
+        // Publish stations to global registry for other nodes (like Station Selector, Station Schedule)
         useEffect(() => {
             if (!window.T2StationRegistry) {
                 window.T2StationRegistry = { stations: [] };
@@ -1109,6 +1743,8 @@
             // Update global registry with this node's stations
             if (stations && stations.length > 0) {
                 window.T2StationRegistry.stations = [...stations];
+                // Fire event so Station Schedule can sync immediately
+                window.dispatchEvent(new CustomEvent('t2-station-registry-update'));
             }
         }, [stations]);
 
@@ -1149,6 +1785,20 @@
                     }
                 }
             };
+            const onChatterboxStatus = (status) => {
+                setChatterboxStatus(status || { available: false });
+            };
+            const onChatterboxVoices = (voices) => {
+                if (voices?.error) {
+                    setChatterboxVoices([]);
+                } else {
+                    setChatterboxVoices(voices || []);
+                }
+            };
+            const onChatterboxResult = (result) => {
+                setTestStatus(result.success ? '✓ Playing!' : '✗ ' + (result.error || 'Failed'));
+                setTimeout(() => setTestStatus(''), 3000);
+            };
             const onTTSResult = (result) => {
                 setTestStatus(result.success ? '✓ Sent!' : '✗ ' + (result.error || 'Failed'));
                 setTimeout(() => setTestStatus(''), 3000);
@@ -1163,16 +1813,24 @@
             window.socket.off('elevenlabs-voices', onElevenLabsVoices);
             window.socket.off('tts-result', onTTSResult);
             window.socket.off('elevenlabs-tts-result', onElevenLabsResult);
+            window.socket.off('chatterbox-status', onChatterboxStatus);
+            window.socket.off('chatterbox-voices', onChatterboxVoices);
+            window.socket.off('chatterbox-tts-result', onChatterboxResult);
 
             window.socket.on('media-players', onMediaPlayers);
             window.socket.on('tts-entities', onTtsEntities);
             window.socket.on('elevenlabs-voices', onElevenLabsVoices);
             window.socket.on('tts-result', onTTSResult);
             window.socket.on('elevenlabs-tts-result', onElevenLabsResult);
+            window.socket.on('chatterbox-status', onChatterboxStatus);
+            window.socket.on('chatterbox-voices', onChatterboxVoices);
+            window.socket.on('chatterbox-tts-result', onChatterboxResult);
 
             window.socket.emit('request-media-players');
             window.socket.emit('request-tts-entities');
             window.socket.emit('request-elevenlabs-voices');
+            window.socket.emit('request-chatterbox-status');
+            window.socket.emit('request-chatterbox-voices');
 
             return () => {
                 window.socket.off('media-players', onMediaPlayers);
@@ -1180,6 +1838,9 @@
                 window.socket.off('tts-result', onTTSResult);
                 window.socket.off('elevenlabs-voices', onElevenLabsVoices);
                 window.socket.off('elevenlabs-tts-result', onElevenLabsResult);
+                window.socket.off('chatterbox-status', onChatterboxStatus);
+                window.socket.off('chatterbox-voices', onChatterboxVoices);
+                window.socket.off('chatterbox-tts-result', onChatterboxResult);
             };
         }, []);
 
@@ -1260,9 +1921,10 @@
                 data.setSpeakerStation(playerId, idx);
                 
                 // Always switch this speaker to the new station immediately
+                // Use forceStop=true to ensure Apple devices (HomePod) accept the new stream
                 const streamUrl = data.getStreamUrlForSpeaker(playerId);
                 console.log('[AudioOutput] Switching speaker to:', streamUrl);
-                data.playSingleSpeaker(playerId, streamUrl);
+                data.playSingleSpeaker(playerId, streamUrl, 1, true); // forceStop=true for station change
                 
                 // Ensure streaming flags are set
                 data.properties.isStreaming = true;
@@ -1301,6 +1963,15 @@
             if (data.changeCallback) data.changeCallback();
         };
 
+        const handleChatterboxVoiceChange = (e) => {
+            const voiceId = e.target.value;
+            const voice = chatterboxVoices.find(v => v.voice_id === voiceId);
+            setSelectedChatterboxVoice(voiceId);
+            data.properties.chatterboxVoiceId = voiceId;
+            data.properties.chatterboxVoiceName = voice?.name || '';
+            if (data.changeCallback) data.changeCallback();
+        };
+
         const handleTest = () => {
             if (selectedPlayers.length === 0) {
                 setTestStatus('Select speaker(s) first');
@@ -1314,6 +1985,11 @@
             }
             if (ttsService === 'elevenlabs' && !selectedVoice) {
                 setTestStatus('Select a voice');
+                setTimeout(() => setTestStatus(''), 2000);
+                return;
+            }
+            if (ttsService === 'chatterbox' && !chatterboxStatus.available) {
+                setTestStatus('Chatterbox server not running');
                 setTimeout(() => setTestStatus(''), 2000);
                 return;
             }
@@ -1342,6 +2018,12 @@
                     window.socket.emit('request-elevenlabs-tts', {
                         message: message,
                         voiceId: selectedVoice,
+                        mediaPlayerIds: ttsSpeakers
+                    });
+                } else if (ttsService === 'chatterbox') {
+                    window.socket.emit('request-chatterbox-tts', {
+                        message: message,
+                        voiceId: selectedChatterboxVoice,
                         mediaPlayerIds: ttsSpeakers
                     });
                 } else {
@@ -2023,6 +2705,177 @@
                         }),
                         React.createElement('span', { key: 'label' }, '🔗 Link Volumes (master slider)')
                     ]),
+                    
+                    // Duck Mode checkbox
+                    React.createElement('label', {
+                        key: 'duck-mode',
+                        style: { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '10px', color: '#aaa' },
+                        onPointerDown: (e) => e.stopPropagation(),
+                        title: 'Lower stream volume during TTS instead of pausing (faster, smoother transitions)'
+                    }, [
+                        React.createElement('input', {
+                            key: 'cb',
+                            type: 'checkbox',
+                            checked: duckMode,
+                            onChange: (e) => {
+                                const newVal = e.target.checked;
+                                setDuckMode(newVal);
+                                data.properties.duckMode = newVal;
+                            },
+                            style: { accentColor: '#ffaa00', cursor: 'pointer' }
+                        }),
+                        React.createElement('span', { key: 'label' }, '🦆 Duck Mode (lower volume instead of pausing)')
+                    ]),
+
+                    // Mixer Mode checkbox - use unified T2 audio stream
+                    React.createElement('label', {
+                        key: 'mixer-mode',
+                        style: { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '10px', color: useMixerMode ? '#00ff88' : '#aaa' },
+                        onPointerDown: (e) => e.stopPropagation(),
+                        title: 'Use T2 Audio Mixer - all speakers play unified stream from T2 server with seamless TTS injection (no per-speaker volume juggling)'
+                    }, [
+                        React.createElement('input', {
+                            key: 'cb',
+                            type: 'checkbox',
+                            checked: useMixerMode,
+                            onChange: (e) => {
+                                const newVal = e.target.checked;
+                                setUseMixerMode(newVal);
+                                data.properties.useMixerMode = newVal;
+                            },
+                            style: { accentColor: '#00ff88', cursor: 'pointer' }
+                        }),
+                        React.createElement('span', { key: 'label' }, '🎛️ Mixer Mode (T2 unified stream + seamless TTS)')
+                    ]),
+
+                    // Mixer URL input (only shown when Mixer Mode is enabled)
+                    useMixerMode && React.createElement('input', {
+                        key: 'mixer-url',
+                        type: 'text',
+                        value: mixerStreamUrl,
+                        onChange: (e) => { 
+                            setMixerStreamUrl(e.target.value); 
+                            data.properties.mixerStreamUrl = e.target.value; 
+                        },
+                        onPointerDown: (e) => e.stopPropagation(),
+                        placeholder: 'http://YOUR-LAN-IP:3000/api/audio/stream',
+                        title: 'T2 mixer stream URL - use your LAN IP so speakers can reach it (not localhost)',
+                        style: { 
+                            ...inputStyle,
+                            borderColor: mixerStreamUrl ? '#00ff88' : '#ff6600',
+                            background: mixerStreamUrl ? 'rgba(0,255,136,0.1)' : 'rgba(255,102,0,0.1)'
+                        }
+                    }),
+
+                    // TTS Volume slider
+                    React.createElement('div', { 
+                        key: 'tts-volume-row', 
+                        style: { display: 'flex', alignItems: 'center', gap: '8px' },
+                        title: 'Volume level for TTS announcements (separate from stream volume)'
+                    }, [
+                        React.createElement('span', { key: 'label', style: { fontSize: '10px', color: '#888' } }, '🔊 TTS Vol'),
+                        React.createElement('input', {
+                            key: 'slider',
+                            type: 'range',
+                            min: 0,
+                            max: 100,
+                            value: ttsVolume,
+                            onChange: (e) => {
+                                const newVal = parseInt(e.target.value);
+                                setTtsVolume(newVal);
+                                data.properties.ttsVolume = newVal;
+                            },
+                            onPointerDown: (e) => e.stopPropagation(),
+                            style: { flex: 1, accentColor: '#00d9ff' }
+                        }),
+                        React.createElement('span', { key: 'value', style: { fontSize: '10px', width: '32px' } }, 
+                            `${ttsVolume}%`)
+                    ]),
+
+                    // Quiet Hours section
+                    React.createElement('div', {
+                        key: 'quiet-hours-section',
+                        style: { 
+                            background: 'rgba(0,0,0,0.2)', 
+                            padding: '6px', 
+                            borderRadius: '4px',
+                            marginTop: '4px'
+                        }
+                    }, [
+                        // Quiet Hours enable checkbox
+                        React.createElement('label', {
+                            key: 'quiet-hours-toggle',
+                            style: { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '10px', color: '#aaa' },
+                            onPointerDown: (e) => e.stopPropagation(),
+                            title: 'Disable TTS announcements during sleeping hours'
+                        }, [
+                            React.createElement('input', {
+                                key: 'cb',
+                                type: 'checkbox',
+                                checked: quietHoursEnabled,
+                                onChange: (e) => {
+                                    const newVal = e.target.checked;
+                                    setQuietHoursEnabled(newVal);
+                                    data.properties.quietHoursEnabled = newVal;
+                                },
+                                style: { accentColor: '#aa66ff', cursor: 'pointer' }
+                            }),
+                            React.createElement('span', { key: 'label' }, '🌙 Quiet Hours (disable TTS)')
+                        ]),
+                        
+                        // Time range inputs (only shown when enabled)
+                        quietHoursEnabled && React.createElement('div', {
+                            key: 'quiet-hours-times',
+                            style: { display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', paddingLeft: '20px' }
+                        }, [
+                            React.createElement('span', { key: 'from-label', style: { fontSize: '10px', color: '#888' } }, 'From'),
+                            React.createElement('select', {
+                                key: 'start-hour',
+                                value: quietHoursStart,
+                                onChange: (e) => {
+                                    const newVal = parseInt(e.target.value);
+                                    setQuietHoursStart(newVal);
+                                    data.properties.quietHoursStart = newVal;
+                                },
+                                onPointerDown: (e) => e.stopPropagation(),
+                                style: { 
+                                    background: '#333', 
+                                    color: '#fff', 
+                                    border: '1px solid #555', 
+                                    borderRadius: '3px',
+                                    fontSize: '10px',
+                                    padding: '2px'
+                                }
+                            }, [...Array(24).keys()].map(h => 
+                                React.createElement('option', { key: h, value: h }, 
+                                    h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h-12} PM`
+                                )
+                            )),
+                            React.createElement('span', { key: 'to-label', style: { fontSize: '10px', color: '#888' } }, 'to'),
+                            React.createElement('select', {
+                                key: 'end-hour',
+                                value: quietHoursEnd,
+                                onChange: (e) => {
+                                    const newVal = parseInt(e.target.value);
+                                    setQuietHoursEnd(newVal);
+                                    data.properties.quietHoursEnd = newVal;
+                                },
+                                onPointerDown: (e) => e.stopPropagation(),
+                                style: { 
+                                    background: '#333', 
+                                    color: '#fff', 
+                                    border: '1px solid #555', 
+                                    borderRadius: '3px',
+                                    fontSize: '10px',
+                                    padding: '2px'
+                                }
+                            }, [...Array(24).keys()].map(h => 
+                                React.createElement('option', { key: h, value: h }, 
+                                    h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h-12} PM`
+                                )
+                            ))
+                        ])
+                    ]),
 
                     // Master Volume slider - only shown when linkVolumes is enabled
                     linkVolumes && React.createElement('div', { key: 'volume-row', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
@@ -2106,6 +2959,101 @@
                             onPointerDown: (e) => e.stopPropagation(),
                             style: { ...buttonStyle, flex: 1, background: '#f44336' }
                         }, '⏹️ Stop')
+                    ]),
+
+                    // Now Playing banner - shows each speaker and what they're streaming
+                    // Always show when speakers selected, different style for playing vs stopped
+                    (selectedPlayers.length > 0) && React.createElement('div', {
+                        key: 'now-playing-banner',
+                        style: {
+                            marginTop: '8px',
+                            background: isStreaming 
+                                ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(0, 150, 136, 0.15) 100%)'
+                                : 'linear-gradient(135deg, rgba(100, 100, 100, 0.1) 0%, rgba(60, 60, 60, 0.1) 100%)',
+                            border: isStreaming 
+                                ? '1px solid rgba(76, 175, 80, 0.3)' 
+                                : '1px solid rgba(100, 100, 100, 0.2)',
+                            borderRadius: '6px',
+                            padding: '8px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                        }
+                    }, [
+                        // Header
+                        React.createElement('div', {
+                            key: 'header',
+                            style: { 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '6px',
+                                marginBottom: '4px',
+                                borderBottom: isStreaming 
+                                    ? '1px solid rgba(76, 175, 80, 0.2)' 
+                                    : '1px solid rgba(100, 100, 100, 0.15)',
+                                paddingBottom: '4px'
+                            }
+                        }, [
+                            React.createElement('span', { key: 'icon', style: { fontSize: '12px' } }, isStreaming ? '🎵' : '📻'),
+                            React.createElement('span', { 
+                                key: 'title', 
+                                style: { fontSize: '10px', fontWeight: '600', color: isStreaming ? '#4caf50' : '#888' } 
+                            }, isStreaming ? 'Now Playing' : 'Station Assignments')
+                        ]),
+                        // Per-speaker stream info
+                        ...selectedPlayers.map(sp => {
+                            const speakerName = mediaPlayers.find(p => (p.id?.replace('ha_', '') || p.entity_id) === sp)?.name 
+                                || mediaPlayers.find(p => (p.id?.replace('ha_', '') || p.entity_id) === sp)?.friendly_name 
+                                || sp.split('.').pop();
+                            const speakerStationIdx = speakerStations[sp] ?? selectedStation;
+                            const stationName = stations[speakerStationIdx]?.name || 'Unknown';
+                            return React.createElement('div', {
+                                key: sp,
+                                style: { 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '6px',
+                                    padding: '3px 6px',
+                                    background: 'rgba(0,0,0,0.2)',
+                                    borderRadius: '4px'
+                                }
+                            }, [
+                                React.createElement('span', { 
+                                    key: 'speaker-icon', 
+                                    style: { fontSize: '10px' } 
+                                }, isStreaming ? '🔊' : '🔇'),
+                                React.createElement('span', { 
+                                    key: 'speaker-name', 
+                                    style: { 
+                                        fontSize: '9px', 
+                                        color: isStreaming ? '#aaa' : '#666',
+                                        flex: '0 0 auto',
+                                        maxWidth: '80px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    },
+                                    title: speakerName
+                                }, speakerName),
+                                React.createElement('span', { 
+                                    key: 'arrow', 
+                                    style: { fontSize: '8px', color: '#666' } 
+                                }, '→'),
+                                React.createElement('span', { 
+                                    key: 'station-name', 
+                                    style: { 
+                                        fontSize: '9px', 
+                                        color: isStreaming ? '#4caf50' : '#888',
+                                        fontWeight: '500',
+                                        flex: 1,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    },
+                                    title: stationName
+                                }, stationName)
+                            ]);
+                        })
                     ])
                 ])
             ]),
@@ -2142,7 +3090,37 @@
                             React.createElement('option', { key: 'tts/speak', value: 'tts/speak' }, 'tts.speak'),
                             React.createElement('option', { key: 'tts/cloud_say', value: 'tts/cloud_say' }, 'tts.cloud_say'),
                             React.createElement('option', { key: 'tts/google_translate_say', value: 'tts/google_translate_say' }, 'tts.google_translate_say'),
-                            React.createElement('option', { key: 'elevenlabs', value: 'elevenlabs' }, '🎙️ ElevenLabs')
+                            React.createElement('option', { key: 'elevenlabs', value: 'elevenlabs' }, '🎙️ ElevenLabs'),
+                            React.createElement('option', { key: 'chatterbox', value: 'chatterbox' }, chatterboxStatus.available ? '🤖 Chatterbox (Local)' : '🤖 Chatterbox (Offline)')
+                        ])
+                    ]),
+
+                    // Chatterbox status indicator (conditional)
+                    ttsService === 'chatterbox' && React.createElement('div', { 
+                        key: 'chatterbox-status', 
+                        style: { 
+                            fontSize: '10px', 
+                            padding: '4px 8px', 
+                            borderRadius: '4px', 
+                            background: chatterboxStatus.available ? 'rgba(76,175,80,0.2)' : 'rgba(255,152,0,0.2)',
+                            color: chatterboxStatus.available ? '#4caf50' : '#ff9800'
+                        }
+                    }, chatterboxStatus.available 
+                        ? `✓ ${chatterboxStatus.model} on ${chatterboxStatus.gpu || 'CPU'}`
+                        : '⚠ Server not running - start with: python C:\\Chatterbox\\server.py'
+                    ),
+
+                    // Chatterbox Voice (conditional)
+                    ttsService === 'chatterbox' && React.createElement('div', { key: 'cb-voice-row' }, [
+                        React.createElement('div', { key: 'label', style: labelStyle }, 'Voice'),
+                        React.createElement('select', {
+                            key: 'cb-voice-select',
+                            value: selectedChatterboxVoice,
+                            onChange: handleChatterboxVoiceChange,
+                            onPointerDown: (e) => e.stopPropagation(),
+                            style: selectStyle
+                        }, [
+                            ...chatterboxVoices.map(v => React.createElement('option', { key: v.voice_id, value: v.voice_id }, v.name))
                         ])
                     ]),
 

@@ -166,6 +166,8 @@ class BackendNodeRegistry {
       'Combine': 'CombineNode',
       'Watchdog': 'CounterNode',  // Use Counter as fallback
       'Sub-Graph': 'SubGraphNode',
+      'TTS Message Scheduler': 'TTSMessageSchedulerNode',
+      'Event Announcer': null,  // Frontend-only (manages UI scheduled events display)
       
       // Buffer/wireless connection nodes - MUST run on backend
       'Sender': 'SenderNode',

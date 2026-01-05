@@ -235,14 +235,21 @@ class TimeOfDayNode {
 
 /**
  * TimeRangeNode - Continuous time range check
+ * Frontend stores: startHour, startMinute, endHour, endMinute (numbers)
+ * Output: isInRange (boolean) - must match frontend plugin!
  */
 class TimeRangeNode {
   constructor() {
     this.id = null;
     this.label = 'Time Range';
     this.properties = {
+      // Support both old format (startTime: "08:00") and new format (startHour: 8, startMinute: 0)
       startTime: '00:00',
-      endTime: '23:59'
+      endTime: '23:59',
+      startHour: 0,
+      startMinute: 0,
+      endHour: 23,
+      endMinute: 59
     };
   }
 
@@ -256,39 +263,41 @@ class TimeRangeNode {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     
-    const [startH, startM] = this.properties.startTime.split(':').map(Number);
-    const [endH, endM] = this.properties.endTime.split(':').map(Number);
+    // Support both property formats
+    let startH, startM, endH, endM;
+    if (this.properties.startHour !== undefined) {
+      // New format: separate hour/minute properties
+      startH = this.properties.startHour;
+      startM = this.properties.startMinute || 0;
+      endH = this.properties.endHour;
+      endM = this.properties.endMinute || 0;
+    } else if (this.properties.startTime) {
+      // Old format: "HH:MM" strings
+      [startH, startM] = this.properties.startTime.split(':').map(Number);
+      [endH, endM] = this.properties.endTime.split(':').map(Number);
+    } else {
+      // Fallback
+      startH = 0; startM = 0;
+      endH = 23; endM = 59;
+    }
+    
     const startMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
     
-    let inRange;
-    if (startMinutes <= endMinutes) {
-      inRange = currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    let isInRange;
+    if (startMinutes < endMinutes) {
+      // Normal case (e.g., 08:00 to 18:00)
+      isInRange = currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    } else if (startMinutes > endMinutes) {
+      // Cross midnight (e.g., 22:00 to 02:00 next day)
+      isInRange = currentMinutes >= startMinutes || currentMinutes < endMinutes;
     } else {
-      inRange = currentMinutes >= startMinutes || currentMinutes < endMinutes;
+      // Same start/end => entire day
+      isInRange = true;
     }
 
-    return { 
-      active: inRange,
-      progress: this.calculateProgress(currentMinutes, startMinutes, endMinutes)
-    };
-  }
-
-  calculateProgress(current, start, end) {
-    if (start <= end) {
-      if (current < start) return 0;
-      if (current >= end) return 1;
-      return (current - start) / (end - start);
-    } else {
-      // Overnight range
-      const totalMinutes = (24 * 60 - start) + end;
-      if (current >= start) {
-        return (current - start) / totalMinutes;
-      } else if (current < end) {
-        return ((24 * 60 - start) + current) / totalMinutes;
-      }
-      return 0;
-    }
+    // Output 'isInRange' to match frontend plugin!
+    return { isInRange };
   }
 }
 

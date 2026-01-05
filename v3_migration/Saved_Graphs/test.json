@@ -1,11 +1,78 @@
 {
   "nodes": [
     {
-      "id": "d2103f9c4a5b95f8",
-      "label": "TTS Announcement",
+      "id": "b87e8e5a20ee76df",
+      "label": "Event Announcer",
       "position": {
-        "x": 1126.3775192483374,
-        "y": 229.88371324601857
+        "x": 2061.9454632123175,
+        "y": 755.3084446745754
+      },
+      "data": {
+        "inputs": {
+          "message": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Message",
+            "id": "3d19576d638cd965",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "trigger": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Trigger",
+            "multipleConnections": true,
+            "id": "563fe89b846cfea0"
+          },
+          "messageOut": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Message",
+            "multipleConnections": true,
+            "id": "0e88f289b766da2a"
+          },
+          "event": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Event",
+            "multipleConnections": true,
+            "id": "9d442230949d5257"
+          }
+        },
+        "controls": {},
+        "label": "Event Announcer",
+        "id": "b87e8e5a20ee76df",
+        "width": 300,
+        "height": 340,
+        "properties": {
+          "leadTime": 5,
+          "template": "passive",
+          "announcedEvents": {},
+          "currentMessage": "It's a rather blustery Day!  Wind gusts have reached or exceeded 8 miles per hour. ",
+          "currentEvent": null,
+          "triggerActive": false,
+          "upcomingCount": 0,
+          "lastAdHocMessage": "It's a rather blustery Day!  Wind gusts have reached or exceeded 8 miles per hour. ",
+          "previousAdHocInput": null,
+          "adHocCooldownUntil": 1767555209030,
+          "isAdHocActive": false,
+          "debug": true
+        },
+        "_backendEvents": []
+      }
+    },
+    {
+      "id": "b2a16596ef241f7b",
+      "label": "Audio Output",
+      "position": {
+        "x": 2467.333124202654,
+        "y": 768.5684651293861
       },
       "data": {
         "inputs": {
@@ -14,7 +81,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "f27e801521151862",
+            "id": "0ef928a2c4c3957d",
             "control": null,
             "showControl": true
           },
@@ -23,7 +90,43 @@
               "name": "any"
             },
             "label": "Message",
-            "id": "0adce987f5ae5517",
+            "id": "1d01b727b85d7112",
+            "control": null,
+            "showControl": true
+          },
+          "streamUrl": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Stream URL",
+            "id": "6b76e2299151ef03",
+            "control": null,
+            "showControl": true
+          },
+          "vol_denon_avr_x1700h_2": {
+            "socket": {
+              "name": "number"
+            },
+            "label": "🔊 denon_avr_x1700h_2",
+            "id": "151b90e9422b6a36",
+            "control": null,
+            "showControl": true
+          },
+          "active_denon_avr_x1700h_2": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "▶️ denon_avr_x1700h_2",
+            "id": "bf4f7f6504e89947",
+            "control": null,
+            "showControl": true
+          },
+          "station_denon_avr_x1700h_2": {
+            "socket": {
+              "name": "number"
+            },
+            "label": "📻 denon_avr_x1700h_2",
+            "id": "d8d41f238154a8ea",
             "control": null,
             "showControl": true
           }
@@ -35,186 +138,444 @@
             },
             "label": "Success",
             "multipleConnections": true,
-            "id": "6d7bd5a2a18cb85b"
+            "id": "9537d02aa0f1489d"
+          },
+          "streaming": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Streaming",
+            "multipleConnections": true,
+            "id": "1ad765a7e45eaf60"
           }
         },
         "controls": {},
-        "label": "TTS Announcement",
-        "id": "d2103f9c4a5b95f8",
-        "width": 280,
-        "height": 320,
+        "label": "Audio Output",
+        "id": "b2a16596ef241f7b",
+        "width": 300,
+        "height": 520,
         "properties": {
           "mediaPlayerIds": [
-            "media_player.homepodoffice",
-            "media_player.grotto_guest"
+            "media_player.denon_avr_x1700h_2"
           ],
           "mediaPlayerId": "",
+          "ttsEnabledSpeakers": {
+            "media_player.homepodoffice": true,
+            "media_player.grotto_guest": true,
+            "media_player.denon_avr_x1700h_2": true,
+            "media_player.denon_avr_x1700h": true
+          },
           "message": "Hello, this is a test announcement",
-          "ttsService": "tts/speak",
+          "ttsService": "chatterbox",
           "ttsEntityId": "tts.google_translate_en_com",
-          "elevenLabsVoiceId": "aRlmTYIQo6Tlg5SlulGC",
-          "elevenLabsVoiceName": "Charlotte",
-          "lastResult": true
+          "elevenLabsVoiceId": "uhYnkYTBc711oAY590Ea",
+          "elevenLabsVoiceName": "Charlotte - Meditation & Relaxation",
+          "chatterboxVoiceId": "charlotte.wav",
+          "chatterboxVoiceName": "charlotte",
+          "lastResult": true,
+          "stations": [
+            {
+              "name": "SomaFM Groove Salad",
+              "url": "https://ice1.somafm.com/groovesalad-128-mp3"
+            },
+            {
+              "name": "SomaFM Drone Zone",
+              "url": "https://ice1.somafm.com/dronezone-128-mp3"
+            },
+            {
+              "name": "Jazz24",
+              "url": "https://live.wostreaming.net/direct/ppm-jazz24aac-ibc1"
+            },
+            {
+              "name": "1.FM - Chillout Lounge Radio",
+              "url": "http://strm112.1.fm/chilloutlounge_mobile_mp3"
+            },
+            {
+              "name": "1.FM - Rock Classics Radio",
+              "url": "http://strm112.1.fm/rockclassics_mobile_mp3"
+            },
+            {
+              "name": "1.FM - Ambient Psychill",
+              "url": "http://strm112.1.fm/ambientpsy_mobile_mp3"
+            },
+            {
+              "name": "1.FM - Ibiza Chill Tropical",
+              "url": "http://strm112.1.fm/ibizachill_mobile_mp3?aw_0_req.gdpr=true"
+            },
+            {
+              "name": "181.FM - Classical Guitar",
+              "url": "http://listen.181fm.com/181-classicalguitar_128k.mp3"
+            },
+            {
+              "name": "SomaFM Beat Blender",
+              "url": "https://ice1.somafm.com/beatblender-128-mp3"
+            },
+            {
+              "name": "SomaFM Groove Salad Classic",
+              "url": "https://ice1.somafm.com/gsclassic-128-mp3"
+            },
+            {
+              "name": "SomaFM Chillits Radio",
+              "url": "https://ice1.somafm.com/chillits-128-mp3"
+            },
+            {
+              "name": "LiSTNR - Chill Electronic",
+              "url": "https://worldradio.online/proxy/?q=http://wz0liw.scahw.com.au/live/chill-electronic.stream/playlist.m3u8"
+            },
+            {
+              "name": "LiSTNR - Rainforest [Soundscapes]",
+              "url": "http://wz0liw.scahw.com.au/live/rainforest_128.stream/playlist.m3u8"
+            },
+            {
+              "name": "LiSTNR - Light Rain [Soundscapes]",
+              "url": "http://wz0liw.scahw.com.au/live/lightrain_128.stream/playlist.m3u8"
+            },
+            {
+              "name": "LiSTNR - Cooling Fan (White Noise) [Soundscapes]",
+              "url": "http://wz0liw.scahw.com.au/live/fan_128.stream/playlist.m3u8"
+            },
+            {
+              "name": "NATURE RADIO SLEEP",
+              "url": "https://az1.mediacp.eu/listen/natureradiosleep/radio.mp3"
+            },
+            {
+              "name": "MyNoise Pure Nature",
+              "url": "https://purenature-mynoise.radioca.st/stream"
+            },
+            {
+              "name": "Ambi Nature Radio",
+              "url": "https://nature-rex.radioca.st/stream"
+            },
+            {
+              "name": "Nature Radio Rain",
+              "url": "https://maggie.torontocast.com:2020/stream/natureradiorain"
+            },
+            {
+              "name": "Epic Lounge - Nature Sounds",
+              "url": "https://stream.epic-lounge.com/nature-sounds"
+            },
+            {
+              "name": "Radio Art - Nature",
+              "url": "http://air.radioart.com/fNature.mp3"
+            }
+          ],
+          "selectedStation": 13,
+          "speakerStations": {
+            "media_player.homepodoffice": 0,
+            "media_player.denon_avr_x1700h_2": 3,
+            "media_player.grotto_guest": 0
+          },
+          "speakerCustomUrls": {},
+          "customStreamUrl": "",
+          "streamVolume": 56,
+          "speakerVolumes": {
+            "media_player.denon_avr_x1700h_2": 65,
+            "media_player.homepodoffice": 17,
+            "media_player.grotto_guest": 57,
+            "media_player.denon_avr_x1700h": 78
+          },
+          "linkVolumes": false,
+          "isStreaming": true,
+          "streamEnabled": true,
+          "resumeDelay": 3000,
+          "wasStreamingBeforeTTS": false,
+          "duckMode": true,
+          "duckVolumePercent": 25,
+          "preDuckVolumes": {},
+          "stoppedSpeakerIds": [],
+          "duckedSpeakerIds": [],
+          "nodeWidth": 355.7065062709903,
+          "nodeHeight": 800,
+          "showIOSection": true,
+          "showSpeakersSection": true,
+          "showTTSSection": true,
+          "pausedSpeakerIds": null
         },
         "_lastTrigger": false,
-        "_lastSentTime": 1767236012542,
-        "selected": false
+        "_lastSentTime": 1767555206030,
+        "_resumeTimeout": null,
+        "_volumeInputKeys": [
+          "vol_denon_avr_x1700h_2"
+        ],
+        "_activeInputKeys": [
+          "active_denon_avr_x1700h_2"
+        ],
+        "_stationInputKeys": [
+          "station_denon_avr_x1700h_2"
+        ],
+        "_lastActiveStates": {},
+        "_lastStationInputs": {},
+        "_needsVolumeSync": true,
+        "_lastTTSDurationMs": null,
+        "_ttsQueue": [],
+        "_ttsInProgress": false
       }
     },
     {
-      "id": "746a58177eb971d8",
-      "label": "Inject",
+      "id": "55e7c5f474fb1228",
+      "label": "TTS Message Scheduler",
       "position": {
-        "x": 369.2624620437926,
-        "y": 236.3489134399511
-      },
-      "data": {
-        "inputs": {},
-        "outputs": {
-          "output": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Output",
-            "multipleConnections": true,
-            "id": "e51eff0d39ce94c4"
-          }
-        },
-        "controls": {},
-        "label": "Inject",
-        "id": "746a58177eb971d8",
-        "width": 220,
-        "properties": {
-          "payloadType": "string",
-          "payloadValue": "Hello",
-          "repeatMs": 0,
-          "onceDelay": 0,
-          "name": "",
-          "pulseMode": true,
-          "pulseDurationMs": 500,
-          "scheduleEnabled": true,
-          "scheduleTime": "18:56",
-          "scheduleDays": [
-            true,
-            true,
-            true,
-            true,
-            true,
-            true,
-            true
-          ],
-          "lastTriggerTime": 1767236012508,
-          "triggerCount": 2,
-          "isRepeating": false,
-          "onceTriggered": false,
-          "nextScheduledTime": 1767236160000,
-          "isPulsing": false,
-          "pulsePending": false,
-          "debug": false
-        },
-        "_repeatTimer": null,
-        "_onceTimer": null,
-        "_scheduleTimer": null,
-        "_scheduleCheckInterval": null,
-        "_pulseTimer": null,
-        "_shouldOutput": true,
-        "_initialized": true,
-        "selected": false
-      }
-    },
-    {
-      "id": "523b71d0c485f718",
-      "label": "Event Announcer",
-      "position": {
-        "x": 705.2111429781669,
-        "y": 374.5393059110786
+        "x": 1538.0353587317222,
+        "y": 956.8915693173735
       },
       "data": {
         "inputs": {
-          "message": {
+          "trigger_0": {
             "socket": {
-              "name": "any"
+              "name": "boolean"
             },
-            "label": "Message",
-            "id": "177e6f2e8f6afd8a",
+            "label": "#1",
+            "id": "d1765e9fd793edd7",
+            "control": null,
+            "showControl": true
+          },
+          "trigger_1": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "#2",
+            "id": "439368e3e74a98d6",
+            "control": null,
+            "showControl": true
+          },
+          "trigger_2": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "#3",
+            "id": "00f6b2b9ef6c79e1",
             "control": null,
             "showControl": true
           }
         },
         "outputs": {
-          "trigger": {
-            "socket": {
-              "name": "boolean"
-            },
-            "label": "Trigger",
-            "multipleConnections": true,
-            "id": "b08b52de51933f43"
-          },
-          "messageOut": {
+          "message": {
             "socket": {
               "name": "any"
             },
             "label": "Message",
             "multipleConnections": true,
-            "id": "37c00efa86ea5c12"
-          },
-          "event": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Event",
-            "multipleConnections": true,
-            "id": "ae3b7f24bb68958b"
+            "id": "ab6f8d49d50006ac"
           }
         },
         "controls": {},
-        "label": "Event Announcer",
-        "id": "523b71d0c485f718",
-        "width": 300,
-        "height": 340,
+        "label": "TTS Message Scheduler",
+        "id": "55e7c5f474fb1228",
+        "width": 360,
+        "height": 280,
         "properties": {
-          "leadTime": 5,
-          "template": "action",
-          "announcedEvents": {},
-          "currentMessage": "Hello",
-          "currentEvent": null,
-          "triggerActive": false,
-          "upcomingCount": 0,
-          "lastAdHocMessage": "Hello",
-          "adHocCooldownUntil": 1767236015542,
-          "isAdHocActive": false
+          "messages": [
+            {
+              "text": "It has started Raining",
+              "enabled": true
+            },
+            {
+              "text": "The Rain has stopped",
+              "enabled": true
+            },
+            {
+              "text": "It's a rather blustery Day!  Wind gusts have reached or exceeded 8 miles per hour. ",
+              "enabled": true
+            }
+          ],
+          "lastTriggeredIndex": 2,
+          "lastTriggeredText": "It's a rather blustery Day!  Wind gusts have reached or exceeded 8 miles per hour. ",
+          "debug": false
         },
-        "_backendEvents": [],
-        "selected": false
+        "_lastInputStates": {
+          "0": false,
+          "1": true,
+          "2": true
+        },
+        "_messageQueue": [],
+        "_isProcessingQueue": false,
+        "_currentOutputMessage": null
+      }
+    },
+    {
+      "id": "dce268fe02d1f373",
+      "label": "Comparison",
+      "position": {
+        "x": 1220.5920990315824,
+        "y": 746.4805764502091
+      },
+      "data": {
+        "id": "dce268fe02d1f373",
+        "label": "Comparison",
+        "properties": {
+          "operator": ">",
+          "compareValue": "0"
+        }
+      }
+    },
+    {
+      "id": "b7ecc6b564412d80",
+      "label": "Weather Logic",
+      "position": {
+        "x": -6.108340534502469,
+        "y": 176.03889206423815
+      },
+      "data": {
+        "id": "b7ecc6b564412d80",
+        "label": "Weather Logic",
+        "properties": {
+          "solarEnabled": true,
+          "solarThresholdHigh": 750,
+          "solarThresholdLow": 500,
+          "solarInvert": false,
+          "solarLabel": "Solar",
+          "tempEnabled": true,
+          "tempThresholdHigh": 80,
+          "tempThresholdLow": 60,
+          "tempInvert": false,
+          "tempLabel": "Temp",
+          "humidityEnabled": true,
+          "humidityThresholdHigh": 70,
+          "humidityThresholdLow": 30,
+          "humidityInvert": false,
+          "humidityLabel": "Humidity",
+          "windEnabled": true,
+          "windThresholdHigh": 15,
+          "windThresholdLow": 5,
+          "windInvert": false,
+          "windLabel": "Wind",
+          "hourlyRainEnabled": true,
+          "hourlyRainThreshold": 0,
+          "hourlyRainInvert": false,
+          "hourlyRainLabel": "Rate Per Hour",
+          "eventRainEnabled": true,
+          "eventRainThreshold": 0.1,
+          "eventRainInvert": false,
+          "eventRainLabel": "Event Rain",
+          "dailyRainEnabled": true,
+          "dailyRainThreshold": 0.1,
+          "dailyRainInvert": false,
+          "dailyRainLabel": "Daily Rain",
+          "logicType": "OR",
+          "hysteresis": 5,
+          "_lastEval": {
+            "solar": false,
+            "temp": false,
+            "humidity": false,
+            "wind": false,
+            "hourlyRain": true,
+            "eventRain": true,
+            "dailyRain": true,
+            "all": true
+          },
+          "_lastWeather": {
+            "temp": 55.9,
+            "humidity": 99,
+            "wind": 0.89,
+            "hourlyRain": 0,
+            "eventRain": 1.45,
+            "dailyRain": 0.13,
+            "solar": 64.77
+          }
+        }
+      }
+    },
+    {
+      "id": "ef513fac9276ad7a",
+      "label": "Comparison",
+      "position": {
+        "x": 1221.1957373607888,
+        "y": 1088.3665523296772
+      },
+      "data": {
+        "id": "ef513fac9276ad7a",
+        "label": "Comparison",
+        "properties": {
+          "operator": "=",
+          "compareValue": "0"
+        }
+      }
+    },
+    {
+      "id": "d65025bba31b0dfc",
+      "label": "Comparison",
+      "position": {
+        "x": 1217.1115965102417,
+        "y": 1532.684076453378
+      },
+      "data": {
+        "id": "d65025bba31b0dfc",
+        "label": "Comparison",
+        "properties": {
+          "operator": ">=",
+          "compareValue": "8"
+        }
       }
     }
   ],
   "connections": [
     {
-      "id": "95e319433e7739d8",
-      "source": "746a58177eb971d8",
-      "target": "523b71d0c485f718",
-      "sourceOutput": "output",
-      "targetInput": "message"
-    },
-    {
-      "id": "8299943ed1298f61",
-      "source": "523b71d0c485f718",
-      "target": "d2103f9c4a5b95f8",
+      "id": "b163e88990834c0c",
+      "source": "b87e8e5a20ee76df",
+      "target": "b2a16596ef241f7b",
       "sourceOutput": "trigger",
       "targetInput": "trigger"
     },
     {
-      "id": "bd29e14cdb1cef77",
-      "source": "523b71d0c485f718",
-      "target": "d2103f9c4a5b95f8",
+      "id": "f088f84702fcf1d8",
+      "source": "b87e8e5a20ee76df",
+      "target": "b2a16596ef241f7b",
       "sourceOutput": "messageOut",
       "targetInput": "message"
+    },
+    {
+      "id": "6da0fe1a589f5d98",
+      "source": "55e7c5f474fb1228",
+      "target": "b87e8e5a20ee76df",
+      "sourceOutput": "message",
+      "targetInput": "message"
+    },
+    {
+      "id": "ac7313ddcfbc4baf",
+      "source": "dce268fe02d1f373",
+      "target": "55e7c5f474fb1228",
+      "sourceOutput": "result",
+      "targetInput": "trigger_0"
+    },
+    {
+      "id": "c3327518191d93b0",
+      "source": "b7ecc6b564412d80",
+      "target": "dce268fe02d1f373",
+      "sourceOutput": "hourly_rain_value",
+      "targetInput": "in"
+    },
+    {
+      "id": "be121c8024bab1e7",
+      "source": "b7ecc6b564412d80",
+      "target": "ef513fac9276ad7a",
+      "sourceOutput": "hourly_rain_value",
+      "targetInput": "in"
+    },
+    {
+      "id": "d61f41cdce3e19bc",
+      "source": "ef513fac9276ad7a",
+      "target": "55e7c5f474fb1228",
+      "sourceOutput": "result",
+      "targetInput": "trigger_1"
+    },
+    {
+      "id": "f1fb9f4c30db233d",
+      "source": "d65025bba31b0dfc",
+      "target": "55e7c5f474fb1228",
+      "sourceOutput": "result",
+      "targetInput": "trigger_2"
+    },
+    {
+      "id": "1d4225cdafe34fc1",
+      "source": "b7ecc6b564412d80",
+      "target": "d65025bba31b0dfc",
+      "sourceOutput": "solar_value",
+      "targetInput": "in"
     }
   ],
   "viewport": {
-    "x": -151.79856491088867,
-    "y": -124.3446653366089,
-    "k": 1.1391909807752107
+    "x": 182.6294403076172,
+    "y": 84.22102928161624,
+    "k": 0.43046721000000016
   }
 }

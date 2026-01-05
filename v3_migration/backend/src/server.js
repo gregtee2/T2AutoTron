@@ -28,11 +28,7 @@ const startTime = Date.now();
 let keepAliveCounter = 0;
 const KEEP_ALIVE = setInterval(() => {
   keepAliveCounter++;
-  // Log every 10 minutes to show server is still running (reduced from 1 min)
-  if (keepAliveCounter % 600 === 0) {
-    const uptimeMinutes = Math.floor((Date.now() - startTime) / 60000);
-    console.log(`[Server] Uptime: ${uptimeMinutes} minutes`);
-  }
+  // Keep-alive interval - no longer logs uptime (BackendEngine health check handles that)
 }, 1000);
 KEEP_ALIVE.ref(); // Explicitly keep this interval referenced
 console.log('[Startup] Keep-alive interval started');
@@ -372,6 +368,220 @@ io.on('connection', (socket) => {
     }
   });
 
+  // === CHATTERBOX STATUS CHECK ===
+  socket.on('request-chatterbox-status', async () => {
+    try {
+      const chatterbox = require('./tts/chatterboxService');
+      const result = await chatterbox.isAvailable();
+      socket.emit('chatterbox-status', result);
+    } catch (err) {
+      socket.emit('chatterbox-status', { available: false, error: err.message });
+    }
+  });
+
+  // === CHATTERBOX VOICES LIST REQUEST ===
+  socket.on('request-chatterbox-voices', async () => {
+    try {
+      const chatterbox = require('./tts/chatterboxService');
+      const result = await chatterbox.getVoices();
+      if (result.success) {
+        socket.emit('chatterbox-voices', result.voices);
+      } else {
+        socket.emit('chatterbox-voices', { error: result.error });
+      }
+    } catch (err) {
+      logger.log(`Chatterbox voices request failed: ${err.message}`, 'error');
+      socket.emit('chatterbox-voices', { error: err.message });
+    }
+  });
+
+  // === CHATTERBOX TTS REQUEST ===
+  socket.on('request-chatterbox-tts', async (data = {}) => {
+    try {
+      const { message, voiceId, mediaPlayerId, mediaPlayerIds } = data;
+      if (!message) {
+        socket.emit('chatterbox-tts-result', { success: false, error: 'No message provided' });
+        return;
+      }
+
+      const chatterbox = require('./tts/chatterboxService');
+      const result = await chatterbox.generateSpeech(message, { voiceId });
+
+      if (!result.success) {
+        socket.emit('chatterbox-tts-result', { success: false, error: result.error });
+        return;
+      }
+
+      // Support both single mediaPlayerId (legacy) and mediaPlayerIds array (new)
+      let speakerIds = [];
+      if (mediaPlayerIds && Array.isArray(mediaPlayerIds) && mediaPlayerIds.length > 0) {
+        speakerIds = mediaPlayerIds;
+      } else if (mediaPlayerId) {
+        speakerIds = [mediaPlayerId];
+      }
+
+      // Play on all specified speakers
+      if (speakerIds.length > 0) {
+        const haManager = deviceManagers.getManager('ha_');
+        if (haManager) {
+          // Build the full URL to the audio file
+          const port = process.env.PORT || 3000;
+          const host = process.env.PUBLIC_URL || `http://localhost:${port}`;
+          const audioUrl = `${host}${result.audioUrl}`;
+          
+          // Play on each speaker
+          for (const speakerId of speakerIds) {
+            const cleanEntityId = speakerId.startsWith('ha_') ? speakerId.slice(3) : speakerId;
+            
+            try {
+              await fetch(`${process.env.HA_HOST}/api/services/media_player/play_media`, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${process.env.HA_TOKEN}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  entity_id: cleanEntityId,
+                  media_content_id: audioUrl,
+                  media_content_type: 'music'
+                })
+              });
+              logger.log(`Chatterbox TTS played on ${cleanEntityId}`, 'info');
+            } catch (playErr) {
+              logger.log(`Error playing Chatterbox TTS on ${cleanEntityId}: ${playErr.message}`, 'error');
+            }
+          }
+        }
+      }
+
+      socket.emit('chatterbox-tts-result', { 
+        success: true, 
+        audioUrl: result.audioUrl,
+        filename: result.filename,
+        durationMs: result.durationMs || 5000 // Pass duration to client for accurate resume timing
+      });
+    } catch (err) {
+      logger.log(`Chatterbox TTS request failed: ${err.message}`, 'error');
+      socket.emit('chatterbox-tts-result', { success: false, error: err.message });
+    }
+  });
+
+  // === CHATTERBOX GENERATE ONLY (no play) ===
+  // Used for optimized flow: generate audio while stream is still playing,
+  // then pause stream and play the pre-generated audio
+  socket.on('generate-chatterbox-tts', async (data = {}) => {
+    try {
+      const { message, voiceId } = data;
+      if (!message) {
+        socket.emit('chatterbox-generated', { success: false, error: 'No message provided' });
+        return;
+      }
+
+      const chatterbox = require('./tts/chatterboxService');
+      const result = await chatterbox.generateSpeech(message, { voiceId });
+
+      if (!result.success) {
+        socket.emit('chatterbox-generated', { success: false, error: result.error });
+        return;
+      }
+
+      // Build the full URL to the audio file
+      const port = process.env.PORT || 3000;
+      const host = process.env.PUBLIC_URL || `http://localhost:${port}`;
+      const fullAudioUrl = `${host}${result.audioUrl}`;
+
+      socket.emit('chatterbox-generated', { 
+        success: true, 
+        audioUrl: fullAudioUrl,
+        filename: result.filename,
+        durationMs: result.durationMs || 5000
+      });
+    } catch (err) {
+      logger.log(`Chatterbox generate failed: ${err.message}`, 'error');
+      socket.emit('chatterbox-generated', { success: false, error: err.message });
+    }
+  });
+
+  // === PLAY MEDIA ON SPEAKERS ===
+  // Plays a pre-generated audio URL on specified speakers
+  socket.on('play-media-on-speakers', async (data = {}) => {
+    try {
+      const { audioUrl, mediaPlayerIds } = data;
+      if (!audioUrl || !mediaPlayerIds?.length) {
+        socket.emit('play-media-result', { success: false, error: 'Missing audioUrl or mediaPlayerIds' });
+        return;
+      }
+
+      const haManager = deviceManagers.getManager('ha_');
+      if (!haManager) {
+        socket.emit('play-media-result', { success: false, error: 'HA manager not available' });
+        return;
+      }
+
+      for (const speakerId of mediaPlayerIds) {
+        const cleanEntityId = speakerId.startsWith('ha_') ? speakerId.slice(3) : speakerId;
+        
+        try {
+          await fetch(`${process.env.HA_HOST}/api/services/media_player/play_media`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.HA_TOKEN}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              entity_id: cleanEntityId,
+              media_content_id: audioUrl,
+              media_content_type: 'music',
+              enqueue: 'replace'  // Replace any queued media, don't add to queue
+            })
+          });
+          logger.log(`Played media on ${cleanEntityId}`, 'info');
+        } catch (playErr) {
+          logger.log(`Error playing media on ${cleanEntityId}: ${playErr.message}`, 'error');
+        }
+      }
+
+      socket.emit('play-media-result', { success: true });
+    } catch (err) {
+      logger.log(`Play media failed: ${err.message}`, 'error');
+      socket.emit('play-media-result', { success: false, error: err.message });
+    }
+  });
+
+  // === AUDIO MIXER TTS ===
+  // Generate TTS and play it through the unified audio mixer stream
+  socket.on('mixer-tts', async (data = {}) => {
+    try {
+      const { message, voiceId } = data;
+      if (!message) {
+        socket.emit('mixer-tts-result', { success: false, error: 'No message provided' });
+        return;
+      }
+
+      const chatterbox = require('./tts/chatterboxService');
+      const audioMixer = require('./services/audioMixerService');
+
+      // Generate the TTS audio
+      const result = await chatterbox.generateSpeech(message, { voiceId });
+      if (!result.success) {
+        socket.emit('mixer-tts-result', { success: false, error: result.error });
+        return;
+      }
+
+      // Play through the mixer (ducks music, plays TTS, resumes)
+      // Use filePath directly from result (not audioUrl which is relative)
+      const playResult = await audioMixer.playTTS(result.filePath);
+
+      socket.emit('mixer-tts-result', { 
+        success: playResult, 
+        durationMs: result.durationMs || 5000 
+      });
+    } catch (err) {
+      logger.log(`Mixer TTS failed: ${err.message}`, 'error');
+      socket.emit('mixer-tts-result', { success: false, error: err.message });
+    }
+  });
+
   // === ELEVENLABS TTS REQUEST ===
   socket.on('request-elevenlabs-tts', async (data = {}) => {
     try {
@@ -640,7 +850,13 @@ app.get('/', async (req, res) => {
 // Serve static files
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use('/custom_nodes', express.static(path.join(__dirname, '../frontend/custom_nodes')));
-app.use('/plugins', express.static(path.join(__dirname, '../plugins')));
+// Plugins: disable caching to ensure fresh code on refresh
+app.use('/plugins', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+}, express.static(path.join(__dirname, '../plugins')));
 app.use('/tools', express.static(path.join(__dirname, '../../tools')));
 app.use('/audio', express.static(path.join(__dirname, '../audio'))); // TTS audio files
 
@@ -916,6 +1132,10 @@ app.use('/api/stock', stockRoutes);
 // Debug Dashboard API routes
 const debugRoutes = require('./api/routes/debugRoutes');
 app.use('/api/debug', debugRoutes);
+
+// Audio Mixer routes (unified stream with TTS mixing)
+const audioRoutes = require('./api/routes/audioRoutes');
+app.use('/api/audio', audioRoutes);
 
 // Media player routes (Internet Radio, streaming)
 const createMediaRoutes = require('./api/routes/mediaRoutes');

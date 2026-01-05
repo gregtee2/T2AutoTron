@@ -5,6 +5,9 @@ const { fetchForecastData } = require('../weather/forecastService');
 const { deviceToggleSchema, validate } = require('./middleware/validationSchemas');
 const authManager = require('./middleware/authMiddleware');
 
+// Import backend AutoTronBuffer for frontend→backend buffer sync
+const { AutoTronBuffer } = require('../engine/nodes/BufferNodes');
+
 module.exports = (deviceService) => (socket) => {
     // Helper to get Hue connection status (used in multiple places)
     const getHueStatus = () => {
@@ -274,6 +277,19 @@ module.exports = (deviceService) => (socket) => {
   socket.on('disconnect', (reason) => {
     authManager.deauthenticate(socket);
     // Note: Disconnect is also logged in server.js - don't duplicate
+  });
+
+  // BUFFER SYNC: Receive buffer updates from frontend
+  // Frontend is source of truth when active - backend just mirrors
+  const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+  socket.on('buffer-update', (data) => {
+    if (data && data.key !== undefined) {
+      AutoTronBuffer.set(data.key, data.value);
+      // Only log in verbose mode - these can be frequent for HSV color changes
+      if (VERBOSE) {
+        console.log(`[Buffer Sync] ${data.key} = ${typeof data.value === 'boolean' ? data.value : JSON.stringify(data.value).slice(0, 50)}`);
+      }
+    }
   });
 
   socket.on('error', (err) => {

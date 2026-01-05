@@ -430,8 +430,12 @@ router.get('/last-active', async (req, res) => {
 /**
  * POST /api/engine/save-active
  * Save the current graph as the last active graph (for auto-load on reconnect)
+ * Also used by sendBeacon on browser close to sync unsaved changes
  */
 router.post('/save-active', async (req, res) => {
+  // Debug: Log ALL incoming requests to this endpoint
+  console.log(`[Engine API] /save-active received, body type: ${typeof req.body}, hasNodes: ${!!req.body?.nodes}, contentType: ${req.get('content-type')}`);
+  
   try {
     const fs = require('fs').promises;
     const savedGraphsDir = getGraphsDir();
@@ -441,6 +445,12 @@ router.post('/save-active', async (req, res) => {
     await fs.mkdir(savedGraphsDir, { recursive: true });
     
     const graphData = req.body;
+    
+    // Log beacon arrivals for debugging sync-on-close feature
+    if (graphData?.syncedOnClose) {
+      console.log(`[Engine API] Received sync-on-close beacon (${graphData.nodes?.length || 0} nodes)`);
+    }
+    
     if (!graphData || !graphData.nodes) {
       console.log('[Engine API] Invalid graph data received:', typeof graphData);
       return res.status(400).json({
@@ -451,13 +461,17 @@ router.post('/save-active', async (req, res) => {
     
     await fs.writeFile(lastActivePath, JSON.stringify(graphData, null, 2), 'utf-8');
     
-    // Also hot-reload into engine if it's running
+    // Also hot-reload into engine if it's running AND frontend is not active
+    // Skip hot-reload when frontend is active to avoid disrupting streams/TTS
     try {
       const { engine } = getEngine();
       if (engine && engine.running) {
-        // Use hotReload with parsed data instead of loadGraph with file path
-        // This avoids race conditions and handles empty graphs gracefully
-        if (graphData.nodes && graphData.nodes.length > 0) {
+        // Don't hot-reload if frontend is controlling - it will disrupt audio
+        if (engine.shouldSkipDeviceCommands && engine.shouldSkipDeviceCommands()) {
+          console.log('[Engine API] Skipping hot-reload - frontend is active');
+        } else if (graphData.nodes && graphData.nodes.length > 0) {
+          // Use hotReload with parsed data instead of loadGraph with file path
+          // This avoids race conditions and handles empty graphs gracefully
           await engine.hotReload(graphData);
           console.log('[Engine API] Graph hot-reloaded into engine');
         } else {

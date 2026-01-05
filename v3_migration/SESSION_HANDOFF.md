@@ -1,4 +1,61 @@
-# Session Handoff - January 1, 2026
+# Session Handoff - January 3, 2026
+
+## Session 19: Sync-on-Close Feature
+
+### What was done (Claude Opus 4.5)
+
+**Current Version: 2.1.189**
+
+#### ✅ Feature: Sync Graph to Backend on Browser Close
+
+**The Problem**: When user closed the browser tab, any unsaved graph changes were lost. The backend would continue running the OLD graph. This was particularly bad for HA add-on users who might make changes, close the tab, and expect automations to use their changes.
+
+**Why Browser Events Don't Work**:
+- Modern browsers (Chrome, Edge, Firefox) actively BLOCK `beforeunload` and `pagehide` events for security/performance
+- They don't want websites slowing down the "I want to leave NOW" action
+
+**The Solution**: Use `visibilitychange` event instead:
+- Fires when tab becomes hidden (switch tabs, minimize, close)
+- More reliable than `beforeunload`/`pagehide`
+- Graph syncs every time you switch away
+- When you finally close, the last tab-switch already synced!
+
+**Implementation Details**:
+1. Added `window._t2GetGraphData()` in Editor.jsx - serializes graph from `window._t2Editor`
+2. Added `syncGraphToBackend()` at MODULE LEVEL in App.jsx (not inside React)
+   - Uses synchronous XHR (only reliable method during page close)
+   - Handles port detection for Vite dev server (5173 → 3000)
+3. Backend `/api/engine/save-active` hot-reloads graph into running engine
+
+**Key Files**:
+- `frontend/src/App.jsx` - Module-level sync function and event listeners
+- `frontend/src/Editor.jsx` - `window._t2GetGraphData()` function
+- `backend/src/api/routes/engineRoutes.js` - `/save-active` endpoint
+
+**Why Module Level?**: Browser events inside React `useEffect` don't fire reliably on tab close. Registering at module load time ensures handlers attach immediately when JS loads.
+
+#### ✅ Fix: Device Sync Settling Delay (v2.1.187)
+
+**The Problem**: When loading a graph with device nodes, lights would flash ON then OFF for about 1 second.
+
+**Root Cause**: Backend engine started sending commands immediately, but graph wasn't fully loaded yet. Sent "default" values first, then real values.
+
+**The Fix**: Added 1-second settling delay after graph load before backend sends device commands.
+
+### 🦴 Caveman Summary
+**Sync-on-Close**: Browsers are like bouncers - they let you YELL things while inside the club (switching tabs), but once you're walking out (clicking X), they cover your mouth. So we yell every time you look away, not when you leave.
+
+**Settling Delay**: We now wait for the graph to settle before controlling lights. No more "flash on then off" dance on startup.
+
+### Files Modified
+- `frontend/src/App.jsx` - Added sync-on-close at module level
+- `frontend/src/Editor.jsx` - Added `_t2GetGraphData()` function
+- `backend/src/api/routes/engineRoutes.js` - Added debug logging for save-active
+- `backend/package.json` - v2.1.189
+- `home-assistant-addons/t2autotron/config.yaml` - v2.1.189
+- `home-assistant-addons/t2autotron/CHANGELOG.md` - Added entries
+
+---
 
 ## Session 18: server.js Modularization
 

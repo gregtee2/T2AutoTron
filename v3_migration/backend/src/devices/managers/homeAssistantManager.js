@@ -32,6 +32,71 @@ class HomeAssistantManager {
     this.deviceCache = null;
     this.STATE_CACHE_TTL = 5000; // 5 seconds for state cache
     this.DEVICE_CACHE_TTL = 30000; // 30 seconds for device list cache
+    
+    // Device health tracking - prevents spam from consistently failing devices
+    this.deviceHealth = new Map(); // entityId -> { failures: number, lastFailure: Date, unhealthy: boolean }
+    this.FAILURE_THRESHOLD = 3; // Mark unhealthy after 3 consecutive failures
+    this.UNHEALTHY_RETRY_INTERVAL = 5 * 60 * 1000; // Retry unhealthy devices every 5 minutes
+  }
+
+  /**
+   * Check if a device is healthy (not marked as failing)
+   * Returns true if healthy or if enough time has passed to retry
+   */
+  isDeviceHealthy(entityId) {
+    const health = this.deviceHealth.get(entityId);
+    if (!health || !health.unhealthy) return true;
+    
+    // Allow retry after UNHEALTHY_RETRY_INTERVAL
+    const timeSinceLastFailure = Date.now() - health.lastFailure;
+    if (timeSinceLastFailure > this.UNHEALTHY_RETRY_INTERVAL) {
+      return true; // Time to retry
+    }
+    return false;
+  }
+
+  /**
+   * Record a device failure - marks device unhealthy after threshold
+   */
+  recordDeviceFailure(entityId, error) {
+    const health = this.deviceHealth.get(entityId) || { failures: 0, lastFailure: 0, unhealthy: false };
+    health.failures++;
+    health.lastFailure = Date.now();
+    health.lastError = error;
+    
+    if (health.failures >= this.FAILURE_THRESHOLD && !health.unhealthy) {
+      health.unhealthy = true;
+      logger.log(`🔴 Device marked UNHEALTHY after ${health.failures} failures: ${entityId} (will retry in 5min)`, 'warn', false, 'ha:health');
+    }
+    
+    this.deviceHealth.set(entityId, health);
+    return health.unhealthy;
+  }
+
+  /**
+   * Record a device success - resets failure counter
+   */
+  recordDeviceSuccess(entityId) {
+    const health = this.deviceHealth.get(entityId);
+    if (health && (health.failures > 0 || health.unhealthy)) {
+      if (health.unhealthy) {
+        logger.log(`🟢 Device recovered: ${entityId}`, 'info', false, 'ha:health');
+      }
+      this.deviceHealth.delete(entityId);
+    }
+  }
+
+  /**
+   * Get list of currently unhealthy devices (for debugging)
+   */
+  getUnhealthyDevices() {
+    const unhealthy = [];
+    for (const [entityId, health] of this.deviceHealth) {
+      if (health.unhealthy) {
+        unhealthy.push({ entityId, ...health });
+      }
+    }
+    return unhealthy;
   }
 
   broadcastConnectionStatus() {
@@ -313,11 +378,19 @@ class HomeAssistantManager {
   }
 
   async updateState(id, update) {
+    // Extract rawId early so it's available in catch block
+    const rawId = id.replace('ha_', '');
+    
     try {
       // Keep config current in case settings were updated at runtime
       this.updateConfig();
-
-      const rawId = id.replace('ha_', '');
+      
+      // Check device health before sending command
+      if (!this.isDeviceHealthy(rawId)) {
+        // Device is unhealthy and not ready for retry - skip silently
+        return { success: false, error: 'Device marked unhealthy - skipping', skipped: true };
+      }
+      
       const entityType = rawId.split('.')[0];
       const service = entityType;
       const payload = { entity_id: rawId };
@@ -419,10 +492,19 @@ class HomeAssistantManager {
       // Invalidate cache after update
       this.stateCache.delete(id);
 
+      // Record success - device is healthy
+      this.recordDeviceSuccess(rawId);
+
       await logger.log(`HA state update succeeded for ${id}: ${JSON.stringify(payload)}`, 'info', false, `ha:state:${id}`);
       return { success: true };
     } catch (error) {
-      await logger.log(`HA state update failed for ${id}: ${error.message}`, 'error', false, `ha:state:${id}`);
+      // Record failure - may mark device as unhealthy
+      const isNowUnhealthy = this.recordDeviceFailure(rawId, error.message);
+      
+      // Only log if device just became unhealthy or is healthy (not spam for known-bad devices)
+      if (!isNowUnhealthy) {
+        await logger.log(`HA state update failed for ${id}: ${error.message}`, 'error', false, `ha:state:${id}`);
+      }
       return { success: false, error: error.message };
     }
   }
@@ -441,6 +523,15 @@ class HomeAssistantManager {
   async callService(domain, service, data) {
     this.updateConfig();
 
+    // Extract entity_id for health tracking (if present)
+    const entityId = data?.entity_id;
+    const healthKey = entityId || `${domain}.${service}`;
+    
+    // Check health if we have an entity_id
+    if (entityId && !this.isDeviceHealthy(entityId)) {
+      return { success: false, error: 'Device marked unhealthy - skipping', skipped: true };
+    }
+
     try {
       const response = await fetch(`${this.config.host}/api/services/${domain}/${service}`, {
         method: 'POST',
@@ -457,10 +548,19 @@ class HomeAssistantManager {
         throw new Error(`HA API error: ${response.status}: ${response.statusText}, Body: ${errorBody}`);
       }
 
+      // Record success
+      if (entityId) this.recordDeviceSuccess(entityId);
+
       await logger.log(`HA service call succeeded: ${domain}.${service}`, 'info', false, `ha:service:${domain}`);
       return { success: true };
     } catch (error) {
-      await logger.log(`HA service call failed: ${domain}.${service} - ${error.message}`, 'error', false, `ha:service:${domain}`);
+      // Record failure
+      const isNowUnhealthy = entityId ? this.recordDeviceFailure(entityId, error.message) : false;
+      
+      // Only log if not already marked unhealthy (prevents spam)
+      if (!isNowUnhealthy) {
+        await logger.log(`HA service call failed: ${domain}.${service} - ${error.message}`, 'error', false, `ha:service:${domain}`);
+      }
       return { success: false, error: error.message };
     }
   }
@@ -684,6 +784,14 @@ module.exports = {
   getMediaPlayers: () => instance.getMediaPlayers(),
   getTtsEntities: () => instance.getTtsEntities(),
   callService: (domain, service, data) => instance.callService(domain, service, data),
+  // Device health tracking
+  isDeviceHealthy: (entityId) => instance.isDeviceHealthy(entityId),
+  recordDeviceSuccess: (entityId) => instance.recordDeviceSuccess(entityId),
+  recordDeviceFailure: (entityId, error) => instance.recordDeviceFailure(entityId, error),
+  getUnhealthyDevices: () => instance.getUnhealthyDevices(),
+  deviceHealth: instance.deviceHealth,  // Direct access to the Map for reset
+  UNHEALTHY_RETRY_INTERVAL: instance.UNHEALTHY_RETRY_INTERVAL,
+  FAILURE_THRESHOLD: instance.FAILURE_THRESHOLD,
   // Expose connection status for status requests
   getConnectionStatus: () => ({
     isConnected: instance.isConnected,

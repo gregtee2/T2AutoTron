@@ -972,6 +972,175 @@ registry.register('TextStringNode', TextStringNode);
 registry.register('StringConcatNode', StringConcatNode);
 registry.register('UpcomingEventsNode', UpcomingEventsNode);
 
+/**
+ * TTSMessageSchedulerNode - Queue-based TTS message scheduler
+ * 
+ * Each message row has a trigger input. When triggered (rising edge),
+ * the message is queued and output one at a time with delay between.
+ */
+class TTSMessageSchedulerNode {
+  constructor() {
+    this.id = null;
+    this.label = 'TTS Message Scheduler';
+    this.properties = {
+      messages: [
+        { text: 'Message 1', enabled: true },
+        { text: 'Message 2', enabled: true },
+        { text: 'Message 3', enabled: true }
+      ],
+      lastTriggeredIndex: null,
+      lastTriggeredText: null,
+      debug: false
+    };
+
+    // Track last input states for edge detection
+    this._lastInputStates = {};
+    
+    // Message queue
+    this._messageQueue = [];
+    this._isProcessingQueue = false;
+    
+    // Current output message
+    this._currentOutputMessage = null;
+    
+    // Processing timeout reference
+    this._processingTimeout = null;
+    
+    // Delay between messages (ms)
+    this._messageDelay = 3000;
+    
+    // Settling period on graph load - prevent initial trigger spam
+    this._initTime = Date.now();
+    this._settlingMs = 2000;
+  }
+
+  restore(data) {
+    if (data.properties) {
+      if (data.properties.messages) {
+        this.properties.messages = data.properties.messages;
+      }
+      if (data.properties.debug !== undefined) {
+        this.properties.debug = data.properties.debug;
+      }
+    }
+  }
+
+  /**
+   * Convert any value to boolean
+   */
+  toBoolean(value) {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    if (typeof value === 'string') {
+      const lower = value.toLowerCase().trim();
+      return lower === 'true' || lower === 'on' || lower === '1' || lower === 'yes';
+    }
+    return !!value;
+  }
+
+  /**
+   * Queue a message for output
+   */
+  queueMessage(index, text) {
+    if (this.properties.debug) {
+      console.log(`[TTSMessageScheduler] Queuing message ${index + 1}: "${text}"`);
+    }
+    
+    this._messageQueue.push({ index, text });
+    this._processQueue();
+  }
+
+  /**
+   * Process the message queue
+   */
+  _processQueue() {
+    if (this._isProcessingQueue || this._messageQueue.length === 0) return;
+    
+    this._isProcessingQueue = true;
+    
+    // Get next message (first in queue = highest priority)
+    const { index, text } = this._messageQueue.shift();
+    
+    // Set output
+    this._currentOutputMessage = text;
+    this.properties.lastTriggeredIndex = index;
+    this.properties.lastTriggeredText = text;
+    
+    if (this.properties.debug) {
+      console.log(`[TTSMessageScheduler] 📢 Sending: "${text}"`);
+    }
+    
+    // Clear output after a short delay (pulse behavior)
+    this._processingTimeout = setTimeout(() => {
+      this._currentOutputMessage = null;
+      
+      // Wait before processing next message
+      this._processingTimeout = setTimeout(() => {
+        this._isProcessingQueue = false;
+        this._processQueue(); // Process next in queue
+      }, this._messageDelay);
+    }, 500);
+  }
+
+  data(inputs) {
+    // Settling period on graph load - skip initial triggers
+    const elapsed = Date.now() - this._initTime;
+    const isSettling = elapsed < this._settlingMs;
+    
+    // Skip if frontend is active (let frontend handle TTS)
+    const engine = global.backendEngine;
+    const frontendActive = engine && engine.shouldSkipDeviceCommands && engine.shouldSkipDeviceCommands();
+    
+    // Check each trigger for rising edge
+    this.properties.messages.forEach((msg, index) => {
+      const triggerKey = `trigger_${index}`;
+      const rawInput = inputs[triggerKey]?.[0];
+      const currentState = this.toBoolean(rawInput);
+      const lastState = this._lastInputStates[index] ?? false;
+      
+      // Rising edge detection
+      if (!lastState && currentState) {
+        // Skip triggers during settling period
+        if (isSettling) {
+          console.log(`[TTSMessageScheduler] ⏳ Backend settling: skipping initial trigger for message #${index + 1}`);
+          this._lastInputStates[index] = currentState; // Still track state
+          return;
+        }
+        
+        // Skip if frontend is handling TTS
+        if (frontendActive) {
+          console.log(`[TTSMessageScheduler] 🖥️ Frontend active: skipping backend TTS for message #${index + 1}`);
+          this._lastInputStates[index] = currentState;
+          return;
+        }
+        
+        // Rising edge detected - queue this message
+        if (msg.enabled && msg.text) {
+          this.queueMessage(index, msg.text);
+        }
+      }
+      
+      // Store state for next cycle
+      this._lastInputStates[index] = currentState;
+    });
+
+    return {
+      message: this._currentOutputMessage
+    };
+  }
+
+  destroy() {
+    if (this._processingTimeout) {
+      clearTimeout(this._processingTimeout);
+    }
+    this._messageQueue = [];
+    this._isProcessingQueue = false;
+  }
+}
+
+registry.register('TTSMessageSchedulerNode', TTSMessageSchedulerNode);
+
 module.exports = {
   CounterNode,
   RandomNode,
@@ -986,5 +1155,6 @@ module.exports = {
   WatchdogNode,
   TextStringNode,
   StringConcatNode,
-  UpcomingEventsNode
+  UpcomingEventsNode,
+  TTSMessageSchedulerNode
 };

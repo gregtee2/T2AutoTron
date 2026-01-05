@@ -545,6 +545,45 @@ export function Editor() {
         window._t2Process = process;  // Expose for debugging
         window._t2ProcessImmediate = processImmediate;  // Expose for debugging
         window._t2Engine = engine;  // Expose for debugging
+        
+        // Expose graph serializer for sync-on-close functionality
+        // Used by App.jsx beforeunload to push unsaved changes to backend
+        // NOTE: Uses window._t2Editor/Area instead of closure to ensure we get current instances
+        window._t2GetGraphData = () => {
+            try {
+                const ed = window._t2Editor;
+                const ar = window._t2Area;
+                if (!ed || !ar) {
+                    console.warn('[_t2GetGraphData] Editor or area not available');
+                    return null;
+                }
+                if (window.graphLoading) return null; // Don't sync during load
+                const nodes = ed.getNodes().map(n => {
+                    const serializedNode = typeof n.toJSON === 'function' ? n.toJSON() : { ...n };
+                    if (n.properties) serializedNode.properties = n.properties;
+                    return {
+                        id: n.id,
+                        label: n.label,
+                        position: ar.nodeViews.get(n.id)?.position || { x: 0, y: 0 },
+                        data: serializedNode
+                    };
+                });
+                const connections = ed.getConnections().map(c => ({
+                    id: c.id,
+                    source: c.source,
+                    target: c.target,
+                    sourceOutput: c.sourceOutput,
+                    targetInput: c.targetInput
+                }));
+                const viewport = ar.area?.transform 
+                    ? { x: ar.area.transform.x, y: ar.area.transform.y, k: ar.area.transform.k }
+                    : { x: 0, y: 0, k: 1 };
+                return { nodes, connections, viewport, syncedOnClose: true, timestamp: Date.now() };
+            } catch (e) {
+                console.warn('[_t2GetGraphData] Failed to serialize graph:', e);
+                return null;
+            }
+        };
 
         const selector = AreaExtensions.selector();
 

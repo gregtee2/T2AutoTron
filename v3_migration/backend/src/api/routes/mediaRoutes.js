@@ -18,6 +18,9 @@ const router = express.Router();
 const homeAssistantManager = require('../../devices/managers/homeAssistantManager');
 const logWithTimestamp = require('../../logging/logWithTimestamp');
 
+// Verbose logging flag
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+
 /**
  * Initialize media routes
  * @param {object} io - Socket.IO instance
@@ -55,7 +58,7 @@ function createMediaRoutes(io) {
                 media_content_type: mediaType
             });
 
-            logWithTimestamp(`▶️ Playing media on ${entityId}: ${mediaUrl}`, 'info');
+            if (VERBOSE) logWithTimestamp(`▶️ Playing media on ${entityId}: ${mediaUrl}`, 'info');
 
             // Emit socket event for UI updates
             if (io) {
@@ -92,7 +95,7 @@ function createMediaRoutes(io) {
                 entity_id: entityId
             });
 
-            logWithTimestamp(`⏹️ Stopped media on ${entityId}`, 'info');
+            if (VERBOSE) logWithTimestamp(`⏹️ Stopped media on ${entityId}`, 'info');
 
             if (io) {
                 io.emit('media-state-update', {

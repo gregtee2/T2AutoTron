@@ -86,27 +86,104 @@ class BackendEngine {
         isActive: active,
         frontendLastSeen: this.frontendLastSeen 
       });
+      
+      // When frontend goes inactive, sync backend node states from HA reality
+      // This prevents backend from "correcting" things that frontend intentionally set
+      if (wasActive && !active) {
+        this.onFrontendInactive();
+      }
+    }
+  }
+
+  /**
+   * Called when frontend goes inactive (browser closes/sleeps)
+   * Reloads the latest graph and syncs states from HA reality
+   */
+  async onFrontendInactive() {
+    console.log(`[BackendEngine] Frontend went inactive - loading latest graph and syncing states...`);
+    
+    try {
+      // First, reload the latest graph from disk (frontend may have made changes)
+      const path = require('path');
+      const fs = require('fs');
+      const savedGraphsDir = path.join(__dirname, '../../..', 'Saved_Graphs');
+      const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
+      
+      if (fs.existsSync(lastActivePath)) {
+        const graphJson = JSON.parse(fs.readFileSync(lastActivePath, 'utf-8'));
+        if (graphJson?.nodes?.length > 0) {
+          await this.hotReload(graphJson);
+          console.log(`[BackendEngine] Reloaded graph (${graphJson.nodes.length} nodes, ${graphJson.connections?.length || 0} connections)`);
+        }
+      }
+      
+      // Then sync device states from HA reality
+      await this.syncDeviceStatesFromHA();
+      
+    } catch (err) {
+      console.error(`[BackendEngine] Failed to handle frontend inactive:`, err.message);
+    }
+  }
+
+  /**
+   * Sync all device node lastTrigger states to match current HA reality.
+   * Called when frontend goes inactive so backend doesn't fight with frontend's changes.
+   */
+  async syncDeviceStatesFromHA() {
+    console.log(`[BackendEngine] Syncing device states from HA...`);
+    
+    try {
+      // Get current HA states
+      const haManager = require('../devices/managers/homeAssistantManager');
+      await haManager.refreshStates(); // Force fresh fetch
+      
+      let syncCount = 0;
+      for (const node of this.nodes.values()) {
+        // Only sync HAGenericDeviceNode types
+        if (node.type === 'HAGenericDeviceNode' && node.properties?.devices) {
+          for (const device of node.properties.devices) {
+            if (device.entityId) {
+              const haState = haManager.getDeviceState(device.entityId);
+              const isOn = haState?.state === 'on';
+              
+              // Update lastTrigger to match reality
+              if (node.lastTrigger !== isOn) {
+                node.lastTrigger = isOn;
+                syncCount++;
+              }
+            }
+          }
+        }
+      }
+      
+      console.log(`[BackendEngine] Synced ${syncCount} device states from HA`);
+    } catch (err) {
+      console.error(`[BackendEngine] Failed to sync from HA:`, err.message);
     }
   }
 
   /**
    * Check if device commands should be skipped (frontend is controlling)
    * 
-   * UPDATE 2026-01-02: DISABLED frontend skip logic entirely.
-   * Problem: When Chrome wakes from sleep, it sends heartbeats but the Rete.js
-   * graph engine isn't actually running. The backend waits for a frontend that
-   * isn't doing anything, so lights don't get controlled.
+   * When frontend is active, it controls devices directly via Rete.js engine.
+   * Backend only takes over when frontend goes inactive (browser closed/sleeping).
+   * This prevents both from fighting over device control.
    * 
-   * Solution: Backend always controls devices. The frontend graph engine is
-   * just for visualization/editing, not for 24/7 automation.
-   * 
-   * @returns {boolean} Always returns false (never skip)
+   * @returns {boolean} True if backend should skip commands (frontend is active)
    */
   shouldSkipDeviceCommands() {
-    // DISABLED 2026-01-02: Always let backend control devices
-    // Problem: Chrome wakes from sleep, sends heartbeats, but Rete.js engine
-    // isn't running. Backend waits for frontend that isn't doing anything.
-    // Solution: Backend always controls devices - it's the source of truth.
+    // If frontend is active and was seen recently (within 30 seconds), skip backend commands
+    // Frontend controls devices directly; backend is the fallback
+    if (this.frontendActive) {
+      const timeSinceHeartbeat = Date.now() - (this.frontendLastSeen || 0);
+      if (timeSinceHeartbeat < 30000) {
+        // Frontend is active and responsive - let it control devices
+        return true;
+      }
+      // Frontend claims active but no heartbeat in 30s - it might be sleeping
+      console.log(`[BackendEngine] Frontend claims active but no heartbeat in ${Math.round(timeSinceHeartbeat/1000)}s - backend taking over`);
+      this.frontendActive = false;
+    }
     return false;
   }
 

@@ -15,7 +15,7 @@ let weatherCache = {
 };
 
 /**
- * Get weather data from the backend weather manager
+ * Get weather data from the backend weather service
  */
 async function getWeatherData() {
   const now = Date.now();
@@ -25,11 +25,11 @@ async function getWeatherData() {
     return weatherCache.data;
   }
   
-  // Try to get from weather manager
+  // Try to get from weather service
   try {
-    const weatherManager = require('../../devices/managers/weatherManager');
-    if (weatherManager && typeof weatherManager.getCurrentWeather === 'function') {
-      const data = await weatherManager.getCurrentWeather();
+    const { fetchWeatherData } = require('../../weather/weatherService');
+    if (fetchWeatherData && typeof fetchWeatherData === 'function') {
+      const data = await fetchWeatherData(false); // false = don't force refresh
       if (data) {
         weatherCache.data = data;
         weatherCache.lastFetch = now;
@@ -37,7 +37,7 @@ async function getWeatherData() {
       }
     }
   } catch (err) {
-    // Weather manager not available
+    console.error('[WeatherNodes] Failed to fetch weather:', err.message);
   }
   
   return weatherCache.data || null;

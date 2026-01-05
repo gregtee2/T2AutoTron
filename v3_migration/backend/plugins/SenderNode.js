@@ -121,11 +121,24 @@
                     }
                 }
 
+                // Check if value actually changed before syncing to backend
+                const oldValue = window.AutoTronBuffer.get(finalName);
+                const valueChanged = JSON.stringify(oldValue) !== JSON.stringify(inputData);
+
                 // Store with source name (buffer name without type prefix for cleaner display)
                 window.AutoTronBuffer.set(finalName, inputData, baseName);
                 this.properties.lastValue = inputData;
                 this.properties.finalName = finalName; // Store for UI
                 this.properties.registeredName = finalName;
+                
+                // SYNC TO BACKEND: Only emit when value actually changes
+                // This prevents flooding the server with duplicate messages every tick
+                if (valueChanged && window.socket && window.socket.connected) {
+                    window.socket.emit('buffer-update', { 
+                        key: finalName, 
+                        value: inputData 
+                    });
+                }
             }
 
             return {};
