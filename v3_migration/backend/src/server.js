@@ -865,6 +865,10 @@ app.use('/audio', express.static(path.join(__dirname, '../audio'))); // TTS audi
 // Local: http://localhost:3000/debug
 // Add-on: http://[ha-url]/api/hassio_ingress/[token]/debug
 app.get('/debug', (req, res) => {
+  // Disable caching so updates are seen immediately
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'debug_dashboard.html'));
 });
 

@@ -1364,7 +1364,7 @@
                 
                 const eventsResult = await eventsResponse.json();
                 const buffersResult = await buffersResponse.json();
-                
+
                 // Get engine's expected states
                 let engineDeviceStates = [];
                 if (deviceStatesResponse.ok) {
@@ -1414,10 +1414,12 @@
                         // For locks, use the state directly ("locked"/"unlocked")
                         // For lights/switches, convert on/off boolean to string
                         let actualState;
-                        if (haDevice?.type === 'lock') {
-                            actualState = haDevice?.state?.state || 'unknown';  // "locked" or "unlocked"
+                        if (!haDevice) {
+                            actualState = 'unknown';  // Device not found in HA
+                        } else if (haDevice.type === 'lock') {
+                            actualState = haDevice.state?.state || 'unknown';  // "locked" or "unlocked"
                         } else {
-                            actualState = haDevice?.state?.on ? 'on' : 'off';
+                            actualState = haDevice.state?.on ? 'on' : 'off';
                         }
                         
                         // Get actual color from HA device (if it's a light)
@@ -1492,10 +1494,12 @@
                         // For locks, use the state directly ("locked"/"unlocked")
                         // For lights/switches, convert on/off boolean to string
                         let actualState;
-                        if (haDevice?.type === 'lock') {
-                            actualState = haDevice?.state?.state || 'unknown';
+                        if (!haDevice) {
+                            actualState = 'unknown';  // Device not found in HA
+                        } else if (haDevice.type === 'lock') {
+                            actualState = haDevice.state?.state || 'unknown';
                         } else {
-                            actualState = haDevice?.state?.on ? 'on' : 'off';
+                            actualState = haDevice.state?.on ? 'on' : 'off';
                         }
                         
                         return {
