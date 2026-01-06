@@ -263,6 +263,20 @@ router.get('/device-states', async (req, res) => {
     
     const deviceStates = [];
     
+    // First pass: find all lights under Hue Effect control
+    // These should be excluded from color mismatch checks
+    const effectControlledEntities = new Set();
+    for (const [nodeId, node] of engine.nodes) {
+      const nodeType = node.constructor?.name || node.label || 'Unknown';
+      if (nodeType === 'HueEffectNode' && node.isEffectActive) {
+        const entityIds = node.properties?.entityIds || [];
+        entityIds.forEach(id => {
+          const cleanId = id.startsWith('ha_') ? id.slice(3) : id;
+          effectControlledEntities.add(cleanId);
+        });
+      }
+    }
+    
     // Iterate over all nodes to find device-controlling nodes
     for (const [nodeId, node] of engine.nodes) {
       const nodeType = node.constructor?.name || node.label || 'Unknown';
@@ -314,6 +328,7 @@ router.get('/device-states', async (req, res) => {
             hasHsvInput: !!node.lastSentHsv,
             expectedHsv: node.lastSentHsv || null,  // What color engine is sending
             trackedState: node.deviceStates?.[entityId],
+            effectOverride: effectControlledEntities.has(entityId),  // Skip color check if Hue Effect active
             lastOutput: output
           });
         });

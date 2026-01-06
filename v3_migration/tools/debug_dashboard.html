@@ -1444,7 +1444,8 @@
                             hasHsvInput: device.hasHsvInput,  // Is this receiving color commands?
                             expectedHsv,    // What color engine is sending
                             actualHsColor,  // What color HA reports [h, s]
-                            actualBrightness // What brightness HA reports (0-100)
+                            actualBrightness, // What brightness HA reports (0-100)
+                            effectOverride: device.effectOverride  // Hue Effect is overriding color
                         };
                     });
                 } else {
@@ -1577,8 +1578,9 @@
             
             // Check for COLOR mismatch (engine sending one color, light showing different color)
             // ONLY flag if the light is actually ON - if light is OFF, HSV commands are harmless/ignored
+            // SKIP if effectOverride is true - Hue Effect is intentionally overriding the color
             comparison.forEach(item => {
-                if (item.expectedHsv && item.actualHsColor && item.actualState === 'on') {
+                if (item.expectedHsv && item.actualHsColor && item.actualState === 'on' && !item.effectOverride) {
                     // expectedHsv is { hue: 0-1, saturation: 0-1, brightness: 0-254 }
                     // actualHsColor is [hue: 0-360, saturation: 0-100]
                     const expectedHue = Math.round((item.expectedHsv.hue || 0) * 360);
