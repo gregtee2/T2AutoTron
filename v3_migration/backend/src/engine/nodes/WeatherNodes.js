@@ -44,21 +44,27 @@ async function getWeatherData() {
 }
 
 /**
- * Evaluate a threshold condition with hysteresis
+ * Evaluate a threshold condition - checks if value is WITHIN range [low, high]
+ * This matches the frontend behavior: true if value is between low and high thresholds.
+ * 
+ * @param {number} value - Current sensor value
+ * @param {number} high - Upper threshold
+ * @param {number} low - Lower threshold  
+ * @param {boolean} currentState - Previous state (unused, kept for API compatibility)
+ * @param {boolean} invert - If true, invert the result
+ * @returns {boolean} - True if value is within range (or inverted)
  */
 function evaluateThreshold(value, high, low, currentState, invert) {
   if (value === null || value === undefined) return false;
   
-  let result;
-  if (currentState) {
-    // Currently true - need to go below low to turn off
-    result = value >= low;
-  } else {
-    // Currently false - need to go above high to turn on
-    result = value >= high;
-  }
+  // Ensure low <= high
+  const effectiveLow = Math.min(low, high);
+  const effectiveHigh = Math.max(low, high);
   
-  return invert ? !result : result;
+  // Check if value is within the range [low, high]
+  const inRange = value >= effectiveLow && value <= effectiveHigh;
+  
+  return invert ? !inRange : inRange;
 }
 
 /**
@@ -138,9 +144,11 @@ class WeatherLogicNode {
     
     if (weather) {
       // Evaluate each condition
+      // Note: weatherService returns field names matching Ambient Weather format:
+      // solarradiation, tempf, windspeedmph, hourlyrainin, eventrainin, dailyrainin
       if (p.solarEnabled) {
         results.solar = evaluateThreshold(
-          weather.solar_radiation || weather.uvi * 100,
+          weather.solarradiation ?? weather.solar_radiation ?? (weather.uvi ? weather.uvi * 100 : null),
           p.solarThresholdHigh, p.solarThresholdLow,
           lastEval.solar, p.solarInvert
         );
@@ -148,7 +156,7 @@ class WeatherLogicNode {
       
       if (p.tempEnabled) {
         results.temp = evaluateThreshold(
-          weather.temperature || weather.temp,
+          weather.tempf ?? weather.temperature ?? weather.temp,
           p.tempThresholdHigh, p.tempThresholdLow,
           lastEval.temp, p.tempInvert
         );
@@ -164,7 +172,7 @@ class WeatherLogicNode {
       
       if (p.windEnabled) {
         results.wind = evaluateThreshold(
-          weather.wind_speed || weather.wind?.speed,
+          weather.windspeedmph ?? weather.wind_speed ?? weather.wind?.speed,
           p.windThresholdHigh, p.windThresholdLow,
           lastEval.wind, p.windInvert
         );
@@ -172,21 +180,21 @@ class WeatherLogicNode {
       
       // Rain conditions (simple threshold, no hysteresis)
       if (p.hourlyRainEnabled) {
-        const hourlyRain = weather.rain?.['1h'] || 0;
+        const hourlyRain = weather.hourlyrainin ?? weather.rain?.['1h'] ?? 0;
         results.hourlyRain = p.hourlyRainInvert 
           ? hourlyRain < p.hourlyRainThreshold
           : hourlyRain >= p.hourlyRainThreshold;
       }
       
       if (p.eventRainEnabled) {
-        const eventRain = weather.rain?.event || weather.rain?.['3h'] || 0;
+        const eventRain = weather.eventrainin ?? weather.rain?.event ?? weather.rain?.['3h'] ?? 0;
         results.eventRain = p.eventRainInvert
           ? eventRain < p.eventRainThreshold
           : eventRain >= p.eventRainThreshold;
       }
       
       if (p.dailyRainEnabled) {
-        const dailyRain = weather.rain?.daily || weather.rain?.['24h'] || 0;
+        const dailyRain = weather.dailyrainin ?? weather.rain?.daily ?? weather.rain?.['24h'] ?? 0;
         results.dailyRain = p.dailyRainInvert
           ? dailyRain < p.dailyRainThreshold
           : dailyRain >= p.dailyRainThreshold;
@@ -211,13 +219,14 @@ class WeatherLogicNode {
     p._lastEval = results;
     
     // Extract raw values from weather data
-    const temp = weather?.temperature || weather?.temp || null;
-    const humidity = weather?.humidity || null;
-    const wind = weather?.wind_speed || weather?.wind?.speed || null;
-    const solar = weather?.solar_radiation || (weather?.uvi ? weather.uvi * 100 : null);
-    const hourlyRain = weather?.rain?.['1h'] || 0;
-    const eventRain = weather?.rain?.event || weather?.rain?.['3h'] || 0;
-    const dailyRain = weather?.rain?.daily || weather?.rain?.['24h'] || 0;
+    // Note: weatherService returns Ambient Weather format field names
+    const temp = weather?.tempf ?? weather?.temperature ?? weather?.temp ?? null;
+    const humidity = weather?.humidity ?? null;
+    const wind = weather?.windspeedmph ?? weather?.wind_speed ?? weather?.wind?.speed ?? null;
+    const solar = weather?.solarradiation ?? weather?.solar_radiation ?? (weather?.uvi ? weather.uvi * 100 : null);
+    const hourlyRain = weather?.hourlyrainin ?? weather?.rain?.['1h'] ?? 0;
+    const eventRain = weather?.eventrainin ?? weather?.rain?.event ?? weather?.rain?.['3h'] ?? 0;
+    const dailyRain = weather?.dailyrainin ?? weather?.rain?.daily ?? weather?.rain?.['24h'] ?? 0;
     
     // Generate summary text for TTS
     const summaryParts = [];

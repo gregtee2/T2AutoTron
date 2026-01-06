@@ -1,15 +1,130 @@
 {
-  "exportTime": "2026-01-05T21:51:32.627Z",
+  "exportTime": "2026-01-06T00:15:16.195Z",
   "hoursWindow": 1,
   "anomalies": [
     {
       "type": "critical",
       "title": "State Mismatch",
-      "details": "Table light: Engine says OFF, HA says ON"
+      "details": "fireplace uplights : Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Living room lights: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Living room lights: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Living room lights: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Living room lights: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Living room lights: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Living room lights: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Bar lamps cool : Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Bar lamps cool : Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Bar Lamps Warm: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Bar Lamps Warm: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "undermount strip: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Dinning room: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "couch lights : Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "couch lights : Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Kitchen Cabinet Bottom: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Kitchen Cabinet Top: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Kitchen Sink: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Chandelier: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Living Room Tables: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Living Room Tables: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Basemanet table lamps: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Basemanet table lamps: Engine says OFF, HA says ON"
+    },
+    {
+      "type": "critical",
+      "title": "State Mismatch",
+      "details": "Basemanet table lamps: Engine says OFF, HA says ON"
     }
   ],
-  "anomalyCount": 1,
-  "criticalCount": 1,
+  "anomalyCount": 24,
+  "criticalCount": 24,
   "warningCount": 0,
   "activity": [
     {
@@ -37,14 +152,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
         0
       ],
-      "actualBrightness": null
+      "actualBrightness": 100
     },
     {
       "nodeId": "f65af4c70a7f6f40",
@@ -224,14 +339,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
-        0
+        0.392
       ],
-      "actualBrightness": null
+      "actualBrightness": 28
     },
     {
       "nodeId": "23c01481261e42d1",
@@ -241,14 +356,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
-        0
+        0.392
       ],
-      "actualBrightness": null
+      "actualBrightness": 28
     },
     {
       "nodeId": "23c01481261e42d1",
@@ -258,14 +373,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
-        0
+        0.392
       ],
-      "actualBrightness": null
+      "actualBrightness": 28
     },
     {
       "nodeId": "23c01481261e42d1",
@@ -275,14 +390,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
-        0
+        0.392
       ],
-      "actualBrightness": null
+      "actualBrightness": 28
     },
     {
       "nodeId": "23c01481261e42d1",
@@ -292,14 +407,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
-        0
+        0.392
       ],
-      "actualBrightness": null
+      "actualBrightness": 28
     },
     {
       "nodeId": "23c01481261e42d1",
@@ -309,14 +424,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
-        0
+        0.392
       ],
-      "actualBrightness": null
+      "actualBrightness": 28
     },
     {
       "nodeId": "46fa426389043256",
@@ -326,14 +441,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        211.385,
+        76.471
       ],
-      "actualBrightness": null
+      "actualBrightness": 49
     },
     {
       "nodeId": "46fa426389043256",
@@ -343,14 +458,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        211.385,
+        76.471
       ],
-      "actualBrightness": null
+      "actualBrightness": 49
     },
     {
       "nodeId": "74640383197a8ca7",
@@ -360,14 +475,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        33.425,
+        85.882
       ],
-      "actualBrightness": null
+      "actualBrightness": 50
     },
     {
       "nodeId": "74640383197a8ca7",
@@ -377,14 +492,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        33.425,
+        85.882
       ],
-      "actualBrightness": null
+      "actualBrightness": 50
     },
     {
       "nodeId": "b8140146b61cbe8b",
@@ -394,14 +509,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        207.421,
+        86.667
       ],
-      "actualBrightness": null
+      "actualBrightness": 18
     },
     {
       "nodeId": "09acc1353342ccb0",
@@ -410,7 +525,7 @@
       "deviceName": "LEDVANCE PLUG",
       "triggerMode": "Follow",
       "eventCount": 0,
-      "expectedState": "off",
+      "expectedState": "on",
       "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
@@ -431,20 +546,20 @@
       "actualState": "on",
       "hasHsvInput": true,
       "expectedHsv": {
-        "hue": 0.05555555555555559,
-        "saturation": 0.15217391304347824,
-        "brightness": 90,
+        "hue": 0.08533333333333333,
+        "saturation": 0.6578947368421053,
+        "brightness": 77,
         "rgb": {
-          "r": 49,
-          "g": 44,
-          "b": 41
+          "r": 57,
+          "g": 39,
+          "b": 20
         }
       },
       "actualHsColor": [
-        20,
-        15.294
+        30.361,
+        65.098
       ],
-      "actualBrightness": 35
+      "actualBrightness": 30
     },
     {
       "nodeId": "f9e613cfd22bb224",
@@ -457,20 +572,20 @@
       "actualState": "on",
       "hasHsvInput": true,
       "expectedHsv": {
-        "hue": 0.05555555555555559,
-        "saturation": 0.15217391304347824,
-        "brightness": 90,
+        "hue": 0.08533333333333333,
+        "saturation": 0.6578947368421053,
+        "brightness": 77,
         "rgb": {
-          "r": 49,
-          "g": 44,
-          "b": 41
+          "r": 57,
+          "g": 39,
+          "b": 20
         }
       },
       "actualHsColor": [
-        20,
-        15.294
+        30.361,
+        65.098
       ],
-      "actualBrightness": 35
+      "actualBrightness": 30
     },
     {
       "nodeId": "0f7a5498635fd32f",
@@ -480,14 +595,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
         0
       ],
-      "actualBrightness": null
+      "actualBrightness": 51
     },
     {
       "nodeId": "5b71b0de41e3a529",
@@ -500,20 +615,20 @@
       "actualState": "on",
       "hasHsvInput": true,
       "expectedHsv": {
-        "hue": 0.5373931623931624,
-        "saturation": 0.8764044943820224,
-        "brightness": 113,
+        "hue": 0.5198135198135198,
+        "saturation": 0.8666666666666666,
+        "brightness": 114,
         "rgb": {
           "r": 10,
-          "g": 63,
-          "b": 79
+          "g": 66,
+          "b": 74
         }
       },
       "actualHsColor": [
-        192.973,
-        87.059
+        187.879,
+        77.647
       ],
-      "actualBrightness": 44
+      "actualBrightness": 45
     },
     {
       "nodeId": "39309e0384e43956",
@@ -523,14 +638,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        199.245,
+        83.137
       ],
-      "actualBrightness": null
+      "actualBrightness": 66
     },
     {
       "nodeId": "39309e0384e43956",
@@ -540,14 +655,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        199.245,
+        83.137
       ],
-      "actualBrightness": null
+      "actualBrightness": 66
     },
     {
       "nodeId": "01446a4eb12772bd",
@@ -557,14 +672,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
         0
       ],
-      "actualBrightness": null
+      "actualBrightness": 34
     },
     {
       "nodeId": "9a4908a524f7808a",
@@ -574,14 +689,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
         0
       ],
-      "actualBrightness": null
+      "actualBrightness": 81
     },
     {
       "nodeId": "d08ef8707ab0fba4",
@@ -591,14 +706,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
         0
       ],
-      "actualBrightness": null
+      "actualBrightness": 47
     },
     {
       "nodeId": "48772a09399ce435",
@@ -608,14 +723,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
         0
       ],
-      "actualBrightness": null
+      "actualBrightness": 52
     },
     {
       "nodeId": "0c96213adb3281f4",
@@ -625,14 +740,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        31.102,
+        96.078
       ],
-      "actualBrightness": null
+      "actualBrightness": 12
     },
     {
       "nodeId": "0c96213adb3281f4",
@@ -642,14 +757,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        31.102,
+        96.078
       ],
-      "actualBrightness": null
+      "actualBrightness": 12
     },
     {
       "nodeId": "c095e7b26b0c147e",
@@ -659,14 +774,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        28,
+        47
       ],
-      "actualBrightness": null
+      "actualBrightness": 21
     },
     {
       "nodeId": "c095e7b26b0c147e",
@@ -676,14 +791,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
-        0,
-        0
+        28,
+        47
       ],
-      "actualBrightness": null
+      "actualBrightness": 21
     },
     {
       "nodeId": "c095e7b26b0c147e",
@@ -693,14 +808,14 @@
       "triggerMode": "Follow",
       "eventCount": 0,
       "expectedState": "off",
-      "actualState": "off",
+      "actualState": "on",
       "hasHsvInput": false,
       "expectedHsv": null,
       "actualHsColor": [
         0,
         0
       ],
-      "actualBrightness": null
+      "actualBrightness": 21
     },
     {
       "nodeId": "ff5f5d259cfeeb7f",
@@ -736,20 +851,10 @@
   "events": [],
   "buffers": {
     "[Trigger]10pm Off": false,
-    "[Trigger]1AM Off": false,
     "[Trigger]Bathroom Light On/Off": false,
-    "[Trigger]KitchenCounterLights": false,
+    "[Trigger]KitchenCounterLights": true,
     "[Trigger]House Lights ON/Off": false,
     "[Trigger]9:30 On": true,
-    "[HSV]Sconce Top Lights": {
-      "hue": 0.08333333333333333,
-      "saturation": 0.82,
-      "brightness": 152,
-      "transition": 0,
-      "colorTemp": 2250,
-      "mode": "temp",
-      "on": true
-    },
     "[HSV]Sconce Bottom Light": {
       "hue": 0.5388888888888889,
       "saturation": 1,
@@ -768,52 +873,45 @@
       "mode": "color",
       "on": true
     },
+    "[Unknown]Bar Cool": null,
     "[Trigger]Office ON/Off": true,
     "[HSV]Office Colors": {
-      "hue": 0.05555555555555559,
-      "saturation": 0.15217391304347824,
-      "brightness": 90,
+      "hue": 0.08533333333333333,
+      "saturation": 0.6578947368421053,
+      "brightness": 76,
       "rgb": {
-        "r": 49,
-        "g": 44,
-        "b": 41
+        "r": 57,
+        "g": 38,
+        "b": 19
       }
     },
+    "[Unknown]Dinning Room Table": null,
     "[HSV]Temps": {
-      "hue": 0.5373931623931624,
-      "saturation": 0.8764044943820224,
-      "brightness": 113,
+      "hue": 0.5198135198135198,
+      "saturation": 0.8666666666666666,
+      "brightness": 114,
       "rgb": {
         "r": 10,
-        "g": 63,
-        "b": 79
+        "g": 66,
+        "b": 74
       }
     },
     "[Trigger]Sunset": false,
     "[Trigger]Home": false,
-    "[String]Forecast": "humidity 81 percent.",
+    "[String]Forecast": "humidity 79 percent.",
     "[Number]Rain Rate": 0,
-    "[Unknown]Bar Cool": null,
-    "[Unknown]Dinning Room Table": null,
     "[Unknown]Wind Speed": null,
+    "[HSV]Sconce Top Lights": {
+      "hue": 0.08333333333333333,
+      "saturation": 0.82,
+      "brightness": 152,
+      "transition": 0,
+      "colorTemp": 2250,
+      "mode": "temp",
+      "on": true
+    },
     "[Unknown]Bathroom_to_office_color": null,
-    "[HSV]Bathroom_to_office_color": {
-      "hue": 0.10555555555555556,
-      "saturation": 0,
-      "brightness": 83,
-      "transition": 0
-    },
-    "[HSV]Bar Cool": {
-      "hue": 0.5666666666666667,
-      "saturation": 1,
-      "brightness": 124
-    },
-    "[HSV]Dinning Room Table": {
-      "hue": 0.6583333333333333,
-      "saturation": 1,
-      "brightness": 131
-    },
-    "[Number]Wind Speed": 0.89
+    "[Trigger]1AM Off": false
   },
   "lights": [
     {
@@ -872,12 +970,12 @@
       "id": "ha_light.living_room_ceiling_6",
       "name": "Living room ceiling 6",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 28,
         "hs_color": [
           0,
-          0
+          0.392
         ]
       }
     },
@@ -887,10 +985,10 @@
       "state": {
         "state": "on",
         "on": true,
-        "brightness": 44,
+        "brightness": 45,
         "hs_color": [
-          192.973,
-          87.059
+          187.879,
+          77.647
         ]
       }
     },
@@ -898,12 +996,12 @@
       "id": "ha_light.kitchen_bar_spot_2",
       "name": "Kitchen Bar Spot 2",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 50,
         "hs_color": [
-          0,
-          0
+          33.425,
+          85.882
         ]
       }
     },
@@ -911,12 +1009,12 @@
       "id": "ha_light.living_room_ceiling_2",
       "name": "Living room ceiling 3",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 28,
         "hs_color": [
           0,
-          0
+          0.392
         ]
       }
     },
@@ -924,12 +1022,12 @@
       "id": "ha_light.kitchen_bar_spot_3",
       "name": "Kitchen Bar Spot 3",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 49,
         "hs_color": [
-          0,
-          0
+          211.385,
+          76.471
         ]
       }
     },
@@ -939,10 +1037,10 @@
       "state": {
         "state": "on",
         "on": true,
-        "brightness": 35,
+        "brightness": 30,
         "hs_color": [
-          20,
-          15.294
+          30.723,
+          65.098
         ]
       }
     },
@@ -950,12 +1048,12 @@
       "id": "ha_light.kitchen_bar_spot_1",
       "name": "Kitchen Bar Spot 1",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 49,
         "hs_color": [
-          0,
-          0
+          211.385,
+          76.471
         ]
       }
     },
@@ -963,12 +1061,12 @@
       "id": "ha_light.bar_undermount_strip",
       "name": "Bar Undermount Strip",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 18,
         "hs_color": [
-          0,
-          0
+          207.421,
+          86.667
         ]
       }
     },
@@ -978,10 +1076,10 @@
       "state": {
         "state": "on",
         "on": true,
-        "brightness": 35,
+        "brightness": 30,
         "hs_color": [
-          20,
-          15.294
+          30.723,
+          65.098
         ]
       }
     },
@@ -989,12 +1087,12 @@
       "id": "ha_light.living_room_ceiling_1",
       "name": "Living room ceiling 1",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 28,
         "hs_color": [
           0,
-          0
+          0.392
         ]
       }
     },
@@ -1002,12 +1100,12 @@
       "id": "ha_light.living_room_ceiling_3",
       "name": "Living room ceiling 2",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 28,
         "hs_color": [
           0,
-          0
+          0.392
         ]
       }
     },
@@ -1015,12 +1113,12 @@
       "id": "ha_light.living_room_ceiling_5",
       "name": "Living room ceiling 5",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 28,
         "hs_color": [
           0,
-          0
+          0.392
         ]
       }
     },
@@ -1028,12 +1126,12 @@
       "id": "ha_light.kitchen_bar_spot_4",
       "name": "Kitchen Bar Spot 4",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 50,
         "hs_color": [
-          0,
-          0
+          33.425,
+          85.882
         ]
       }
     },
@@ -1054,12 +1152,12 @@
       "id": "ha_light.living_room_wall_washer_south",
       "name": "Living room wall washer south ",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 66,
         "hs_color": [
-          0,
-          0
+          199.245,
+          83.137
         ]
       }
     },
@@ -1067,12 +1165,12 @@
       "id": "ha_light.living_room_wall_washer_north",
       "name": "Living room wall washer North ",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 66,
         "hs_color": [
-          0,
-          0
+          199.245,
+          83.137
         ]
       }
     },
@@ -1093,12 +1191,12 @@
       "id": "ha_light.living_room_ceiling_4",
       "name": "Living room ceiling 4",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 28,
         "hs_color": [
           0,
-          0
+          0.392
         ]
       }
     },
@@ -1121,10 +1219,10 @@
       "state": {
         "state": "on",
         "on": true,
-        "brightness": 44,
+        "brightness": 43,
         "hs_color": [
-          192.973,
-          87.059
+          247.2,
+          19.608
         ]
       }
     },
@@ -1134,10 +1232,10 @@
       "state": {
         "state": "on",
         "on": true,
-        "brightness": 35,
+        "brightness": 30,
         "hs_color": [
-          20,
-          15.294
+          30.723,
+          65.098
         ]
       }
     },
@@ -1145,12 +1243,12 @@
       "id": "ha_light.living_room",
       "name": "Living room",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 38,
         "hs_color": [
-          0,
-          0
+          209.362,
+          18.431
         ]
       }
     },
@@ -1158,12 +1256,12 @@
       "id": "ha_light.hanging_pendants",
       "name": "Hanging Pendants",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 49,
         "hs_color": [
-          0,
-          0
+          322.909,
+          21.569
         ]
       }
     },
@@ -1186,10 +1284,10 @@
       "state": {
         "state": "on",
         "on": true,
-        "brightness": 35,
+        "brightness": 30,
         "hs_color": [
-          20,
-          15.294
+          30.723,
+          65.098
         ]
       }
     },
@@ -1288,9 +1386,9 @@
       "id": "ha_light.kitchen_cabinet_bottom",
       "name": "Kitchen Cabinet Bottom ",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 34,
         "hs_color": [
           0,
           0
@@ -1301,9 +1399,9 @@
       "id": "ha_light.living_room_chandelier",
       "name": "Living Room Chandelier ",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 52,
         "hs_color": [
           0,
           0
@@ -1314,9 +1412,9 @@
       "id": "ha_light.kitchen_sink_light",
       "name": "kitchen Sink Light ",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 47,
         "hs_color": [
           0,
           0
@@ -1327,9 +1425,9 @@
       "id": "ha_light.dining_room",
       "name": "Dining Room ",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 51,
         "hs_color": [
           0,
           0
@@ -1340,9 +1438,9 @@
       "id": "ha_light.kitchen_cabinet_top",
       "name": "kitchen Cabinet Top",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 81,
         "hs_color": [
           0,
           0
@@ -1366,9 +1464,9 @@
       "id": "ha_light.laundry_room",
       "name": "Laundry Room",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 21,
         "hs_color": [
           0,
           0
@@ -1418,12 +1516,12 @@
       "id": "ha_light.basement_right",
       "name": "Basement Right",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 21,
         "hs_color": [
-          0,
-          0
+          28,
+          47
         ]
       }
     },
@@ -1431,12 +1529,12 @@
       "id": "ha_light.basement_left",
       "name": "Basement Left",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 21,
         "hs_color": [
-          0,
-          0
+          28,
+          47
         ]
       }
     },
@@ -1522,12 +1620,12 @@
       "id": "ha_light.third_reality_inc_3rcb01057z_2",
       "name": "Living Room Table North",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 12,
         "hs_color": [
-          0,
-          0
+          31.102,
+          96.078
         ]
       }
     },
@@ -1535,12 +1633,12 @@
       "id": "ha_light.living_room_table_south",
       "name": "Living Room Table South ",
       "state": {
-        "state": "off",
-        "on": false,
-        "brightness": 0,
+        "state": "on",
+        "on": true,
+        "brightness": 12,
         "hs_color": [
-          0,
-          0
+          31.102,
+          96.078
         ]
       }
     },
@@ -1704,13 +1802,13 @@
   "engine": {
     "running": true,
     "nodeCount": 169,
-    "connectionCount": 160,
-    "tickCount": 291,
+    "connectionCount": 164,
+    "tickCount": 490,
     "tickRate": 100,
-    "lastTickTime": 1767649892403,
+    "lastTickTime": 1767658512122,
     "graphPath": "C:\\X_T2_AutoTron2.1\\v3_migration\\Saved_Graphs\\.last_active.json",
-    "startedAt": 1767649861326,
-    "uptime": 31078,
+    "startedAt": 1767658459629,
+    "uptime": 52527,
     "registeredNodeTypes": [
       "AllInOneColorNode",
       "ColorGradientNode",
@@ -1785,7 +1883,33 @@
       "WeatherLogicNode"
     ],
     "frontendActive": false,
-    "frontendLastSeen": 1767649859788
+    "frontendLastSeen": 1767658447340
   },
-  "serverRestarts": []
+  "serverRestarts": [
+    {
+      "time": "2026-01-05T22:12:51.689Z",
+      "previousUptime": 9,
+      "newUptime": 0
+    },
+    {
+      "time": "2026-01-05T22:51:51.379Z",
+      "previousUptime": 37,
+      "newUptime": 0
+    },
+    {
+      "time": "2026-01-05T23:56:59.377Z",
+      "previousUptime": 65,
+      "newUptime": 0
+    },
+    {
+      "time": "2026-01-06T00:12:51.720Z",
+      "previousUptime": 14,
+      "newUptime": 0
+    },
+    {
+      "time": "2026-01-06T00:14:19.932Z",
+      "previousUptime": 1,
+      "newUptime": 0
+    }
+  ]
 }
