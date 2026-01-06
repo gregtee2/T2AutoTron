@@ -349,6 +349,13 @@
             cursor: 'pointer'
         };
 
+        const socketLabelStyle = {
+            fontSize: '11px',
+            color: THEME.text,
+            marginLeft: '6px',
+            marginRight: '6px'
+        };
+
         return React.createElement('div', { style: nodeStyle }, [
             // Header
             NodeHeader && React.createElement(NodeHeader, {
@@ -442,7 +449,7 @@
                         }),
                         React.createElement('span', { 
                             key: 'label',
-                            className: 'socket-label'
+                            style: socketLabelStyle
                         }, input.label || key)
                     ])
                 )
@@ -456,11 +463,11 @@
                     React.createElement('div', { 
                         key, 
                         className: 'socket-row',
-                        style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }
+                        style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '4px' }
                     }, [
                         React.createElement('span', {
                             key: 'label',
-                            className: 'socket-label'
+                            style: socketLabelStyle
                         }, output.label || key),
                         React.createElement(RefComponent, {
                             key: 'socket',

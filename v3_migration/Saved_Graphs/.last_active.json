@@ -154,7 +154,7 @@
             "all": true
           },
           "_lastWeather": {
-            "temp": 50.7,
+            "temp": 50.5,
             "humidity": 98,
             "wind": 0,
             "hourlyRain": 0,
@@ -753,7 +753,7 @@
           "selectedDeviceNames": [
             "Z_Fireplace Uplights"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1028,7 +1028,7 @@
             "Backdoor Upper Sconce",
             "Front West Upper Sconce"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1064,7 +1064,7 @@
             "Front West Lower Sconce",
             "Backdoor Lower Sconce"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1523,7 +1523,7 @@
             "Kitchen Bar Spot 1",
             "Kitchen Bar Spot 3"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1555,7 +1555,7 @@
             "Kitchen Bar Spot 2",
             "Kitchen Bar Spot 4"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1774,7 +1774,7 @@
           "selectedDeviceNames": [
             "Bar Undermount Strip"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1873,7 +1873,7 @@
           "selectedDeviceNames": [
             "LEDVANCE PLUG"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1922,7 +1922,7 @@
             "Downstairs Fire Extinguisher",
             "Hue color Leg Lamg"
           ],
-          "status": "Control applied to 2 devices",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2076,7 +2076,7 @@
           "selectedDeviceNames": [
             "Dining Room"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2204,7 +2204,7 @@
           "selectedDeviceNames": [
             "Bar Lamp"
           ],
-          "status": "Control applied to 1 devices",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2514,7 +2514,7 @@
             "Living room wall washer North",
             "Living room wall washer south"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2608,7 +2608,7 @@
           "selectedDeviceNames": [
             "Kitchen Cabinet Bottom"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2638,7 +2638,7 @@
           "selectedDeviceNames": [
             "kitchen Cabinet Top"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2668,7 +2668,7 @@
           "selectedDeviceNames": [
             "kitchen Sink Light"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2698,7 +2698,7 @@
           "selectedDeviceNames": [
             "Living Room Chandelier"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2859,13 +2859,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 29,
-        "position": 0.48333333333333334,
+        "lastTimeStep": 30,
+        "position": 0.5,
         "isInRange": true,
         "lastColor": {
           "r": 255,
-          "g": 188,
-          "b": 133
+          "g": 186,
+          "b": 130
         },
         "inputStartTime": "4:29 PM",
         "inputEndTime": "10:30 PM"
@@ -2926,7 +2926,7 @@
             "Living Room Table South (ha)",
             "Living Room Table North (ha)"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -3125,15 +3125,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0.3440137964774951,
+          "position": 0.3565601108936725,
           "isInRange": true,
-          "outputHue": 0.3461538461538461,
-          "outputSaturation": 0.09285714285714293,
-          "outputBrightness": 116,
+          "outputHue": 0.24999999999999992,
+          "outputSaturation": 0.12765957446808515,
+          "outputBrightness": 110,
           "outputRgb": {
-            "r": 58,
-            "g": 64,
-            "b": 58
+            "r": 57,
+            "g": 61,
+            "b": 53
           }
         }
       }
@@ -3218,15 +3218,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0.3440137964774951,
+          "position": 0.3565601435094586,
           "isInRange": true,
-          "outputHue": 0.09672619047619047,
-          "outputSaturation": 0.4392156862745098,
-          "outputBrightness": 133,
+          "outputHue": 0.09829059829059829,
+          "outputSaturation": 0.45882352941176474,
+          "outputBrightness": 129,
           "outputRgb": {
-            "r": 133,
-            "g": 108,
-            "b": 75
+            "r": 129,
+            "g": 105,
+            "b": 70
           }
         }
       }
@@ -3306,15 +3306,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.18695333333333333,
+          "position": 0.5313066666666666,
           "isInRange": true,
-          "outputHue": 0.33752620545073375,
-          "outputSaturation": 0.7681159420289855,
+          "outputHue": 0.14285714285714285,
+          "outputSaturation": 0.7777777777777777,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 48,
-            "g": 206,
-            "b": 52
+            "r": 134,
+            "g": 120,
+            "b": 30
           }
         }
       }
@@ -3394,14 +3394,14 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.013006666666666722,
+          "position": 0.7307666666666667,
           "isInRange": true,
-          "outputHue": 0.001976284584980237,
+          "outputHue": 0.2275985663082437,
           "outputSaturation": 1,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 252,
-            "g": 3,
+            "r": 118,
+            "g": 185,
             "b": 0
           }
         }
@@ -3471,7 +3471,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
           "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Sunshine terrace  Feels like: 50.5",
+          "status": "✅ Devices fetched",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -3666,7 +3666,7 @@
             "Basement Right",
             "Laundry Room (ha)"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -3754,7 +3754,7 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.04122530107064291,
-          "position": 0.821598908045977,
+          "position": 0.8289680842911877,
           "isInRange": true,
           "outputHue": 0.08888888888888889,
           "outputSaturation": 1,
@@ -3888,7 +3888,7 @@
           "priceChange": 3.3299999999999983,
           "changePercent": 5.0646387832699595,
           "isUp": true,
-          "lastUpdate": "7:24:16 PM",
+          "lastUpdate": "7:30:16 PM",
           "status": "OK",
           "error": null
         }
@@ -4945,7 +4945,7 @@
         "properties": {
           "selectedDeviceId": "person.greg_teegarden",
           "selectedDeviceName": "greg teegarden",
-          "status": "✅ greg teegarden: home",
+          "status": "✅ Devices fetched",
           "debug": false,
           "haToken": "",
           "filterType": "Person",
@@ -5061,7 +5061,7 @@
           "selectedDeviceNames": [
             "FD_Light"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "HA Connected (932 devices)",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -7533,6 +7533,83 @@
         },
         "selected": false
       }
+    },
+    {
+      "id": "72fc19b55df3ce86",
+      "label": "State Machine",
+      "position": {
+        "x": 12791.775888021042,
+        "y": 934.2430674510999
+      },
+      "data": {
+        "inputs": {
+          "trigger": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Trigger",
+            "id": "56a10f417314b4d6",
+            "control": null,
+            "showControl": true
+          },
+          "reset": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Reset",
+            "id": "5f4ac37f35c2ba3d",
+            "control": null,
+            "showControl": true
+          },
+          "setState": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "Set State",
+            "id": "b5c73c497b2fe24a",
+            "control": null,
+            "showControl": true
+          }
+        },
+        "outputs": {
+          "state": {
+            "socket": {
+              "name": "any"
+            },
+            "label": "State",
+            "multipleConnections": true,
+            "id": "78281e5afe961dcb"
+          },
+          "stateIndex": {
+            "socket": {
+              "name": "number"
+            },
+            "label": "Index",
+            "multipleConnections": true,
+            "id": "a0bb01cd27a2259c"
+          },
+          "changed": {
+            "socket": {
+              "name": "boolean"
+            },
+            "label": "Changed",
+            "multipleConnections": true,
+            "id": "fa0b863a3ce28dc5"
+          }
+        },
+        "controls": {},
+        "label": "State Machine",
+        "id": "72fc19b55df3ce86",
+        "width": 260,
+        "properties": {
+          "states": "idle,armed,triggered,cooldown",
+          "transitions": "idle→armed:true\narmed→triggered:true\ntriggered→cooldown:true\ncooldown→idle:true",
+          "currentState": "idle",
+          "previousState": null,
+          "debug": false
+        },
+        "selected": true
+      }
     }
   ],
   "connections": [
@@ -8693,10 +8770,10 @@
     }
   ],
   "viewport": {
-    "x": -5259.876172970984,
-    "y": 19.12348159342781,
-    "k": 0.5369535155116582
+    "x": -15345.007422970984,
+    "y": -990.9430955550099,
+    "k": 1.2661083020750479
   },
-  "syncedOnClose": true,
-  "timestamp": 1767669887544
+  "autoSaved": true,
+  "timestamp": 1767670272189
 }
