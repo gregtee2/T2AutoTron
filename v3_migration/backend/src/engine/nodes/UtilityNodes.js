@@ -122,30 +122,60 @@ class RandomNode {
 }
 
 /**
- * StateMachineNode - Named states with transitions
+ * StateMachineNode - Named states with transitions and per-state timers
+ * States format: "idle,armed,triggered:120,cooldown:30" (name:seconds for auto-advance)
+ * Transitions format: "state1→state2:condition" where condition can be 'true', 'false', 'timeout', or 'any'
  */
 class StateMachineNode {
   constructor() {
     this.id = null;
     this.label = 'State Machine';
     this.properties = {
-      states: 'idle,armed,triggered,cooldown',
-      transitions: 'idle→armed:true\narmed→triggered:true\ntriggered→cooldown:true\ncooldown→idle:true',
+      states: 'idle,armed,triggered:10,cooldown:5',
+      transitions: 'idle→armed:true\narmed→triggered:true\ntriggered→cooldown:timeout\ncooldown→idle:timeout',
       currentState: 'idle',
-      previousState: null
+      previousState: null,
+      stateEnteredAt: null
     };
     this._lastTrigger = false;
     this._lastReset = false;
+    this.remainingSeconds = 0;
   }
 
   restore(data) {
     if (data.properties) {
       Object.assign(this.properties, data.properties);
     }
+    if (!this.properties.stateEnteredAt) {
+      this.properties.stateEnteredAt = Date.now();
+    }
   }
 
-  _getStates() {
-    return this.properties.states.split(',').map(s => s.trim()).filter(s => s);
+  // Parse states with optional timers: "idle,armed,triggered:120,cooldown:30"
+  _parseStates() {
+    const stateConfigs = [];
+    const parts = this.properties.states.split(',').map(s => s.trim()).filter(Boolean);
+    
+    for (const part of parts) {
+      const match = part.match(/^(\w+)(?::(\d+))?$/);
+      if (match) {
+        stateConfigs.push({
+          name: match[1],
+          timer: match[2] ? parseInt(match[2], 10) : null
+        });
+      }
+    }
+    return stateConfigs;
+  }
+
+  _getStateNames() {
+    return this._parseStates().map(s => s.name);
+  }
+
+  _getStateTimer(stateName) {
+    const states = this._parseStates();
+    const state = states.find(s => s.name === stateName);
+    return state?.timer || null;
   }
 
   _parseTransitions() {
@@ -153,12 +183,12 @@ class StateMachineNode {
     const transitions = [];
     
     for (const line of lines) {
-      const match = line.match(/(\w+)→(\w+):?(\w*)/);
+      const match = line.match(/(\w+)(?:→|->)(\w+):?(\w*)/);
       if (match) {
         transitions.push({
           from: match[1],
           to: match[2],
-          condition: match[3] || 'true'
+          condition: match[3] || 'any'
         });
       }
     }
@@ -166,50 +196,90 @@ class StateMachineNode {
     return transitions;
   }
 
+  _transitionTo(newState, reason) {
+    const states = this._getStateNames();
+    if (!states.includes(newState)) return false;
+    
+    const previousState = this.properties.currentState;
+    if (previousState === newState) return false;
+    
+    this.properties.previousState = previousState;
+    this.properties.currentState = newState;
+    this.properties.stateEnteredAt = Date.now();
+    
+    const timer = this._getStateTimer(newState);
+    this.remainingSeconds = timer || 0;
+    
+    console.log(`[StateMachine ${this.id?.slice(-6) || '???'}] ${previousState} → ${newState} (${reason})${timer ? `, timer: ${timer}s` : ''}`);
+    
+    return true;
+  }
+
+  _checkTimeout() {
+    const currentState = this.properties.currentState;
+    const timer = this._getStateTimer(currentState);
+    
+    if (!timer || !this.properties.stateEnteredAt) return false;
+    
+    const elapsed = (Date.now() - this.properties.stateEnteredAt) / 1000;
+    this.remainingSeconds = Math.max(0, Math.ceil(timer - elapsed));
+    
+    if (elapsed >= timer) {
+      // Find timeout transition
+      const transitions = this._parseTransitions();
+      for (const trans of transitions) {
+        if (trans.from === currentState && trans.condition === 'timeout') {
+          return this._transitionTo(trans.to, 'timeout');
+        }
+      }
+    }
+    return false;
+  }
+
   data(inputs) {
     const trigger = inputs.trigger?.[0];
     const reset = inputs.reset?.[0];
     const setState = inputs.setState?.[0];
     
-    const states = this._getStates();
+    const states = this._getStateNames();
     let changed = false;
     
     // Handle reset
     if (reset && !this._lastReset) {
-      this.properties.previousState = this.properties.currentState;
-      this.properties.currentState = states[0] || 'idle';
-      changed = this.properties.previousState !== this.properties.currentState;
+      changed = this._transitionTo(states[0] || 'idle', 'reset');
     }
     this._lastReset = !!reset;
     
     // Handle direct setState
     if (setState && typeof setState === 'string' && states.includes(setState)) {
       if (this.properties.currentState !== setState) {
-        this.properties.previousState = this.properties.currentState;
-        this.properties.currentState = setState;
-        changed = true;
+        changed = this._transitionTo(setState, 'setState');
       }
     }
     
+    // Check for timeout transition first
+    if (this._checkTimeout()) {
+      changed = true;
+    }
+    
     // Handle trigger-based transitions (edge detection)
-    if (trigger && !this._lastTrigger && !reset && !setState) {
+    if (trigger && !this._lastTrigger && !reset && !setState && !changed) {
       const transitions = this._parseTransitions();
-      const currentTransitions = transitions.filter(t => t.from === this.properties.currentState);
+      const currentTransitions = transitions.filter(t => 
+        t.from === this.properties.currentState && t.condition !== 'timeout'
+      );
       
       for (const t of currentTransitions) {
         // Evaluate condition
         let shouldTransition = false;
-        if (t.condition === 'true' || t.condition === '') {
+        if (t.condition === 'true' || t.condition === '' || t.condition === 'any') {
           shouldTransition = true;
         } else if (t.condition === 'false') {
           shouldTransition = false;
         }
-        // Could add more complex condition evaluation here
         
         if (shouldTransition) {
-          this.properties.previousState = this.properties.currentState;
-          this.properties.currentState = t.to;
-          changed = true;
+          changed = this._transitionTo(t.to, `trigger=${trigger}`);
           break;
         }
       }
@@ -217,12 +287,22 @@ class StateMachineNode {
     this._lastTrigger = !!trigger;
     
     const stateIndex = states.indexOf(this.properties.currentState);
+    const currentState = this.properties.currentState;
     
-    return {
-      state: this.properties.currentState,
+    // Build output with state-specific booleans
+    const output = {
+      state: currentState,
       stateIndex: stateIndex >= 0 ? stateIndex : 0,
-      changed
+      changed,
+      remaining: this.remainingSeconds
     };
+    
+    // Add is_<stateName> outputs for each state
+    for (const state of states) {
+      output[`is_${state}`] = (currentState === state);
+    }
+    
+    return output;
   }
 }
 

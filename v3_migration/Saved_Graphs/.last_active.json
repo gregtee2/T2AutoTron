@@ -154,7 +154,7 @@
             "all": true
           },
           "_lastWeather": {
-            "temp": 50.5,
+            "temp": 50.2,
             "humidity": 98,
             "wind": 0,
             "hourlyRain": 0,
@@ -1922,7 +1922,7 @@
             "Downstairs Fire Extinguisher",
             "Hue color Leg Lamg"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Control applied to 2 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2004,10 +2004,10 @@
           "lastValue": {
             "hue": 0.08888888888888889,
             "saturation": 1,
-            "brightness": 61,
+            "brightness": 60,
             "rgb": {
-              "r": 61,
-              "g": 33,
+              "r": 60,
+              "g": 32,
               "b": 0
             }
           },
@@ -2048,10 +2048,10 @@
           "lastValue": {
             "hue": 0.08888888888888889,
             "saturation": 1,
-            "brightness": 61,
+            "brightness": 60,
             "rgb": {
-              "r": 61,
-              "g": 33,
+              "r": 60,
+              "g": 32,
               "b": 0
             }
           },
@@ -2204,7 +2204,7 @@
           "selectedDeviceNames": [
             "Bar Lamp"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Control applied to 1 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2230,16 +2230,16 @@
         "properties": {
           "selectedBuffer": "[HSV]Temps",
           "lastValue": {
-            "hue": 0.6573498964803313,
-            "saturation": 0.688034188034188,
-            "brightness": 94,
+            "hue": 0.6666666666666666,
+            "saturation": 0.6680851063829787,
+            "brightness": 93,
             "rgb": {
-              "r": 27,
-              "g": 30,
+              "r": 28,
+              "g": 28,
               "b": 86
             }
           },
-          "lastTriggerSource": "Temps"
+          "lastTriggerSource": null
         }
       }
     },
@@ -2859,13 +2859,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 30,
-        "position": 0.5,
+        "lastTimeStep": 31,
+        "position": 0.5166666666666667,
         "isInRange": true,
         "lastColor": {
           "r": 255,
-          "g": 186,
-          "b": 130
+          "g": 184,
+          "b": 126
         },
         "inputStartTime": "4:29 PM",
         "inputEndTime": "10:30 PM"
@@ -3125,15 +3125,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0.3565601108936725,
+          "position": 0.3688342139595564,
           "isInRange": true,
-          "outputHue": 0.24999999999999992,
-          "outputSaturation": 0.12765957446808515,
-          "outputBrightness": 110,
+          "outputHue": 0.2045454545454546,
+          "outputSaturation": 0.15602836879432627,
+          "outputBrightness": 105,
           "outputRgb": {
-            "r": 57,
-            "g": 61,
-            "b": 53
+            "r": 56,
+            "g": 58,
+            "b": 49
           }
         }
       }
@@ -3218,15 +3218,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0.3565601435094586,
+          "position": 0.3688342139595564,
           "isInRange": true,
-          "outputHue": 0.09829059829059829,
-          "outputSaturation": 0.45882352941176474,
-          "outputBrightness": 129,
+          "outputHue": 0.09779614325068871,
+          "outputSaturation": 0.4745098039215686,
+          "outputBrightness": 125,
           "outputRgb": {
-            "r": 129,
-            "g": 105,
-            "b": 70
+            "r": 125,
+            "g": 100,
+            "b": 66
           }
         }
       }
@@ -3306,15 +3306,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.5313066666666666,
+          "position": 0.7223066666666667,
           "isInRange": true,
-          "outputHue": 0.14285714285714285,
-          "outputSaturation": 0.7777777777777777,
+          "outputHue": 0.05321285140562249,
+          "outputSaturation": 0.9021739130434783,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 134,
-            "g": 120,
-            "b": 30
+            "r": 183,
+            "g": 71,
+            "b": 18
           }
         }
       }
@@ -3394,14 +3394,14 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.7307666666666667,
+          "position": 0.5236033333333333,
           "isInRange": true,
-          "outputHue": 0.2275985663082437,
+          "outputHue": 0.14225053078556263,
           "outputSaturation": 1,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 118,
-            "g": 185,
+            "r": 156,
+            "g": 133,
             "b": 0
           }
         }
@@ -3452,7 +3452,7 @@
             "value"
           ],
           "lastOutputValues": {
-            "value": 50.5
+            "value": 50
           },
           "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
         }
@@ -3471,7 +3471,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
           "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Devices fetched",
+          "status": "✅ Sunshine terrace  Feels like: 50",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -3570,14 +3570,14 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.043893880635679956,
-          "position": 0.27205882352941174,
+          "position": 0.2647058823529412,
           "isInRange": true,
-          "outputHue": 0.6573498964803313,
-          "outputSaturation": 0.688034188034188,
-          "outputBrightness": 94,
+          "outputHue": 0.6666666666666666,
+          "outputSaturation": 0.6680851063829787,
+          "outputBrightness": 93,
           "outputRgb": {
-            "r": 27,
-            "g": 30,
+            "r": 28,
+            "g": 28,
             "b": 86
           }
         }
@@ -3596,12 +3596,12 @@
         "properties": {
           "bufferName": "Temps",
           "lastValue": {
-            "hue": 0.6573498964803313,
-            "saturation": 0.688034188034188,
-            "brightness": 94,
+            "hue": 0.6666666666666666,
+            "saturation": 0.6680851063829787,
+            "brightness": 93,
             "rgb": {
-              "r": 27,
-              "g": 30,
+              "r": 28,
+              "g": 28,
               "b": 86
             }
           },
@@ -3754,14 +3754,14 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.04122530107064291,
-          "position": 0.8289680842911877,
+          "position": 0.8361773563218391,
           "isInRange": true,
           "outputHue": 0.08888888888888889,
           "outputSaturation": 1,
-          "outputBrightness": 61,
+          "outputBrightness": 60,
           "outputRgb": {
-            "r": 61,
-            "g": 33,
+            "r": 60,
+            "g": 32,
             "b": 0
           }
         }
@@ -3888,7 +3888,7 @@
           "priceChange": 3.3299999999999983,
           "changePercent": 5.0646387832699595,
           "isUp": true,
-          "lastUpdate": "7:30:16 PM",
+          "lastUpdate": "7:37:26 PM",
           "status": "OK",
           "error": null
         }
@@ -6413,7 +6413,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "Forecast",
-          "lastValue": "Temperature is 51 degrees, humidity 98 percent.",
+          "lastValue": "Temperature is 50 degrees, humidity 98 percent.",
           "registeredName": "[String]Forecast",
           "finalName": "[String]Forecast"
         }
@@ -6431,7 +6431,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[String]Forecast",
-          "lastValue": "Temperature is 51 degrees, humidity 98 percent.",
+          "lastValue": "Temperature is 50 degrees, humidity 98 percent.",
           "lastTriggerSource": null
         }
       }
@@ -7538,8 +7538,8 @@
       "id": "72fc19b55df3ce86",
       "label": "State Machine",
       "position": {
-        "x": 12791.775888021042,
-        "y": 934.2430674510999
+        "x": 12774.399807346155,
+        "y": 941.3514640908264
       },
       "data": {
         "inputs": {
@@ -7605,10 +7605,10 @@
           "states": "idle,armed,triggered,cooldown",
           "transitions": "idle→armed:true\narmed→triggered:true\ntriggered→cooldown:true\ncooldown→idle:true",
           "currentState": "idle",
-          "previousState": null,
+          "previousState": "armed",
           "debug": false
         },
-        "selected": true
+        "selected": false
       }
     }
   ],
@@ -8774,6 +8774,6 @@
     "y": -990.9430955550099,
     "k": 1.2661083020750479
   },
-  "autoSaved": true,
-  "timestamp": 1767670272189
+  "syncedOnClose": true,
+  "timestamp": 1767670648469
 }
