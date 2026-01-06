@@ -1401,15 +1401,24 @@
                         const lastOnEvent = onOffEvents.filter(e => e.action?.includes('turn_on')).slice(-1)[0];
                         const lastOffEvent = onOffEvents.filter(e => e.action?.includes('turn_off')).slice(-1)[0];
                         
-                        // Get actual current state from HA - check BOTH lights AND switches
+                        // Get actual current state from HA - check lights, switches, AND locks
                         const allDevices = [
                             ...(buffersResult.lights || []),
-                            ...(buffersResult.switches || [])
+                            ...(buffersResult.switches || []),
+                            ...(buffersResult.locks || [])
                         ];
                         const haDevice = allDevices.find(d => 
                             d.id === `ha_${device.entityId}` || d.id === device.entityId
                         );
-                        const actualState = haDevice?.state?.on ? 'on' : 'off';
+                        
+                        // For locks, use the state directly ("locked"/"unlocked")
+                        // For lights/switches, convert on/off boolean to string
+                        let actualState;
+                        if (haDevice?.type === 'lock') {
+                            actualState = haDevice?.state?.state || 'unknown';  // "locked" or "unlocked"
+                        } else {
+                            actualState = haDevice?.state?.on ? 'on' : 'off';
+                        }
                         
                         // Get actual color from HA device (if it's a light)
                         const actualHsColor = haDevice?.state?.hs_color || null;
@@ -1472,13 +1481,22 @@
                         const lastOnEvent = onOffEvents.filter(e => e.action?.includes('turn_on')).slice(-1)[0];
                         const lastOffEvent = onOffEvents.filter(e => e.action?.includes('turn_off')).slice(-1)[0];
                         
-                        // Check both lights AND switches
+                        // Check lights, switches, AND locks
                         const allDevices = [
                             ...(buffersResult.lights || []),
-                            ...(buffersResult.switches || [])
+                            ...(buffersResult.switches || []),
+                            ...(buffersResult.locks || [])
                         ];
                         const haDevice = allDevices.find(d => d.id === node.deviceId);
-                        const actualState = haDevice?.state?.on ? 'on' : 'off';
+                        
+                        // For locks, use the state directly ("locked"/"unlocked")
+                        // For lights/switches, convert on/off boolean to string
+                        let actualState;
+                        if (haDevice?.type === 'lock') {
+                            actualState = haDevice?.state?.state || 'unknown';
+                        } else {
+                            actualState = haDevice?.state?.on ? 'on' : 'off';
+                        }
                         
                         return {
                             ...node,

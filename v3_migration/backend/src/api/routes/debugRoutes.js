@@ -40,9 +40,10 @@ router.get('/all', async (req, res) => {
       }
     } catch (e) {}
     
-    // Get lights AND switches FRESH from HA API (bypass cache for debugging)
+    // Get lights, switches AND locks FRESH from HA API (bypass cache for debugging)
     let lights = [];
     let switches = [];
+    let locks = [];
     let haError = null;
     try {
       // Fetch fresh states directly from HA instead of using cached getDevices()
@@ -75,6 +76,18 @@ router.get('/all', async (req, res) => {
               if (domain === 'light') lights.push(transformed);
               if (domain === 'switch') switches.push(transformed);
             }
+            // Handle locks separately - they use locked/unlocked states
+            if (domain === 'lock') {
+              locks.push({
+                id: `ha_${device.entity_id}`,
+                name: device.attributes?.friendly_name || device.entity_id,
+                type: 'lock',
+                state: {
+                  state: device.state,  // "locked" or "unlocked"
+                  is_locked: device.state === 'locked'
+                }
+              });
+            }
           });
         } else {
           haError = `HA API returned ${response.status}`;
@@ -93,6 +106,7 @@ router.get('/all', async (req, res) => {
       buffers,
       lights,
       switches,  // Include switches for dashboard state comparison
+      locks,     // Include locks for dashboard state comparison
       haError    // Include any HA fetch error for debugging
     });
   } catch (err) {

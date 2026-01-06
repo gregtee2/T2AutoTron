@@ -89,9 +89,9 @@
           "haToken": "",
           "sunrise_time": "2026-01-05T14:57:40.000Z",
           "sunset_time": "2026-01-06T00:59:21.000Z",
-          "next_on_date": "2026-01-06T00:54:21.000Z",
+          "next_on_date": "2026-01-07T00:54:21.000Z",
           "next_off_date": "2026-01-06T11:00:00.000Z",
-          "currentState": false,
+          "currentState": true,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
           "pulseMode": false
@@ -145,7 +145,7 @@
           "hysteresis": 5,
           "_lastEval": {
             "solar": true,
-            "temp": true,
+            "temp": false,
             "humidity": false,
             "wind": false,
             "hourlyRain": false,
@@ -154,13 +154,13 @@
             "all": true
           },
           "_lastWeather": {
-            "temp": 60.3,
-            "humidity": 79,
-            "wind": 1.57,
+            "temp": 56.5,
+            "humidity": 85,
+            "wind": 0.67,
             "hourlyRain": 0,
             "eventRain": 1.67,
             "dailyRain": 0,
-            "solar": 24.66
+            "solar": 3.8
           }
         }
       }
@@ -200,9 +200,9 @@
           "haToken": "",
           "sunrise_time": "2026-01-05T14:57:40.000Z",
           "sunset_time": "2026-01-06T00:59:21.000Z",
-          "next_on_date": "2026-01-06T00:30:21.000Z",
+          "next_on_date": "2026-01-07T00:30:21.000Z",
           "next_off_date": "2026-01-06T06:30:00.000Z",
-          "currentState": false,
+          "currentState": true,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
           "pulseMode": false
@@ -586,7 +586,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]Sunset",
-          "lastValue": false,
+          "lastValue": true,
           "lastTriggerSource": "Sunset"
         }
       }
@@ -638,9 +638,9 @@
         "properties": {
           "bufferName": "Bathroom_to_office_color",
           "lastValue": {
-            "hue": 0.10555555555555556,
-            "saturation": 0,
-            "brightness": 83,
+            "hue": 0.2388888888888889,
+            "saturation": 0.86,
+            "brightness": 180,
             "transition": 0
           },
           "registeredName": "[HSV]Bathroom_to_office_color",
@@ -727,7 +727,7 @@
           "haToken": "",
           "sunrise_time": "2026-01-05T14:57:40.000Z",
           "sunset_time": "2026-01-06T00:59:21.000Z",
-          "next_on_date": "2026-01-06T00:29:21.000Z",
+          "next_on_date": "2026-01-07T00:29:21.000Z",
           "next_off_date": "2026-01-06T06:30:00.000Z",
           "currentState": false,
           "status": "Los Angeles, California, United States - Updated",
@@ -882,7 +882,7 @@
           "selectedDeviceNames": [
             "Master Bedroom Wall Light"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "Control applied to 1 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -912,7 +912,7 @@
           "selectedDeviceNames": [
             "Hue bloom Master Bath"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "Control applied to 1 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -960,9 +960,9 @@
           "haToken": "",
           "sunrise_time": "2026-01-05T14:57:40.000Z",
           "sunset_time": "2026-01-06T00:59:21.000Z",
-          "next_on_date": "2026-01-06T00:29:21.000Z",
+          "next_on_date": "2026-01-07T00:29:21.000Z",
           "next_off_date": "2026-01-06T09:00:00.000Z",
-          "currentState": false,
+          "currentState": true,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
           "pulseMode": false
@@ -1028,7 +1028,7 @@
             "Backdoor Upper Sconce",
             "Front West Upper Sconce"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "Turned On",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1064,7 +1064,7 @@
             "Front West Lower Sconce",
             "Backdoor Lower Sconce"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "Turned On",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1104,7 +1104,7 @@
             "Living room ceiling 5",
             "Living room ceiling 6"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "Control applied to 6 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1183,7 +1183,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]Sunset",
-          "lastValue": false,
+          "lastValue": true,
           "lastTriggerSource": "Sunset"
         }
       }
@@ -1897,7 +1897,7 @@
             "Downstairs Fire Extinguisher",
             "Hue color Leg Lamg"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "Control applied to 2 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1977,13 +1977,13 @@
         "properties": {
           "bufferName": "Office Colors",
           "lastValue": {
-            "hue": 0.08533333333333333,
-            "saturation": 0.6578947368421053,
-            "brightness": 77,
+            "hue": 0.08700209643605868,
+            "saturation": 0.7681159420289855,
+            "brightness": 72,
             "rgb": {
-              "r": 57,
-              "g": 39,
-              "b": 20
+              "r": 58,
+              "g": 37,
+              "b": 14
             }
           },
           "registeredName": "[HSV]Office Colors",
@@ -2021,13 +2021,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Office Colors",
           "lastValue": {
-            "hue": 0.08533333333333333,
-            "saturation": 0.6578947368421053,
-            "brightness": 77,
+            "hue": 0.08700209643605868,
+            "saturation": 0.7681159420289855,
+            "brightness": 72,
             "rgb": {
-              "r": 57,
-              "g": 39,
-              "b": 20
+              "r": 58,
+              "g": 37,
+              "b": 14
             }
           },
           "lastTriggerSource": "Office Colors"
@@ -2179,7 +2179,7 @@
           "selectedDeviceNames": [
             "Bar Lamp"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "Control applied to 1 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2205,13 +2205,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Temps",
           "lastValue": {
-            "hue": 0.5239726027397261,
-            "saturation": 0.869047619047619,
-            "brightness": 114,
+            "hue": 0.5820642978003384,
+            "saturation": 0.8873873873873874,
+            "brightness": 106,
             "rgb": {
               "r": 10,
-              "g": 66,
-              "b": 75
+              "g": 52,
+              "b": 92
             }
           },
           "lastTriggerSource": "Temps"
@@ -2822,13 +2822,13 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": null,
-        "position": 0,
-        "isInRange": false,
+        "lastTimeStep": 5,
+        "position": 0.08333333333333333,
+        "isInRange": true,
         "lastColor": {
           "r": 255,
-          "g": 255,
-          "b": 255
+          "g": 239,
+          "b": 225
         },
         "inputStartTime": "4:29 PM",
         "inputEndTime": "10:30 PM"
@@ -2991,14 +2991,20 @@
           "enabled": true,
           "history": [
             {
+              "time": "4:54:40 PM",
+              "timestamp": 1767660880368,
+              "value": true,
+              "type": "boolean"
+            },
+            {
               "time": "2:00:16 PM",
               "timestamp": 1767650416331,
               "value": false,
               "type": "boolean"
             }
           ],
-          "currentValue": false,
-          "messageCount": 1
+          "currentValue": true,
+          "messageCount": 2
         }
       }
     },
@@ -3082,15 +3088,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0,
-          "isInRange": false,
-          "outputHue": 0.5803921568627451,
-          "outputSaturation": 1,
-          "outputBrightness": 254,
+          "position": 0.06436562296151337,
+          "isInRange": true,
+          "outputHue": 0.5780998389694042,
+          "outputSaturation": 0.8961038961038961,
+          "outputBrightness": 237,
           "outputRgb": {
-            "r": 0,
-            "g": 131,
-            "b": 254
+            "r": 22,
+            "g": 125,
+            "b": 215
           }
         }
       }
@@ -3175,15 +3181,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0,
-          "isInRange": false,
-          "outputHue": 0,
-          "outputSaturation": 0,
-          "outputBrightness": 254,
+          "position": 0.06436562296151337,
+          "isInRange": true,
+          "outputHue": 0.0952380952380953,
+          "outputSaturation": 0.08235294117647063,
+          "outputBrightness": 239,
           "outputRgb": {
-            "r": 254,
-            "g": 254,
-            "b": 254
+            "r": 239,
+            "g": 231,
+            "b": 219
           }
         }
       }
@@ -3263,15 +3269,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0,
-          "isInRange": false,
-          "outputHue": 0.37516339869281046,
-          "outputSaturation": 1,
+          "position": 0.5633633333333333,
+          "isInRange": true,
+          "outputHue": 0.1192528735632184,
+          "outputSaturation": 0.8055555555555556,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 0,
-            "g": 254,
-            "b": 64
+            "r": 143,
+            "g": 111,
+            "b": 28
           }
         }
       }
@@ -3351,14 +3357,14 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0,
-          "isInRange": false,
-          "outputHue": 0,
+          "position": 0.5630133333333334,
+          "isInRange": true,
+          "outputHue": 0.16,
           "outputSaturation": 1,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 254,
-            "g": 0,
+            "r": 149,
+            "g": 143,
             "b": 0
           }
         }
@@ -3409,7 +3415,7 @@
             "value"
           ],
           "lastOutputValues": {
-            "value": 60.6
+            "value": 56.3
           },
           "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
         }
@@ -3428,7 +3434,7 @@
         "properties": {
           "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
           "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Sunshine terrace  Feels like: 60.6",
+          "status": "✅ Sunshine terrace  Feels like: 56.3",
           "debug": false,
           "haToken": "",
           "filterType": "Sensor",
@@ -3527,15 +3533,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.043893880635679956,
-          "position": 0.42058823529411765,
+          "position": 0.35735294117647054,
           "isInRange": true,
-          "outputHue": 0.5198135198135198,
-          "outputSaturation": 0.8666666666666666,
-          "outputBrightness": 114,
+          "outputHue": 0.5820642978003384,
+          "outputSaturation": 0.8873873873873874,
+          "outputBrightness": 106,
           "outputRgb": {
             "r": 10,
-            "g": 66,
-            "b": 74
+            "g": 52,
+            "b": 92
           }
         }
       }
@@ -3553,13 +3559,13 @@
         "properties": {
           "bufferName": "Temps",
           "lastValue": {
-            "hue": 0.5239726027397261,
-            "saturation": 0.869047619047619,
-            "brightness": 114,
+            "hue": 0.5820642978003384,
+            "saturation": 0.8873873873873874,
+            "brightness": 106,
             "rgb": {
               "r": 10,
-              "g": 66,
-              "b": 75
+              "g": 52,
+              "b": 92
             }
           },
           "registeredName": "[HSV]Temps",
@@ -3579,7 +3585,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]Sunset",
-          "lastValue": false,
+          "lastValue": true,
           "lastTriggerSource": "Sunset"
         }
       }
@@ -3596,7 +3602,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "Sunset",
-          "lastValue": false,
+          "lastValue": true,
           "registeredName": "[Trigger]Sunset",
           "finalName": "[Trigger]Sunset"
         }
@@ -3711,15 +3717,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.04122530107064291,
-          "position": 0.6026715517241379,
+          "position": 0.6573457854406131,
           "isInRange": true,
-          "outputHue": 0.08533333333333333,
-          "outputSaturation": 0.6578947368421053,
-          "outputBrightness": 77,
+          "outputHue": 0.08700209643605868,
+          "outputSaturation": 0.7681159420289855,
+          "outputBrightness": 72,
           "outputRgb": {
-            "r": 57,
-            "g": 39,
-            "b": 20
+            "r": 58,
+            "g": 37,
+            "b": 14
           }
         }
       }
@@ -3845,7 +3851,7 @@
           "priceChange": 3.3299999999999983,
           "changePercent": 5.0646387832699595,
           "isUp": true,
-          "lastUpdate": "4:14:16 PM",
+          "lastUpdate": "5:01:40 PM",
           "status": "OK",
           "error": null
         }
@@ -4956,7 +4962,7 @@
           "selectedDeviceNames": [
             "FD_Light"
           ],
-          "status": "HA Connected (930 devices)",
+          "status": "Turned On",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -5009,7 +5015,7 @@
           "deviceId": "ha_sensor.sunshine_terrace_irradiance",
           "deviceName": "Sunshine terrace  Irradiance",
           "field": "state",
-          "lastValue": "24.21",
+          "lastValue": "2.12",
           "filterType": "Sensor",
           "letterFilter": "STU",
           "searchText": ""
@@ -5791,42 +5797,24 @@
         "properties": {
           "leadTime": 5,
           "template": "action",
-          "announcedEvents": {},
-          "currentMessage": "",
+          "announcedEvents": {
+            "Living Room Ceiling Lights - On_on_1767659361000": true,
+            "Master Bath/ Wall Washer - On_on_1767659361000": true,
+            "House Lights  - On_on_1767659421000": true,
+            "Sunset_on_1767660360000": true,
+            "Sunset - On_on_1767660861000": true
+          },
+          "currentMessage": "It's Critter Feeding Time!!!",
           "currentEvent": null,
           "triggerActive": false,
-          "upcomingCount": 37,
-          "lastAdHocMessage": "",
+          "upcomingCount": 33,
+          "lastAdHocMessage": "It's Critter Feeding Time!!!",
           "previousAdHocInput": null,
-          "adHocCooldownUntil": 0,
+          "adHocCooldownUntil": 1767661207457,
           "isAdHocActive": false,
           "debug": true
         },
         "_backendEvents": [
-          {
-            "time": "2026-01-06T00:21:00.000Z",
-            "action": "on",
-            "deviceName": "Living Room Ceiling Lights",
-            "nodeId": "83837d8f043f49cf"
-          },
-          {
-            "time": "2026-01-06T00:21:00.000Z",
-            "action": "on",
-            "deviceName": "Master Bath/ Wall Washer",
-            "nodeId": "22ab7427bbcd0c0f"
-          },
-          {
-            "time": "2026-01-06T00:22:00.000Z",
-            "action": "on",
-            "deviceName": "House Lights ",
-            "nodeId": "cb4c3820c4b47079"
-          },
-          {
-            "time": "2026-01-06T00:46:00.000Z",
-            "action": "on",
-            "deviceName": "Sunset",
-            "nodeId": "537324f4d766e02b"
-          },
           {
             "time": "2026-01-06T04:00:00.000Z",
             "action": "off",
@@ -5967,11 +5955,11 @@
             true,
             true
           ],
-          "lastTriggerTime": null,
-          "triggerCount": 0,
+          "lastTriggerTime": 1767661200447,
+          "triggerCount": 1,
           "isRepeating": false,
           "onceTriggered": false,
-          "nextScheduledTime": 1767661200000,
+          "nextScheduledTime": 1767747600000,
           "isPulsing": false,
           "pulsePending": false,
           "debug": false
@@ -5981,7 +5969,7 @@
         "_scheduleTimer": null,
         "_scheduleCheckInterval": 99,
         "_pulseTimer": null,
-        "_shouldOutput": false,
+        "_shouldOutput": true,
         "_initialized": true
       }
     },
@@ -6174,11 +6162,11 @@
             true,
             true
           ],
-          "lastTriggerTime": null,
-          "triggerCount": 0,
+          "lastTriggerTime": 1767659880434,
+          "triggerCount": 1,
           "isRepeating": false,
           "onceTriggered": false,
-          "nextScheduledTime": 1767659880000,
+          "nextScheduledTime": 1767746280000,
           "isPulsing": false,
           "pulsePending": false,
           "debug": false
@@ -6188,7 +6176,7 @@
         "_scheduleTimer": null,
         "_scheduleCheckInterval": 100,
         "_pulseTimer": null,
-        "_shouldOutput": false,
+        "_shouldOutput": true,
         "_initialized": true
       }
     },
@@ -6204,7 +6192,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "Forecast",
-          "lastValue": "Temperature is 60 degrees, humidity 79 percent, wind 2 miles per hour.",
+          "lastValue": "Temperature is 57 degrees, humidity 85 percent, wind 1 miles per hour.",
           "registeredName": "[String]Forecast",
           "finalName": "[String]Forecast"
         }
@@ -6222,7 +6210,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[String]Forecast",
-          "lastValue": "Temperature is 60 degrees, humidity 79 percent, wind 2 miles per hour.",
+          "lastValue": "Temperature is 57 degrees, humidity 85 percent, wind 1 miles per hour.",
           "lastTriggerSource": "Forecast"
         }
       }
@@ -6306,7 +6294,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "Wind Speed",
-          "lastValue": 1.57,
+          "lastValue": 0.67,
           "registeredName": "[Number]Wind Speed",
           "finalName": "[Number]Wind Speed"
         }
@@ -6324,7 +6312,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Number]Wind Speed",
-          "lastValue": 1.57,
+          "lastValue": 0.67,
           "lastTriggerSource": "Wind Speed"
         }
       }
@@ -6537,33 +6525,6 @@
             "id": "6570a3f3e584af51",
             "control": null,
             "showControl": true
-          },
-          "vol_homepodoffice": {
-            "socket": {
-              "name": "number"
-            },
-            "label": "🔊 HomePodOffice",
-            "id": "c3b871b2ff7e1251",
-            "control": null,
-            "showControl": true
-          },
-          "active_homepodoffice": {
-            "socket": {
-              "name": "boolean"
-            },
-            "label": "▶️ HomePodOffice",
-            "id": "0ea076090fa57b1b",
-            "control": null,
-            "showControl": true
-          },
-          "station_homepodoffice": {
-            "socket": {
-              "name": "number"
-            },
-            "label": "📻 HomePodOffice",
-            "id": "9c68e1e0c2b93839",
-            "control": null,
-            "showControl": true
           }
         },
         "outputs": {
@@ -6591,8 +6552,7 @@
         "height": 520,
         "properties": {
           "mediaPlayerIds": [
-            "media_player.grotto_guest",
-            "media_player.homepodoffice"
+            "media_player.grotto_guest"
           ],
           "mediaPlayerId": "",
           "ttsEnabledSpeakers": {
@@ -6607,7 +6567,7 @@
           "elevenLabsVoiceName": "Charlotte - Meditation & Relaxation",
           "chatterboxVoiceId": "charlotte.wav",
           "chatterboxVoiceName": "charlotte",
-          "lastResult": null,
+          "lastResult": true,
           "stations": [
             {
               "name": "SomaFM Groove Salad",
@@ -6728,22 +6688,20 @@
           "nodeHeight": 800,
           "showIOSection": true,
           "showSpeakersSection": true,
-          "showTTSSection": true
+          "showTTSSection": true,
+          "pausedSpeakerIds": null
         },
         "_lastTrigger": false,
-        "_lastSentTime": 0,
+        "_lastSentTime": 1767661204466,
         "_resumeTimeout": null,
         "_volumeInputKeys": [
-          "vol_grotto_guest",
-          "vol_homepodoffice"
+          "vol_grotto_guest"
         ],
         "_activeInputKeys": [
-          "active_grotto_guest",
-          "active_homepodoffice"
+          "active_grotto_guest"
         ],
         "_stationInputKeys": [
-          "station_grotto_guest",
-          "station_homepodoffice"
+          "station_grotto_guest"
         ],
         "_lastActiveStates": {
           "media_player.grotto_guest": true
@@ -6758,8 +6716,8 @@
         "_lastTTSDurationMs": null,
         "_ttsQueue": [],
         "_ttsInProgress": false,
-        "_lastPlayedMessage": null,
-        "_lastPlayedTime": 0
+        "_lastPlayedMessage": "It's Critter Feeding Time!!!",
+        "_lastPlayedTime": 1767661204466
       }
     },
     {
@@ -8462,10 +8420,10 @@
     }
   ],
   "viewport": {
-    "x": 2008.0223021108422,
-    "y": -1621.0359632540963,
-    "k": 0.6571382880658936
+    "x": -3183.4620187204537,
+    "y": -2456.040250210885,
+    "k": 0.8246121007411127
   },
   "syncedOnClose": true,
-  "timestamp": 1767658459608
+  "timestamp": 1767661313505
 }

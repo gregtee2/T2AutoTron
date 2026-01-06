@@ -319,7 +319,26 @@ router.get('/device-states', async (req, res) => {
         });
       }
       
-      // HALightControlNode - has deviceId
+      // HALockNode - special handling for lock devices
+      else if (nodeType === 'HALockNode' && props.deviceId) {
+        const entityId = props.deviceId.startsWith('ha_') ? props.deviceId.slice(3) : props.deviceId;
+        
+        // For locks, expected state is "locked" or "unlocked" (HA format)
+        // currentState is set by the node after sending commands
+        let expectedState = props.currentState || 'unknown';
+        
+        deviceStates.push({
+          nodeId,
+          nodeType,
+          nodeTitle: props.customTitle || props.customName || node.label,
+          entityId,
+          deviceName: props.deviceName || entityId,
+          expectedState,  // Will be "locked", "unlocked", or "unknown"
+          lastOutput: output
+        });
+      }
+      
+      // HALightControlNode and other HA devices - has deviceId
       else if (props.deviceId && (nodeType.includes('Light') || nodeType.includes('HA'))) {
         const entityId = props.deviceId.startsWith('ha_') ? props.deviceId.slice(3) : props.deviceId;
         
