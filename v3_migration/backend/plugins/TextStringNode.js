@@ -122,12 +122,11 @@
         };
 
         return React.createElement('div', {
-            className: 'text-string-node',
+            className: 'text-string-node node-bg-gradient',
             style: {
                 padding: '8px',
                 fontFamily: 'Arial, sans-serif',
                 minWidth: '230px',
-                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
                 borderRadius: '8px'
             }
         }, [

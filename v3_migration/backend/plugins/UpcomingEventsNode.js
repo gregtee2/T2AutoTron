@@ -61,7 +61,7 @@
                 previousAdHocInput: undefined, // Previous input state (for edge detection)
                 adHocCooldownUntil: 0, // Timestamp when cooldown ends
                 isAdHocActive: false,  // True when currently announcing ad-hoc message
-                debug: true            // Enable debug logging (TEMP)
+                debug: false           // Enable debug logging
             };
 
             // Input for ad-hoc messages
@@ -434,12 +434,11 @@
         };
 
         return React.createElement('div', {
-            className: 'event-announcer-node',
+            className: 'upcoming-events-node node-bg-gradient',
             style: {
                 padding: '8px',
                 fontFamily: 'Arial, sans-serif',
                 width: '280px',
-                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
                 borderRadius: '8px'
             }
         }, [

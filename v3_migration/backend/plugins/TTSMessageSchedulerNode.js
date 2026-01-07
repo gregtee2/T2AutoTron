@@ -315,8 +315,8 @@
         const outputs = Object.entries(data.outputs || {});
 
         return el('div', { 
+            className: 'tts-scheduler-node node-bg-gradient',
             style: { 
-                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
                 border: `2px solid ${THEME.border}`,
                 borderRadius: '8px',
                 padding: '10px',

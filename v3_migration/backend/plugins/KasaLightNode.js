@@ -693,21 +693,11 @@
             state?.on || state?.state === 'on'
         );
         
-        // Dynamic border style based on device state (Kasa uses orange/brown theme)
-        const borderStyle = anyDeviceOn 
-            ? '2px solid #ff9800' 
-            : '1px solid rgba(255, 152, 0, 0.3)';
-        const boxShadowStyle = anyDeviceOn 
-            ? '0 0 15px rgba(255, 152, 0, 0.4), inset 0 0 10px rgba(255, 152, 0, 0.1)' 
-            : 'none';
+        // Use CSS class for active state - allows hover effects to work
+        const activeClass = anyDeviceOn ? 'kasa-node-tron kasa-device-active' : 'kasa-node-tron';
 
         return React.createElement('div', { 
-            className: 'ha-node-tron',
-            style: {
-                border: borderStyle,
-                boxShadow: boxShadowStyle,
-                transition: 'border 0.3s ease, box-shadow 0.3s ease'
-            }
+            className: activeClass
         }, [
             // Header
             React.createElement('div', { key: 'header', className: 'ha-node-header' }, [

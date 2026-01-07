@@ -52,6 +52,43 @@
 }
 
 /* ============================================================================
+   SHARED UTILITY CLASSES - Use these instead of inline styles
+   ============================================================================ */
+
+/* Common gradient background used by many nodes */
+.node-bg-gradient {
+  background: linear-gradient(var(--node-bg-gradient-angle, 135deg), 
+                              var(--node-bg-gradient-start, #1a1a2e) 0%, 
+                              var(--node-bg-gradient-end, #16213e) 100%);
+}
+
+/* Section backgrounds for internal node UI */
+.node-section-bg {
+  background: var(--node-section-bg, rgba(0, 0, 0, 0.2));
+}
+
+.node-section-bg-light {
+  background: var(--node-section-bg-light, rgba(255, 255, 255, 0.05));
+}
+
+/* Status backgrounds */
+.node-highlight {
+  background: var(--node-highlight-bg, rgba(76, 175, 80, 0.15));
+}
+
+.node-warning {
+  background: var(--node-warning-bg, rgba(255, 152, 0, 0.15));
+}
+
+.node-error {
+  background: var(--node-error-bg, rgba(244, 67, 54, 0.15));
+}
+
+.node-info {
+  background: var(--node-info-bg, rgba(33, 150, 243, 0.15));
+}
+
+/* ============================================================================
    HA GENERIC DEVICE NODE
    ============================================================================ */
 
@@ -94,10 +131,107 @@
   border-color: var(--node-ha-color, var(--node-device-hover));
 }
 
+/* HA Device Active State (device is ON) */
+.ha-node-tron.ha-device-active {
+  border: 2px solid #00ff64;
+  box-shadow: 0 0 15px rgba(0, 255, 100, 0.4), inset 0 0 10px rgba(0, 255, 100, 0.1);
+}
+
+.ha-node-tron.ha-device-active:hover {
+  box-shadow: 0 0 25px rgba(0, 255, 100, 0.6), inset 0 0 20px rgba(0, 255, 100, 0.2);
+}
+
+/* HA Lock States */
+.ha-node-tron.ha-lock-locked {
+  border: 1px solid rgba(95, 170, 125, 0.5);
+  box-shadow: 0 0 15px rgba(95, 170, 125, 0.3), inset 0 0 10px rgba(95, 170, 125, 0.1);
+}
+
+.ha-node-tron.ha-lock-locked:hover {
+  box-shadow: 0 0 25px rgba(95, 170, 125, 0.5), inset 0 0 20px rgba(95, 170, 125, 0.2);
+}
+
+.ha-node-tron.ha-lock-unlocked {
+  border: 1px solid rgba(212, 160, 84, 0.5);
+  box-shadow: 0 0 15px rgba(212, 160, 84, 0.3), inset 0 0 10px rgba(212, 160, 84, 0.1);
+}
+
+.ha-node-tron.ha-lock-unlocked:hover {
+  box-shadow: 0 0 25px rgba(212, 160, 84, 0.5), inset 0 0 20px rgba(212, 160, 84, 0.2);
+}
+
 .hsv-node-tron:hover {
   box-shadow: 0 0 25px rgba(var(--node-color-color-rgb, var(--node-device-color-rgb)), 0.4), 
               inset 0 0 30px rgba(var(--node-color-color-rgb, var(--node-device-color-rgb)), 0.1);
   border-color: var(--node-color-hover, var(--node-device-hover));
+}
+
+/* ============================================================================
+   KASA DEVICE NODE - Orange/amber theme for TP-Link Kasa devices
+   ============================================================================ */
+.kasa-node-tron {
+  background: var(--node-ha-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 152, 0, 0.5);
+  box-shadow: 0 0 15px rgba(255, 152, 0, 0.2), 
+              inset 0 0 20px rgba(255, 152, 0, 0.05);
+  border-radius: var(--node-radius);
+  color: var(--node-device-text);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 420px;
+  display: flex;
+  flex-direction: column;
+  transition: all var(--transition-normal);
+  user-select: none;
+}
+
+.kasa-node-tron:hover {
+  box-shadow: 0 0 25px rgba(255, 152, 0, 0.4), 
+              inset 0 0 30px rgba(255, 152, 0, 0.1);
+  border-color: #ff9800;
+}
+
+.kasa-node-tron.kasa-device-active {
+  border: 2px solid #ff9800;
+  box-shadow: 0 0 15px rgba(255, 152, 0, 0.4), inset 0 0 10px rgba(255, 152, 0, 0.1);
+}
+
+.kasa-node-tron.kasa-device-active:hover {
+  box-shadow: 0 0 25px rgba(255, 152, 0, 0.6), inset 0 0 20px rgba(255, 152, 0, 0.2);
+}
+
+/* ============================================================================
+   HUE DEVICE NODE - Purple/magenta theme for Philips Hue devices
+   ============================================================================ */
+.hue-node-tron {
+  background: var(--node-ha-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(156, 39, 176, 0.5);
+  box-shadow: 0 0 15px rgba(156, 39, 176, 0.2), 
+              inset 0 0 20px rgba(156, 39, 176, 0.05);
+  border-radius: var(--node-radius);
+  color: var(--node-device-text);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 420px;
+  display: flex;
+  flex-direction: column;
+  transition: all var(--transition-normal);
+  user-select: none;
+}
+
+.hue-node-tron:hover {
+  box-shadow: 0 0 25px rgba(156, 39, 176, 0.4), 
+              inset 0 0 30px rgba(156, 39, 176, 0.1);
+  border-color: #9c27b0;
+}
+
+.hue-node-tron.hue-device-active {
+  border: 2px solid #00ff64;
+  box-shadow: 0 0 15px rgba(0, 255, 100, 0.4), inset 0 0 10px rgba(0, 255, 100, 0.1);
+}
+
+.hue-node-tron.hue-device-active:hover {
+  box-shadow: 0 0 25px rgba(0, 255, 100, 0.6), inset 0 0 20px rgba(0, 255, 100, 0.2);
 }
 
 /* ============================================================================
@@ -470,6 +604,13 @@
   box-shadow: 0 0 15px rgba(var(--node-kasa-color-rgb), 0.2);
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   user-select: none;
+  transition: all var(--transition-normal);
+}
+
+.kasa-node:hover {
+  box-shadow: 0 0 25px rgba(var(--node-kasa-color-rgb), 0.4),
+              inset 0 0 30px rgba(var(--node-kasa-color-rgb), 0.1);
+  border-color: var(--node-kasa-hover, var(--node-kasa-color));
 }
 
 .kasa-header {
@@ -514,6 +655,13 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 0 10px rgba(var(--node-logic-color-rgb), 0.2);
+  transition: all var(--transition-normal);
+}
+
+.logic-node:hover {
+  box-shadow: 0 0 20px rgba(var(--node-logic-color-rgb), 0.4),
+              inset 0 0 25px rgba(var(--node-logic-color-rgb), 0.1);
+  border-color: var(--node-logic-hover, var(--node-logic-color));
 }
 
 .logic-node .header {
@@ -624,6 +772,13 @@
   min-width: 400px;
   font-family: 'Segoe UI', sans-serif;
   overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.sunrise-sunset-node:hover {
+  box-shadow: 0 0 25px rgba(var(--node-timer-color-rgb), 0.4),
+              inset 0 0 30px rgba(var(--node-timer-color-rgb), 0.1);
+  border-color: var(--node-timer-hover, var(--node-timer-color));
 }
 
 .sunrise-sunset-node .title {
@@ -806,6 +961,13 @@
   min-width: 400px;
   font-family: 'Segoe UI', sans-serif;
   overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.time-of-day-node:hover {
+  box-shadow: 0 0 25px rgba(var(--node-timeofday-color-rgb), 0.4),
+              inset 0 0 30px rgba(var(--node-timeofday-color-rgb), 0.1);
+  border-color: var(--node-timeofday-hover, var(--node-timeofday-color));
 }
 
 .time-of-day-node .title {
@@ -996,6 +1158,13 @@
   box-shadow: 0 0 15px rgba(var(--node-weather-color-rgb), 0.2);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   user-select: none;
+  transition: all var(--transition-normal);
+}
+
+.weather-node-tron:hover {
+  box-shadow: 0 0 25px rgba(var(--node-weather-color-rgb), 0.4),
+              inset 0 0 30px rgba(var(--node-weather-color-rgb), 0.1);
+  border-color: var(--node-weather-hover, var(--node-weather-color));
 }
 
 .weather-node-header {
@@ -1399,6 +1568,23 @@
   display: flex;
   flex-direction: column;
   user-select: none;
+  transition: all var(--transition-normal);
+}
+
+.sender-node-tron:hover {
+  box-shadow: 0 0 25px rgba(var(--node-sender-color-rgb), 0.4),
+              inset 0 0 30px rgba(var(--node-sender-color-rgb), 0.1);
+  border-color: var(--node-sender-hover, var(--node-sender-color));
+}
+
+/* Active state when transmitting data */
+.sender-node-tron.sender-active {
+  border: 2px solid #00ff64;
+  box-shadow: 0 0 15px rgba(0, 255, 100, 0.4), inset 0 0 10px rgba(0, 255, 100, 0.1);
+}
+
+.sender-node-tron.sender-active:hover {
+  box-shadow: 0 0 25px rgba(0, 255, 100, 0.6), inset 0 0 20px rgba(0, 255, 100, 0.2);
 }
 
 .sender-header {
@@ -1478,10 +1664,27 @@
   font-family: 'Segoe UI', sans-serif;
   width: 250px;
   min-width: 250px;
+  transition: all var(--transition-normal);
+}
+
+.receiver-node-tron:hover {
+  box-shadow: 0 0 25px rgba(var(--node-receiver-color-rgb), 0.4),
+              inset 0 0 30px rgba(var(--node-receiver-color-rgb), 0.1);
+  border-color: var(--node-receiver-hover, var(--node-receiver-color));
   max-width: 250px;
   display: flex;
   flex-direction: column;
   user-select: none;
+}
+
+/* Active state when receiving data */
+.receiver-node-tron.receiver-active {
+  border: 2px solid #00ff64;
+  box-shadow: 0 0 15px rgba(0, 255, 100, 0.4), inset 0 0 10px rgba(0, 255, 100, 0.1);
+}
+
+.receiver-node-tron.receiver-active:hover {
+  box-shadow: 0 0 25px rgba(0, 255, 100, 0.6), inset 0 0 20px rgba(0, 255, 100, 0.2);
 }
 
 .receiver-header {
@@ -1567,6 +1770,13 @@
   text-align: center;
   display: flex;
   flex-direction: column;
+  transition: all var(--transition-normal);
+}
+
+.pushbutton-node:hover {
+  box-shadow: 0 0 25px rgba(var(--node-pushbutton-color-rgb), 0.4),
+              inset 0 0 30px rgba(var(--node-pushbutton-color-rgb), 0.1);
+  border-color: var(--node-pushbutton-hover, var(--node-pushbutton-color));
 }
 
 .pushbutton-node .header {
@@ -1643,6 +1853,12 @@
   font-family: monospace;
   user-select: none;
   position: relative;
+  transition: all 0.2s ease;
+}
+
+.display-node:hover {
+  box-shadow: 0 0 25px rgba(100, 150, 200, 0.4),
+              inset 0 0 30px rgba(100, 150, 200, 0.1);
 }
 
 .display-node .header {
@@ -1769,6 +1985,13 @@
   min-width: 180px;
   font-family: 'Segoe UI', sans-serif;
   overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.integer-selector-node:hover {
+  box-shadow: 0 0 25px rgba(74, 144, 80, 0.4),
+              inset 0 0 30px rgba(74, 144, 80, 0.1);
+  border-color: #6abf70;
 }
 
 .integer-selector-node .header {
@@ -1891,7 +2114,12 @@
   min-width: 200px;
   font-family: 'Segoe UI', sans-serif;
   overflow: hidden;
-  transition: border-color var(--transition-normal);
+  transition: all 0.2s ease;
+}
+
+.conditional-integer-output-node:hover {
+  box-shadow: 0 0 25px rgba(var(--node-logic-color-rgb), 0.4),
+              inset 0 0 30px rgba(var(--node-logic-color-rgb), 0.1);
 }
 
 .conditional-integer-output-node.output-false {
@@ -1983,6 +2211,12 @@
   min-width: 180px;
   font-family: 'Segoe UI', sans-serif;
   overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.conditional-switch-node:hover {
+  box-shadow: 0 0 25px rgba(var(--node-logic-color-rgb), 0.4),
+              inset 0 0 30px rgba(var(--node-logic-color-rgb), 0.1);
 }
 
 .conditional-switch-node .header {
@@ -2376,6 +2610,12 @@
   user-select: none;
   padding: 0;
   overflow: hidden;
+}
+
+.color-gradient-node:hover {
+  box-shadow: 0 0 25px rgba(var(--node-color-color-rgb), 0.4),
+              inset 0 0 30px rgba(var(--node-color-color-rgb), 0.1);
+  border-color: var(--node-color-hover, var(--node-color-color));
 }
 
 .color-gradient-node.active {
@@ -3160,4 +3400,594 @@
   border-radius: 4px;
   font-family: 'Consolas', 'Monaco', monospace;
   border: 1px solid rgba(171, 71, 188, 0.2);
+}
+
+/* ============================================================================
+   WIZ EFFECT NODE (Copy of Hue Effect Node styling)
+   ============================================================================ */
+.wiz-effect-node {
+  background: var(--node-ha-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--node-ha-color, #00f3ff);
+  box-shadow: 0 0 15px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.2), 
+              inset 0 0 20px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0f7ff);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.wiz-effect-node:hover {
+  box-shadow: 0 0 25px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.4), 
+              inset 0 0 30px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.1);
+}
+
+.wiz-effect-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 15px;
+  background: linear-gradient(90deg, rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.1), transparent);
+  border-bottom: 1px solid rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.3);
+}
+
+.wiz-effect-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--node-ha-color, #00f3ff);
+  text-shadow: 0 0 8px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.6);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wiz-effect-title-icon {
+  font-size: 16px;
+}
+
+.wiz-effect-io {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background: rgba(0, 20, 30, 0.4);
+}
+
+.wiz-effect-inputs,
+.wiz-effect-outputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wiz-effect-outputs {
+  align-items: flex-end;
+}
+
+.wiz-effect-socket-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wiz-effect-socket-row.output {
+  justify-content: flex-end;
+}
+
+.wiz-effect-socket-label {
+  font-size: 10px;
+  color: #8899aa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wiz-effect-controls {
+  padding: 12px 15px;
+  border-top: 1px solid rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.2);
+  background: rgba(0, 30, 40, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wiz-effect-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wiz-effect-label {
+  font-size: 11px;
+  color: #8899aa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 55px;
+}
+
+.wiz-effect-light-toggle {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.3);
+  background: rgba(0, 40, 50, 0.5);
+  color: #e0f7ff;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.wiz-effect-light-toggle:hover {
+  border-color: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.5);
+  background: rgba(0, 50, 60, 0.6);
+}
+
+.wiz-effect-light-toggle .arrow {
+  font-size: 10px;
+  color: #8899aa;
+}
+
+.wiz-effect-light-list {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+  border-radius: 4px;
+  background: rgba(0, 30, 40, 0.6);
+  border: 1px solid transparent;
+}
+
+.wiz-effect-light-list.expanded {
+  max-height: 160px;
+  overflow-y: auto;
+  border-color: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.2);
+}
+
+.wiz-effect-light-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.wiz-effect-light-list::-webkit-scrollbar-track {
+  background: rgba(0, 20, 30, 0.3);
+  border-radius: 3px;
+}
+
+.wiz-effect-light-list::-webkit-scrollbar-thumb {
+  background: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.4);
+  border-radius: 3px;
+}
+
+.wiz-effect-light-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #aabbcc;
+  transition: background 0.15s ease;
+}
+
+.wiz-effect-light-item:hover {
+  background: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.1);
+}
+
+.wiz-effect-light-item.selected {
+  background: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.15);
+  color: #e0f7ff;
+}
+
+.wiz-effect-light-item input[type="checkbox"] {
+  accent-color: var(--node-ha-color, #00f3ff);
+  width: 14px;
+  height: 14px;
+}
+
+.wiz-effect-select {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.3);
+  background: rgba(0, 40, 50, 0.5);
+  color: #e0f7ff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wiz-effect-select:hover,
+.wiz-effect-select:focus {
+  border-color: rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.5);
+  outline: none;
+}
+
+.wiz-effect-select option {
+  background: #1a2a35;
+  color: #e0f7ff;
+}
+
+.wiz-effect-test-btn {
+  padding: 10px 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.4);
+  background: linear-gradient(180deg, rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.2), rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.1));
+  color: var(--node-ha-color, #00f3ff);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wiz-effect-test-btn:hover {
+  background: linear-gradient(180deg, rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.3), rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.15));
+  box-shadow: 0 0 10px rgba(var(--node-ha-color-rgb, 0, 243, 255), 0.3);
+}
+
+.wiz-effect-test-btn:active {
+  transform: scale(0.98);
+}
+
+.wiz-effect-test-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Wiz effect preview animation */
+.wiz-effect-preview {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.wiz-anim-pulse {
+  animation: wizPulse 1.5s ease-in-out infinite;
+}
+
+.wiz-anim-flicker {
+  animation: wizFlicker 0.3s linear infinite;
+}
+
+.wiz-anim-wave {
+  animation: wizWave 2s ease-in-out infinite;
+}
+
+@keyframes wizPulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes wizFlicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes wizWave {
+  0% { box-shadow: 0 0 5px currentColor; }
+  50% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
+  100% { box-shadow: 0 0 5px currentColor; }
+}
+
+/* ============================================================================
+   STOCK PRICE NODE (Utility category - green accent)
+   ============================================================================ */
+.stock-price-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #4caf50;
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.2),
+              inset 0 0 20px rgba(76, 175, 80, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.stock-price-node:hover {
+  box-shadow: 0 0 25px rgba(76, 175, 80, 0.4),
+              inset 0 0 30px rgba(76, 175, 80, 0.1);
+  border-color: #81c784;
+}
+
+/* ============================================================================
+   TEXT STRING NODE (Utility category - gray-blue accent)
+   ============================================================================ */
+.text-string-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #607d8b;
+  box-shadow: 0 0 15px rgba(96, 125, 139, 0.2),
+              inset 0 0 20px rgba(96, 125, 139, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.text-string-node:hover {
+  box-shadow: 0 0 25px rgba(96, 125, 139, 0.4),
+              inset 0 0 30px rgba(96, 125, 139, 0.1);
+  border-color: #90a4ae;
+}
+
+/* ============================================================================
+   STRING CONCAT NODE (Utility category - gray-blue accent)
+   ============================================================================ */
+.string-concat-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #607d8b;
+  box-shadow: 0 0 15px rgba(96, 125, 139, 0.2),
+              inset 0 0 20px rgba(96, 125, 139, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.string-concat-node:hover {
+  box-shadow: 0 0 25px rgba(96, 125, 139, 0.4),
+              inset 0 0 30px rgba(96, 125, 139, 0.1);
+  border-color: #90a4ae;
+}
+
+/* ============================================================================
+   EVENT ANNOUNCER NODE (Media category - purple accent)
+   ============================================================================ */
+.event-announcer-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #ab47bc;
+  box-shadow: 0 0 15px rgba(171, 71, 188, 0.2),
+              inset 0 0 20px rgba(171, 71, 188, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.event-announcer-node:hover {
+  box-shadow: 0 0 25px rgba(171, 71, 188, 0.4),
+              inset 0 0 30px rgba(171, 71, 188, 0.1);
+  border-color: #ce93d8;
+}
+
+/* ============================================================================
+   SUBGRAPH NODES (Utility category - orange accent for visibility)
+   ============================================================================ */
+.subgraph-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #ff9800;
+  box-shadow: 0 0 15px rgba(255, 152, 0, 0.2),
+              inset 0 0 20px rgba(255, 152, 0, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.subgraph-node:hover {
+  box-shadow: 0 0 25px rgba(255, 152, 0, 0.4),
+              inset 0 0 30px rgba(255, 152, 0, 0.1);
+  border-color: #ffb74d;
+}
+
+.subgraph-input-node,
+.subgraph-output-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #ff9800;
+  box-shadow: 0 0 15px rgba(255, 152, 0, 0.2),
+              inset 0 0 20px rgba(255, 152, 0, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.subgraph-input-node:hover,
+.subgraph-output-node:hover {
+  box-shadow: 0 0 25px rgba(255, 152, 0, 0.4),
+              inset 0 0 30px rgba(255, 152, 0, 0.1);
+  border-color: #ffb74d;
+}
+
+/* ============================================================================
+   TIMER/EVENT NODES - Unified styling (purple accent)
+   ============================================================================ */
+.timer-node,
+.inject-node,
+.trigger-node,
+.delay-node,
+.tts-scheduler-node,
+.date-comparison-node,
+.day-comparison-node,
+.upcoming-events-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #9c27b0;
+  box-shadow: 0 0 15px rgba(156, 39, 176, 0.2),
+              inset 0 0 20px rgba(156, 39, 176, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.timer-node:hover,
+.inject-node:hover,
+.trigger-node:hover,
+.delay-node:hover,
+.tts-scheduler-node:hover,
+.date-comparison-node:hover,
+.day-comparison-node:hover,
+.upcoming-events-node:hover {
+  box-shadow: 0 0 25px rgba(156, 39, 176, 0.4),
+              inset 0 0 30px rgba(156, 39, 176, 0.1);
+  border-color: #ba68c8;
+}
+
+/* ============================================================================
+   UTILITY NODES - Unified styling (gray-blue accent)
+   ============================================================================ */
+.utility-node,
+.change-node,
+.smooth-node,
+.random-node,
+.counter-node,
+.filter-node,
+.watchdog-node,
+.combine-node,
+.debug-node,
+.state-machine-node,
+.spline-curve-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #607d8b;
+  box-shadow: 0 0 15px rgba(96, 125, 139, 0.2),
+              inset 0 0 20px rgba(96, 125, 139, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.utility-node:hover,
+.change-node:hover,
+.smooth-node:hover,
+.random-node:hover,
+.counter-node:hover,
+.filter-node:hover,
+.watchdog-node:hover,
+.combine-node:hover,
+.debug-node:hover,
+.state-machine-node:hover,
+.spline-curve-node:hover {
+  box-shadow: 0 0 25px rgba(96, 125, 139, 0.4),
+              inset 0 0 30px rgba(96, 125, 139, 0.1);
+  border-color: #90a4ae;
+}
+
+/* ============================================================================
+   MEDIA NODES - Unified styling (purple/magenta accent)
+   ============================================================================ */
+.media-node,
+.tts-node,
+.station-schedule-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #ab47bc;
+  box-shadow: 0 0 15px rgba(171, 71, 188, 0.2),
+              inset 0 0 20px rgba(171, 71, 188, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.media-node:hover,
+.tts-node:hover,
+.station-schedule-node:hover {
+  box-shadow: 0 0 25px rgba(171, 71, 188, 0.4),
+              inset 0 0 30px rgba(171, 71, 188, 0.1);
+  border-color: #ce93d8;
+}
+
+/* ============================================================================
+   COLOR NODES - Additional styling (purple/pink accent for color category)
+   ============================================================================ */
+.spline-timeline-node,
+.color-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid #e91e63;
+  box-shadow: 0 0 15px rgba(233, 30, 99, 0.2),
+              inset 0 0 20px rgba(233, 30, 99, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.spline-timeline-node:hover,
+.color-node:hover {
+  box-shadow: 0 0 25px rgba(233, 30, 99, 0.4),
+              inset 0 0 30px rgba(233, 30, 99, 0.1);
+  border-color: #f48fb1;
+}
+
+/* ============================================================================
+   LOGIC NODES - Additional hover styles (for nodes not yet covered)
+   ============================================================================ */
+.edge-detector-node,
+.hysteresis-node {
+  background: var(--node-bg, rgba(10, 15, 20, 0.85));
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--node-logic-color, #ffaa00);
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.2),
+              inset 0 0 20px rgba(255, 170, 0, 0.05);
+  border-radius: var(--node-radius, 8px);
+  color: var(--node-device-text, #e0e0e0);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.edge-detector-node:hover,
+.hysteresis-node:hover {
+  box-shadow: 0 0 25px rgba(255, 170, 0, 0.4),
+              inset 0 0 30px rgba(255, 170, 0, 0.1);
+  border-color: #ffcc00;
 }

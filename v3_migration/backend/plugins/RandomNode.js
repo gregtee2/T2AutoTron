@@ -217,7 +217,7 @@
         // Styles
         const containerStyle = {
             padding: '12px',
-            background: `linear-gradient(135deg, ${THEME.background} 0%, ${THEME.surface} 100%)`,
+
             borderRadius: '8px',
             fontFamily: 'monospace',
             minWidth: '180px'
@@ -311,7 +311,7 @@
         const valueOutput = data.outputs?.value;
         const normalizedOutput = data.outputs?.normalized;
 
-        return React.createElement('div', { style: containerStyle }, [
+        return React.createElement('div', { className: 'random-node node-bg-gradient', style: containerStyle }, [
             // Header
             NodeHeader 
                 ? React.createElement(NodeHeader, {

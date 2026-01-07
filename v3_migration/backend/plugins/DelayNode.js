@@ -389,7 +389,6 @@
 
         // Styles
         const containerStyle = {
-            background: `linear-gradient(135deg, ${THEME.background} 0%, ${THEME.surface} 100%)`,
             borderRadius: '8px',
             padding: '10px',
             fontFamily: 'Inter, system-ui, sans-serif',
@@ -496,7 +495,7 @@
         };
 
         // Build the component
-        return React.createElement('div', { style: containerStyle }, [
+        return React.createElement('div', { className: 'delay-node node-bg-gradient', style: containerStyle }, [
             // Header with node-level tooltip
             NodeHeader ? 
                 React.createElement(NodeHeader, {

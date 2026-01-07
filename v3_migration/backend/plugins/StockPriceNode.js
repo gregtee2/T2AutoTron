@@ -273,9 +273,8 @@
         }
 
         return el('div', { 
-            className: 'stock-price-node',
+            className: 'stock-price-node node-bg-gradient',
             style: { 
-                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
                 borderRadius: '8px',
                 padding: '12px',
                 minWidth: '220px',

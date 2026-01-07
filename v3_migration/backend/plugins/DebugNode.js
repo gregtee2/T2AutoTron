@@ -209,7 +209,7 @@
         // Styles
         const containerStyle = {
             padding: '12px',
-            background: `linear-gradient(135deg, ${THEME.background} 0%, ${THEME.surface} 100%)`,
+
             borderRadius: '8px',
             fontFamily: 'monospace',
             minWidth: '240px'
@@ -343,7 +343,7 @@
             transition: 'left 0.2s'
         };
 
-        return React.createElement('div', { style: containerStyle },
+        return React.createElement('div', { className: 'debug-node node-bg-gradient', style: containerStyle },
             // Header with count and toggle
             React.createElement('div', { style: headerRowStyle },
                 NodeHeader ? React.createElement(NodeHeader, {

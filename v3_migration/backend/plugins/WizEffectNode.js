@@ -516,7 +516,7 @@
         // Get current effect for preview (uses cycle effect if in cycle mode)
         const currentPreview = effectPreviewConfig[effect] || effectPreviewConfig['default'];
 
-        return React.createElement('div', { className: 'wiz-effect-node' }, [
+        return React.createElement('div', { className: 'wiz-effect-node node-bg-gradient' }, [
             // Header
             React.createElement('div', { key: 'header', className: 'wiz-effect-header' }, [
                 React.createElement('div', { key: 'title', className: 'wiz-effect-title' }, [
@@ -678,7 +678,6 @@
             // Inline styles for the component
             React.createElement('style', { key: 'styles' }, `
                 .wiz-effect-node {
-                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
                     border-radius: 8px;
                     padding: 12px;
                     min-width: 280px;

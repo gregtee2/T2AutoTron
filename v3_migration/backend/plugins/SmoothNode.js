@@ -268,7 +268,6 @@
         // Styles
         const containerStyle = {
             padding: '12px',
-            background: `linear-gradient(135deg, ${THEME.background} 0%, ${THEME.surface} 100%)`,
             borderRadius: '8px',
             fontFamily: 'monospace',
             minWidth: '200px'
@@ -367,7 +366,7 @@
         const minOutput = data.outputs?.min;
         const maxOutput = data.outputs?.max;
 
-        return React.createElement('div', { style: containerStyle }, [
+        return React.createElement('div', { className: 'smooth-node node-bg-gradient', style: containerStyle }, [
             // Header
             NodeHeader 
                 ? React.createElement(NodeHeader, {

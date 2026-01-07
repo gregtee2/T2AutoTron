@@ -599,7 +599,6 @@
         // Styles
         const containerStyle = {
             padding: '12px',
-            background: `linear-gradient(135deg, ${THEME.background} 0%, ${THEME.surface} 100%)`,
             borderRadius: '8px',
             fontFamily: 'monospace',
             minWidth: '200px'
@@ -698,7 +697,7 @@
                            props.scheduleEnabled && props.scheduleTime ? '#5a9bd5' :
                            props.onceDelay > 0 && !props.onceTriggered ? THEME.warning : THEME.textMuted;
 
-        return React.createElement('div', { style: containerStyle },
+        return React.createElement('div', { className: 'inject-node node-bg-gradient', style: containerStyle },
             // Header
             NodeHeader && React.createElement(NodeHeader, {
                 icon: '💉',

@@ -557,12 +557,55 @@
             this.addControl("trigger_mode", new DropdownControl("Input Mode", ["Toggle", "Follow", "Turn On", "Turn Off"], "Follow", (v) => { this.properties.triggerMode = v; }));
             this.addControl("add_device", new ButtonControl("➕ Add Device", () => this.onAddDevice()));
             this.addControl("remove_device", new ButtonControl("➖ Remove Device", () => this.onRemoveDevice()));
-            this.addControl("refresh", new ButtonControl("🔄 Refresh", () => this.fetchDevices()));
+            this.addControl("refresh", new ButtonControl("🔄 Refresh", () => this.refreshDevicesAndStates()));
             this.addControl("trigger_btn", new ButtonControl("🔄 Manual Trigger", () => this.onTrigger()));
             this.addControl("transition", new NumberControl("Transition (ms)", 1000, (v) => this.properties.transitionTime = v, { min: 0, max: 10000 }));
             this.addControl("debug", new SwitchControl("Debug Logs", false, (v) => this.properties.debug = v));
         }
-
+        
+        // New method: Refresh both device list AND individual device states
+        async refreshDevicesAndStates() {
+            console.log('[HAGenericDeviceNode] 🔄 Refreshing devices and states...');
+            await this.fetchDevices(true);
+            
+            // Also refresh state for each selected device
+            for (const id of this.properties.selectedDeviceIds) {
+                if (id) {
+                    await this.fetchDeviceState(id);
+                }
+            }
+            console.log('[HAGenericDeviceNode] ✅ Refresh complete');
+        }
+        
+        // Lightweight method: Only refresh states for already-selected devices
+        // Called on socket reconnect and tab visibility change to sync stale UI
+        async refreshSelectedDeviceStates() {
+            const ids = this.properties.selectedDeviceIds.filter(id => id);
+            if (ids.length === 0) return;
+            
+            if (this.properties.debug) {
+                console.log(`[HAGenericDeviceNode] 🔄 Refreshing ${ids.length} device states...`);
+            }
+            
+            // Stagger requests slightly to avoid API flood
+            for (let i = 0; i < ids.length; i++) {
+                const id = ids[i];
+                try {
+                    await this.fetchDeviceState(id);
+                } catch (e) {
+                    console.error(`[HAGenericDeviceNode] Failed to refresh state for ${id}:`, e);
+                }
+                // Small delay between requests
+                if (i < ids.length - 1) {
+                    await new Promise(r => setTimeout(r, 50));
+                }
+            }
+            
+            if (this.properties.debug) {
+                console.log('[HAGenericDeviceNode] ✅ Device states refreshed');
+            }
+        }
+        
         initializeSocketIO() {
             if (window.socket) {
                 // Store bound handlers so we can remove them in destroy()
@@ -580,8 +623,24 @@
                 this._onConnect = () => {
                     window.socket.emit("request-ha-status");
                     // Don't fetch devices during graph loading - will be fetched via graphLoadComplete
-                    if (!window.graphLoading) this.fetchDevices();
+                    if (!window.graphLoading) {
+                        this.fetchDevices();
+                        // CRITICAL FIX: Also refresh device STATES on reconnect
+                        // This ensures stale state is cleared after overnight disconnect/reconnect
+                        this.refreshSelectedDeviceStates();
+                    }
                 };
+                
+                // Handle visibility change - refresh states when user returns to tab
+                // This fixes stale state after overnight screensaver/sleep
+                this._onVisibilityChange = () => {
+                    if (document.visibilityState === 'visible' && window.socket?.connected) {
+                        // User returned to tab - refresh device states to ensure UI is current
+                        // Small delay to let socket stabilize after tab becomes active
+                        setTimeout(() => this.refreshSelectedDeviceStates(), 500);
+                    }
+                };
+                document.addEventListener('visibilitychange', this._onVisibilityChange);
                 
                 // Listen for graph load complete event to refresh devices and sync state
                 this._onGraphLoadComplete = async () => {
@@ -1297,10 +1356,22 @@
             
             if (!matchedId) return; // Not a device we're tracking
             
+            // DEBUG: Log state updates for kitchen devices
+            if (id.includes('kitchen_cabinet') || id.includes('kitchen_sink')) {
+                console.log(`[HAGenericDeviceNode] 🔍 Socket update for ${id}:`, {
+                    matchedId,
+                    newState: state,
+                    locked: this._commandLocks?.[matchedId] ? 'YES' : 'NO'
+                });
+            }
+            
             // Skip updates for devices we recently commanded (optimistic lock)
             // This prevents stale HA state from overwriting our optimistic update
             if (this._commandLocks?.[matchedId] && Date.now() < this._commandLocks[matchedId]) {
                 // Still within lock period - ignore this update
+                if (id.includes('kitchen_cabinet') || id.includes('kitchen_sink')) {
+                    console.log(`[HAGenericDeviceNode] 🔒 LOCKED - ignoring update for ${id}`);
+                }
                 return;
             }
             
@@ -1316,6 +1387,7 @@
                 const indicator = this.controls[`${base}indicator`];
                 const colorbar = this.controls[`${base}colorbar`];
                 const power = this.controls[`${base}power`];
+                
                 if (indicator) indicator.data = { state: state.state || (state.on ? "on" : "off") };
                 if (colorbar) {
                     colorbar.data = { 
@@ -1379,6 +1451,11 @@
             // Remove window event listener
             if (this._onGraphLoadComplete) {
                 window.removeEventListener("graphLoadComplete", this._onGraphLoadComplete);
+            }
+            
+            // Remove visibility change listener
+            if (this._onVisibilityChange) {
+                document.removeEventListener('visibilitychange', this._onVisibilityChange);
             }
             
             // Unsubscribe from device cache updates
@@ -1469,21 +1546,11 @@
             state?.on || state?.state === 'on'
         );
         
-        // Dynamic border style based on device state
-        const borderStyle = anyDeviceOn 
-            ? '2px solid #00ff64' 
-            : '1px solid rgba(0, 243, 255, 0.3)';
-        const boxShadowStyle = anyDeviceOn 
-            ? '0 0 15px rgba(0, 255, 100, 0.4), inset 0 0 10px rgba(0, 255, 100, 0.1)' 
-            : 'none';
+        // Use CSS class for active state - allows hover effects to work
+        const activeClass = anyDeviceOn ? 'ha-node-tron ha-device-active' : 'ha-node-tron';
 
         return React.createElement('div', { 
-            className: 'ha-node-tron',
-            style: {
-                border: borderStyle,
-                boxShadow: boxShadowStyle,
-                transition: 'border 0.3s ease, box-shadow 0.3s ease'
-            }
+            className: activeClass
         }, [
             // Header
             React.createElement('div', { key: 'header', className: 'ha-node-header' }, [

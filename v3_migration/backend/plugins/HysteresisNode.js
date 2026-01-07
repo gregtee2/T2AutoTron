@@ -278,7 +278,7 @@
         };
 
         return React.createElement('div', { 
-            className: 'logic-node',
+            className: 'logic-node hysteresis-node',
             style: { padding: '0', minWidth: '200px' } 
         }, [
             // Header

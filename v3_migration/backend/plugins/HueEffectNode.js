@@ -200,46 +200,30 @@
                 return;
             }
 
-            console.log(`[HueEffectNode] Restoring ${Object.keys(prevStates).length} lights`);
+            console.log(`[HueEffectNode] Clearing effect on ${entityIds.length} lights (NOT restoring on/off state)`);
 
-            // Restore all lights in parallel
+            // Clear effect on all lights in parallel
+            // IMPORTANT: Do NOT turn lights on/off here!
+            // The trigger-based on/off is handled by HAGenericDeviceNode downstream.
+            // We only need to clear the effect. The downstream node handles on/off.
             await Promise.all(
                 entityIds.map(async (entityId) => {
                     const prev = prevStates[entityId];
                     if (!prev) return;
 
                     try {
-                        // Build the service call data
-                        const serviceData = { effect: 'off' };
-
-                        if (prev.brightness !== undefined && prev.brightness !== null) {
-                            serviceData.brightness = prev.brightness;
-                        }
-
-                        if (prev.hs_color && Array.isArray(prev.hs_color) && prev.hs_color.length === 2) {
-                            serviceData.hs_color = prev.hs_color;
-                        } else if (prev.rgb_color && Array.isArray(prev.rgb_color) && prev.rgb_color.length === 3) {
-                            serviceData.rgb_color = prev.rgb_color;
-                        } else if (prev.color_temp !== undefined && prev.color_temp !== null) {
-                            serviceData.color_temp = prev.color_temp;
-                        }
-
-                        // If light was off, turn it off
                         const fetchFn = window.apiFetch || fetch;
+                        
+                        // If light was off before effect started, skip it
+                        // The downstream node will handle turning it off if needed
                         if (!prev.on) {
-                            await fetchFn('/api/lights/ha/service', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    domain: 'light',
-                                    service: 'turn_off',
-                                    entity_id: entityId.replace('ha_', '')
-                                })
-                            });
+                            console.log(`[HueEffectNode] Light ${entityId} was OFF before effect - skipping (downstream will handle)`);
                             return;
                         }
 
-                        // Restore state
+                        // Just clear the effect - downstream HSV input will apply the correct color
+                        // Don't send brightness/color here as the Timeline/HSV input will provide that
+                        console.log(`[HueEffectNode] Clearing effect on ${entityId} (was ON before effect)`);
                         await fetchFn('/api/lights/ha/service', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -247,16 +231,16 @@
                                 domain: 'light',
                                 service: 'turn_on',
                                 entity_id: entityId.replace('ha_', ''),
-                                data: serviceData
+                                data: { effect: 'none' }
                             })
                         });
                     } catch (err) {
-                        console.error(`[HueEffectNode] Error restoring ${entityId}:`, err);
+                        console.error(`[HueEffectNode] Error clearing effect on ${entityId}:`, err);
                     }
                 })
             );
 
-            console.log('[HueEffectNode] ✅ All lights restored');
+            console.log('[HueEffectNode] ✅ Effect cleared on all lights');
             this.properties.previousStates = {};
         }
 
@@ -406,7 +390,7 @@
             node: "Triggers Hue light effects like candle, fire, sunrise, etc.\n\nSit this node INLINE in your color flow:\nTimeline → HueEffect → HA Device\n\nWhen active, selected lights are excluded from HSV commands - other lights continue normally.",
             lights: "Select one or more Hue lights.\nOnly effect-capable bulbs are shown.\n\nThese lights will be excluded from downstream HSV while effect is running.",
             effect: "The animation effect to play.\nCommon effects: candle, fire, prism, sunrise.",
-            trigger: "TRUE = play effect\nFALSE = restore previous state\n\nConnect a button, time node, or sensor.",
+            trigger: "TRUE = play effect\nFALSE = clear effect (on/off handled by downstream node)\n\nConnect a button, time node, or sensor.",
             hsv_in: "Connect your color source here.\nTimeline, spline, or manual HSV.\n\nPasses through to HSV Out.",
             hsv_out: "Connect to HA Device node.\nHSV flows through with metadata telling downstream to skip effect lights.",
             active: "TRUE while the effect is running.",

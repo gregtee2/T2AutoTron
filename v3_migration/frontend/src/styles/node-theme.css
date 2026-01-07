@@ -101,6 +101,19 @@
   --node-bg-controls: rgba(0, 10, 15, 0.4);
   --node-bg-io: rgba(0, 0, 0, 0.2);
   
+  /* Common background gradients - used by most nodes */
+  --node-bg-gradient-start: #1a1a2e;
+  --node-bg-gradient-end: #16213e;
+  --node-bg-gradient-angle: 135deg;
+  
+  /* Utility backgrounds for internal elements */
+  --node-section-bg: rgba(0, 0, 0, 0.2);
+  --node-section-bg-light: rgba(255, 255, 255, 0.05);
+  --node-highlight-bg: rgba(76, 175, 80, 0.15);
+  --node-warning-bg: rgba(255, 152, 0, 0.15);
+  --node-error-bg: rgba(244, 67, 54, 0.15);
+  --node-info-bg: rgba(33, 150, 243, 0.15);
+  
   /* Form Controls */
   --control-bg: #222222;
   --control-bg-dark: #333333;

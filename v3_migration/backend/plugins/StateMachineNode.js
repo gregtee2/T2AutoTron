@@ -484,7 +484,7 @@
             return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
         };
 
-        return React.createElement('div', { style: nodeStyle }, [
+        return React.createElement('div', { className: 'state-machine-node', style: nodeStyle }, [
             // Header
             NodeHeader && React.createElement(NodeHeader, {
                 key: 'header',

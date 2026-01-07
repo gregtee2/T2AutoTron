@@ -512,26 +512,14 @@
             transition: 'all 0.2s'
         });
 
-        // Border style based on lock state
-        const borderStyle = isLocked 
-            ? '1px solid rgba(95, 170, 125, 0.5)' 
-            : isUnlocked 
-            ? '1px solid rgba(212, 160, 84, 0.5)' 
-            : '1px solid rgba(0, 243, 255, 0.3)';
-        const boxShadowStyle = isLocked 
-            ? '0 0 15px rgba(95, 170, 125, 0.3), inset 0 0 10px rgba(95, 170, 125, 0.1)' 
-            : isUnlocked 
-            ? '0 0 15px rgba(212, 160, 84, 0.3), inset 0 0 10px rgba(212, 160, 84, 0.1)' 
-            : 'none';
+        // Use CSS class for lock state - allows hover effects to work
+        const stateClass = isLocked ? 'ha-node-tron ha-lock-locked' 
+            : isUnlocked ? 'ha-node-tron ha-lock-unlocked' 
+            : 'ha-node-tron';
 
         return React.createElement('div', { 
-            className: 'ha-node-tron',
-            style: {
-                ...containerStyle,
-                border: borderStyle,
-                boxShadow: boxShadowStyle,
-                transition: 'border 0.3s ease, box-shadow 0.3s ease'
-            }
+            className: stateClass,
+            style: containerStyle
         }, [
             // Header
             NodeHeader && React.createElement(NodeHeader, {

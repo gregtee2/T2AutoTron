@@ -894,6 +894,25 @@
                 await new Promise(r => setTimeout(r, this.properties.resumeDelay));
             }
             
+            // RESTORE VOLUME: If we boosted volume for TTS, restore to original
+            if (this._preTTSVolumes && Object.keys(this._preTTSVolumes).length > 0) {
+                console.log(`[AudioOutput] 🔉 Restoring pre-TTS volumes...`);
+                for (const speakerId of Object.keys(this._preTTSVolumes)) {
+                    // Skip AirPort Express (grotto) - we never changed its volume
+                    if (speakerId.toLowerCase().includes('grotto')) {
+                        continue;
+                    }
+                    const originalVol = this._preTTSVolumes[speakerId];
+                    const currentVol = this.getSpeakerVolume(speakerId);
+                    if (currentVol !== originalVol) {
+                        console.log(`[AudioOutput] 🔉 ${speakerId}: Restoring ${currentVol}% → ${originalVol}%`);
+                        await this.setVolume(speakerId, originalVol);
+                        await new Promise(r => setTimeout(r, 100));
+                    }
+                }
+                this._preTTSVolumes = {};
+            }
+            
             // Now resume - handle stopped vs ducked speakers separately
             if (this.properties.wasStreamingBeforeTTS && this.properties.streamEnabled) {
                 const stoppedSpeakers = this.properties.stoppedSpeakerIds || [];
@@ -1193,6 +1212,44 @@
             // Step 2: NOW pause the stream (audio is ready to play immediately)
             await this.pauseStreamForTTS(speakerIds);
             
+            // Step 2.5: SMART TTS VOLUME
+            // Store original volumes and set optimal TTS volume
+            // Logic: If stream vol > 50%, use that volume (listener expects loud)
+            //        If stream vol ≤ 50%, boost to ttsVolume setting (75% default)
+            // EXCLUSION: AirPort Express (grotto) doesn't handle volume changes well
+            this._preTTSVolumes = {};
+            const ttsTargetVol = this.properties.ttsVolume || 75;
+            
+            for (const speakerId of speakerIds) {
+                const currentVol = this.getSpeakerVolume(speakerId);
+                this._preTTSVolumes[speakerId] = currentVol;
+                
+                // Skip volume adjustment for AirPort Express (grotto) - it behaves badly
+                if (speakerId.toLowerCase().includes('grotto')) {
+                    console.log(`[AudioOutput] 🔇 ${speakerId}: AirPort Express excluded from TTS volume changes`);
+                    continue;
+                }
+                
+                // Determine what volume to use for TTS
+                let ttsVol;
+                if (currentVol > 50) {
+                    // Stream is already loud - use same volume for TTS
+                    ttsVol = currentVol;
+                    console.log(`[AudioOutput] 🔊 ${speakerId}: Stream at ${currentVol}% (high) - TTS will play at same level`);
+                } else {
+                    // Stream is quiet - boost TTS to be clearly audible
+                    ttsVol = Math.max(currentVol, ttsTargetVol);
+                    console.log(`[AudioOutput] 🔊 ${speakerId}: Stream at ${currentVol}% (low) - boosting TTS to ${ttsVol}%`);
+                }
+                
+                // Set the volume BEFORE playing TTS
+                if (ttsVol !== currentVol) {
+                    await this.setVolume(speakerId, ttsVol);
+                    // Brief delay for volume change to take effect
+                    await new Promise(r => setTimeout(r, 200));
+                }
+            }
+            
             // Step 3: Play the pre-generated audio
             console.log(`[AudioOutput] ▶️ Playing pre-generated audio on speakers...`);
             const playResult = await new Promise((resolve) => {
@@ -1382,8 +1439,8 @@
             const debounceMs = 1000;
             const ttsSpeakerIds = this.getTTSSpeakerIds();  // Only TTS-enabled speakers
 
-            // DEBUG: Log every trigger evaluation
-            if (triggerIsTrue || wasTriggered) {
+            // DEBUG: Log every trigger evaluation (enable with this.properties.debug)
+            if (this.properties.debug && (triggerIsTrue || wasTriggered)) {
                 console.log(`[AudioOutput] 🔍 TTS TRIGGER CHECK: trigger=${triggerIsTrue}, wasTriggered=${wasTriggered}, debounceOk=${(now - this._lastSentTime) > debounceMs}, dynamicMessage="${(dynamicMessage || '').substring(0, 30)}..."`);
             }
 
@@ -1395,8 +1452,10 @@
                     ? dynamicMessage
                     : this.properties.message;
                 
-                console.log(`[AudioOutput] ✅ TTS TRIGGER FIRING! Message: "${message.substring(0, 50)}..."`);
-                console.log(`[AudioOutput]    Source: dynamicMessage=${dynamicMessage ? 'yes' : 'no'}, properties.message="${(this.properties.message || '').substring(0, 30)}..."`);
+                if (this.properties.debug) {
+                    console.log(`[AudioOutput] ✅ TTS TRIGGER FIRING! Message: "${message.substring(0, 50)}..."`);
+                    console.log(`[AudioOutput]    Source: dynamicMessage=${dynamicMessage ? 'yes' : 'no'}, properties.message="${(this.properties.message || '').substring(0, 30)}..."`);
+                }
 
 
                 if (ttsSpeakerIds.length > 0 && message) {
@@ -2375,10 +2434,8 @@
             target.addEventListener('pointercancel', handleUp);
         };
 
-        // Styles
+        // Styles - border/boxShadow moved to CSS to allow hover effects
         const nodeStyle = {
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-            border: '2px solid #00d9ff',
             borderRadius: '12px',
             padding: '12px',
             width: nodeWidth + 'px',
@@ -2453,7 +2510,7 @@
             letterSpacing: '0.5px'
         };
 
-        return React.createElement('div', { style: nodeStyle, 'data-testid': 'audio-output-node' }, [
+        return React.createElement('div', { className: 'tts-node media-node node-bg-gradient', style: nodeStyle, 'data-testid': 'audio-output-node' }, [
             // Header
             NodeHeader ? React.createElement(NodeHeader, {
                 key: 'header',

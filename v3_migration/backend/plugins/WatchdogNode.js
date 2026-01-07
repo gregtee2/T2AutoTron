@@ -251,7 +251,7 @@
             borderRadius: '4px'
         };
 
-        return React.createElement('div', { style: nodeStyle }, [
+        return React.createElement('div', { className: 'watchdog-node', style: nodeStyle }, [
             // Header
             NodeHeader && React.createElement(NodeHeader, {
                 key: 'header',

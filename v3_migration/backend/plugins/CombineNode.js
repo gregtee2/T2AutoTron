@@ -260,8 +260,8 @@
         const outputSocket = data.outputs['output'];
 
         return el('div', {
+            className: 'combine-node node-bg-gradient',
             style: {
-                background: `linear-gradient(135deg, ${THEME.background} 0%, ${THEME.surface} 100%)`,
                 borderRadius: '8px',
                 padding: '10px',
                 minWidth: '160px',
