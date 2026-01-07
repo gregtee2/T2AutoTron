@@ -71,6 +71,11 @@ router.get('/all', async (req, res) => {
                   on: device.state === 'on',
                   brightness: device.attributes?.brightness ? Math.round((device.attributes.brightness / 255) * 100) : (device.state === 'on' ? 100 : 0),
                   hs_color: device.attributes?.hs_color || [0, 0]
+                },
+                // Include attributes for dashboard to check color support
+                attributes: {
+                  supported_color_modes: device.attributes?.supported_color_modes || [],
+                  color_mode: device.attributes?.color_mode || null
                 }
               };
               if (domain === 'light') lights.push(transformed);

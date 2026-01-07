@@ -137,7 +137,7 @@ class BackendNodeRegistry {
       'HA Device Automation': 'HADeviceAutomationNode',
       'HA Generic Device': 'HAGenericDeviceNode',
       'HA Lock Control': 'HALockNode',
-      'HA Device Field': null,  // UI-only visualization node
+      'HA Device Field': 'HADeviceFieldNode',  // Field extractor for Timeline Color inputs
       'Device State': 'HADeviceStateNode',
       
       // Device nodes
@@ -176,8 +176,10 @@ class BackendNodeRegistry {
       // Input nodes
       'Integer Selector': 'IntegerSelectorNode',
       
-      // Nodes that don't run on backend (UI-only)
-      'Debug': null,
+      // Utility nodes that pass through data (needed for data flow)
+      'Debug': 'DebugNode',  // Pass-through node (frontend displays, backend just passes data)
+      
+      // Nodes that don't run on backend (UI-only visualization)
       'Display': null,
       'Backdrop': null
     };

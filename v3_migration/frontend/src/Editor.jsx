@@ -116,6 +116,9 @@ export function Editor() {
     const [subGraphStack, setSubGraphStack] = useState([]);
     const mainGraphDataRef = useRef(null);  // Stores the main graph when we enter a sub-graph
     
+    // Node search state (Ctrl+F)
+    const [nodeSearch, setNodeSearch] = useState({ visible: false, query: '', results: [], selectedIndex: 0 });
+    
     // Fast context menu state
     const [contextMenu, setContextMenu] = useState({
         visible: false,
@@ -1912,6 +1915,18 @@ export function Editor() {
                         });
                     }
                 }
+                return;
+            }
+            
+            // Ctrl+F - Open node search
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyF') {
+                e.preventDefault();
+                setNodeSearch(prev => ({
+                    visible: !prev.visible,
+                    query: '',
+                    results: [],
+                    selectedIndex: 0
+                }));
                 return;
             }
             
@@ -3993,6 +4008,155 @@ export function Editor() {
                 }}
                 currentGraphData={currentGraphDataForSave}
             />
+            {/* Node Search Overlay (Ctrl+F) */}
+            {nodeSearch.visible && (
+                <div style={{
+                    position: 'absolute',
+                    top: '60px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 10000,
+                    background: 'rgba(30, 40, 50, 0.98)',
+                    borderRadius: '12px',
+                    border: '1px solid #4a6070',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                    width: '500px',
+                    maxWidth: '90vw',
+                    overflow: 'hidden'
+                }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #3a5060' }}>
+                        <input
+                            type="text"
+                            placeholder="Search nodes by name, type, or property..."
+                            autoFocus
+                            value={nodeSearch.query}
+                            onChange={(e) => {
+                                const query = e.target.value;
+                                const editor = editorRef.current;
+                                const area = areaRef.current;
+                                if (!editor || !area) return;
+                                
+                                const results = [];
+                                if (query.trim()) {
+                                    const lowerQuery = query.toLowerCase();
+                                    for (const node of editor.getNodes()) {
+                                        const label = (node.label || '').toLowerCase();
+                                        const customTitle = (node.properties?.customTitle || node.properties?.customName || '').toLowerCase();
+                                        const type = (node.constructor?.name || '').toLowerCase();
+                                        const deviceName = (node.properties?.deviceName || '').toLowerCase();
+                                        const symbol = (node.properties?.symbol || '').toLowerCase();
+                                        
+                                        const searchText = `${label} ${customTitle} ${type} ${deviceName} ${symbol}`;
+                                        if (searchText.includes(lowerQuery)) {
+                                            const pos = area.nodeViews.get(node.id)?.position || { x: 0, y: 0 };
+                                            results.push({
+                                                id: node.id,
+                                                label: node.label,
+                                                customTitle: node.properties?.customTitle || node.properties?.customName,
+                                                type: node.constructor?.name,
+                                                position: pos
+                                            });
+                                        }
+                                    }
+                                }
+                                setNodeSearch({ visible: true, query, results, selectedIndex: 0 });
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                    setNodeSearch({ visible: false, query: '', results: [], selectedIndex: 0 });
+                                } else if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    setNodeSearch(prev => ({
+                                        ...prev,
+                                        selectedIndex: Math.min(prev.selectedIndex + 1, prev.results.length - 1)
+                                    }));
+                                } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    setNodeSearch(prev => ({
+                                        ...prev,
+                                        selectedIndex: Math.max(prev.selectedIndex - 1, 0)
+                                    }));
+                                } else if (e.key === 'Enter' && nodeSearch.results.length > 0) {
+                                    e.preventDefault();
+                                    const selected = nodeSearch.results[nodeSearch.selectedIndex];
+                                    if (selected) {
+                                        const area = areaRef.current;
+                                        const editor = editorRef.current;
+                                        if (area && editor) {
+                                            // Zoom to the node
+                                            const node = editor.getNode(selected.id);
+                                            if (node) {
+                                                AreaExtensions.zoomAt(area, [node], { scale: 1.2 });
+                                            }
+                                        }
+                                        setNodeSearch({ visible: false, query: '', results: [], selectedIndex: 0 });
+                                    }
+                                }
+                            }}
+                            style={{
+                                width: '100%',
+                                padding: '12px 16px',
+                                fontSize: '16px',
+                                background: '#1a2a35',
+                                border: '1px solid #3a5060',
+                                borderRadius: '8px',
+                                color: '#fff',
+                                outline: 'none'
+                            }}
+                        />
+                    </div>
+                    {nodeSearch.results.length > 0 && (
+                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            {nodeSearch.results.map((result, idx) => (
+                                <div
+                                    key={result.id}
+                                    onClick={() => {
+                                        const area = areaRef.current;
+                                        const editor = editorRef.current;
+                                        if (area && editor) {
+                                            const node = editor.getNode(result.id);
+                                            if (node) {
+                                                AreaExtensions.zoomAt(area, [node], { scale: 1.2 });
+                                            }
+                                        }
+                                        setNodeSearch({ visible: false, query: '', results: [], selectedIndex: 0 });
+                                    }}
+                                    style={{
+                                        padding: '10px 16px',
+                                        cursor: 'pointer',
+                                        background: idx === nodeSearch.selectedIndex ? '#2a4a5a' : 'transparent',
+                                        borderBottom: '1px solid #2a3a45',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                    onMouseEnter={() => setNodeSearch(prev => ({ ...prev, selectedIndex: idx }))}
+                                >
+                                    <div>
+                                        <div style={{ color: '#fff', fontWeight: 500 }}>
+                                            {result.customTitle || result.label}
+                                        </div>
+                                        <div style={{ color: '#8ab', fontSize: '12px' }}>
+                                            {result.type} • x:{Math.round(result.position.x)}, y:{Math.round(result.position.y)}
+                                        </div>
+                                    </div>
+                                    <span style={{ color: '#6a8090', fontSize: '12px' }}>↵ to zoom</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {nodeSearch.query && nodeSearch.results.length === 0 && (
+                        <div style={{ padding: '20px', color: '#8ab', textAlign: 'center' }}>
+                            No nodes found matching "{nodeSearch.query}"
+                        </div>
+                    )}
+                    <div style={{ padding: '8px 16px', background: '#1a2530', color: '#6a7a85', fontSize: '11px', display: 'flex', gap: '16px' }}>
+                        <span>↑↓ Navigate</span>
+                        <span>↵ Zoom to node</span>
+                        <span>Esc Close</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

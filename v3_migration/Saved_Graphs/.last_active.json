@@ -87,11 +87,11 @@
           "city": "Los Angeles, California, United States",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2026-01-05T14:57:40.000Z",
-          "sunset_time": "2026-01-06T00:59:21.000Z",
-          "next_on_date": "2026-01-07T00:54:21.000Z",
-          "next_off_date": "2026-01-06T11:00:00.000Z",
-          "currentState": true,
+          "sunrise_time": "2026-01-07T14:57:44.000Z",
+          "sunset_time": "2026-01-08T01:01:02.000Z",
+          "next_on_date": "2026-01-08T00:56:02.000Z",
+          "next_off_date": "2026-01-08T11:00:00.000Z",
+          "currentState": false,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
           "pulseMode": false
@@ -103,7 +103,7 @@
       "label": "Weather Logic",
       "position": {
         "x": -2912.1616052283925,
-        "y": 2548.26203755995
+        "y": 2550.258610911397
       },
       "data": {
         "id": "757c6f3bd4fd74dd",
@@ -144,9 +144,9 @@
           "logicType": "OR",
           "hysteresis": 5,
           "_lastEval": {
-            "solar": true,
-            "temp": false,
-            "humidity": false,
+            "solar": false,
+            "temp": true,
+            "humidity": true,
             "wind": false,
             "hourlyRain": false,
             "eventRain": false,
@@ -154,13 +154,13 @@
             "all": true
           },
           "_lastWeather": {
-            "temp": 50.2,
-            "humidity": 98,
-            "wind": 0,
+            "temp": 66.6,
+            "humidity": 49,
+            "wind": 2.24,
             "hourlyRain": 0,
             "eventRain": 0,
             "dailyRain": 0,
-            "solar": 0
+            "solar": 225.12
           }
         }
       }
@@ -198,11 +198,11 @@
           "city": "Los Angeles, California, United States",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2026-01-05T14:57:40.000Z",
-          "sunset_time": "2026-01-06T00:59:21.000Z",
-          "next_on_date": "2026-01-07T00:30:21.000Z",
-          "next_off_date": "2026-01-06T06:30:00.000Z",
-          "currentState": true,
+          "sunrise_time": "2026-01-07T14:57:44.000Z",
+          "sunset_time": "2026-01-08T01:01:02.000Z",
+          "next_on_date": "2026-01-08T00:32:02.000Z",
+          "next_off_date": "2026-01-08T06:30:00.000Z",
+          "currentState": false,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
           "pulseMode": false
@@ -226,7 +226,7 @@
           "compareOperator": ">",
           "compareThreshold": 80,
           "setVariable": "",
-          "_lastResult": true
+          "_lastResult": false
         }
       }
     },
@@ -279,7 +279,8 @@
             "651e4974f94a2b89",
             "5b70aa0a10177bf8",
             "ef3dac149a8f3010",
-            "c4dc0023e14d7bce"
+            "c4dc0023e14d7bce",
+            "2cd2c616b6e92d7a"
           ],
           "locked": true
         }
@@ -322,7 +323,9 @@
             "0c96213adb3281f4",
             "41b1e60811ee1356",
             "a28b6cbc2f1c610b",
-            "e2ebe9e12e74d6aa"
+            "e2ebe9e12e74d6aa",
+            "203db16d5df1c8dd",
+            "d3525706023035a1"
           ],
           "locked": true
         }
@@ -355,7 +358,7 @@
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
           "next_on_date": null,
-          "next_off_date": "2026-01-06T09:00:00.000Z",
+          "next_off_date": "2026-01-08T09:00:00.000Z",
           "next_cycle_date": null,
           "currentState": false,
           "status": "Initializing...",
@@ -415,8 +418,8 @@
           "city": "Los Angeles, California, United States",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2026-01-05T14:57:40.000Z",
-          "sunset_time": "2026-01-06T00:59:21.000Z",
+          "sunrise_time": "2026-01-07T14:57:44.000Z",
+          "sunset_time": "2026-01-08T01:01:02.000Z",
           "next_on_date": null,
           "next_off_date": null,
           "currentState": false,
@@ -477,11 +480,11 @@
           "city": "Los Angeles, California, United States",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2026-01-05T14:57:40.000Z",
-          "sunset_time": "2026-01-06T00:59:21.000Z",
-          "next_on_date": "2026-01-07T00:00:21.000Z",
-          "next_off_date": "2026-01-06T06:30:00.000Z",
-          "currentState": true,
+          "sunrise_time": "2026-01-07T14:57:44.000Z",
+          "sunset_time": "2026-01-08T01:01:02.000Z",
+          "next_on_date": "2026-01-08T00:02:02.000Z",
+          "next_off_date": "2026-01-08T06:30:00.000Z",
+          "currentState": false,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
           "pulseMode": false
@@ -500,7 +503,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "KitchenCounterLights",
-          "lastValue": true,
+          "lastValue": false,
           "registeredName": "[Trigger]KitchenCounterLights",
           "finalName": "[Trigger]KitchenCounterLights"
         }
@@ -518,7 +521,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "registeredName": "[Trigger]House Lights ON/Off",
           "finalName": "[Trigger]House Lights ON/Off"
         }
@@ -528,8 +531,8 @@
       "id": "0cab81e8c5c154ff",
       "label": "Sender",
       "position": {
-        "x": -2322.696835874179,
-        "y": 1354.1639070118772
+        "x": -2386.9825501598934,
+        "y": 1456.3067641547343
       },
       "data": {
         "id": "0cab81e8c5c154ff",
@@ -546,15 +549,15 @@
       "id": "e82bee10d637f7bd",
       "label": "Receiver",
       "position": {
-        "x": 7190.520267386282,
-        "y": 968.5488534648491
+        "x": 7204.749992097619,
+        "y": 973.7232988144261
       },
       "data": {
         "id": "e82bee10d637f7bd",
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -563,8 +566,8 @@
       "id": "6ff49671565a0255",
       "label": "Conditional Integer Output",
       "position": {
-        "x": 596.8004819557932,
-        "y": -975.745519159906
+        "x": 703.7183979530317,
+        "y": -1264.6266327252604
       },
       "data": {
         "id": "6ff49671565a0255",
@@ -578,15 +581,15 @@
       "id": "90d3eea48e12005f",
       "label": "Receiver",
       "position": {
-        "x": 592.0840471419492,
-        "y": -1260.3853313679265
+        "x": 345.5948929893952,
+        "y": -1420.4097036973333
       },
       "data": {
         "id": "90d3eea48e12005f",
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]Sunset",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "Sunset"
         }
       }
@@ -595,8 +598,8 @@
       "id": "f4dd2d2e6355d1c9",
       "label": "Integer Selector",
       "position": {
-        "x": 200.18898851379754,
-        "y": -1085.049853071565
+        "x": 330.5314208143628,
+        "y": -1183.1293070799109
       },
       "data": {
         "id": "f4dd2d2e6355d1c9",
@@ -612,8 +615,8 @@
       "id": "13d7d35bcd11958e",
       "label": "Conditional Switch",
       "position": {
-        "x": 250.5753197798665,
-        "y": -727.5318974973875
+        "x": 1022.6149819041797,
+        "y": -944.1112815542873
       },
       "data": {
         "id": "13d7d35bcd11958e",
@@ -629,8 +632,8 @@
       "id": "32214cb284b6c445",
       "label": "Sender",
       "position": {
-        "x": 601.1949812084615,
-        "y": -484.0507464884474
+        "x": 1007.404467019509,
+        "y": -603.3197209818047
       },
       "data": {
         "id": "32214cb284b6c445",
@@ -638,9 +641,9 @@
         "properties": {
           "bufferName": "Bathroom_to_office_color",
           "lastValue": {
-            "hue": 0.2388888888888889,
-            "saturation": 0.86,
-            "brightness": 180,
+            "hue": 0.10555555555555556,
+            "saturation": 0,
+            "brightness": 83,
             "transition": 0
           },
           "registeredName": "[HSV]Bathroom_to_office_color",
@@ -725,10 +728,10 @@
           "city": "Los Angeles, California, United States",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2026-01-05T14:57:40.000Z",
-          "sunset_time": "2026-01-06T00:59:21.000Z",
-          "next_on_date": "2026-01-07T00:29:21.000Z",
-          "next_off_date": "2026-01-06T06:30:00.000Z",
+          "sunrise_time": "2026-01-07T14:57:44.000Z",
+          "sunset_time": "2026-01-08T01:01:02.000Z",
+          "next_on_date": "2026-01-08T00:31:02.000Z",
+          "next_off_date": "2026-01-08T06:30:00.000Z",
           "currentState": false,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
@@ -753,7 +756,7 @@
           "selectedDeviceNames": [
             "Z_Fireplace Uplights"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Loaded 932 devices",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -869,8 +872,8 @@
       "id": "f65af4c70a7f6f40",
       "label": "HA Generic Device",
       "position": {
-        "x": 10439.428537333624,
-        "y": -2378.919724417784
+        "x": 10165.344380021344,
+        "y": -2332.53625164186
       },
       "data": {
         "id": "f65af4c70a7f6f40",
@@ -882,7 +885,7 @@
           "selectedDeviceNames": [
             "Master Bedroom Wall Light"
           ],
-          "status": "Control applied to 1 devices",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -899,8 +902,8 @@
       "id": "c1c9a5b0ed01c3b7",
       "label": "HA Generic Device",
       "position": {
-        "x": 11295.622821977384,
-        "y": -2972.392002276499
+        "x": 11297.731161649017,
+        "y": -2947.091926216904
       },
       "data": {
         "id": "c1c9a5b0ed01c3b7",
@@ -912,7 +915,7 @@
           "selectedDeviceNames": [
             "Hue bloom Master Bath"
           ],
-          "status": "Control applied to 1 devices",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -958,11 +961,11 @@
           "city": "Los Angeles, California, United States",
           "timezone": "America/Los_Angeles",
           "haToken": "",
-          "sunrise_time": "2026-01-05T14:57:40.000Z",
-          "sunset_time": "2026-01-06T00:59:21.000Z",
-          "next_on_date": "2026-01-07T00:29:21.000Z",
-          "next_off_date": "2026-01-06T09:00:00.000Z",
-          "currentState": true,
+          "sunrise_time": "2026-01-07T14:57:44.000Z",
+          "sunset_time": "2026-01-08T01:01:02.000Z",
+          "next_on_date": "2026-01-08T00:31:02.000Z",
+          "next_off_date": "2026-01-08T09:00:00.000Z",
+          "currentState": false,
           "status": "Los Angeles, California, United States - Updated",
           "debug": false,
           "pulseMode": false
@@ -995,8 +998,8 @@
           "cycle_duration": 10,
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
-          "next_on_date": "2026-01-06T05:00:00.000Z",
-          "next_off_date": "2026-01-06T17:00:00.000Z",
+          "next_on_date": "2026-01-08T05:00:00.000Z",
+          "next_off_date": "2026-01-08T17:00:00.000Z",
           "next_cycle_date": null,
           "currentState": false,
           "status": "Initializing...",
@@ -1028,7 +1031,7 @@
             "Backdoor Upper Sconce",
             "Front West Upper Sconce"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1064,7 +1067,7 @@
             "Front West Lower Sconce",
             "Backdoor Lower Sconce"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1081,8 +1084,8 @@
       "id": "23c01481261e42d1",
       "label": "HA Generic Device",
       "position": {
-        "x": 4881.47296186105,
-        "y": 200.0257283666517
+        "x": 4895.813087531149,
+        "y": 303.99163947486846
       },
       "data": {
         "id": "23c01481261e42d1",
@@ -1104,7 +1107,7 @@
             "Living room ceiling 5",
             "Living room ceiling 6"
           ],
-          "status": "Control applied to 6 devices",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1166,7 +1169,8 @@
             "e729ec0fb980a9fe",
             "34214b6c22772c7f",
             "f29dbd11b611a57c",
-            "81800f6ab4904aa5"
+            "81800f6ab4904aa5",
+            "16e4c5eb23283240"
           ],
           "locked": true
         }
@@ -1184,7 +1188,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]Sunset",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "Sunset"
         }
       }
@@ -1201,7 +1205,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -1218,7 +1222,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -1297,8 +1301,6 @@
             "a3d528fc57e1ff4d",
             "d5004b3611dddf0f",
             "ce37567d8626a0db",
-            "e4a99a5458a16357",
-            "6dbc9bbdcd1943e0",
             "7b0803eadc605db8",
             "d7f72f4c35755d5d",
             "24035c8839725684",
@@ -1312,7 +1314,6 @@
             "49d07ae20033daef",
             "93d6f872bd5baf64",
             "5ca77d693549fe84",
-            "52b8f443ab0acf3e",
             "bb48d377b60c7dba",
             "41c9816aac4a7837",
             "21a4d2813b9f0315",
@@ -1322,6 +1323,7 @@
             "670018467da88996",
             "7ff37422eae2b4e1",
             "9d3def13f1929305",
+            "9d017474deec0bb7",
             "fab345bfbe6e5222",
             "d6f8c05d1c1760b8",
             "86116410f59b6600"
@@ -1363,8 +1365,8 @@
       "id": "15bedae98acf174c",
       "label": "Sender",
       "position": {
-        "x": -1223.3511231256189,
-        "y": -2585.3481293830996
+        "x": -1201.5414141818474,
+        "y": -2604.4316247088996
       },
       "data": {
         "id": "15bedae98acf174c",
@@ -1497,6 +1499,7 @@
             "cbad499a84025e4f",
             "225b8fa7a816b1ad",
             "18b6e71b99164b08",
+            "dada42bb305eeae1",
             "482a8f354b1e14e4",
             "fa8775e41c7c325b"
           ],
@@ -1523,7 +1526,7 @@
             "Kitchen Bar Spot 1",
             "Kitchen Bar Spot 3"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1555,7 +1558,7 @@
             "Kitchen Bar Spot 2",
             "Kitchen Bar Spot 4"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1617,13 +1620,7 @@
             "on": true,
             "h": 34,
             "s": 0.89,
-            "v": 0.4980392156862745,
-            "_excludeDevices": [
-              "ha_light.kitchen_bar_spot_1",
-              "ha_light.kitchen_bar_spot_2",
-              "ha_light.kitchen_bar_spot_3",
-              "ha_light.kitchen_bar_spot_4"
-            ]
+            "v": 0.4980392156862745
           },
           "registeredName": "[HSV]Bar Warm",
           "finalName": "[HSV]Bar Warm"
@@ -1683,13 +1680,7 @@
           "lastValue": {
             "hue": 0.5666666666666667,
             "saturation": 1,
-            "brightness": 124,
-            "_excludeDevices": [
-              "ha_light.kitchen_bar_spot_1",
-              "ha_light.kitchen_bar_spot_2",
-              "ha_light.kitchen_bar_spot_3",
-              "ha_light.kitchen_bar_spot_4"
-            ]
+            "brightness": 124
           },
           "registeredName": "[HSV]Bar Cool",
           "finalName": "[HSV]Bar Cool"
@@ -1718,15 +1709,9 @@
             "on": true,
             "h": 34,
             "s": 0.89,
-            "v": 0.4980392156862745,
-            "_excludeDevices": [
-              "ha_light.kitchen_bar_spot_1",
-              "ha_light.kitchen_bar_spot_2",
-              "ha_light.kitchen_bar_spot_3",
-              "ha_light.kitchen_bar_spot_4"
-            ]
+            "v": 0.4980392156862745
           },
-          "lastTriggerSource": null
+          "lastTriggerSource": "Bar Warm"
         }
       }
     },
@@ -1745,15 +1730,9 @@
           "lastValue": {
             "hue": 0.5666666666666667,
             "saturation": 1,
-            "brightness": 124,
-            "_excludeDevices": [
-              "ha_light.kitchen_bar_spot_1",
-              "ha_light.kitchen_bar_spot_2",
-              "ha_light.kitchen_bar_spot_3",
-              "ha_light.kitchen_bar_spot_4"
-            ]
+            "brightness": 124
           },
-          "lastTriggerSource": null
+          "lastTriggerSource": "Bar Cool"
         }
       }
     },
@@ -1774,7 +1753,7 @@
           "selectedDeviceNames": [
             "Bar Undermount Strip"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1873,7 +1852,7 @@
           "selectedDeviceNames": [
             "LEDVANCE PLUG"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned On",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -1890,8 +1869,8 @@
       "id": "638e3dd2992d1984",
       "label": "Receiver",
       "position": {
-        "x": 8620.750612045358,
-        "y": 3458.2438088670997
+        "x": 8606.840437233093,
+        "y": 3639.0760814265477
       },
       "data": {
         "id": "638e3dd2992d1984",
@@ -1961,8 +1940,8 @@
           "cycle_duration": 10,
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
-          "next_on_date": "2026-01-06T15:30:00.000Z",
-          "next_off_date": "2026-01-06T07:00:00.000Z",
+          "next_on_date": "2026-01-08T15:30:00.000Z",
+          "next_off_date": "2026-01-08T07:00:00.000Z",
           "next_cycle_date": null,
           "currentState": true,
           "status": "Initializing...",
@@ -2002,13 +1981,13 @@
         "properties": {
           "bufferName": "Office Colors",
           "lastValue": {
-            "hue": 0.08888888888888889,
-            "saturation": 1,
-            "brightness": 60,
+            "hue": 0.0714285714285714,
+            "saturation": 0.2413793103448275,
+            "brightness": 88,
             "rgb": {
-              "r": 60,
-              "g": 32,
-              "b": 0
+              "r": 50,
+              "g": 43,
+              "b": 38
             }
           },
           "registeredName": "[HSV]Office Colors",
@@ -2046,13 +2025,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Office Colors",
           "lastValue": {
-            "hue": 0.08888888888888889,
-            "saturation": 1,
-            "brightness": 60,
+            "hue": 0.0714285714285714,
+            "saturation": 0.2413793103448275,
+            "brightness": 88,
             "rgb": {
-              "r": 60,
-              "g": 32,
-              "b": 0
+              "r": 50,
+              "g": 43,
+              "b": 38
             }
           },
           "lastTriggerSource": "Office Colors"
@@ -2076,7 +2055,7 @@
           "selectedDeviceNames": [
             "Dining Room"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2153,8 +2132,8 @@
       "id": "c6a03d9be3047a22",
       "label": "Receiver",
       "position": {
-        "x": 9578.051587580285,
-        "y": 190.74486162159997
+        "x": 9622.726785700554,
+        "y": 223.80450823059908
       },
       "data": {
         "id": "c6a03d9be3047a22",
@@ -2204,7 +2183,7 @@
           "selectedDeviceNames": [
             "Bar Lamp"
           ],
-          "status": "Control applied to 1 devices",
+          "status": "Turned On",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2230,13 +2209,13 @@
         "properties": {
           "selectedBuffer": "[HSV]Temps",
           "lastValue": {
-            "hue": 0.6666666666666666,
-            "saturation": 0.6680851063829787,
-            "brightness": 93,
+            "hue": 0.40189873417721517,
+            "saturation": 0.88268156424581,
+            "brightness": 127,
             "rgb": {
-              "r": 28,
-              "g": 28,
-              "b": 86
+              "r": 10,
+              "g": 89,
+              "b": 43
             }
           },
           "lastTriggerSource": null
@@ -2434,7 +2413,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -2514,7 +2493,7 @@
             "Living room wall washer North",
             "Living room wall washer south"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2542,13 +2521,7 @@
           "lastValue": {
             "hue": 0.5666666666666667,
             "saturation": 1,
-            "brightness": 124,
-            "_excludeDevices": [
-              "ha_light.kitchen_bar_spot_1",
-              "ha_light.kitchen_bar_spot_2",
-              "ha_light.kitchen_bar_spot_3",
-              "ha_light.kitchen_bar_spot_4"
-            ]
+            "brightness": 124
           },
           "lastTriggerSource": "Bar Cool"
         }
@@ -2573,13 +2546,7 @@
           "lastInputHSV": {
             "hue": 0.5666666666666667,
             "saturation": 1,
-            "brightness": 124,
-            "_excludeDevices": [
-              "ha_light.kitchen_bar_spot_1",
-              "ha_light.kitchen_bar_spot_2",
-              "ha_light.kitchen_bar_spot_3",
-              "ha_light.kitchen_bar_spot_4"
-            ]
+            "brightness": 124
           },
           "selectedBuffer": "",
           "selectedHsvBuffer": "",
@@ -2608,7 +2575,7 @@
           "selectedDeviceNames": [
             "Kitchen Cabinet Bottom"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2638,7 +2605,7 @@
           "selectedDeviceNames": [
             "kitchen Cabinet Top"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2656,7 +2623,7 @@
       "label": "HA Generic Device",
       "position": {
         "x": 11343.130547559114,
-        "y": 2190.6381994675803
+        "y": 2192.3465285406514
       },
       "data": {
         "id": "d08ef8707ab0fba4",
@@ -2668,7 +2635,7 @@
           "selectedDeviceNames": [
             "kitchen Sink Light"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2698,7 +2665,7 @@
           "selectedDeviceNames": [
             "Living Room Chandelier"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2725,7 +2692,7 @@
               "name": "number"
             },
             "label": "Value",
-            "id": "242e05773fdd09c7",
+            "id": "8c205b5e8cf74680",
             "control": null,
             "showControl": true
           },
@@ -2734,7 +2701,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "f42e34fe86ed577e",
+            "id": "37a91574dd336ee3",
             "control": null,
             "showControl": true
           },
@@ -2743,7 +2710,7 @@
               "name": "number"
             },
             "label": "Timer Duration",
-            "id": "bf27e1c16439289d",
+            "id": "38f8341e2ab1ab5a",
             "control": null,
             "showControl": true
           },
@@ -2752,7 +2719,7 @@
               "name": "string"
             },
             "label": "Start Time",
-            "id": "915fb27adb6911b2",
+            "id": "28b9e240c67ecbbc",
             "control": null,
             "showControl": true
           },
@@ -2761,7 +2728,7 @@
               "name": "string"
             },
             "label": "End Time",
-            "id": "1f4e986f35b1bc91",
+            "id": "b56c065ceb469d02",
             "control": null,
             "showControl": true
           }
@@ -2773,7 +2740,7 @@
             },
             "label": "HSV Info",
             "multipleConnections": true,
-            "id": "7eb15aaf067fc20d"
+            "id": "3063a21a87e9f382"
           }
         },
         "controls": {},
@@ -2859,15 +2826,15 @@
         "debug": false,
         "timerStart": null,
         "currentStep": 0,
-        "lastTimeStep": 31,
-        "position": 0.5166666666666667,
-        "isInRange": true,
+        "lastTimeStep": null,
+        "position": 0,
+        "isInRange": false,
         "lastColor": {
           "r": 255,
-          "g": 184,
-          "b": 126
+          "g": 255,
+          "b": 255
         },
-        "inputStartTime": "4:29 PM",
+        "inputStartTime": "4:31 PM",
         "inputEndTime": "10:30 PM"
       }
     },
@@ -2897,8 +2864,8 @@
           "cycle_duration": 10,
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
-          "next_on_date": "2026-01-06T15:30:00.000Z",
-          "next_off_date": "2026-01-06T06:00:00.000Z",
+          "next_on_date": "2026-01-08T15:30:00.000Z",
+          "next_off_date": "2026-01-08T06:00:00.000Z",
           "next_cycle_date": null,
           "currentState": false,
           "status": "Initializing...",
@@ -2926,7 +2893,7 @@
             "Living Room Table South (ha)",
             "Living Room Table North (ha)"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -2953,7 +2920,7 @@
               "name": "any"
             },
             "label": "Input 1",
-            "id": "3a012d17870806ef",
+            "id": "b4e673a4c73a202e",
             "control": null,
             "showControl": true
           },
@@ -2962,7 +2929,7 @@
               "name": "any"
             },
             "label": "Input 2",
-            "id": "3cbafdda8409323a",
+            "id": "1b7c8e9071014378",
             "control": null,
             "showControl": true
           }
@@ -2974,7 +2941,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "88c1e74c8ff8d20d"
+            "id": "41c7098008515af3"
           }
         },
         "controls": {},
@@ -3002,7 +2969,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "8332b1df14bc9ac9",
+            "id": "92500431a8f18745",
             "control": null,
             "showControl": true
           }
@@ -3014,7 +2981,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "84e11cd88d0e8716"
+            "id": "6b853c38266b9b74"
           }
         },
         "controls": {},
@@ -3028,20 +2995,14 @@
           "enabled": true,
           "history": [
             {
-              "time": "4:54:40 PM",
-              "timestamp": 1767660880368,
-              "value": true,
-              "type": "boolean"
-            },
-            {
-              "time": "2:00:16 PM",
-              "timestamp": 1767650416331,
+              "time": "2:08:42 PM",
+              "timestamp": 1767823722537,
               "value": false,
               "type": "boolean"
             }
           ],
-          "currentValue": true,
-          "messageCount": 2
+          "currentValue": false,
+          "messageCount": 1
         }
       }
     },
@@ -3049,8 +3010,8 @@
       "id": "f655421d76358d81",
       "label": "Timeline Color",
       "position": {
-        "x": 9753.843390008711,
-        "y": -2338.746211912149
+        "x": 9538.792743502154,
+        "y": -2315.554475524187
       },
       "data": {
         "id": "f655421d76358d81",
@@ -3125,15 +3086,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0.3688342139595564,
-          "isInRange": true,
-          "outputHue": 0.2045454545454546,
-          "outputSaturation": 0.15602836879432627,
-          "outputBrightness": 105,
+          "position": 0,
+          "isInRange": false,
+          "outputHue": 0.5803921568627451,
+          "outputSaturation": 1,
+          "outputBrightness": 254,
           "outputRgb": {
-            "r": 56,
-            "g": 58,
-            "b": 49
+            "r": 0,
+            "g": 131,
+            "b": 254
           }
         }
       }
@@ -3218,15 +3179,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.762842218507593,
-          "position": 0.3688342139595564,
-          "isInRange": true,
-          "outputHue": 0.09779614325068871,
-          "outputSaturation": 0.4745098039215686,
-          "outputBrightness": 125,
+          "position": 0,
+          "isInRange": false,
+          "outputHue": 0,
+          "outputSaturation": 0,
+          "outputBrightness": 254,
           "outputRgb": {
-            "r": 125,
-            "g": 100,
-            "b": 66
+            "r": 254,
+            "g": 254,
+            "b": 254
           }
         }
       }
@@ -3306,15 +3267,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.7223066666666667,
-          "isInRange": true,
-          "outputHue": 0.05321285140562249,
-          "outputSaturation": 0.9021739130434783,
+          "position": 0,
+          "isInRange": false,
+          "outputHue": 0.37516339869281046,
+          "outputSaturation": 1,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 183,
-            "g": 71,
-            "b": 18
+            "r": 0,
+            "g": 254,
+            "b": 64
           }
         }
       }
@@ -3394,14 +3355,14 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.5236033333333333,
-          "isInRange": true,
-          "outputHue": 0.14225053078556263,
+          "position": 0,
+          "isInRange": false,
+          "outputHue": 0,
           "outputSaturation": 1,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 156,
-            "g": 133,
+            "r": 254,
+            "g": 0,
             "b": 0
           }
         }
@@ -3431,51 +3392,6 @@
           "autoInterval": 5000,
           "showPalette": true,
           "activeMode": "temp"
-        }
-      }
-    },
-    {
-      "id": "e4a99a5458a16357",
-      "label": "HA Device Automation",
-      "position": {
-        "x": 1107.2764552658225,
-        "y": -2701.3023445410577
-      },
-      "data": {
-        "id": "e4a99a5458a16357",
-        "label": "HA Device Automation",
-        "properties": {
-          "status": "Fields: value",
-          "debug": false,
-          "lastEntityType": "sensor",
-          "selectedFields": [
-            "value"
-          ],
-          "lastOutputValues": {
-            "value": 50
-          },
-          "lastInputDeviceId": "sensor.sunshine_terrace_feels_like"
-        }
-      }
-    },
-    {
-      "id": "6dbc9bbdcd1943e0",
-      "label": "HA Device State Output",
-      "position": {
-        "x": 1117.83992727594,
-        "y": -2365.4727704789957
-      },
-      "data": {
-        "id": "6dbc9bbdcd1943e0",
-        "label": "HA Device State Output",
-        "properties": {
-          "selectedDeviceId": "sensor.sunshine_terrace_feels_like",
-          "selectedDeviceName": "Sunshine terrace  Feels like",
-          "status": "✅ Sunshine terrace  Feels like: 50",
-          "debug": false,
-          "haToken": "",
-          "filterType": "Sensor",
-          "letterFilter": "All Letters"
         }
       }
     },
@@ -3570,15 +3486,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.043893880635679956,
-          "position": 0.2647058823529412,
+          "position": 0.5058823529411766,
           "isInRange": true,
-          "outputHue": 0.6666666666666666,
-          "outputSaturation": 0.6680851063829787,
-          "outputBrightness": 93,
+          "outputHue": 0.40189873417721517,
+          "outputSaturation": 0.88268156424581,
+          "outputBrightness": 127,
           "outputRgb": {
-            "r": 28,
-            "g": 28,
-            "b": 86
+            "r": 10,
+            "g": 89,
+            "b": 43
           }
         }
       }
@@ -3588,7 +3504,7 @@
       "label": "Sender",
       "position": {
         "x": 3157.9442137220985,
-        "y": -3288.1829847187946
+        "y": -3262.507526534152
       },
       "data": {
         "id": "d7f72f4c35755d5d",
@@ -3596,13 +3512,13 @@
         "properties": {
           "bufferName": "Temps",
           "lastValue": {
-            "hue": 0.6666666666666666,
-            "saturation": 0.6680851063829787,
-            "brightness": 93,
+            "hue": 0.40189873417721517,
+            "saturation": 0.88268156424581,
+            "brightness": 127,
             "rgb": {
-              "r": 28,
-              "g": 28,
-              "b": 86
+              "r": 10,
+              "g": 89,
+              "b": 43
             }
           },
           "registeredName": "[HSV]Temps",
@@ -3622,7 +3538,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]Sunset",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "Sunset"
         }
       }
@@ -3639,7 +3555,7 @@
         "label": "Sender",
         "properties": {
           "bufferName": "Sunset",
-          "lastValue": true,
+          "lastValue": false,
           "registeredName": "[Trigger]Sunset",
           "finalName": "[Trigger]Sunset"
         }
@@ -3666,7 +3582,7 @@
             "Basement Right",
             "Laundry Room (ha)"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -3754,15 +3670,15 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0.04122530107064291,
-          "position": 0.8361773563218391,
+          "position": 0.45979605363984677,
           "isInRange": true,
-          "outputHue": 0.08888888888888889,
-          "outputSaturation": 1,
-          "outputBrightness": 60,
+          "outputHue": 0.0714285714285714,
+          "outputSaturation": 0.2413793103448275,
+          "outputBrightness": 88,
           "outputRgb": {
-            "r": 60,
-            "g": 32,
-            "b": 0
+            "r": 50,
+            "g": 43,
+            "b": 38
           }
         }
       }
@@ -3781,7 +3697,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "6047d5c777c19153",
+            "id": "2b08293fa397ff72",
             "control": null,
             "showControl": true
           }
@@ -3793,7 +3709,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "b63c610f5522709c"
+            "id": "6a186557d03be9c3"
           }
         },
         "controls": {},
@@ -3807,8 +3723,8 @@
           "enabled": true,
           "history": [
             {
-              "time": "2:00:16 PM",
-              "timestamp": 1767650416334,
+              "time": "2:08:42 PM",
+              "timestamp": 1767823722538,
               "value": true,
               "type": "boolean"
             }
@@ -3844,8 +3760,8 @@
           "cycle_duration": 10,
           "cycle_enabled": false,
           "timezone": "America/Los_Angeles",
-          "next_on_date": "2026-01-06T17:30:00.000Z",
-          "next_off_date": "2026-01-06T04:00:00.000Z",
+          "next_on_date": "2026-01-08T17:30:00.000Z",
+          "next_off_date": "2026-01-08T04:00:00.000Z",
           "next_cycle_date": null,
           "currentState": true,
           "status": "Initializing...",
@@ -3882,13 +3798,13 @@
         "id": "94cd5cd2d98323af",
         "label": "Stock Price",
         "properties": {
-          "symbol": "SLV",
+          "symbol": "SPY",
           "refreshInterval": 60,
-          "lastPrice": 69.08,
-          "priceChange": 3.3299999999999983,
-          "changePercent": 5.0646387832699595,
-          "isUp": true,
-          "lastUpdate": "7:37:26 PM",
+          "lastPrice": 689.58,
+          "priceChange": -2.2099999999999227,
+          "changePercent": -0.3194611081397422,
+          "isUp": false,
+          "lastUpdate": "2:09:43 PM",
           "status": "OK",
           "error": null
         }
@@ -3969,14 +3885,14 @@
           "showColorEditor": true,
           "previewMode": false,
           "previewPosition": 0,
-          "position": 0.8165399239543725,
+          "position": 0.4800336807412661,
           "isInRange": true,
-          "outputHue": 0.2844551282051282,
+          "outputHue": 0.14420803782505912,
           "outputSaturation": 1,
           "outputBrightness": 254,
           "outputRgb": {
-            "r": 61,
-            "g": 207,
+            "r": 140,
+            "g": 122,
             "b": 0
           }
         }
@@ -4051,7 +3967,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "2e63bddb9ededafb",
+            "id": "71abf4c50d6024aa",
             "control": null,
             "showControl": true
           }
@@ -4063,7 +3979,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "f5c45d7bca9b7c91"
+            "id": "368a1ee044bcb6c2"
           }
         },
         "controls": {},
@@ -4077,8 +3993,8 @@
           "enabled": true,
           "history": [
             {
-              "time": "2:00:16 PM",
-              "timestamp": 1767650416333,
+              "time": "2:08:42 PM",
+              "timestamp": 1767823722538,
               "value": false,
               "type": "boolean"
             }
@@ -4223,7 +4139,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -4240,7 +4156,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -4257,7 +4173,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -4274,7 +4190,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -4283,15 +4199,15 @@
       "id": "f1944ce140939e41",
       "label": "Receiver",
       "position": {
-        "x": 9305.974789572183,
-        "y": 193.1887123790125
+        "x": 9323.916349137282,
+        "y": 227.0257074353043
       },
       "data": {
         "id": "f1944ce140939e41",
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -4308,7 +4224,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -4348,7 +4264,8 @@
             "31bdcd3d69a4e2ad",
             "cbad499a84025e4f",
             "225b8fa7a816b1ad",
-            "18b6e71b99164b08"
+            "18b6e71b99164b08",
+            "dada42bb305eeae1"
           ],
           "locked": true
         }
@@ -4405,7 +4322,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "a7dfdfa2bf196fd7",
+            "id": "6f1d1ed4d83c471d",
             "control": null,
             "showControl": true
           },
@@ -4414,7 +4331,7 @@
               "name": "object"
             },
             "label": "HSV In",
-            "id": "8b1107567ca3bb3b",
+            "id": "a75f5c1a7f3a7d81",
             "control": null,
             "showControl": true
           }
@@ -4426,7 +4343,7 @@
             },
             "label": "HSV Out",
             "multipleConnections": true,
-            "id": "90fd4efad474ccfe"
+            "id": "8a5832e7259dd71b"
           },
           "active": {
             "socket": {
@@ -4434,7 +4351,7 @@
             },
             "label": "Active",
             "multipleConnections": true,
-            "id": "1218542b035403da"
+            "id": "2e8e302e8ef661c0"
           },
           "applied": {
             "socket": {
@@ -4442,7 +4359,7 @@
             },
             "label": "Applied",
             "multipleConnections": true,
-            "id": "72bfbdedc07f3ad9"
+            "id": "496073ef431c959f"
           }
         },
         "controls": {},
@@ -4456,40 +4373,9 @@
             "ha_light.kitchen_bar_spot_3"
           ],
           "effect": "candle",
-          "lastTrigger": true,
+          "lastTrigger": false,
           "lastSentEffect": "candle",
-          "previousStates": {
-            "ha_light.kitchen_bar_spot_1": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            },
-            "ha_light.kitchen_bar_spot_3": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            }
-          }
+          "previousStates": {}
         }
       }
     },
@@ -4507,7 +4393,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "c486ea6b9623b531",
+            "id": "9d167272cba94b3d",
             "control": null,
             "showControl": true
           },
@@ -4516,7 +4402,7 @@
               "name": "object"
             },
             "label": "HSV In",
-            "id": "345edfffffb71dce",
+            "id": "d0f894656640a67e",
             "control": null,
             "showControl": true
           }
@@ -4528,7 +4414,7 @@
             },
             "label": "HSV Out",
             "multipleConnections": true,
-            "id": "6b3ab11401f6223d"
+            "id": "10cb73bc7a1feb24"
           },
           "active": {
             "socket": {
@@ -4536,7 +4422,7 @@
             },
             "label": "Active",
             "multipleConnections": true,
-            "id": "76c7f18689fc30c5"
+            "id": "5d79913e4bc07b56"
           },
           "applied": {
             "socket": {
@@ -4544,7 +4430,7 @@
             },
             "label": "Applied",
             "multipleConnections": true,
-            "id": "3a5ef27db386e1e2"
+            "id": "8d2d0de4d9c4ca1e"
           }
         },
         "controls": {},
@@ -4558,40 +4444,9 @@
             "ha_light.kitchen_bar_spot_4"
           ],
           "effect": "candle",
-          "lastTrigger": true,
+          "lastTrigger": false,
           "lastSentEffect": "candle",
-          "previousStates": {
-            "ha_light.kitchen_bar_spot_2": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            },
-            "ha_light.kitchen_bar_spot_4": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            }
-          }
+          "previousStates": {}
         }
       }
     },
@@ -4651,15 +4506,15 @@
       "id": "41b1e60811ee1356",
       "label": "Receiver",
       "position": {
-        "x": 4512.2838312935655,
-        "y": 153.52814787299326
+        "x": 4475.23850664581,
+        "y": 196.54852488328984
       },
       "data": {
         "id": "41b1e60811ee1356",
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Trigger]House Lights ON/Off",
-          "lastValue": true,
+          "lastValue": false,
           "lastTriggerSource": "House Lights ON/Off"
         }
       }
@@ -4729,7 +4584,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "ec831a2dfb269c03",
+            "id": "16641200074e0056",
             "control": null,
             "showControl": true
           },
@@ -4738,7 +4593,7 @@
               "name": "object"
             },
             "label": "HSV In",
-            "id": "0137ec4d88fe6d1a",
+            "id": "868ea318ebf51e32",
             "control": null,
             "showControl": true
           }
@@ -4750,7 +4605,7 @@
             },
             "label": "HSV Out",
             "multipleConnections": true,
-            "id": "7e7f77c45f7707fd"
+            "id": "b28808e17e9c6814"
           },
           "active": {
             "socket": {
@@ -4758,7 +4613,7 @@
             },
             "label": "Active",
             "multipleConnections": true,
-            "id": "1e0d83783ffc7c12"
+            "id": "fdb93d0dbfb8c43a"
           },
           "applied": {
             "socket": {
@@ -4766,7 +4621,7 @@
             },
             "label": "Applied",
             "multipleConnections": true,
-            "id": "c17340eb476d2833"
+            "id": "7a230e97ade1aabd"
           }
         },
         "controls": {},
@@ -4828,8 +4683,6 @@
           "width": 2403.147742556335,
           "height": 2102.2882499554958,
           "capturedNodes": [
-            "e4a99a5458a16357",
-            "6dbc9bbdcd1943e0",
             "7b0803eadc605db8",
             "d7f72f4c35755d5d",
             "94cd5cd2d98323af",
@@ -4841,7 +4694,7 @@
             "49d07ae20033daef",
             "93d6f872bd5baf64",
             "5ca77d693549fe84",
-            "52b8f443ab0acf3e"
+            "9d017474deec0bb7"
           ],
           "locked": true
         }
@@ -4881,23 +4734,6 @@
       }
     },
     {
-      "id": "52b8f443ab0acf3e",
-      "label": "Display",
-      "position": {
-        "x": 2237.0163078599617,
-        "y": -2851.8731640806323
-      },
-      "data": {
-        "id": "52b8f443ab0acf3e",
-        "label": "Display",
-        "width": 200,
-        "height": 150,
-        "properties": {
-          "value": false
-        }
-      }
-    },
-    {
       "id": "5e818ebd02a96d61",
       "label": "Time Range (Continuous)",
       "position": {
@@ -4920,14 +4756,14 @@
       "id": "27191efb1636eaf9",
       "label": "OR Gate",
       "position": {
-        "x": 9865.53814857093,
-        "y": 2190.6368416986325
+        "x": 9872.790582148082,
+        "y": 2130.1998952223707
       },
       "data": {
         "id": "27191efb1636eaf9",
         "label": "OR Gate",
         "properties": {
-          "inputCount": 2,
+          "inputCount": 3,
           "pulseMode": false
         }
       }
@@ -4945,7 +4781,7 @@
         "properties": {
           "selectedDeviceId": "person.greg_teegarden",
           "selectedDeviceName": "greg teegarden",
-          "status": "✅ Devices fetched",
+          "status": "✅ greg teegarden: home",
           "debug": false,
           "haToken": "",
           "filterType": "Person",
@@ -5015,8 +4851,8 @@
       "id": "82b447ceac53ae67",
       "label": "AND Gate",
       "position": {
-        "x": 9631.524424427129,
-        "y": 2136.8749498158295
+        "x": 9618.810416152633,
+        "y": 2127.7935153340472
       },
       "data": {
         "id": "82b447ceac53ae67",
@@ -5061,7 +4897,7 @@
           "selectedDeviceNames": [
             "FD_Light"
           ],
-          "status": "HA Connected (932 devices)",
+          "status": "Turned Off",
           "haConnected": true,
           "haWsConnected": true,
           "debug": false,
@@ -5104,8 +4940,8 @@
       "id": "cbad499a84025e4f",
       "label": "HA Device Field",
       "position": {
-        "x": 8989.253157785752,
-        "y": 2476.0034884786432
+        "x": 8997.538542077751,
+        "y": 2485.6697701526437
       },
       "data": {
         "id": "cbad499a84025e4f",
@@ -5114,7 +4950,7 @@
           "deviceId": "ha_sensor.sunshine_terrace_irradiance",
           "deviceName": "Sunshine terrace  Irradiance",
           "field": "state",
-          "lastValue": "0",
+          "lastValue": "216.15",
           "filterType": "Sensor",
           "letterFilter": "STU",
           "searchText": ""
@@ -5151,7 +4987,7 @@
               "name": "any"
             },
             "label": "Trigger",
-            "id": "089187710e9bfcb0",
+            "id": "8cc66474652997c6",
             "control": null,
             "showControl": true
           },
@@ -5160,7 +4996,7 @@
               "name": "boolean"
             },
             "label": "Reset",
-            "id": "72edc6bac21bb7fc",
+            "id": "bfabc346c738fb29",
             "control": null,
             "showControl": true
           },
@@ -5169,7 +5005,7 @@
               "name": "any"
             },
             "label": "Set State",
-            "id": "b83a09fa10ead081",
+            "id": "687d339c07bd6f76",
             "control": null,
             "showControl": true
           }
@@ -5181,7 +5017,7 @@
             },
             "label": "State",
             "multipleConnections": true,
-            "id": "f633d72163f962f9"
+            "id": "f9d4dc33725e1786"
           },
           "stateIndex": {
             "socket": {
@@ -5189,7 +5025,7 @@
             },
             "label": "Index",
             "multipleConnections": true,
-            "id": "73200f186ae1e833"
+            "id": "1cb4b7987ed21334"
           },
           "changed": {
             "socket": {
@@ -5197,20 +5033,31 @@
             },
             "label": "Changed",
             "multipleConnections": true,
-            "id": "e3acf0a4a79bcd8b"
+            "id": "eb16df45a28e7b2d"
+          },
+          "remaining": {
+            "socket": {
+              "name": "number"
+            },
+            "label": "Timer",
+            "multipleConnections": true,
+            "id": "21bed4e24d10cc28"
           }
         },
         "controls": {},
         "label": "State Machine",
         "id": "18b6e71b99164b08",
-        "width": 260,
+        "width": 280,
         "properties": {
           "states": "idle,armed,triggered,cooldown",
           "transitions": "idle→armed:true\narmed→triggered:true\ntriggered→cooldown:true\ncooldown→idle:true",
           "currentState": "idle",
           "previousState": "armed",
+          "stateEnteredAt": 1767710078377,
           "debug": false
-        }
+        },
+        "timerInterval": null,
+        "remainingSeconds": 0
       }
     },
     {
@@ -5227,7 +5074,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "7087167db0c06d90",
+            "id": "e36b065180ed8ef6",
             "control": null,
             "showControl": true
           }
@@ -5239,7 +5086,7 @@
             },
             "label": "State",
             "multipleConnections": true,
-            "id": "6c6463cffb25c78e"
+            "id": "ea15b983df3f4773"
           },
           "is_locked": {
             "socket": {
@@ -5247,19 +5094,19 @@
             },
             "label": "Is Locked",
             "multipleConnections": true,
-            "id": "85df398f943ad69a"
+            "id": "dddb506f8c1ef82c"
           }
         },
         "controls": {
           "search": {
-            "id": "342006dc89b7d362",
+            "id": "298df865eecd4b60",
             "label": "🔍 Search",
             "value": "",
             "placeholder": "Type to filter locks...",
             "type": "text"
           },
           "device_select": {
-            "id": "44c499f1a511a717",
+            "id": "a5685a67e3ae4441",
             "label": "Lock",
             "values": [
               "— Select Lock —",
@@ -5302,7 +5149,7 @@
               "energy": null
             },
             "attributes": {
-              "changed_by": "Remote",
+              "changed_by": "Manual",
               "friendly_name": "Sunshine Terrace Door Lock",
               "supported_features": 0
             }
@@ -5315,8 +5162,8 @@
       "id": "961c4d262b632efd",
       "label": "HA Device Field",
       "position": {
-        "x": 3829.6993691521557,
-        "y": 3388.9762889380017
+        "x": 3827.211461451949,
+        "y": 3392.2934992049436
       },
       "data": {
         "id": "961c4d262b632efd",
@@ -5378,7 +5225,7 @@
               "name": "any"
             },
             "label": "Input 1",
-            "id": "601eace35c9c591d",
+            "id": "72e0fc6c91373c41",
             "control": null,
             "showControl": true
           },
@@ -5387,7 +5234,7 @@
               "name": "any"
             },
             "label": "Input 2",
-            "id": "4994f3d786b8a6c0",
+            "id": "cf2731c8f6d8eb1d",
             "control": null,
             "showControl": true
           }
@@ -5399,7 +5246,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "0b1c68940a07e163"
+            "id": "e70594d898d02176"
           }
         },
         "controls": {},
@@ -5427,7 +5274,7 @@
               "name": "any"
             },
             "label": "Value Override",
-            "id": "fcb86fc0078cf216",
+            "id": "3342c2bbddf924c5",
             "control": null,
             "showControl": true
           }
@@ -5439,7 +5286,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "2ad5d86086882595"
+            "id": "1a36e409ca875865"
           }
         },
         "controls": {},
@@ -5469,7 +5316,7 @@
           "triggerCount": 0,
           "isRepeating": false,
           "onceTriggered": false,
-          "nextScheduledTime": 1767675600000,
+          "nextScheduledTime": 1767848400000,
           "isPulsing": false,
           "pulsePending": false,
           "debug": false
@@ -5477,7 +5324,7 @@
         "_repeatTimer": null,
         "_onceTimer": null,
         "_scheduleTimer": null,
-        "_scheduleCheckInterval": 97,
+        "_scheduleCheckInterval": 99,
         "_pulseTimer": null,
         "_shouldOutput": false,
         "_initialized": true
@@ -5497,7 +5344,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "e12f0fc7bbc95644",
+            "id": "550b73bd7f1f4c56",
             "control": null,
             "showControl": true
           }
@@ -5509,7 +5356,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "ef0f2475357c4a0f"
+            "id": "e0d702e0c6133d31"
           }
         },
         "controls": {},
@@ -5523,8 +5370,8 @@
           "enabled": true,
           "history": [
             {
-              "time": "2:00:16 PM",
-              "timestamp": 1767650416337,
+              "time": "2:08:42 PM",
+              "timestamp": 1767823722539,
               "value": "unknown",
               "type": "string"
             }
@@ -5546,18 +5393,18 @@
         "label": "All-in-One Color Control",
         "properties": {
           "red": 132,
-          "green": 80,
+          "green": 32,
           "blue": 32,
-          "hueShift": 29,
+          "hueShift": 360,
           "saturation": 76,
           "brightness": 132,
-          "colorTemp": 2400,
+          "colorTemp": 2707,
           "whiteAdjust": 4000,
           "transitionTime": 0,
           "enableAutoTrigger": false,
           "autoInterval": 5000,
           "showPalette": true,
-          "activeMode": "temp"
+          "activeMode": "color"
         }
       }
     },
@@ -5565,8 +5412,8 @@
       "id": "e2ebe9e12e74d6aa",
       "label": "All-in-One Color Control",
       "position": {
-        "x": 7298.581970789588,
-        "y": 1245.712552555969
+        "x": 6764.3204884457555,
+        "y": 1261.2358886047002
       },
       "data": {
         "id": "e2ebe9e12e74d6aa",
@@ -5602,7 +5449,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "b0b6189b8d780847",
+            "id": "5876cf0703773731",
             "control": null,
             "showControl": true
           },
@@ -5611,7 +5458,7 @@
               "name": "object"
             },
             "label": "HSV In",
-            "id": "dcfe307d89a42bc3",
+            "id": "95465086af800f5e",
             "control": null,
             "showControl": true
           }
@@ -5623,7 +5470,7 @@
             },
             "label": "HSV Out",
             "multipleConnections": true,
-            "id": "3d111b3c968dfe8f"
+            "id": "38af9990df4ae906"
           },
           "active": {
             "socket": {
@@ -5631,7 +5478,7 @@
             },
             "label": "Active",
             "multipleConnections": true,
-            "id": "6017a54cb49553ca"
+            "id": "193bdd863ab5e168"
           },
           "applied": {
             "socket": {
@@ -5639,7 +5486,7 @@
             },
             "label": "Applied",
             "multipleConnections": true,
-            "id": "2ab300c963e1c051"
+            "id": "42047065fa1d006f"
           }
         },
         "controls": {},
@@ -5692,7 +5539,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "4370d7026839d60b",
+            "id": "32de640ae7f99393",
             "control": null,
             "showControl": true
           },
@@ -5701,7 +5548,7 @@
               "name": "object"
             },
             "label": "HSV In",
-            "id": "b69813bf86855c8b",
+            "id": "058490c7d5237f30",
             "control": null,
             "showControl": true
           }
@@ -5713,7 +5560,7 @@
             },
             "label": "HSV Out",
             "multipleConnections": true,
-            "id": "6043fa34c4dc64c1"
+            "id": "3d7ff6e13d176dba"
           },
           "active": {
             "socket": {
@@ -5721,7 +5568,7 @@
             },
             "label": "Active",
             "multipleConnections": true,
-            "id": "a06aa438434606c0"
+            "id": "45cb0eff7a240043"
           },
           "applied": {
             "socket": {
@@ -5729,7 +5576,7 @@
             },
             "label": "Applied",
             "multipleConnections": true,
-            "id": "739dae8c5886ef1c"
+            "id": "4a77a13a659f3238"
           }
         },
         "controls": {},
@@ -5745,70 +5592,9 @@
             "ha_light.kitchen_bar_spot_4"
           ],
           "effect": "candle",
-          "lastTrigger": true,
+          "lastTrigger": false,
           "lastSentEffect": "candle",
-          "previousStates": {
-            "ha_light.kitchen_bar_spot_1": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            },
-            "ha_light.kitchen_bar_spot_2": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            },
-            "ha_light.kitchen_bar_spot_3": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            },
-            "ha_light.kitchen_bar_spot_4": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            }
-          }
+          "previousStates": {}
         }
       }
     },
@@ -5845,7 +5631,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "fb1286b2ccd94c1d",
+            "id": "65aa37fb998b9056",
             "control": null,
             "showControl": true
           },
@@ -5854,7 +5640,7 @@
               "name": "object"
             },
             "label": "HSV In",
-            "id": "d4bbc0480031a3a1",
+            "id": "a19578f724e66451",
             "control": null,
             "showControl": true
           }
@@ -5866,7 +5652,7 @@
             },
             "label": "HSV Out",
             "multipleConnections": true,
-            "id": "df5ee6c143624c73"
+            "id": "e722b57b8c95ea23"
           },
           "active": {
             "socket": {
@@ -5874,7 +5660,7 @@
             },
             "label": "Active",
             "multipleConnections": true,
-            "id": "5b701ea7a97763d3"
+            "id": "97a8453cee7a15b0"
           },
           "applied": {
             "socket": {
@@ -5882,7 +5668,7 @@
             },
             "label": "Applied",
             "multipleConnections": true,
-            "id": "bad03fdb01309134"
+            "id": "f956bcb077cc53bf"
           }
         },
         "controls": {},
@@ -5898,70 +5684,9 @@
             "ha_light.kitchen_bar_spot_4"
           ],
           "effect": "candle",
-          "lastTrigger": true,
+          "lastTrigger": false,
           "lastSentEffect": "candle",
-          "previousStates": {
-            "ha_light.kitchen_bar_spot_1": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            },
-            "ha_light.kitchen_bar_spot_2": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            },
-            "ha_light.kitchen_bar_spot_3": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            },
-            "ha_light.kitchen_bar_spot_4": {
-              "on": true,
-              "brightness": 68,
-              "hs_color": [
-                29.378,
-                79.261
-              ],
-              "rgb_color": [
-                255,
-                152,
-                53
-              ],
-              "color_temp": 430,
-              "effect": "candle"
-            }
-          }
+          "previousStates": {}
         }
       }
     },
@@ -5979,7 +5704,7 @@
               "name": "any"
             },
             "label": "Message",
-            "id": "8ea2e39ac8221b2d",
+            "id": "6e8177d147e60e88",
             "control": null,
             "showControl": true
           }
@@ -5991,7 +5716,7 @@
             },
             "label": "Trigger",
             "multipleConnections": true,
-            "id": "15bcce3e4a1c32e8"
+            "id": "84b78b82a38d0769"
           },
           "messageOut": {
             "socket": {
@@ -5999,7 +5724,7 @@
             },
             "label": "Message",
             "multipleConnections": true,
-            "id": "f72fd9b613102cbf"
+            "id": "be7c180387d985e2"
           },
           "event": {
             "socket": {
@@ -6007,7 +5732,7 @@
             },
             "label": "Event",
             "multipleConnections": true,
-            "id": "bea4c3cef0b59111"
+            "id": "c549befe3afd4165"
           }
         },
         "controls": {},
@@ -6018,104 +5743,128 @@
         "properties": {
           "leadTime": 5,
           "template": "action",
-          "announcedEvents": {
-            "Living Room Ceiling Lights - On_on_1767659361000": true,
-            "Master Bath/ Wall Washer - On_on_1767659361000": true,
-            "House Lights  - On_on_1767659421000": true,
-            "Sunset_on_1767660360000": true,
-            "Sunset - On_on_1767660861000": true
-          },
-          "currentMessage": "It's Critter Feeding Time!!!",
+          "announcedEvents": {},
+          "currentMessage": "",
           "currentEvent": null,
           "triggerActive": false,
-          "upcomingCount": 33,
-          "lastAdHocMessage": "It's Critter Feeding Time!!!",
+          "upcomingCount": 38,
+          "lastAdHocMessage": "",
           "previousAdHocInput": null,
-          "adHocCooldownUntil": 1767661207457,
+          "adHocCooldownUntil": 0,
           "isAdHocActive": false,
-          "debug": true
+          "debug": false
         },
         "_backendEvents": [
           {
-            "time": "2026-01-06T04:00:00.000Z",
+            "time": "2026-01-07T23:53:00.000Z",
+            "action": "on",
+            "deviceName": "KitchenCounterLights",
+            "nodeId": "8480926f954c2743"
+          },
+          {
+            "time": "2026-01-08T00:22:00.000Z",
+            "action": "on",
+            "deviceName": "Living Room Ceiling Lights",
+            "nodeId": "83837d8f043f49cf"
+          },
+          {
+            "time": "2026-01-08T00:22:00.000Z",
+            "action": "on",
+            "deviceName": "Master Bath/ Wall Washer",
+            "nodeId": "22ab7427bbcd0c0f"
+          },
+          {
+            "time": "2026-01-08T00:23:00.000Z",
+            "action": "on",
+            "deviceName": "House Lights ",
+            "nodeId": "cb4c3820c4b47079"
+          },
+          {
+            "time": "2026-01-08T00:47:00.000Z",
+            "action": "on",
+            "deviceName": "Sunset",
+            "nodeId": "537324f4d766e02b"
+          },
+          {
+            "time": "2026-01-08T04:00:00.000Z",
             "action": "off",
             "deviceName": "Copper Fountain",
             "nodeId": "983a98adf4480305"
           },
           {
-            "time": "2026-01-06T05:00:00.000Z",
+            "time": "2026-01-08T05:00:00.000Z",
             "action": "on",
             "deviceName": "Electric Blanket",
             "nodeId": "bb5e204a7266087a"
           },
           {
-            "time": "2026-01-06T06:00:00.000Z",
+            "time": "2026-01-08T06:00:00.000Z",
             "action": "off",
             "deviceName": "Office Colors",
             "nodeId": "a3d528fc57e1ff4d"
           },
           {
-            "time": "2026-01-06T06:30:00.000Z",
+            "time": "2026-01-08T06:30:00.000Z",
             "action": "off",
             "deviceName": "House Lights ",
             "nodeId": "cb4c3820c4b47079"
           },
           {
-            "time": "2026-01-06T06:30:00.000Z",
+            "time": "2026-01-08T06:30:00.000Z",
             "action": "off",
             "deviceName": "KitchenCounterLights",
             "nodeId": "8480926f954c2743"
           },
           {
-            "time": "2026-01-06T06:30:00.000Z",
+            "time": "2026-01-08T06:30:00.000Z",
             "action": "off",
             "deviceName": "Living Room Ceiling Lights",
             "nodeId": "83837d8f043f49cf"
           },
           {
-            "time": "2026-01-06T07:00:00.000Z",
+            "time": "2026-01-08T07:00:00.000Z",
             "action": "off",
             "deviceName": "Office Lights",
             "nodeId": "80cb637e8dec510c"
           },
           {
-            "time": "2026-01-06T09:00:00.000Z",
+            "time": "2026-01-08T09:00:00.000Z",
             "action": "off",
             "deviceName": "Master Bedroom Lights Off",
             "nodeId": "720bd29f88ec7e96"
           },
           {
-            "time": "2026-01-06T09:00:00.000Z",
+            "time": "2026-01-08T09:00:00.000Z",
             "action": "off",
             "deviceName": "Master Bath/ Wall Washer",
             "nodeId": "22ab7427bbcd0c0f"
           },
           {
-            "time": "2026-01-06T11:00:00.000Z",
+            "time": "2026-01-08T11:00:00.000Z",
             "action": "off",
             "deviceName": "Sunset",
             "nodeId": "537324f4d766e02b"
           },
           {
-            "time": "2026-01-06T15:30:00.000Z",
+            "time": "2026-01-08T15:30:00.000Z",
             "action": "on",
             "deviceName": "Office Lights",
             "nodeId": "80cb637e8dec510c"
           },
           {
-            "time": "2026-01-06T15:30:00.000Z",
+            "time": "2026-01-08T15:30:00.000Z",
             "action": "on",
             "deviceName": "Office Colors",
             "nodeId": "a3d528fc57e1ff4d"
           },
           {
-            "time": "2026-01-06T17:00:00.000Z",
+            "time": "2026-01-08T17:00:00.000Z",
             "action": "off",
             "deviceName": "Electric Blanket",
             "nodeId": "bb5e204a7266087a"
           },
           {
-            "time": "2026-01-06T17:30:00.000Z",
+            "time": "2026-01-08T17:30:00.000Z",
             "action": "on",
             "deviceName": "Copper Fountain",
             "nodeId": "983a98adf4480305"
@@ -6138,7 +5887,7 @@
               "name": "any"
             },
             "label": "Value Override",
-            "id": "fdedfbb1c47a1a19",
+            "id": "a0fbda28c74ca333",
             "control": null,
             "showControl": true
           }
@@ -6150,7 +5899,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "1f82412d62915ab5"
+            "id": "57e7cf7d1c3ccb50"
           }
         },
         "controls": {},
@@ -6176,11 +5925,11 @@
             true,
             true
           ],
-          "lastTriggerTime": 1767661200447,
-          "triggerCount": 1,
+          "lastTriggerTime": null,
+          "triggerCount": 0,
           "isRepeating": false,
           "onceTriggered": false,
-          "nextScheduledTime": 1767747600000,
+          "nextScheduledTime": 1767834000000,
           "isPulsing": false,
           "pulsePending": false,
           "debug": false
@@ -6188,9 +5937,9 @@
         "_repeatTimer": null,
         "_onceTimer": null,
         "_scheduleTimer": null,
-        "_scheduleCheckInterval": 99,
+        "_scheduleCheckInterval": 101,
         "_pulseTimer": null,
-        "_shouldOutput": true,
+        "_shouldOutput": false,
         "_initialized": true
       }
     },
@@ -6208,7 +5957,7 @@
               "name": "any"
             },
             "label": "Value Override",
-            "id": "37c8d3df17dec697",
+            "id": "6d7568ef3ac5915a",
             "control": null,
             "showControl": true
           }
@@ -6220,7 +5969,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "5c1e8bdf5d1e42de"
+            "id": "ec0bdfe3af65c748"
           }
         },
         "controls": {},
@@ -6250,7 +5999,7 @@
           "triggerCount": 0,
           "isRepeating": false,
           "onceTriggered": false,
-          "nextScheduledTime": 1767675600000,
+          "nextScheduledTime": 1767848400000,
           "isPulsing": false,
           "pulsePending": false,
           "debug": false
@@ -6258,7 +6007,7 @@
         "_repeatTimer": null,
         "_onceTimer": null,
         "_scheduleTimer": null,
-        "_scheduleCheckInterval": 98,
+        "_scheduleCheckInterval": 100,
         "_pulseTimer": null,
         "_shouldOutput": false,
         "_initialized": true
@@ -6278,7 +6027,7 @@
               "name": "any"
             },
             "label": "Input 1",
-            "id": "95102d8764c8e1a8",
+            "id": "2c9a66de5f70fa8e",
             "control": null,
             "showControl": true
           },
@@ -6287,7 +6036,7 @@
               "name": "any"
             },
             "label": "Input 2",
-            "id": "dfc119b1d2badb4f",
+            "id": "c1e74c7a065e81eb",
             "control": null,
             "showControl": true
           },
@@ -6296,7 +6045,7 @@
               "name": "any"
             },
             "label": "Input 3",
-            "id": "6755f33c53b57041",
+            "id": "72764c947dae6ccf",
             "control": null,
             "showControl": true
           },
@@ -6305,7 +6054,7 @@
               "name": "any"
             },
             "label": "Input 4",
-            "id": "ff49e7e76892391d",
+            "id": "fd4d8f1c72ff7c32",
             "control": null,
             "showControl": true
           }
@@ -6317,7 +6066,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "467fe0d18366d89f"
+            "id": "1e7a860bb6ea563c"
           }
         },
         "controls": {},
@@ -6345,7 +6094,7 @@
               "name": "any"
             },
             "label": "Value Override",
-            "id": "fcf0c0f0f517b2fc",
+            "id": "295baecd12066414",
             "control": null,
             "showControl": true
           }
@@ -6357,7 +6106,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "357b6f207c1a85f2"
+            "id": "7e549ac8a5902980"
           }
         },
         "controls": {},
@@ -6373,7 +6122,7 @@
           "pulseMode": true,
           "pulseDurationMs": 500,
           "scheduleEnabled": true,
-          "scheduleTime": "16:38",
+          "scheduleTime": "09:00",
           "scheduleDays": [
             true,
             true,
@@ -6383,11 +6132,11 @@
             true,
             true
           ],
-          "lastTriggerTime": 1767659880434,
-          "triggerCount": 1,
+          "lastTriggerTime": null,
+          "triggerCount": 0,
           "isRepeating": false,
           "onceTriggered": false,
-          "nextScheduledTime": 1767746280000,
+          "nextScheduledTime": 1767891600000,
           "isPulsing": false,
           "pulsePending": false,
           "debug": false
@@ -6395,9 +6144,9 @@
         "_repeatTimer": null,
         "_onceTimer": null,
         "_scheduleTimer": null,
-        "_scheduleCheckInterval": 100,
+        "_scheduleCheckInterval": 102,
         "_pulseTimer": null,
-        "_shouldOutput": true,
+        "_shouldOutput": false,
         "_initialized": true
       }
     },
@@ -6405,15 +6154,15 @@
       "id": "d938d69eac0092aa",
       "label": "Sender",
       "position": {
-        "x": -2088.3165392093015,
-        "y": 3745.969280153895
+        "x": -2082.757803387434,
+        "y": 3671.323399117386
       },
       "data": {
         "id": "d938d69eac0092aa",
         "label": "Sender",
         "properties": {
           "bufferName": "Forecast",
-          "lastValue": "Temperature is 50 degrees, humidity 98 percent.",
+          "lastValue": "Temperature is 67 degrees, humidity 49 percent, wind 2 miles per hour.",
           "registeredName": "[String]Forecast",
           "finalName": "[String]Forecast"
         }
@@ -6431,7 +6180,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[String]Forecast",
-          "lastValue": "Temperature is 50 degrees, humidity 98 percent.",
+          "lastValue": "Temperature is 67 degrees, humidity 49 percent, wind 2 miles per hour.",
           "lastTriggerSource": null
         }
       }
@@ -6440,8 +6189,8 @@
       "id": "651e4974f94a2b89",
       "label": "Sender",
       "position": {
-        "x": -2072.8223950697047,
-        "y": 4143.012674078434
+        "x": -2089.498602535308,
+        "y": 4042.9554292848165
       },
       "data": {
         "id": "651e4974f94a2b89",
@@ -6507,15 +6256,15 @@
       "id": "5b70aa0a10177bf8",
       "label": "Sender",
       "position": {
-        "x": -2076.340080643448,
-        "y": 3964.9244680265215
+        "x": -2082.6929215827254,
+        "y": 3865.661328350313
       },
       "data": {
         "id": "5b70aa0a10177bf8",
         "label": "Sender",
         "properties": {
           "bufferName": "Wind Speed",
-          "lastValue": 0,
+          "lastValue": 2.24,
           "registeredName": "[Number]Wind Speed",
           "finalName": "[Number]Wind Speed"
         }
@@ -6533,7 +6282,7 @@
         "label": "Receiver",
         "properties": {
           "selectedBuffer": "[Number]Wind Speed",
-          "lastValue": 0,
+          "lastValue": 2.24,
           "lastTriggerSource": null
         }
       }
@@ -6589,7 +6338,7 @@
               "name": "any"
             },
             "label": "String 1",
-            "id": "a268a875c02089f1",
+            "id": "c6ec88552849bfd0",
             "control": null,
             "showControl": true
           },
@@ -6598,7 +6347,7 @@
               "name": "any"
             },
             "label": "String 2",
-            "id": "c2fcba09b72de908",
+            "id": "5658de6bfd93b741",
             "control": null,
             "showControl": true
           },
@@ -6607,7 +6356,7 @@
               "name": "any"
             },
             "label": "String 3",
-            "id": "6b37104d69a0b490",
+            "id": "f966f63a66013215",
             "control": null,
             "showControl": true
           },
@@ -6616,7 +6365,7 @@
               "name": "any"
             },
             "label": "String 4",
-            "id": "b949c16cd1b2b67b",
+            "id": "f41cd3f0c63347c0",
             "control": null,
             "showControl": true
           }
@@ -6628,7 +6377,7 @@
             },
             "label": "Result",
             "multipleConnections": true,
-            "id": "c4942028f255bb71"
+            "id": "0f2f13ae27998df7"
           }
         },
         "controls": {},
@@ -6658,7 +6407,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "95628786b0759a0f",
+            "id": "1235fb97335e599e",
             "control": null,
             "showControl": true
           }
@@ -6670,7 +6419,7 @@
             },
             "label": "Text",
             "multipleConnections": true,
-            "id": "c393a18a6e631996"
+            "id": "c9790b61ed9622f6"
           }
         },
         "controls": {},
@@ -6679,7 +6428,7 @@
         "width": 250,
         "height": 180,
         "properties": {
-          "text": "Here's the latest weather conditions:",
+          "text": "Here's this morning's  weather conditions:",
           "lastTriggered": false
         }
       }
@@ -6698,7 +6447,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "9f6be1515eb75a40",
+            "id": "329e4c5452d7435e",
             "control": null,
             "showControl": true
           },
@@ -6707,7 +6456,7 @@
               "name": "any"
             },
             "label": "Message",
-            "id": "7164d3e7e7a4a474",
+            "id": "e12ad85f1c953b45",
             "control": null,
             "showControl": true
           },
@@ -6716,7 +6465,7 @@
               "name": "any"
             },
             "label": "Stream URL",
-            "id": "5a310481166ac28f",
+            "id": "19e4489c2eeab06a",
             "control": null,
             "showControl": true
           },
@@ -6725,7 +6474,7 @@
               "name": "number"
             },
             "label": "🔊 grotto_guest",
-            "id": "ff1b84a574e9ecb8",
+            "id": "7b8fd0319f298977",
             "control": null,
             "showControl": true
           },
@@ -6734,7 +6483,7 @@
               "name": "boolean"
             },
             "label": "▶️ grotto_guest",
-            "id": "e8ba1a434623e9b3",
+            "id": "05dd18f9887509b6",
             "control": null,
             "showControl": true
           },
@@ -6743,7 +6492,7 @@
               "name": "number"
             },
             "label": "📻 grotto_guest",
-            "id": "6570a3f3e584af51",
+            "id": "fa28037c2a4f2e3d",
             "control": null,
             "showControl": true
           }
@@ -6755,7 +6504,7 @@
             },
             "label": "Success",
             "multipleConnections": true,
-            "id": "6a882478ec31dc64"
+            "id": "34ac7c31b820003a"
           },
           "streaming": {
             "socket": {
@@ -6763,7 +6512,7 @@
             },
             "label": "Streaming",
             "multipleConnections": true,
-            "id": "201648844bc6d686"
+            "id": "c839274c83bf5b35"
           }
         },
         "controls": {},
@@ -6778,7 +6527,7 @@
           "mediaPlayerId": "",
           "ttsEnabledSpeakers": {
             "media_player.homepodoffice": true,
-            "media_player.grotto_guest": true,
+            "media_player.grotto_guest": false,
             "media_player.denon_avr_x1700h_2": true
           },
           "message": "Hello, this is a test announcement",
@@ -6788,7 +6537,7 @@
           "elevenLabsVoiceName": "Charlotte - Meditation & Relaxation",
           "chatterboxVoiceId": "charlotte.wav",
           "chatterboxVoiceName": "charlotte",
-          "lastResult": true,
+          "lastResult": null,
           "stations": [
             {
               "name": "SomaFM Groove Salad",
@@ -6877,17 +6626,17 @@
           ],
           "selectedStation": 13,
           "speakerStations": {
-            "media_player.homepodoffice": 3,
+            "media_player.homepodoffice": 0,
             "media_player.denon_avr_x1700h_2": 0,
-            "media_player.grotto_guest": 7
+            "media_player.grotto_guest": 8
           },
           "speakerCustomUrls": {},
           "customStreamUrl": "",
           "streamVolume": 56,
           "speakerVolumes": {
             "media_player.denon_avr_x1700h_2": 49,
-            "media_player.homepodoffice": 30,
-            "media_player.grotto_guest": 35
+            "media_player.homepodoffice": 45,
+            "media_player.grotto_guest": 40
           },
           "linkVolumes": false,
           "isStreaming": true,
@@ -6901,7 +6650,7 @@
           "duckedSpeakerIds": [],
           "useMixerMode": false,
           "mixerStreamUrl": "",
-          "ttsVolume": 75,
+          "ttsVolume": 68,
           "quietHoursEnabled": true,
           "quietHoursStart": 21,
           "quietHoursEnd": 7,
@@ -6909,11 +6658,10 @@
           "nodeHeight": 800,
           "showIOSection": true,
           "showSpeakersSection": true,
-          "showTTSSection": true,
-          "pausedSpeakerIds": null
+          "showTTSSection": true
         },
         "_lastTrigger": false,
-        "_lastSentTime": 1767661204466,
+        "_lastSentTime": 0,
         "_resumeTimeout": null,
         "_volumeInputKeys": [
           "vol_grotto_guest"
@@ -6924,12 +6672,9 @@
         "_stationInputKeys": [
           "station_grotto_guest"
         ],
-        "_lastActiveStates": {
-          "media_player.grotto_guest": true
-        },
+        "_lastActiveStates": {},
         "_lastStationInputs": {
-          "media_player.grotto_guest": 7,
-          "media_player.homepodoffice": 3
+          "media_player.grotto_guest": 8
         },
         "_playInProgress": false,
         "_lastPlayTime": 0,
@@ -6937,8 +6682,8 @@
         "_lastTTSDurationMs": null,
         "_ttsQueue": [],
         "_ttsInProgress": false,
-        "_lastPlayedMessage": "It's Critter Feeding Time!!!",
-        "_lastPlayedTime": 1767661204466
+        "_lastPlayedMessage": null,
+        "_lastPlayedTime": 0
       }
     },
     {
@@ -6962,8 +6707,8 @@
       "id": "e729ec0fb980a9fe",
       "label": "Station Schedule",
       "position": {
-        "x": 7462.848509018366,
-        "y": 4217.924733367635
+        "x": 7216.855420315088,
+        "y": 4268.308199544557
       },
       "data": {
         "inputs": {},
@@ -6974,7 +6719,7 @@
             },
             "label": "Station #",
             "multipleConnections": true,
-            "id": "4e724d1503d0c363"
+            "id": "4c0d673e7078a6b0"
           },
           "volume": {
             "socket": {
@@ -6982,7 +6727,7 @@
             },
             "label": "Volume %",
             "multipleConnections": true,
-            "id": "68392c75edc54f66"
+            "id": "1a3beb9edf24730e"
           }
         },
         "controls": {},
@@ -7086,7 +6831,7 @@
             {
               "time": "07:30",
               "stationIndex": 0,
-              "volume": 40
+              "volume": 45
             },
             {
               "time": "13:00",
@@ -7114,7 +6859,7 @@
               "volume": 40
             },
             {
-              "time": "22:00",
+              "time": "21:44",
               "stationIndex": 15,
               "volume": 60
             },
@@ -7124,22 +6869,21 @@
               "volume": 70
             }
           ],
-          "lastOutputStation": 7,
-          "lastOutputVolume": 35,
+          "lastOutputStation": 8,
+          "lastOutputVolume": 40,
           "nodeWidth": 500,
           "nodeHeight": 594.5879278609974
         },
         "_pulseActive": false,
-        "_lastActiveTime": "19:00",
-        "selected": false
+        "_lastActiveTime": "14:00"
       }
     },
     {
       "id": "34214b6c22772c7f",
       "label": "Station Schedule",
       "position": {
-        "x": 7460.674210766121,
-        "y": 4864.230992926503
+        "x": 7219.631242356938,
+        "y": 4908.677974322476
       },
       "data": {
         "inputs": {},
@@ -7150,7 +6894,7 @@
             },
             "label": "Station #",
             "multipleConnections": true,
-            "id": "2937b3dc20eac500"
+            "id": "b7b9d2a852ade719"
           },
           "volume": {
             "socket": {
@@ -7158,7 +6902,7 @@
             },
             "label": "Volume %",
             "multipleConnections": true,
-            "id": "1f4c78a23e6ef38a"
+            "id": "5a7f5afb6f7a212e"
           }
         },
         "controls": {},
@@ -7256,7 +7000,8 @@
           "schedule": [
             {
               "time": "06:00",
-              "stationIndex": 0
+              "stationIndex": 0,
+              "volume": 45
             },
             {
               "time": "12:00",
@@ -7265,7 +7010,7 @@
             },
             {
               "time": "21:00",
-              "stationIndex": 15
+              "stationIndex": 16
             }
           ],
           "lastOutputStation": 3,
@@ -7274,8 +7019,7 @@
           "nodeHeight": 299.25665470070646
         },
         "_pulseActive": false,
-        "_lastActiveTime": "12:00",
-        "selected": false
+        "_lastActiveTime": "12:00"
       }
     },
     {
@@ -7292,7 +7036,7 @@
               "name": "boolean"
             },
             "label": "#1",
-            "id": "fbe37df8f35486b3",
+            "id": "03f9e0643253afaa",
             "control": null,
             "showControl": true
           },
@@ -7301,7 +7045,7 @@
               "name": "boolean"
             },
             "label": "#2",
-            "id": "21221a8843593446",
+            "id": "fa216a83e54ec59b",
             "control": null,
             "showControl": true
           },
@@ -7310,7 +7054,7 @@
               "name": "boolean"
             },
             "label": "#3",
-            "id": "e3b0d29fd549fe6e",
+            "id": "85978e05d2d3a003",
             "control": null,
             "showControl": true
           },
@@ -7319,7 +7063,7 @@
               "name": "boolean"
             },
             "label": "#4",
-            "id": "9e6930c99c023058",
+            "id": "d39f46887c25f2cf",
             "control": null,
             "showControl": true
           }
@@ -7331,7 +7075,7 @@
             },
             "label": "Message",
             "multipleConnections": true,
-            "id": "5ac42dd00ff3d6a2"
+            "id": "8dd6ca9ea948d5b3"
           }
         },
         "controls": {},
@@ -7368,7 +7112,7 @@
           "2": false,
           "3": false
         },
-        "_initTime": 1767650416136,
+        "_initTime": 1767823722394,
         "_settlingMs": 2000,
         "_messageQueue": [],
         "_isProcessingQueue": false,
@@ -7389,7 +7133,7 @@
               "name": "boolean"
             },
             "label": "Trigger",
-            "id": "d1e6c99e0924609e",
+            "id": "3d7bbe0f725922ef",
             "control": null,
             "showControl": true
           },
@@ -7398,7 +7142,7 @@
               "name": "any"
             },
             "label": "Effect",
-            "id": "0156c8f746c18323",
+            "id": "5afc5dd423cc918c",
             "control": null,
             "showControl": true
           },
@@ -7407,7 +7151,7 @@
               "name": "object"
             },
             "label": "HSV In",
-            "id": "2c72b996f4cbed4e",
+            "id": "0063ae233e458f69",
             "control": null,
             "showControl": true
           }
@@ -7419,7 +7163,7 @@
             },
             "label": "HSV Out",
             "multipleConnections": true,
-            "id": "24e5da3f788c3b1c"
+            "id": "c1aa5680293286d9"
           },
           "active": {
             "socket": {
@@ -7427,7 +7171,7 @@
             },
             "label": "Active",
             "multipleConnections": true,
-            "id": "9b3ebe0d91bc6d73"
+            "id": "f21beeb1d06d5757"
           },
           "applied": {
             "socket": {
@@ -7435,7 +7179,7 @@
             },
             "label": "Applied",
             "multipleConnections": true,
-            "id": "f4fd47905e59dea3"
+            "id": "918e7d67dc098a8d"
           }
         },
         "controls": {},
@@ -7466,9 +7210,9 @@
         "label": "Time Range (Continuous)",
         "properties": {
           "startHour": 6,
-          "startMinute": 0,
-          "endHour": 18,
-          "endMinute": 0,
+          "startMinute": 30,
+          "endHour": 8,
+          "endMinute": 30,
           "debug": false
         }
       }
@@ -7477,8 +7221,8 @@
       "id": "c4dc0023e14d7bce",
       "label": "AND Gate",
       "position": {
-        "x": -1838.2934684578638,
-        "y": 2648.4949578996466
+        "x": -1835.4411577706996,
+        "y": 2711.132457605734
       },
       "data": {
         "id": "c4dc0023e14d7bce",
@@ -7503,7 +7247,7 @@
               "name": "any"
             },
             "label": "Input",
-            "id": "3845ac0fcb2f9b71",
+            "id": "b09d3538f30e827c",
             "control": null,
             "showControl": true
           }
@@ -7515,7 +7259,7 @@
             },
             "label": "Output",
             "multipleConnections": true,
-            "id": "15eed5ca99445fff"
+            "id": "09e4e34ae8301dc1"
           }
         },
         "controls": {},
@@ -7530,1250 +7274,1281 @@
           "history": [],
           "currentValue": null,
           "messageCount": 0
-        },
-        "selected": false
+        }
       }
     },
     {
-      "id": "72fc19b55df3ce86",
-      "label": "State Machine",
+      "id": "2cd2c616b6e92d7a",
+      "label": "Sender",
       "position": {
-        "x": 12774.399807346155,
-        "y": 941.3514640908264
+        "x": -1544.4329677957853,
+        "y": 2252.6461275935976
       },
       "data": {
-        "inputs": {
-          "trigger": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Trigger",
-            "id": "56a10f417314b4d6",
-            "control": null,
-            "showControl": true
-          },
-          "reset": {
-            "socket": {
-              "name": "boolean"
-            },
-            "label": "Reset",
-            "id": "5f4ac37f35c2ba3d",
-            "control": null,
-            "showControl": true
-          },
-          "setState": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "Set State",
-            "id": "b5c73c497b2fe24a",
-            "control": null,
-            "showControl": true
-          }
-        },
-        "outputs": {
-          "state": {
-            "socket": {
-              "name": "any"
-            },
-            "label": "State",
-            "multipleConnections": true,
-            "id": "78281e5afe961dcb"
-          },
-          "stateIndex": {
-            "socket": {
-              "name": "number"
-            },
-            "label": "Index",
-            "multipleConnections": true,
-            "id": "a0bb01cd27a2259c"
-          },
-          "changed": {
-            "socket": {
-              "name": "boolean"
-            },
-            "label": "Changed",
-            "multipleConnections": true,
-            "id": "fa0b863a3ce28dc5"
-          }
-        },
-        "controls": {},
-        "label": "State Machine",
-        "id": "72fc19b55df3ce86",
-        "width": 260,
+        "id": "2cd2c616b6e92d7a",
+        "label": "Sender",
         "properties": {
-          "states": "idle,armed,triggered,cooldown",
-          "transitions": "idle→armed:true\narmed→triggered:true\ntriggered→cooldown:true\ncooldown→idle:true",
-          "currentState": "idle",
-          "previousState": "armed",
-          "debug": false
-        },
-        "selected": false
+          "bufferName": "Good Morning",
+          "lastValue": false,
+          "registeredName": "[Trigger]Good Morning",
+          "finalName": "[Trigger]Good Morning"
+        }
+      }
+    },
+    {
+      "id": "dada42bb305eeae1",
+      "label": "Receiver",
+      "position": {
+        "x": 9114.596259568449,
+        "y": 2021.4236044284319
+      },
+      "data": {
+        "id": "dada42bb305eeae1",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Good Morning",
+          "lastValue": false,
+          "lastTriggerSource": "Good Morning"
+        }
+      }
+    },
+    {
+      "id": "203db16d5df1c8dd",
+      "label": "Receiver",
+      "position": {
+        "x": 7226.690781506084,
+        "y": 1492.5647052111424
+      },
+      "data": {
+        "id": "203db16d5df1c8dd",
+        "label": "Receiver",
+        "properties": {
+          "selectedBuffer": "[Trigger]Good Morning",
+          "lastValue": false,
+          "lastTriggerSource": "Good Morning"
+        }
+      }
+    },
+    {
+      "id": "d3525706023035a1",
+      "label": "OR Gate",
+      "position": {
+        "x": 7561.736117891199,
+        "y": 1403.305522930938
+      },
+      "data": {
+        "id": "d3525706023035a1",
+        "label": "OR Gate",
+        "properties": {
+          "inputCount": 2,
+          "pulseMode": false
+        }
+      }
+    },
+    {
+      "id": "16e4c5eb23283240",
+      "label": "HSV Modifier",
+      "position": {
+        "x": 6623.750469236599,
+        "y": 4884.570776948701
+      },
+      "data": {
+        "id": "16e4c5eb23283240",
+        "label": "HSV Modifier",
+        "properties": {
+          "hueShift": 0,
+          "saturationScale": 1,
+          "brightnessScale": 254,
+          "enabled": true,
+          "presets": [],
+          "lastInputHSV": null,
+          "selectedBuffer": "",
+          "selectedHsvBuffer": "",
+          "lastOutputHSV": {
+            "hue": 0,
+            "saturation": 0,
+            "brightness": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "9d017474deec0bb7",
+      "label": "HA Device Field",
+      "position": {
+        "x": 1139.4844708002233,
+        "y": -2685.5408579505643
+      },
+      "data": {
+        "id": "9d017474deec0bb7",
+        "label": "HA Device Field",
+        "properties": {
+          "deviceId": "ha_sensor.sunshine_terrace_temperature",
+          "deviceName": "Sunshine terrace  Temperature",
+          "field": "state",
+          "lastValue": "66.2",
+          "filterType": "Sensor",
+          "letterFilter": "STU",
+          "searchText": ""
+        }
       }
     }
   ],
   "connections": [
     {
-      "id": "7141a9abcd1499d6",
+      "id": "0d80fbe88084ac22",
       "source": "18c61864ae674e4a",
       "target": "8d4af06d6181b1c6",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "e8fad54516e2f446",
+      "id": "b4f16af80b5df1da",
       "source": "b774e53e008efd8a",
       "target": "c01e165c7bfe62a5",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "5f0e53decae047e0",
+      "id": "65dde92481167da1",
       "source": "8480926f954c2743",
       "target": "ccf1a34014c85926",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "71f68b152cb685b3",
+      "id": "9a31b41192f2e896",
       "source": "d384f545fa2b7f45",
       "target": "d34623b94b64ad5c",
       "sourceOutput": "result",
       "targetInput": "in"
     },
     {
-      "id": "e999f15961b73c82",
+      "id": "0ba768ec2bd5e3fd",
       "source": "90d3eea48e12005f",
       "target": "6ff49671565a0255",
       "sourceOutput": "out",
       "targetInput": "a"
     },
     {
-      "id": "8d5bd2541b1f9993",
+      "id": "2c49710e1b11f611",
       "source": "f4dd2d2e6355d1c9",
       "target": "6ff49671565a0255",
       "sourceOutput": "value",
       "targetInput": "b"
     },
     {
-      "id": "fd0b6e58758b3383",
+      "id": "0fd2c2d21c5063e3",
       "source": "6ff49671565a0255",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "44592998e6d7740d",
+      "id": "695d46377cd360ff",
       "source": "13d7d35bcd11958e",
       "target": "32214cb284b6c445",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "9ee77f3f079ffca7",
+      "id": "3b7f6df395cb0fea",
       "source": "8b0054e3d5a4b49f",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "6dcb6d82d7bd6d12",
+      "id": "d8604e99c9b6a725",
       "source": "1556397fa0448d51",
       "target": "13d7d35bcd11958e",
       "sourceOutput": "hsv_out",
       "targetInput": "data_3"
     },
     {
-      "id": "66a6bbf6290c0a0e",
+      "id": "5aef9f0aa599f82b",
       "source": "bb5e204a7266087a",
       "target": "c602674304198387",
       "sourceOutput": "state",
       "targetInput": "trigger"
     },
     {
-      "id": "7393d394fbf7fd07",
+      "id": "4300ce538aa5efdb",
       "source": "d6bb910c707b1dd5",
       "target": "e0ea6f0875da65de",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "fe731ea1dbed5664",
+      "id": "a18e98f59eea9455",
       "source": "9e2a30f7a17e5bd5",
       "target": "2f7d4a81e11769d4",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "9e238fad5c2555b4",
+      "id": "31535ef839addc42",
       "source": "620d9422ac54e63e",
       "target": "57db63745a724bc3",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "9fdec7ecf698a334",
+      "id": "a9245e181bab8cc9",
       "source": "638e3dd2992d1984",
       "target": "642f583dff788b72",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "885ced4575ef8015",
+      "id": "5c133e2956c68cc0",
       "source": "80cb637e8dec510c",
       "target": "e2f1b055323b6048",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "1ec6948e2bef200c",
+      "id": "62ab8866486a4e87",
       "source": "80cb637e8dec510c",
       "target": "105adc7b3db42147",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "b2b58bec535fa71c",
+      "id": "a0bf94bafe423f7a",
       "source": "620d9422ac54e63e",
       "target": "f92212978a300d5a",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "9539769b94f5dfa9",
+      "id": "4c3b8f134ff837c5",
       "source": "f92212978a300d5a",
       "target": "dd6bece03850fcd1",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "e543027b619b1ad1",
+      "id": "5bf3939dee0c3dd4",
       "source": "c6a03d9be3047a22",
       "target": "0f7a5498635fd32f",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "eda711ecbdc113b2",
+      "id": "dbdfd4caa48d391d",
       "source": "bb5e204a7266087a",
       "target": "fa3dd8e92a6fb03f",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "07e0a19189a3cd8e",
+      "id": "d5f3734a75f2d634",
       "source": "56ee4fd527651afc",
       "target": "e318b65067c3608e",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "f5c9b21b8cff8814",
+      "id": "1a2f95b432f04641",
       "source": "bf71124258f2c9f4",
       "target": "af5d78eb391594ce",
       "sourceOutput": "isInRange",
       "targetInput": "a"
     },
     {
-      "id": "bcfc3bc720a6d549",
+      "id": "0a554c62374f37cf",
       "source": "c50730db0a8fc75b",
       "target": "af5d78eb391594ce",
       "sourceOutput": "value",
       "targetInput": "b"
     },
     {
-      "id": "e59541449e31a788",
+      "id": "8673ae685e4f050f",
       "source": "af5d78eb391594ce",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "0a4e03db4146612f",
+      "id": "0c10b5ec13e35b5e",
       "source": "af5d78eb391594ce",
       "target": "56ee4fd527651afc",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "c4285e8131e09ef2",
+      "id": "00232620bbce4658",
       "source": "3f6956273b66f32c",
       "target": "56ee4fd527651afc",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "8180d908c0ce6f1f",
+      "id": "5e3a1b255ffc7d11",
       "source": "a096aaaa5d139111",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "hsv_out",
       "targetInput": "data_0"
     },
     {
-      "id": "9d261bbec8eac68e",
+      "id": "1a0226e7e49e7541",
       "source": "50ff70ef0f2acc96",
       "target": "6ac17d4ab201b32b",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "8aaa4e448282d00d",
+      "id": "cec10b4314118744",
       "source": "e82bee10d637f7bd",
       "target": "39309e0384e43956",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "821c7351a978c1d8",
+      "id": "7e95f8ca33a0e023",
       "source": "043a50dbfccdcd71",
       "target": "6b63b8e9fb86837c",
       "sourceOutput": "out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "349dd95ea993240d",
+      "id": "04aa34b2ee508ccc",
       "source": "6b63b8e9fb86837c",
       "target": "39309e0384e43956",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "1f5be1aee34c937c",
+      "id": "5740c6702b58ce98",
       "source": "ccbfbe4498e0188d",
       "target": "48772a09399ce435",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "1f8cc93968b2b1a0",
+      "id": "c0a426d310272a67",
       "source": "2769561f4d1141e5",
       "target": "23c01481261e42d1",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "055d92c4aab02029",
+      "id": "a32dc7e879a195ad",
       "source": "83837d8f043f49cf",
       "target": "2769561f4d1141e5",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "4bb05913f3d15509",
+      "id": "c4b1ac701d47b0cd",
       "source": "83837d8f043f49cf",
       "target": "2769561f4d1141e5",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "5391ff600bd9f51f",
+      "id": "3c879a3566349636",
       "source": "4e9efb3c40202f3d",
       "target": "444d3a77af409b04",
       "sourceOutput": "output",
       "targetInput": "in"
     },
     {
-      "id": "db6438dbf5803dc9",
+      "id": "56e6c6a8c2ea521f",
       "source": "720bd29f88ec7e96",
       "target": "4e9efb3c40202f3d",
       "sourceOutput": "state",
       "targetInput": "in1"
     },
     {
-      "id": "be50fe8ff38e4d52",
+      "id": "536b8c5843f30403",
       "source": "537324f4d766e02b",
       "target": "15d23e2dcb5c4e04",
       "sourceOutput": "state",
       "targetInput": "input"
     },
     {
-      "id": "529f8a0835799b73",
-      "source": "e82bee10d637f7bd",
-      "target": "0c96213adb3281f4",
-      "sourceOutput": "out",
-      "targetInput": "trigger"
-    },
-    {
-      "id": "c9fe20f8812a91cd",
+      "id": "cdb2d5abdabc4a52",
       "source": "22ab7427bbcd0c0f",
       "target": "f655421d76358d81",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "7d5b3c11b382454d",
+      "id": "56d821872a93bd17",
       "source": "22ab7427bbcd0c0f",
       "target": "f655421d76358d81",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "1b338fd1ce9f5a95",
+      "id": "8cae9ab5228f6dfe",
       "source": "f655421d76358d81",
       "target": "f65af4c70a7f6f40",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "9f63dd9bfa31fa96",
+      "id": "45a80a8c16bf21ef",
       "source": "22ab7427bbcd0c0f",
       "target": "7bd022dda6f9f5b4",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "8bd07feb79f2f03d",
+      "id": "d179ca303cef34c8",
       "source": "22ab7427bbcd0c0f",
       "target": "7bd022dda6f9f5b4",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "26a9dafecb27d5a5",
+      "id": "1e40d275bcf4dcee",
       "source": "7bd022dda6f9f5b4",
       "target": "c1c9a5b0ed01c3b7",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_info"
     },
     {
-      "id": "d9502ce5e60abdfe",
+      "id": "700218ad2d048206",
       "source": "d5004b3611dddf0f",
       "target": "56ee4fd527651afc",
       "sourceOutput": "hsvInfo",
       "targetInput": "data_2"
     },
     {
-      "id": "ca16f90009716723",
+      "id": "19477909adb2ac33",
       "source": "ce37567d8626a0db",
       "target": "a3d39e49f47f28f7",
       "sourceOutput": "hsvInfo",
       "targetInput": "data_2"
     },
     {
-      "id": "d605126774e01cd5",
-      "source": "6dbc9bbdcd1943e0",
-      "target": "e4a99a5458a16357",
-      "sourceOutput": "device_state",
-      "targetInput": "device_state"
-    },
-    {
-      "id": "d085329f7efb9daa",
+      "id": "bd893fd735a5f0d4",
       "source": "a3d39e49f47f28f7",
       "target": "15bedae98acf174c",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "71316e3e81e7201c",
+      "id": "5baa317a77d2bf64",
       "source": "537324f4d766e02b",
       "target": "e5129f50942c3bf8",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "0060ddb41adf229e",
+      "id": "555179d5ffc01560",
       "source": "24035c8839725684",
       "target": "ce37567d8626a0db",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "6dbacfd53d900d38",
+      "id": "425188a41613361d",
       "source": "24035c8839725684",
       "target": "d5004b3611dddf0f",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "ccece0ecbab846de",
+      "id": "addd5b42ea9633d0",
       "source": "9e2a30f7a17e5bd5",
       "target": "771f2954e396349a",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "2e641c9bf78c7d2d",
+      "id": "31f10dc18372503b",
       "source": "9e2a30f7a17e5bd5",
       "target": "228368262223f1db",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "a74073d6106cbc2a",
+      "id": "f67e71f30df648f6",
       "source": "b697f1460c4c6614",
       "target": "d5686fc3e43513d6",
       "sourceOutput": "out",
       "targetInput": "in1"
     },
     {
-      "id": "5ee9fee8d91c23ba",
+      "id": "ca0e44f9e33232b7",
       "source": "a3d528fc57e1ff4d",
       "target": "6737e33f3ada4c82",
       "sourceOutput": "endTime",
       "targetInput": "endTime"
     },
     {
-      "id": "2572f824d3d962e7",
+      "id": "ffcb5301d1e7187d",
       "source": "a3d528fc57e1ff4d",
       "target": "6737e33f3ada4c82",
       "sourceOutput": "startTime",
       "targetInput": "startTime"
     },
     {
-      "id": "012ca5b691f0d9e9",
+      "id": "3a956bc315aedb24",
       "source": "50ff70ef0f2acc96",
       "target": "7d16f3641fda9279",
       "sourceOutput": "out",
       "targetInput": "input"
     },
     {
-      "id": "e5defb9737e55f91",
+      "id": "e646edd4d61b221f",
       "source": "983a98adf4480305",
       "target": "0cab81e8c5c154ff",
       "sourceOutput": "state",
       "targetInput": "in"
     },
     {
-      "id": "c21b50d9ec758765",
+      "id": "2dd681c3b26b402f",
       "source": "cb87122766b2be7d",
       "target": "771f2954e396349a",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "bc4c03c6d250e637",
+      "id": "698a5ddfa5292f2d",
       "source": "c4018a258f9c8fbd",
       "target": "c095e7b26b0c147e",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "0ae7548060bca666",
+      "id": "ade5178fedf703d8",
       "source": "d5686fc3e43513d6",
       "target": "c095e7b26b0c147e",
       "sourceOutput": "result",
       "targetInput": "trigger"
     },
     {
-      "id": "7127cb9b6dff138b",
+      "id": "f3bcd9372116baee",
       "source": "7f0c3b161bddd6d7",
       "target": "5b71b0de41e3a529",
       "sourceOutput": "state",
       "targetInput": "trigger"
     },
     {
-      "id": "166ab22d4405cb25",
+      "id": "f86e61d274cf3e3f",
       "source": "11b733bfd380b567",
       "target": "93d6f872bd5baf64",
       "sourceOutput": "output",
       "targetInput": "a"
     },
     {
-      "id": "4d5a4ba25da20c34",
+      "id": "8dc76211f9122931",
       "source": "49d07ae20033daef",
       "target": "93d6f872bd5baf64",
       "sourceOutput": "value",
       "targetInput": "b"
     },
     {
-      "id": "13aab0cc4be160c3",
+      "id": "6a9dcd0e27227398",
       "source": "93d6f872bd5baf64",
       "target": "65f3549d75b5278c",
       "sourceOutput": "out",
       "targetInput": "select"
     },
     {
-      "id": "b6319d884638b7bb",
+      "id": "576d11610e536b77",
       "source": "3a81e20d6e06835a",
       "target": "5ca77d693549fe84",
       "sourceOutput": "isInRange",
       "targetInput": "in1"
     },
     {
-      "id": "f944ee45405ee02f",
+      "id": "5766549c277cc7e0",
       "source": "65f3549d75b5278c",
       "target": "d7f72f4c35755d5d",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "c529e9560b127026",
+      "id": "6a66077f2cc3d04a",
       "source": "12a9e3f3ec9e1b68",
       "target": "65f3549d75b5278c",
       "sourceOutput": "hsvInfo",
       "targetInput": "data_2"
     },
     {
-      "id": "93f9eb85e339f782",
+      "id": "969e77dd49335fdc",
       "source": "7b0803eadc605db8",
       "target": "65f3549d75b5278c",
       "sourceOutput": "hsvInfo",
       "targetInput": "data_0"
     },
     {
-      "id": "e8e1a464a91f7c71",
-      "source": "e4a99a5458a16357",
-      "target": "7b0803eadc605db8",
-      "sourceOutput": "out_value",
-      "targetInput": "value"
-    },
-    {
-      "id": "fa4ec75235a210be",
+      "id": "3eb63b9691695f1c",
       "source": "94cd5cd2d98323af",
       "target": "12a9e3f3ec9e1b68",
       "sourceOutput": "changePercent",
       "targetInput": "value"
     },
     {
-      "id": "6c3d2275011c3aea",
+      "id": "d3b637fa41f46229",
       "source": "4cb66d05f6093141",
       "target": "5ca77d693549fe84",
       "sourceOutput": "isInRange",
       "targetInput": "in0"
     },
     {
-      "id": "83d03fb7c3592d9e",
+      "id": "3dd15a3b7d74f36f",
       "source": "5ca77d693549fe84",
       "target": "11b733bfd380b567",
       "sourceOutput": "result",
       "targetInput": "input"
     },
     {
-      "id": "4b4b72e56dc0d7ae",
+      "id": "3a93c81560058245",
       "source": "4e242756c2612585",
       "target": "5b71b0de41e3a529",
       "sourceOutput": "out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "ad9947435757c3a6",
+      "id": "87a63d36f3fb1838",
       "source": "d146b474737e06c7",
       "target": "d42bd5f074b47ab1",
       "sourceOutput": "isInRange",
       "targetInput": "in0"
     },
     {
-      "id": "4b7d8076572c3dac",
+      "id": "7556188fba407a90",
       "source": "ba9e40b6cde18e11",
       "target": "d42bd5f074b47ab1",
       "sourceOutput": "isInRange",
       "targetInput": "in1"
     },
     {
-      "id": "f3d1aaf5aac55c58",
+      "id": "b27d68a33f39c0d1",
       "source": "d42bd5f074b47ab1",
       "target": "5c2cc55af04e29d0",
       "sourceOutput": "result",
       "targetInput": "in1"
     },
     {
-      "id": "66219e6737cf2059",
+      "id": "7f46ef7b4e59cea5",
       "source": "5c2cc55af04e29d0",
       "target": "09acc1353342ccb0",
       "sourceOutput": "result",
       "targetInput": "trigger"
     },
     {
-      "id": "4ff2ad62709f16c2",
+      "id": "a2429942049d4dca",
       "source": "e3e2cab49fa297eb",
       "target": "9a4908a524f7808a",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "54f06c96c584cb18",
+      "id": "82f83f6f04799ffd",
       "source": "1d2f2f544a29e92e",
       "target": "d08ef8707ab0fba4",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "b5759690d772bc0e",
+      "id": "24f931c23d2aa322",
       "source": "510ee1d7dabbecff",
       "target": "b8140146b61cbe8b",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "62f15ca74417a2e2",
+      "id": "47c0d38a8fe42471",
       "source": "f1944ce140939e41",
       "target": "0f7a5498635fd32f",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "7b6b0dbc0ab3bfd3",
+      "id": "08879d093d6418ff",
       "source": "9289bd97b1d582f5",
       "target": "425da669f29b9c80",
       "sourceOutput": "out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "e3a6ff7bdaa8c650",
+      "id": "43a22539db035086",
       "source": "425da669f29b9c80",
       "target": "46fa426389043256",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "652e87116e808001",
+      "id": "eda02039d3211205",
       "source": "9ccb7efe133cf25a",
       "target": "94601ad50d4290d2",
       "sourceOutput": "out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "253352b077cab83c",
+      "id": "94fda202530ffa98",
       "source": "94601ad50d4290d2",
       "target": "74640383197a8ca7",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "d9b6cc6c47140d2d",
+      "id": "27813038b6b107f9",
       "source": "b2457172b83db337",
       "target": "94601ad50d4290d2",
       "sourceOutput": "isInRange",
       "targetInput": "trigger"
     },
     {
-      "id": "c6bca8967124e41b",
+      "id": "c0837d748bbb4ab0",
       "source": "b2457172b83db337",
       "target": "6180bbc25b4977c7",
       "sourceOutput": "isInRange",
       "targetInput": "in1"
     },
     {
-      "id": "f2138eca337e8bc6",
+      "id": "7f7291f396fc524b",
       "source": "6180bbc25b4977c7",
       "target": "74640383197a8ca7",
       "sourceOutput": "result",
       "targetInput": "trigger"
     },
     {
-      "id": "00d6bb78d1e4d72a",
+      "id": "ab48f088bb9388be",
       "source": "6180bbc25b4977c7",
       "target": "46fa426389043256",
       "sourceOutput": "result",
       "targetInput": "trigger"
     },
     {
-      "id": "c62d4bf7460e4347",
+      "id": "68f6fae1363ba427",
       "source": "b2457172b83db337",
       "target": "425da669f29b9c80",
       "sourceOutput": "isInRange",
       "targetInput": "trigger"
     },
     {
-      "id": "6066b37e291de357",
+      "id": "2a22ec64a73b0c45",
       "source": "29bfa4d945ceb5da",
       "target": "6180bbc25b4977c7",
       "sourceOutput": "out",
       "targetInput": "in0"
     },
     {
-      "id": "0ffaa122e1da7b29",
+      "id": "723151744e4223e5",
       "source": "c695cec7637a252f",
       "target": "4e9efb3c40202f3d",
       "sourceOutput": "out",
       "targetInput": "in2"
     },
     {
-      "id": "3cc57621c4dfe85d",
+      "id": "3562a4f16273f30d",
       "source": "41b1e60811ee1356",
       "target": "23c01481261e42d1",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "467591ed8dc59a55",
+      "id": "554d14170f435207",
       "source": "404d13489437db4f",
       "target": "d5686fc3e43513d6",
       "sourceOutput": "out",
       "targetInput": "in0"
     },
     {
-      "id": "fcb5fc2d0bafca6f",
+      "id": "be5c4b8f02bb6073",
       "source": "3e157bf1a086946f",
       "target": "f9e613cfd22bb224",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "9eb3eb33248d90cb",
+      "id": "b2f674652db4b52c",
       "source": "fd185ab6bd6ac2d0",
       "target": "5c2cc55af04e29d0",
       "sourceOutput": "out",
       "targetInput": "in0"
     },
     {
-      "id": "889e541680ca0869",
+      "id": "fea6d8fb0b125301",
       "source": "d75099b0931e7056",
       "target": "df1b591084715caa",
       "sourceOutput": "out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "50d6ca8f04b70829",
+      "id": "3780d7ca7e466ac6",
       "source": "df1b591084715caa",
       "target": "f9e613cfd22bb224",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "ecd867e7f0108c5c",
+      "id": "d51d8295dacd9902",
       "source": "82d02cb2283e4c10",
       "target": "df1b591084715caa",
       "sourceOutput": "isInRange",
       "targetInput": "trigger"
     },
     {
-      "id": "9626a1b57e8b7984",
-      "source": "5ca77d693549fe84",
-      "target": "52b8f443ab0acf3e",
-      "sourceOutput": "result",
-      "targetInput": "input"
-    },
-    {
-      "id": "41e7d61923c6fe04",
+      "id": "57b4002701cbd9e1",
       "source": "a9c967aef62c5f5e",
       "target": "27191efb1636eaf9",
       "sourceOutput": "out",
       "targetInput": "in1"
     },
     {
-      "id": "aebafdd8f15c6266",
+      "id": "329532ac9191d882",
       "source": "27191efb1636eaf9",
       "target": "01446a4eb12772bd",
       "sourceOutput": "result",
       "targetInput": "trigger"
     },
     {
-      "id": "db9f053869cf92b0",
+      "id": "74e167be3c3f74de",
       "source": "bb48d377b60c7dba",
       "target": "41c9816aac4a7837",
       "sourceOutput": "device_state",
       "targetInput": "device_state"
     },
     {
-      "id": "90c7f33c84f98d9c",
+      "id": "f2618a786ca3ef66",
       "source": "41c9816aac4a7837",
       "target": "21a4d2813b9f0315",
       "sourceOutput": "out_state",
       "targetInput": "in"
     },
     {
-      "id": "fde2cb8260fa6741",
+      "id": "7add6054f0c08006",
       "source": "21a4d2813b9f0315",
       "target": "8564c1d6bd04440b",
       "sourceOutput": "result",
       "targetInput": "in"
     },
     {
-      "id": "ccea520f77e722c3",
+      "id": "c9cacdfa4e3b0248",
       "source": "5e818ebd02a96d61",
       "target": "82b447ceac53ae67",
       "sourceOutput": "isInRange",
       "targetInput": "in0"
     },
     {
-      "id": "775016435349debf",
+      "id": "cb1f7eaaf4ca8578",
       "source": "31bdcd3d69a4e2ad",
       "target": "82b447ceac53ae67",
       "sourceOutput": "out",
       "targetInput": "in1"
     },
     {
-      "id": "109ea1d29f3ae766",
+      "id": "4a8c7a869e9df3cc",
       "source": "82b447ceac53ae67",
       "target": "27191efb1636eaf9",
       "sourceOutput": "result",
       "targetInput": "in0"
     },
     {
-      "id": "1b21d1386cf275cf",
+      "id": "3c195af67b2cb82e",
       "source": "b8b2168037d38a15",
       "target": "ff5f5d259cfeeb7f",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "a3391e8efa270389",
+      "id": "2692bb417288472e",
       "source": "cbad499a84025e4f",
       "target": "225b8fa7a816b1ad",
       "sourceOutput": "value",
       "targetInput": "in"
     },
     {
-      "id": "19ed6aec89f63215",
+      "id": "b4b03ec5e5d65214",
       "source": "225b8fa7a816b1ad",
       "target": "82b447ceac53ae67",
       "sourceOutput": "result",
       "targetInput": "in2"
     },
     {
-      "id": "2a04772b99fe3b70",
+      "id": "65e6226ea9427dc3",
       "source": "961c4d262b632efd",
       "target": "bf36409ba6577997",
       "sourceOutput": "value",
       "targetInput": "in"
     },
     {
-      "id": "410e42ecb0e557c2",
+      "id": "617e9af6a06cb270",
       "source": "961c4d262b632efd",
       "target": "e5a830aef8be2b75",
       "sourceOutput": "value",
       "targetInput": "in"
     },
     {
-      "id": "8a0d3523995bcf48",
+      "id": "ee79038952b557ee",
       "source": "e5a830aef8be2b75",
       "target": "72feea0c67d0fe48",
       "sourceOutput": "result",
       "targetInput": "in2"
     },
     {
-      "id": "040891d220f0dfda",
+      "id": "fbb1d51741ba7ca1",
       "source": "bf36409ba6577997",
       "target": "72feea0c67d0fe48",
       "sourceOutput": "result",
       "targetInput": "in1"
     },
     {
-      "id": "14461f361eafe550",
+      "id": "fe20e990a6413875",
       "source": "961c4d262b632efd",
       "target": "eb1ae0c03de1a53e",
       "sourceOutput": "value",
       "targetInput": "input"
     },
     {
-      "id": "f5dd6b7ecc345e37",
+      "id": "cc4d2701a8d485b3",
       "source": "23c891a32dcba27b",
       "target": "02cdc44a83e95f0a",
       "sourceOutput": "output",
       "targetInput": "trigger"
     },
     {
-      "id": "302068444e3c7523",
+      "id": "132028d942b3044b",
       "source": "a28b6cbc2f1c610b",
       "target": "48772a09399ce435",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "8a3c0f72f8e0fb5c",
+      "id": "ab47161f2000b379",
       "source": "e2ebe9e12e74d6aa",
       "target": "0c96213adb3281f4",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "ae2ebc679d13dae7",
+      "id": "6f13b3f8be91ae0d",
       "source": "6737e33f3ada4c82",
       "target": "65fb0c43fa87a894",
       "sourceOutput": "hsvInfo",
       "targetInput": "hsv_in"
     },
     {
-      "id": "f6fc6e64333e6186",
+      "id": "2548fbc4eb08bd74",
       "source": "65fb0c43fa87a894",
       "target": "04169d0d9714a784",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "f5c4dd164a0376f6",
+      "id": "800bb23e73d6c3e1",
       "source": "1a35f4f160273ad5",
       "target": "65fb0c43fa87a894",
       "sourceOutput": "isInRange",
       "targetInput": "trigger"
     },
     {
-      "id": "353ba5d1b147a510",
+      "id": "2ddc059a26c73a55",
       "source": "7ff37422eae2b4e1",
       "target": "670018467da88996",
       "sourceOutput": "isInRange",
       "targetInput": "trigger"
     },
     {
-      "id": "844bc0ab4ffa6bae",
+      "id": "aaba77c16a87899c",
       "source": "620d9422ac54e63e",
       "target": "670018467da88996",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "7db4e2458f23df10",
+      "id": "d7e3561cb6d9e532",
       "source": "670018467da88996",
       "target": "2c3e63e9a7123804",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "a21d64f4e00991a6",
+      "id": "fc5d202e793dddcc",
       "source": "57db63745a724bc3",
       "target": "9d3def13f1929305",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_in"
     },
     {
-      "id": "d0660cfeaec48eb9",
+      "id": "54f85d869fe04d6c",
       "source": "7ff37422eae2b4e1",
       "target": "9d3def13f1929305",
       "sourceOutput": "isInRange",
       "targetInput": "trigger"
     },
     {
-      "id": "453eb63ba2473657",
+      "id": "c743de2713b7cf90",
       "source": "9d3def13f1929305",
       "target": "8be42cfaab24b585",
       "sourceOutput": "hsv_out",
       "targetInput": "in"
     },
     {
-      "id": "46d9cc7167d72ddf",
+      "id": "fde2333c7a2b61a3",
       "source": "b0a717f0f92cd2f2",
       "target": "1073041896a8e3c2",
       "sourceOutput": "output",
       "targetInput": "message"
     },
     {
-      "id": "778b39a6a3224c58",
+      "id": "1a40d8c47d54b5a7",
       "source": "22ab7427bbcd0c0f",
       "target": "f65af4c70a7f6f40",
       "sourceOutput": "state",
       "targetInput": "trigger"
     },
     {
-      "id": "d81ecc704e794a87",
+      "id": "5f3f3e4b55a996c9",
       "source": "22ab7427bbcd0c0f",
       "target": "c1c9a5b0ed01c3b7",
       "sourceOutput": "state",
       "targetInput": "trigger"
     },
     {
-      "id": "4998ddc1a8dcb8b6",
+      "id": "f22bb74846998ebe",
       "source": "757c6f3bd4fd74dd",
       "target": "d938d69eac0092aa",
       "sourceOutput": "summary_text",
       "targetInput": "in"
     },
     {
-      "id": "f3ce725e0bf7f04c",
+      "id": "d8c0f3af28e9d73d",
       "source": "757c6f3bd4fd74dd",
       "target": "651e4974f94a2b89",
       "sourceOutput": "hourly_rain_value",
       "targetInput": "in"
     },
     {
-      "id": "92d76348ba8effc5",
+      "id": "988c87d6769f1535",
       "source": "dd75b44eb810d51a",
       "target": "fc8f51de0e9c1901",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "a7a46aae07f12c43",
+      "id": "b82fecb72c123e0a",
       "source": "dd75b44eb810d51a",
       "target": "e46cd6b5dc6675ee",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "0427517a45318df0",
+      "id": "66763e1563b08ffb",
       "source": "757c6f3bd4fd74dd",
       "target": "5b70aa0a10177bf8",
       "sourceOutput": "wind_value",
       "targetInput": "in"
     },
     {
-      "id": "f32939654040e2b6",
+      "id": "a5aeacb7ee303640",
       "source": "be2ed93d9f6eadf2",
       "target": "dfb19da6f8274644",
       "sourceOutput": "out",
       "targetInput": "in"
     },
     {
-      "id": "39b7f39f84c4a0a6",
+      "id": "14402f90bc9bd7b9",
       "source": "f0ef0c5eb9ec05fb",
       "target": "6839706cec0bc675",
       "sourceOutput": "text",
       "targetInput": "string1"
     },
     {
-      "id": "da63ee40b12bb44d",
+      "id": "853341ac5e45a8c1",
       "source": "446ff79d7d6c5666",
       "target": "6839706cec0bc675",
       "sourceOutput": "out",
       "targetInput": "string2"
     },
     {
-      "id": "2b4e80d2d45a64bb",
+      "id": "b9b6b659074719ea",
       "source": "6839706cec0bc675",
       "target": "b542ac42e47bd363",
       "sourceOutput": "result",
       "targetInput": "value_in"
     },
     {
-      "id": "fb9c5b11c0070a62",
+      "id": "06a92ce180ff6763",
       "source": "9e2a30f7a17e5bd5",
       "target": "ff5f5d259cfeeb7f",
       "sourceOutput": "out",
       "targetInput": "trigger"
     },
     {
-      "id": "b970c113c90b2f53",
+      "id": "66dbadfead297f8a",
       "source": "e47a5c86a13b2685",
       "target": "b0a717f0f92cd2f2",
       "sourceOutput": "output",
       "targetInput": "in3"
     },
     {
-      "id": "7560d3afce0a94fc",
+      "id": "675fcfc23bf2a985",
       "source": "04d01b18d19a8dbf",
       "target": "b0a717f0f92cd2f2",
       "sourceOutput": "output",
       "targetInput": "in2"
     },
     {
-      "id": "01791d0a35d192e9",
+      "id": "28258d1502563d09",
       "source": "b542ac42e47bd363",
       "target": "b0a717f0f92cd2f2",
       "sourceOutput": "output",
       "targetInput": "in1"
     },
     {
-      "id": "99b00c52ef0e9918",
+      "id": "582816fd21074931",
       "source": "1073041896a8e3c2",
       "target": "ef0d14a9788524f0",
       "sourceOutput": "trigger",
       "targetInput": "trigger"
     },
     {
-      "id": "15a61e1260e3c451",
+      "id": "575bcaccda3763b2",
       "source": "1073041896a8e3c2",
       "target": "ef0d14a9788524f0",
       "sourceOutput": "messageOut",
       "targetInput": "message"
     },
     {
-      "id": "7e17b839861bfe19",
+      "id": "b5aa43e55170d74a",
       "source": "fc8f51de0e9c1901",
       "target": "f29dbd11b611a57c",
       "sourceOutput": "result",
       "targetInput": "trigger_0"
     },
     {
-      "id": "40f614c9088950f6",
+      "id": "f4b06064047dabca",
       "source": "fc8f51de0e9c1901",
       "target": "f29dbd11b611a57c",
       "sourceOutput": "result",
       "targetInput": "trigger_1"
     },
     {
-      "id": "98c4254ebcafe28a",
+      "id": "455b2d5131b82607",
       "source": "e46cd6b5dc6675ee",
       "target": "f29dbd11b611a57c",
       "sourceOutput": "result",
       "targetInput": "trigger_2"
     },
     {
-      "id": "1aa572f1b1d4a3cb",
+      "id": "043af426e10a5cc3",
       "source": "f29dbd11b611a57c",
       "target": "b0a717f0f92cd2f2",
       "sourceOutput": "message",
       "targetInput": "in4"
     },
     {
-      "id": "abc26e5963bb108c",
+      "id": "6a9c5820cc5ba2ff",
       "source": "dfb19da6f8274644",
       "target": "f29dbd11b611a57c",
       "sourceOutput": "result",
       "targetInput": "trigger_3"
     },
     {
-      "id": "41633910e9029bd6",
+      "id": "2a30babf2f26226f",
       "source": "3fb3a20b014821a8",
       "target": "e8b3645f4f11e155",
       "sourceOutput": "out",
       "targetInput": "effect_name"
     },
     {
-      "id": "90215d8fbcb0a989",
+      "id": "96eb1d3cbe6f8727",
       "source": "e8b3645f4f11e155",
       "target": "228368262223f1db",
       "sourceOutput": "hsv_out",
       "targetInput": "hsv_info"
     },
     {
-      "id": "a6dc45e029ecdc84",
+      "id": "57f743269cbdd8f5",
       "source": "ef3dac149a8f3010",
       "target": "c4dc0023e14d7bce",
       "sourceOutput": "isInRange",
       "targetInput": "in0"
     },
     {
-      "id": "77a6ddc9787013e8",
+      "id": "61b14492447bb3f2",
       "source": "757c6f3bd4fd74dd",
       "target": "c4dc0023e14d7bce",
       "sourceOutput": "solar",
       "targetInput": "in1"
     },
     {
-      "id": "792932d5d00bba4e",
+      "id": "fac544f799033aa8",
       "source": "e729ec0fb980a9fe",
       "target": "ef0d14a9788524f0",
       "sourceOutput": "station",
       "targetInput": "station_grotto_guest"
     },
     {
-      "id": "a8261e5620811b6d",
+      "id": "bddcbd3bd7ba97df",
       "source": "e729ec0fb980a9fe",
       "target": "ef0d14a9788524f0",
       "sourceOutput": "volume",
       "targetInput": "vol_grotto_guest"
     },
     {
-      "id": "766f472225db65d4",
-      "source": "34214b6c22772c7f",
-      "target": "ef0d14a9788524f0",
-      "sourceOutput": "station",
-      "targetInput": "station_homepodoffice"
-    },
-    {
-      "id": "cd31f30d5bef9e71",
-      "source": "34214b6c22772c7f",
-      "target": "ef0d14a9788524f0",
-      "sourceOutput": "volume",
-      "targetInput": "vol_homepodoffice"
-    },
-    {
-      "id": "91f595531faa6eec",
-      "source": "c4dc0023e14d7bce",
-      "target": "d384f545fa2b7f45",
-      "sourceOutput": "result",
-      "targetInput": "in0"
-    },
-    {
-      "id": "bd468fa607a7aad6",
+      "id": "82846768ccf5d2ce",
       "source": "cb4c3820c4b47079",
       "target": "d384f545fa2b7f45",
       "sourceOutput": "state",
       "targetInput": "in1"
     },
     {
-      "id": "739a913a8801c972",
+      "id": "340dfa9304d59ba1",
       "source": "23c891a32dcba27b",
       "target": "81800f6ab4904aa5",
       "sourceOutput": "output",
       "targetInput": "input"
+    },
+    {
+      "id": "f1eac56dd03bda6e",
+      "source": "c4dc0023e14d7bce",
+      "target": "2cd2c616b6e92d7a",
+      "sourceOutput": "result",
+      "targetInput": "in"
+    },
+    {
+      "id": "12c9356ab9080fa4",
+      "source": "dada42bb305eeae1",
+      "target": "27191efb1636eaf9",
+      "sourceOutput": "out",
+      "targetInput": "in2"
+    },
+    {
+      "id": "365f96ed339f7415",
+      "source": "e82bee10d637f7bd",
+      "target": "d3525706023035a1",
+      "sourceOutput": "out",
+      "targetInput": "in0"
+    },
+    {
+      "id": "d54921efe24b7e8e",
+      "source": "203db16d5df1c8dd",
+      "target": "d3525706023035a1",
+      "sourceOutput": "out",
+      "targetInput": "in1"
+    },
+    {
+      "id": "1a2aa7888d0432af",
+      "source": "d3525706023035a1",
+      "target": "0c96213adb3281f4",
+      "sourceOutput": "result",
+      "targetInput": "trigger"
+    },
+    {
+      "id": "f29cdba916515244",
+      "source": "9d017474deec0bb7",
+      "target": "7b0803eadc605db8",
+      "sourceOutput": "value",
+      "targetInput": "value"
     }
   ],
   "viewport": {
-    "x": -15345.007422970984,
-    "y": -990.9430955550099,
-    "k": 1.2661083020750479
+    "x": 30.610134453821388,
+    "y": 1607.6034488434516,
+    "k": 0.4273676552294956
   },
-  "syncedOnClose": true,
-  "timestamp": 1767670648469
+  "autoSaved": true,
+  "timestamp": 1767823843343
 }

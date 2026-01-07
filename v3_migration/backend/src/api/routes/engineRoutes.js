@@ -296,8 +296,10 @@ router.get('/device-states', async (req, res) => {
           let expectedState = 'unknown';
           
           // First check deviceStates (tracks actual commands sent)
-          if (node.deviceStates && node.deviceStates[entityId] !== undefined) {
-            expectedState = node.deviceStates[entityId] ? 'on' : 'off';
+          // Note: deviceStates may be keyed with or without ha_ prefix - check both
+          const trackedState = node.deviceStates?.[entityId] ?? node.deviceStates?.[`ha_${entityId}`] ?? node.deviceStates?.[deviceId];
+          if (trackedState !== undefined) {
+            expectedState = trackedState ? 'on' : 'off';
           }
           // If trigger is connected, use trigger state
           else if (node.lastTrigger !== undefined && node.lastTrigger !== null) {
@@ -327,7 +329,7 @@ router.get('/device-states', async (req, res) => {
             lastTrigger: node.lastTrigger,
             hasHsvInput: !!node.lastSentHsv,
             expectedHsv: node.lastSentHsv || null,  // What color engine is sending
-            trackedState: node.deviceStates?.[entityId],
+            trackedState: trackedState,  // Already looked up above with fallback
             effectOverride: effectControlledEntities.has(entityId),  // Skip color check if Hue Effect active
             lastOutput: output
           });
@@ -377,12 +379,17 @@ router.get('/device-states', async (req, res) => {
       }
     }
     
+    // Include frontend status so dashboard can show appropriate message
+    const status = engine.getStatus();
+    
     res.json({
       success: true,
       deviceStates,
       tickCount: engine.tickCount,
       running: engine.running,
-      lastTickTime: engine.lastTickTime
+      lastTickTime: engine.lastTickTime,
+      frontendActive: status.frontendActive,
+      frontendLastSeen: status.frontendLastSeen
     });
   } catch (error) {
     res.status(500).json({
@@ -926,11 +933,25 @@ router.get('/logs/device-history', (req, res) => {
       const hasDeviceCategory = deviceCategories.some(cat => line.includes(`[${cat}]`));
       if (!hasDeviceCategory) continue;
       
+      // Match ISO timestamp at start: [2026-01-06T10:06:00.000Z]
       const timestampMatch = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\]/);
-      if (!timestampMatch) continue;
+      if (!timestampMatch) {
+        // Also try legacy format without ISO: [10:06 AM]
+        // For legacy logs, skip time filtering (we can't know the date)
+        const legacyMatch = line.match(/^\[(\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M)\]/);
+        if (!legacyMatch) continue;
+        // For legacy format, include line but we can't filter by time
+      }
       
-      const timestamp = new Date(timestampMatch[1]);
-      if (timestamp < cutoff) continue;
+      let timestamp;
+      if (timestampMatch) {
+        timestamp = new Date(timestampMatch[1]);
+        if (timestamp < cutoff) continue;
+      } else {
+        // Legacy format - use current date with parsed time
+        // This is approximate but allows viewing recent logs
+        timestamp = new Date(); // Will be approximate
+      }
       
       // Extract entity ID if present (in message or data)
       const entityMatch = line.match(/((?:light|switch|sensor|climate|cover|fan|media_player)\.[a-z0-9_]+)/i);
@@ -938,8 +959,9 @@ router.get('/logs/device-history', (req, res) => {
       
       if (entityFilter && entityId && !entityId.includes(entityFilter)) continue;
       
-      // Extract category - match the second [...] block (first is timestamp)
-      const categoryMatch = line.match(/^\[[^\]]+\]\s*\[([A-Z0-9-]+)\]/);
+      // Extract category - now third [...] block (ISO, local time, then category)
+      // Or second [...] block for legacy format
+      const categoryMatch = line.match(/\[([A-Z][A-Z0-9-]+)\]/);
       const category = categoryMatch ? categoryMatch[1] : 'UNKNOWN';
       
       // Extract action/message - everything after the second bracket up to pipe or end

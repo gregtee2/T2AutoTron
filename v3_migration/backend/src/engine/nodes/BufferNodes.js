@@ -166,6 +166,12 @@ class ReceiverNode {
 
 /**
  * HSVModifierNode - Modifies HSV values from buffer
+ * 
+ * Supports two modes:
+ * 1. Direct input via hsv_in socket (applies slider modifications)
+ * 2. Buffer override via selectedHsvBuffer (bypasses sliders, outputs buffer directly)
+ * 
+ * Enable control priority: selectedBuffer (trigger buffer) > enable socket > enabled checkbox
  */
 class HSVModifierNode {
   static type = 'HSVModifierNode';
@@ -175,37 +181,78 @@ class HSVModifierNode {
     this.id = id;
     this.type = HSVModifierNode.type;
     this.properties = {
+      // Legacy property name
       bufferName: properties.bufferName || '',
+      // Frontend property names (match HSVModifierNode.js plugin)
+      selectedBuffer: properties.selectedBuffer || '',      // Enable trigger buffer
+      selectedHsvBuffer: properties.selectedHsvBuffer || '', // HSV source buffer
+      enabled: properties.enabled !== false,                 // Checkbox default
+      // Slider values
+      hueShift: properties.hueShift || 0,
+      saturationScale: properties.saturationScale ?? 1.0,
+      brightnessScale: properties.brightnessScale ?? 254,
+      // Legacy names (for backwards compat)
       hueOffset: properties.hueOffset || 0,
       saturationMultiplier: properties.saturationMultiplier || 1,
       brightnessMultiplier: properties.brightnessMultiplier || 1,
       ...properties
     };
-    this.inputs = ['hueOffset', 'satMult', 'briMult'];
+    this.inputs = ['hsv_in', 'enable', 'hueOffset', 'satMult', 'briMult'];
     this.outputs = ['hsv_out'];
   }
   
   process(inputs) {
-    const bufferName = this.properties.bufferName;
-    const baseHSV = bufferName ? AutoTronBuffer.get(bufferName) : null;
+    // Get HSV input from socket
+    const hsvIn = inputs.hsv_in?.[0];
+    const enableIn = inputs.enable?.[0];
     
-    if (!baseHSV || typeof baseHSV !== 'object') {
+    // 1. Determine if node is enabled
+    // Priority: Enable Buffer > Socket input > Checkbox
+    let isEnabled = this.properties.enabled;
+    if (enableIn !== undefined) {
+      isEnabled = !!enableIn;
+    }
+    if (this.properties.selectedBuffer) {
+      const bufferVal = AutoTronBuffer.get(this.properties.selectedBuffer);
+      if (bufferVal !== undefined) {
+        isEnabled = !!bufferVal;
+      }
+    }
+    
+    // If disabled, output null
+    if (!isEnabled) {
       return { hsv_out: null };
     }
     
-    // Get modifiers from inputs or properties
-    const hueOffset = inputs.hueOffset ?? this.properties.hueOffset ?? 0;
-    const satMult = inputs.satMult ?? this.properties.saturationMultiplier ?? 1;
-    const briMult = inputs.briMult ?? this.properties.brightnessMultiplier ?? 1;
+    // 2. Check for HSV Buffer override (bypasses sliders entirely)
+    const hsvBufferName = this.properties.selectedHsvBuffer || this.properties.bufferName;
+    if (hsvBufferName) {
+      const bufferVal = AutoTronBuffer.get(hsvBufferName);
+      if (bufferVal && typeof bufferVal === 'object' && 'hue' in bufferVal) {
+        // Output HSV buffer directly (bypass slider modifications)
+        return { hsv_out: bufferVal };
+      }
+    }
     
-    // Apply modifications
-    let hue = (baseHSV.hue || 0) + hueOffset;
-    // Wrap hue to 0-1 range
-    while (hue < 0) hue += 1;
-    while (hue > 1) hue -= 1;
+    // 3. No input? Return default
+    if (!hsvIn || typeof hsvIn !== 'object') {
+      return { hsv_out: { hue: 0, saturation: 0, brightness: 0 } };
+    }
     
-    const saturation = Math.max(0, Math.min(1, (baseHSV.saturation || 0) * satMult));
-    const brightness = Math.max(0, Math.min(254, (baseHSV.brightness || 0) * briMult));
+    // 4. Apply slider modifications to socket input
+    // Get modifiers from inputs or properties (support both old and new names)
+    const hueOffset = inputs.hueOffset?.[0] ?? this.properties.hueShift ?? this.properties.hueOffset ?? 0;
+    const satMult = inputs.satMult?.[0] ?? this.properties.saturationScale ?? this.properties.saturationMultiplier ?? 1;
+    const briMult = inputs.briMult?.[0] ?? this.properties.brightnessScale ?? this.properties.brightnessMultiplier ?? 254;
+    
+    // Apply hue shift (input is 0-1, shift is in degrees on frontend but stored as 0-360)
+    let hue = ((hsvIn.hue || 0) * 360 + hueOffset) % 360;
+    if (hue < 0) hue += 360;
+    hue = hue / 360; // Convert back to 0-1 range
+    
+    // Saturation and brightness use scale values directly
+    const saturation = Math.max(0, Math.min(1, satMult));
+    const brightness = Math.max(0, Math.min(254, briMult));
     
     return {
       hsv_out: {

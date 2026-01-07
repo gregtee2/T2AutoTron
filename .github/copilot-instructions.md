@@ -35,6 +35,35 @@ Eliminating duplicate code between frontend plugins (47 files) and backend engin
 
 ---
 
+## ⚠️ CRITICAL: Frontend/Backend Priority Design (DO NOT CHANGE)
+
+**This design was carefully implemented. Do NOT modify without explicit user approval.**
+
+### The Architecture
+1. **Frontend is in control** while browser is open (sending heartbeats)
+2. **Backend engine notes all changes** but does NOT send device commands
+3. **When browser closes/sleeps** (no heartbeat for 30 seconds), backend takes over
+4. **Backend syncs to current state** - it knows what frontend was doing
+
+### Why This Matters
+- User's manual changes are preserved (not overwritten by engine)
+- HSV color nodes continuously output values - device nodes ignore them if device is OFF
+- Engine's `shouldSkipDeviceCommands()` returns TRUE while frontend is active
+- Log shows `[HA-DEVICE-SKIP] Frontend active, skipping command` - this is CORRECT behavior
+
+### Key Files
+- `backend/src/engine/BackendEngine.js` - `shouldSkipDeviceCommands()`, `setFrontendActive()`
+- `frontend/src/App.jsx` - Sends `editor-active` and heartbeats via socket
+- `backend/src/api/routes/engineRoutes.js` - Receives `editor-active` events
+
+### Common Mistakes to Avoid
+❌ Don't make backend send commands while frontend is active
+❌ Don't change the 30-second heartbeat timeout without discussion  
+❌ Don't assume "frontend active = blocking bug" - it's intentional
+✅ If colors aren't updating, the bug is in FRONTEND, not backend
+
+---
+
 ## 🦴 Caveman Explanations (IMPORTANT - READ THIS FIRST)
 
 **The project owner is not a programmer.** When explaining problems, fixes, or concepts:
@@ -83,6 +112,37 @@ When documenting fixes or explaining problems, use this format:
 ---
 
 ### Recent Caveman Fixes:
+
+#### Hue/WiZ Effect Restore Turning Lights ON at Midnight (2026-01-06) - v2.1.207
+- **What broke**: Office Floor Lights stayed ON at midnight when the effect trigger went FALSE. Debug Dashboard showed "Engine says OFF, HA says ON".
+- **Why it broke**: HueEffectNode's `restorePreviousStates()` was turning lights back ON because they were ON when the effect started. This overrode the downstream HAGenericDeviceNode's turn_off command.
+- **The fix**: Modified `restorePreviousStates()` in both backend HADeviceNodes.js and frontend HueEffectNode.js to only clear the effect (`effect: 'none'`), NOT restore on/off state. Same fix applied to WizEffectNode.
+- **Now it works because**: Effect nodes only clear the effect. On/off control is exclusively handled by downstream HAGenericDeviceNode - no more override fight.
+
+---
+
+#### Debug Node Breaking Data Flow in Engine (2026-01-06) - v2.1.211
+- **What broke**: Bar Lamp showing Green (128°) but Debug Dashboard says "Engine sending Blue (245°)". The Conditional Switch was selecting the wrong Timeline Color.
+- **Why it broke**: The graph has: Debug Node → Conditional Integer Output → Conditional Switch → Sender → Receiver → Device. The Debug node was marked as `null` (frontend-only) in the backend registry, so it didn't exist in the engine. The Conditional Integer Output got `undefined` for its `a` input (should be `true` from Debug), which made it output `false` instead of `2`, causing the switch to select input 0 (blue) instead of input 2 (green).
+- **The fix**: Added a backend `DebugNode` implementation in `UtilityNodes.js` - simple pass-through that returns `{ output: input }`. Updated `BackendNodeRegistry.js` to map `'Debug'` to `'DebugNode'` instead of `null`.
+- **Now it works because**: Data flows through Debug nodes on the backend just like on the frontend. The Debug node passes through its input unchanged, so downstream nodes (like Conditional Integer Output) get the correct values.
+
+#### Backend Engine Not Mirroring Frontend State (2026-01-06) - v2.1.210
+- **What broke**: Debug Dashboard showed "State Mismatch" anomalies like "Engine says OFF, HA says ON" even though both frontend and backend were running correctly. The engine's `deviceStates` was out of sync with reality.
+- **Why it broke**: When frontend is active, the backend engine's `controlDevice()` was doing an early return to skip the API call - but it was ALSO skipping the internal state tracking! So when frontend turned a light ON, the engine's `deviceStates` never got updated.
+- **The fix**: In `HADeviceNodes.js` `controlDevice()`, moved the `deviceStates` update to happen BEFORE the `shouldSkipDeviceCommands()` check. Now the engine tracks state even when not sending commands.
+- **Now it works because**: The engine is now a true "mirror" of the frontend. It processes all the same logic and tracks the same state - it just doesn't send API calls when frontend is active. When frontend hands off (browser closes), engine is already in sync and ready to take over seamlessly.
+
+#### HAGenericDeviceNode Stale State After Overnight (2026-01-06) - v2.1.209
+- **What broke**: Device state bars showed stale/wrong values after overnight sessions. User would leave browser open, go to sleep, wake up, and the state bars showed yesterday's data (e.g., 81% brightness when device was actually OFF).
+- **Why it broke**: Chrome throttles JavaScript when screensaver/screen lock is active. Socket might disconnect/reconnect during the night. The `_onConnect` handler only fetched the device LIST, not individual device STATES. So after reconnection, dropdowns worked but state bars showed stale cached data from `perDeviceState`.
+- **The fix**: 
+  1. Added `refreshSelectedDeviceStates()` method that fetches fresh state for each selected device
+  2. Call it on socket `connect` (fires on initial connect AND reconnect)
+  3. Added `visibilitychange` listener - when user returns to tab, refresh states automatically
+- **Now it works because**: Every time the socket reconnects (after disconnect, page refresh, overnight hiccup), we now fetch fresh device states. Also, when you switch back to the T2 tab after it was in the background, states auto-refresh. No more stale data!
+
+---
 
 #### TTS Triple-Play Bug / Audio File Accumulation (2026-01-04) - v2.1.191
 - **What broke**: Clicking the TTS test button once would play the announcement 2-3 times in a row.
@@ -1425,7 +1485,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 
 ## Beta Release Status
 
-**Current Version: 2.1.175 | Status: Beta-Ready! 🎉**
+**Current Version: 2.1.208 | Status: Beta-Ready! 🎉**
 
 ### ✅ COMPLETED - Critical Items
 
@@ -1535,6 +1595,11 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 31 | **Server log spam cleanup** | v2.1.175 - Gated ALL routine logs behind `VERBOSE_LOGGING`. Removed: PUT logs, device update logs, CMD→/←STATE logs, cache refresh logs, audit OK logs, uptime logs. See LOGGING GUIDELINES section. |
 | 32 | **Device sync settling delay** | v2.1.187 - Lights no longer flash ON→OFF on graph load. Added 1-second settling delay before backend sends commands. |
 | 33 | **Browser close sync blocked** | v2.1.189 - Browsers block `beforeunload`/`pagehide`. Now uses `visibilitychange` to sync before close. |
+| 34 | **Hue/WiZ Effect restore bug** | v2.1.207 - Effect nodes were turning lights back ON at midnight. Now only clear effect, don't restore on/off state. |
+| 35 | **REFRESH button not fetching states** | v2.1.208 - REFRESH now fetches device states, not just dropdown list. Helps after overnight sessions. |
+| 36 | **Stale state after overnight** | v2.1.209 - Device state bars now auto-refresh on socket reconnect AND when user returns to tab (visibilitychange). No more stale data after sleep/screensaver. |
+| 37 | **Engine not mirroring frontend** | v2.1.210 - Engine's `deviceStates` was out of sync when frontend active. Moved state tracking BEFORE skip check in `controlDevice()`. Engine now mirrors frontend exactly. |
+| 38 | **Debug node breaking data flow** | v2.1.211 - Debug node was `null` (frontend-only) in backend registry. Added backend `DebugNode` pass-through implementation so data flows correctly through Debug → downstream nodes. |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 

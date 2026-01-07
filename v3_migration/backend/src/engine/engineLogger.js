@@ -184,7 +184,7 @@ function writeLog(line) {
 }
 
 /**
- * Main log function - writes with local timestamp
+ * Main log function - writes with ISO + local timestamp for both parsing and readability
  */
 function log(category, message, data = null) {
   if (!logStream) {
@@ -193,8 +193,10 @@ function log(category, message, data = null) {
   
   checkHourlySummary();
   
-  const time = formatTime();
-  let line = `[${time}] [${category}] ${message}`;
+  const now = new Date();
+  const isoTime = now.toISOString();
+  const localTime = formatTime(now);
+  let line = `[${isoTime}] [${localTime}] [${category}] ${message}`;
   
   if (data !== null && data !== undefined) {
     try {

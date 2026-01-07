@@ -33,6 +33,7 @@ class StockPriceNode {
     };
     this._lastFetchTime = 0;
     this._fetchPromise = null;
+    this._lastLoggedPrice = null;  // Track last logged price to reduce spam
   }
 
   restore(data) {
@@ -86,8 +87,11 @@ class StockPriceNode {
       const priceChange = currentPrice - previousClose;
       const changePercent = (priceChange / previousClose) * 100;
 
-      // Only log if price changed significantly (avoid spam for unchanged values)
-      const priceChanged = Math.abs((this.properties.lastPrice || 0) - currentPrice) > 0.01;
+      // Only log on significant price movement (> 0.5% from last logged) to reduce spam
+      // A stock going from $692.11 to $692.12 shouldn't log, but $692 to $695 should
+      const lastLogged = this._lastLoggedPrice || 0;
+      const pctChangeFromLastLog = lastLogged > 0 ? Math.abs((currentPrice - lastLogged) / lastLogged) * 100 : 999;
+      const shouldLog = pctChangeFromLastLog > 0.5 || this._lastLoggedPrice === null;
       
       this.properties.lastPrice = currentPrice;
       this.properties.priceChange = priceChange;
@@ -96,8 +100,9 @@ class StockPriceNode {
       this.properties.lastUpdate = new Date().toISOString();
       this.properties.error = null;
 
-      if (priceChanged) {
+      if (shouldLog) {
         console.log(`[StockPriceNode] ${symbol}: $${currentPrice.toFixed(2)} (${priceChange >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
+        this._lastLoggedPrice = currentPrice;  // Update last logged price
       }
 
     } catch (error) {

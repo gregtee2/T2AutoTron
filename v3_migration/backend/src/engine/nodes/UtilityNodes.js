@@ -1221,6 +1221,40 @@ class TTSMessageSchedulerNode {
 
 registry.register('TTSMessageSchedulerNode', TTSMessageSchedulerNode);
 
+/**
+ * DebugNode - Pass-through node for debugging
+ * 
+ * Frontend version displays values in the UI and logs to console.
+ * Backend version simply passes values through unchanged.
+ * This is needed because other nodes may wire through Debug nodes,
+ * and if Debug is null (frontend-only), the data chain breaks.
+ */
+class DebugNode {
+  constructor() {
+    this.id = null;
+    this.label = 'Debug';
+    this.properties = {
+      name: '',
+      enabled: true
+    };
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+
+  data(inputs) {
+    // Simply pass through the input value unchanged
+    // Frontend handles display/logging, backend just needs the data to flow
+    const input = inputs.input?.[0];
+    return { output: input };
+  }
+}
+
+registry.register('DebugNode', DebugNode);
+
 module.exports = {
   CounterNode,
   RandomNode,
@@ -1236,5 +1270,6 @@ module.exports = {
   TextStringNode,
   StringConcatNode,
   UpcomingEventsNode,
-  TTSMessageSchedulerNode
+  TTSMessageSchedulerNode,
+  DebugNode
 };

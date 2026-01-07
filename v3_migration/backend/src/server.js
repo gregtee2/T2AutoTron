@@ -16,6 +16,29 @@ const formatLocalTime = (date = new Date()) => {
   });
 };
 
+// ============================================
+// PATCH console.log/error to add local timestamps
+// This ensures ALL log output has timestamps, not just our own code
+// ============================================
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+console.log = (...args) => {
+  const timestamp = `[${formatLocalTime()}]`;
+  originalConsoleLog(timestamp, ...args);
+};
+
+console.error = (...args) => {
+  const timestamp = `[${formatLocalTime()}]`;
+  originalConsoleError(timestamp, ...args);
+};
+
+console.warn = (...args) => {
+  const timestamp = `[${formatLocalTime()}]`;
+  originalConsoleWarn(timestamp, ...args);
+};
+
 // Identify this server instance clearly (helps when multiple servers are accidentally running)
 console.log(`[Startup] PID=${process.pid} CWD=${process.cwd()}`);
 console.log(`[Startup] Local time: ${formatLocalTime()} (${TIMEZONE})`);

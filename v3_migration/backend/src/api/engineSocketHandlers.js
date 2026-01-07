@@ -242,9 +242,28 @@ async function autoStartEngine() {
       console.log('[Engine] No last active graph found');
     }
     
-    // Start the engine
+    // Enable notification batching before engine starts (prevents Telegram spam)
+    let notificationEmitter;
+    try {
+      notificationEmitter = io?.sockets?.notificationEmitter;
+      console.log('[Engine] Checking for notification batching:', notificationEmitter ? 'emitter found' : 'NO EMITTER');
+      if (notificationEmitter?.startBatch) {
+        console.log('[Engine] Starting notification batch mode...');
+        notificationEmitter.startBatch();
+      } else {
+        console.log('[Engine] WARNING: startBatch not available on emitter');
+      }
+    } catch (e) {
+      console.log('[Engine] Notification batching error:', e.message);
+    }
+    
+    // Start the engine (this runs reconciliation which triggers device state changes)
     await engine.start();
     console.log(`[Engine] Auto-started ${graphLoaded ? `with ${engine.nodes.size} nodes` : '(no graph loaded)'}`);
+    
+    // Note: Batch will auto-flush after 15 seconds of no new device changes
+    // No need to manually schedule flush - settling detection handles it
+    console.log('[Engine] Startup complete - batch will flush when device changes settle');
     
     // Start periodic device audit
     const deviceAudit = require('../engine/deviceAudit');

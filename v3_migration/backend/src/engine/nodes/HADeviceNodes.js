@@ -433,6 +433,148 @@ class HADeviceStateNode {
 }
 
 /**
+ * HADeviceFieldNode - Extracts a specific field from a Home Assistant entity
+ * 
+ * 🦴 Caveman Version:
+ * This is like HADeviceStateNode but simpler - you pick ONE field (like temperature)
+ * and that's all that comes out. Used by Timeline Color nodes to drive color
+ * based on temperature, humidity, or any sensor value.
+ */
+class HADeviceFieldNode {
+  constructor() {
+    this.id = null;
+    this.label = 'HA Device Field';
+    this.properties = {
+      deviceId: '',          // e.g., 'ha_sensor.temperature'
+      deviceName: '',        // Display name
+      field: 'state',        // Which field to extract
+      filterType: 'Sensor',  // For dropdown filtering
+      lastValue: null
+    };
+    this.lastPollTime = 0;
+    this.cachedValue = null;
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+      // Log restore in verbose mode
+      if (VERBOSE) {
+        console.log(`[HADeviceFieldNode ${this.id?.slice(0,8) || 'new'}] Restored: ${this.properties.deviceId} field:${this.properties.field}`);
+      }
+    }
+  }
+
+  async data(inputs) {
+    const now = Date.now();
+    const pollInterval = 5000; // Poll every 5 seconds
+    
+    // Skip if no device configured
+    if (!this.properties.deviceId) {
+      return { value: null };
+    }
+
+    // Poll at interval
+    if (now - this.lastPollTime >= pollInterval) {
+      this.lastPollTime = now;
+      
+      // Strip ha_ prefix for API call
+      let entityId = this.properties.deviceId;
+      if (entityId.startsWith('ha_')) {
+        entityId = entityId.replace('ha_', '');
+      }
+
+      // Get state from bulk cache
+      const state = await bulkStateCache.getState(entityId);
+      
+      if (state) {
+        // Extract the requested field
+        const field = this.properties.field || 'state';
+        let value = null;
+        
+        switch (field) {
+          case 'state':
+            value = state.state;
+            // Try to convert to number if it looks like a number
+            if (value && !isNaN(parseFloat(value))) {
+              value = parseFloat(value);
+            }
+            break;
+          case 'is_on':
+            value = state.state === 'on' || state.state === 'playing' || state.state === 'home';
+            break;
+          case 'brightness':
+            // Normalize to 0-100
+            value = state.attributes?.brightness 
+              ? Math.round((state.attributes.brightness / 255) * 100) 
+              : 0;
+            break;
+          case 'color_temp':
+            value = state.attributes?.color_temp ?? null;
+            break;
+          case 'temperature':
+          case 'current_temperature':
+            value = state.attributes?.current_temperature ?? state.attributes?.temperature ?? null;
+            break;
+          case 'humidity':
+            value = state.attributes?.humidity ?? null;
+            break;
+          case 'unit':
+            value = state.attributes?.unit_of_measurement ?? '';
+            break;
+          case 'volume':
+            value = state.attributes?.volume_level 
+              ? Math.round(state.attributes.volume_level * 100) 
+              : 0;
+            break;
+          case 'is_playing':
+            value = state.state === 'playing';
+            break;
+          case 'position':
+            value = state.attributes?.current_position ?? 0;
+            break;
+          case 'is_open':
+            value = state.state === 'open';
+            break;
+          case 'percentage':
+            value = state.attributes?.percentage ?? 0;
+            break;
+          case 'zone':
+            value = state.state;
+            break;
+          case 'is_home':
+            value = state.state === 'home';
+            break;
+          case 'is_locked':
+            value = state.state === 'locked';
+            break;
+          case 'is_unlocked':
+            value = state.state === 'unlocked';
+            break;
+          case 'battery_level':
+            value = state.attributes?.battery_level ?? null;
+            break;
+          case 'is_cleaning':
+            value = state.state === 'cleaning';
+            break;
+          case 'is_recording':
+            value = state.state === 'recording';
+            break;
+          default:
+            // Try to get from attributes
+            value = state.attributes?.[field] ?? state.state;
+        }
+        
+        this.cachedValue = value;
+        this.properties.lastValue = value;
+      }
+    }
+
+    return { value: this.cachedValue };
+  }
+}
+
+/**
  * HAServiceCallNode - Calls a Home Assistant service
  */
 class HAServiceCallNode {
@@ -727,17 +869,24 @@ class HAGenericDeviceNode {
   }
 
   async controlDevice(entityId, turnOn, hsv = null) {
-    // Check if frontend is active - if so, skip device commands to avoid conflict
-    const engine = getEngine();
-    if (engine && engine.shouldSkipDeviceCommands()) {
-      engineLogger.log('HA-DEVICE-SKIP', `Frontend active, skipping command for ${entityId}`, { turnOn });
-      return { success: true, skipped: true };
-    }
-
     const config = getHAConfig();
     if (!config.token || !entityId) {
       console.error('[HAGenericDeviceNode] No token or entityId');
       return { success: false };
+    }
+
+    // ALWAYS update internal state tracking - this keeps engine in sync with frontend
+    // Even if we skip the actual API call, we need to track what SHOULD be happening
+    this.deviceStates = this.deviceStates || {};
+    this.deviceStates[entityId] = turnOn;
+    this.deviceStates[`ha_${entityId}`] = turnOn;  // Also track with prefix for compatibility
+
+    // Check if frontend is active - if so, skip the API call to avoid conflict
+    // But we've already updated deviceStates above, so engine stays in sync
+    const engine = getEngine();
+    if (engine && engine.shouldSkipDeviceCommands()) {
+      engineLogger.log('HA-DEVICE-SKIP', `Frontend active, skipping API call for ${entityId} (state tracked: ${turnOn ? 'ON' : 'OFF'})`, { turnOn });
+      return { success: true, skipped: true };
     }
 
     // Determine domain from entity_id
@@ -1028,6 +1177,10 @@ class HAGenericDeviceNode {
     }
     
     if (risingEdge || fallingEdge || shouldActOnNewConnection || deviceMismatch) {
+      // Log the edge detection for debugging
+      const nodeLabel = this.properties.customTitle || this.label || this.id;
+      console.log(`[HAGenericDevice] ${nodeLabel}: Edge detected! trigger=${trigger}, lastTrigger=${this.lastTrigger}, risingEdge=${risingEdge}, fallingEdge=${fallingEdge}`);
+      
       engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, 
         risingEdge ? 'RISING_EDGE' : fallingEdge ? 'FALLING_EDGE' : deviceMismatch ? 'DEVICE_MISMATCH' : 'NEW_CONNECTION');
       this.lastTrigger = trigger;
@@ -1761,7 +1914,7 @@ class HueEffectNode {
       return;
     }
 
-    console.log(`[HueEffectNode] 🔄 Restoring ${Object.keys(prevStates).length} lights`);
+    console.log(`[HueEffectNode] 🔄 Clearing effect on ${entityIds.length} lights (NOT restoring on/off state)`);
 
     let successCount = 0;
     for (const entityId of entityIds) {
@@ -1771,36 +1924,36 @@ class HueEffectNode {
       const cleanId = entityId.replace('ha_', '');
 
       try {
-        // If light was off, turn it off
+        // IMPORTANT: Do NOT turn lights on/off here!
+        // The trigger-based on/off is handled by HAGenericDeviceNode.
+        // We only need to clear the effect and optionally restore the color.
+        //
+        // If we turn lights ON here when the trigger is going FALSE, the downstream
+        // HAGenericDeviceNode will try to turn them OFF, but there's a race condition
+        // where our turn_on might happen AFTER their turn_off.
+        //
+        // Instead, just clear the effect. The downstream node handles on/off.
+        
+        // If light was off before effect started, leave it - downstream will handle it
         if (!prev.on) {
-          await this.callHAService('light', 'turn_off', cleanId);
+          console.log(`[HueEffectNode] Light ${cleanId} was OFF before effect - skipping (downstream will handle)`);
           successCount++;
           continue;
         }
 
-        // Build service data to restore state
+        // Clear the effect only - downstream HSV input will apply the correct color
+        // Don't send brightness/color here as the Timeline/HSV input will provide that
         const serviceData = { effect: 'none' };
-
-        if (prev.brightness !== undefined && prev.brightness !== null) {
-          serviceData.brightness = prev.brightness;
-        }
-
-        if (prev.hs_color && Array.isArray(prev.hs_color) && prev.hs_color.length === 2) {
-          serviceData.hs_color = prev.hs_color;
-        } else if (prev.rgb_color && Array.isArray(prev.rgb_color) && prev.rgb_color.length === 3) {
-          serviceData.rgb_color = prev.rgb_color;
-        } else if (prev.color_temp !== undefined && prev.color_temp !== null) {
-          serviceData.color_temp = prev.color_temp;
-        }
-
+        
+        console.log(`[HueEffectNode] Clearing effect on ${cleanId} (was ON before effect)`);
         await this.callHAService('light', 'turn_on', cleanId, serviceData);
         successCount++;
       } catch (err) {
-        console.error(`[HueEffectNode] Error restoring ${entityId}:`, err.message);
+        console.error(`[HueEffectNode] Error clearing effect on ${entityId}:`, err.message);
       }
     }
 
-    console.log(`[HueEffectNode] ✅ Restored ${successCount}/${entityIds.length} lights`);
+    console.log(`[HueEffectNode] ✅ Cleared effect on ${successCount}/${entityIds.length} lights`);
     this.properties.previousStates = {};
     this.isEffectActive = false;
   }
@@ -1978,7 +2131,7 @@ class WizEffectNode {
       return;
     }
 
-    console.log(`[WizEffectNode] 🔄 Restoring ${Object.keys(prevStates).length} lights`);
+    console.log(`[WizEffectNode] 🔄 Clearing effect on ${entityIds.length} lights (NOT restoring on/off state)`);
 
     let successCount = 0;
     for (const entityId of entityIds) {
@@ -1988,34 +2141,27 @@ class WizEffectNode {
       const cleanId = entityId.replace('ha_', '');
 
       try {
-        // If light was off, turn it off
+        // IMPORTANT: Do NOT turn lights on/off here!
+        // The trigger-based on/off is handled by HAGenericDeviceNode downstream.
+        // We only need to clear the effect.
+        
+        // If light was off before effect started, skip it
         if (!prev.on) {
-          await this.callHAService('light', 'turn_off', cleanId);
+          console.log(`[WizEffectNode] Light ${cleanId} was OFF before effect - skipping (downstream will handle)`);
           successCount++;
           continue;
         }
 
-        // Build service data to restore state
-        const serviceData = {};
-
-        if (prev.brightness !== undefined && prev.brightness !== null) {
-          serviceData.brightness = prev.brightness;
-        }
-
-        if (prev.rgb_color && Array.isArray(prev.rgb_color) && prev.rgb_color.length === 3) {
-          serviceData.rgb_color = prev.rgb_color;
-        } else if (prev.color_temp !== undefined && prev.color_temp !== null) {
-          serviceData.color_temp = prev.color_temp;
-        }
-
-        await this.callHAService('light', 'turn_on', cleanId, serviceData);
+        // Just clear the effect - downstream HSV input will apply the correct color
+        console.log(`[WizEffectNode] Clearing effect on ${cleanId} (was ON before effect)`);
+        await this.callHAService('light', 'turn_on', cleanId, {});
         successCount++;
       } catch (err) {
-        console.error(`[WizEffectNode] Error restoring ${entityId}:`, err.message);
+        console.error(`[WizEffectNode] Error clearing effect on ${entityId}:`, err.message);
       }
     }
 
-    console.log(`[WizEffectNode] ✅ Restored ${successCount}/${entityIds.length} lights`);
+    console.log(`[WizEffectNode] ✅ Cleared effect on ${successCount}/${entityIds.length} lights`);
     this.properties.previousStates = {};
     this.isEffectActive = false;
   }
@@ -2069,6 +2215,7 @@ class WizEffectNode {
 registry.register('HADeviceStateNode', HADeviceStateNode);
 registry.register('HADeviceStateOutputNode', HADeviceStateNode);  // Alias
 registry.register('HADeviceStateDisplayNode', HADeviceStateDisplayNode);  // Passthrough display
+registry.register('HADeviceFieldNode', HADeviceFieldNode);  // Field extractor for Timeline Color
 registry.register('HAServiceCallNode', HAServiceCallNode);
 registry.register('HALightControlNode', HALightControlNode);
 registry.register('HAGenericDeviceNode', HAGenericDeviceNode);
@@ -2503,6 +2650,7 @@ registry.register('TTSAnnouncementNode', TTSAnnouncementNode);
 
 module.exports = { 
   HADeviceStateNode, 
+  HADeviceFieldNode,
   HAServiceCallNode, 
   HALightControlNode,
   HAGenericDeviceNode,

@@ -29,6 +29,19 @@ let lastGlobalSend = 0;
 const MIN_GLOBAL_MS = 5000;            // 5 sec between ANY messages
 const MIN_PER_DEVICE_MS = 10000;       // 10 sec between same message
 
+// Batching mode for startup/reconciliation
+// Uses "settling" approach: waits until no new changes for BATCH_SETTLE_MS
+let batchMode = false;
+let batchedChanges = { on: [], off: [] };
+let batchTimeout = null;
+let batchSettleTimeout = null;
+const BATCH_MAX_MS = 180000;           // Max 3 minutes of batching (safety limit)
+const BATCH_SETTLE_MS = 15000;         // Flush after 15 seconds of no new changes
+
+// Startup quiet period - suppress ALL individual device messages during startup
+let startupQuietUntil = 0;             // Timestamp when quiet period ends
+const STARTUP_QUIET_MS = 120000;       // 2 minutes of quiet after server start
+
 function setupNotifications(io) {
   const emitter = new EventEmitter();
 
@@ -49,6 +62,27 @@ function setupNotifications(io) {
     setTimeout(() => {
       drainScheduled = false;
       if (queue.length > 0) {
+        // If batch mode is now active, move queue items to batch instead of sending
+        const inQuietPeriod = Date.now() < startupQuietUntil;
+        if (batchMode || inQuietPeriod) {
+          // Move all queued device messages to batch
+          while (queue.length > 0) {
+            const item = queue.shift();
+            const turnedMatch = item.msg.match(/\*?(.+?)\*?\s+turned\s+\*?(ON|OFF)\*?/i);
+            if (turnedMatch) {
+              const [_, rawName, state] = turnedMatch;
+              const name = rawName.replace(/_/g, ' ').replace(/[*[\]`]/g, '').trim();
+              const isOn = state.toUpperCase() === 'ON';
+              if (isOn) {
+                if (!batchedChanges.on.includes(name)) batchedChanges.on.push(name);
+              } else {
+                if (!batchedChanges.off.includes(name)) batchedChanges.off.push(name);
+              }
+              log(`[Batch] Moved queued message to batch: ${name}`, 'info');
+            }
+          }
+          return;
+        }
         const next = queue.shift();
         sendImmediate(next.msg, next.deviceId);
       }
@@ -111,7 +145,32 @@ function setupNotifications(io) {
       const deviceId = name.toLowerCase().replace(/\s+/g, '_');
       const newState = { on: state.toUpperCase() === 'ON' };
       const oldState = deviceStates.get(deviceId);
+      
+      // Check if we're in batch/quiet mode
+      const inQuietPeriod = Date.now() < startupQuietUntil;
+      
       if (!oldState || oldState.on !== newState.on) {
+        // During startup quiet period OR batch mode, collect instead of sending
+        if (batchMode || inQuietPeriod) {
+          const isOn = state.toUpperCase() === 'ON';
+          if (isOn) {
+            if (!batchedChanges.on.includes(name)) batchedChanges.on.push(name);
+          } else {
+            if (!batchedChanges.off.includes(name)) batchedChanges.off.push(name);
+          }
+          deviceStates.set(deviceId, newState);
+          
+          // Reset settle timer - but only flush AFTER quiet period ends
+          if (batchSettleTimeout) clearTimeout(batchSettleTimeout);
+          const timeUntilQuietEnds = Math.max(0, startupQuietUntil - Date.now());
+          const flushDelay = Math.max(BATCH_SETTLE_MS, timeUntilQuietEnds + 5000);
+          batchSettleTimeout = setTimeout(() => {
+            log('[Notifications] Device changes settled - flushing batch', 'info');
+            flushBatch();
+          }, flushDelay);
+          
+          return;  // Don't send individual message
+        }
         send(message, deviceId);
         deviceStates.set(deviceId, newState);
       }
@@ -172,6 +231,107 @@ function setupNotifications(io) {
     // 5. Debug: log unmatched messages to help diagnose issues
     log(`Unmatched notification (no Telegram): ${message.substring(0, 100)}`, 'info');
   });
+
+  // Flush batched changes and send summary
+  const flushBatch = () => {
+    // During quiet period, don't actually flush yet
+    const inQuietPeriod = Date.now() < startupQuietUntil;
+    if (inQuietPeriod) {
+      log('[Notifications] Still in quiet period - deferring flush', 'info');
+      return;
+    }
+    
+    // Clear batch mode
+    batchMode = false;
+    
+    if (batchTimeout) {
+      clearTimeout(batchTimeout);
+      batchTimeout = null;
+    }
+    if (batchSettleTimeout) {
+      clearTimeout(batchSettleTimeout);
+      batchSettleTimeout = null;
+    }
+    
+    const onCount = batchedChanges.on.length;
+    const offCount = batchedChanges.off.length;
+    
+    if (onCount === 0 && offCount === 0) {
+      log('[Notifications] Batch complete - no device changes', 'info');
+      return;
+    }
+    
+    // Build summary message with all device names
+    // Telegram has a 4096 char limit, so we'll list all devices in a readable format
+    const lines = ['🔄 *Startup Sync Complete*', ''];
+    
+    if (onCount > 0) {
+      lines.push(`💡 *${onCount} devices turned ON:*`);
+      // Group into rows of 3 for readability
+      for (let i = 0; i < batchedChanges.on.length; i += 3) {
+        const row = batchedChanges.on.slice(i, i + 3).join(', ');
+        lines.push(`  ${row}`);
+      }
+      lines.push('');
+    }
+    
+    if (offCount > 0) {
+      lines.push(`🔌 *${offCount} devices turned OFF:*`);
+      for (let i = 0; i < batchedChanges.off.length; i += 3) {
+        const row = batchedChanges.off.slice(i, i + 3).join(', ');
+        lines.push(`  ${row}`);
+      }
+    }
+    
+    const summary = lines.join('\n');
+    sendImmediate(summary, 'batch_summary');
+    
+    log(`[Notifications] Batch sent: ${onCount} ON, ${offCount} OFF`, 'info');
+    
+    // Reset
+    batchedChanges = { on: [], off: [] };
+  };
+
+  // Start batching mode (call at startup/reconciliation)
+  const startBatch = () => {
+    batchMode = true;
+    batchedChanges = { on: [], off: [] };
+    
+    // Set startup quiet period - ALL device ON/OFF messages will be batched
+    startupQuietUntil = Date.now() + STARTUP_QUIET_MS;
+    log(`[Notifications] Startup quiet period active for ${STARTUP_QUIET_MS / 1000}s`, 'info');
+    
+    // Move any already-queued messages into the batch
+    if (queue.length > 0) {
+      log(`[Notifications] Moving ${queue.length} queued messages to batch`, 'info');
+      while (queue.length > 0) {
+        const item = queue.shift();
+        const turnedMatch = item.msg.match(/\*?(.+?)\*?\s+turned\s+\*?(ON|OFF)\*?/i);
+        if (turnedMatch) {
+          const [_, rawName, state] = turnedMatch;
+          const name = rawName.replace(/_/g, ' ').replace(/[*[\]`]/g, '').trim();
+          const isOn = state.toUpperCase() === 'ON';
+          if (isOn) {
+            if (!batchedChanges.on.includes(name)) batchedChanges.on.push(name);
+          } else {
+            if (!batchedChanges.off.includes(name)) batchedChanges.off.push(name);
+          }
+        }
+      }
+    }
+    
+    // Safety max timeout - flush after 3 minutes no matter what
+    if (batchTimeout) clearTimeout(batchTimeout);
+    batchTimeout = setTimeout(() => {
+      log('[Notifications] Batch max time reached - flushing', 'info');
+      flushBatch();
+    }, BATCH_MAX_MS);
+    log('[Notifications] Batch mode started - will flush after 15s of quiet', 'info');
+  };
+
+  // Expose batch controls on emitter
+  emitter.startBatch = startBatch;
+  emitter.flushBatch = flushBatch;
 
   return emitter;
 }

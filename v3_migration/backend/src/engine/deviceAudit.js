@@ -21,6 +21,10 @@ const engineIntendedStates = new Map();
 const AUDIT_INTERVAL = 5 * 60 * 1000;  // 5 minutes
 let auditIntervalId = null;
 
+// Track previously logged mismatches to avoid repeating the same ones
+// entityId → { issues: string[], lastLogged: timestamp }
+const previouslyLoggedMismatches = new Map();
+
 /**
  * Record what the engine intends for a device
  * Called whenever HAGenericDevice or similar sends a command
@@ -170,6 +174,18 @@ async function runAudit() {
  * Run audit and log results to engine log
  */
 async function auditAndLog() {
+  // Skip audit when frontend is active - user is manually controlling devices
+  // Mismatches are expected and intentional in this mode
+  try {
+    const { engine } = require('./index');
+    if (engine && engine.frontendActive) {
+      // Frontend is in control - don't spam logs with expected mismatches
+      return { success: true, skipped: true, reason: 'Frontend active' };
+    }
+  } catch (e) {
+    // Engine not available, continue with audit
+  }
+
   const results = await runAudit();
   
   if (!results.success) {
@@ -194,16 +210,38 @@ async function auditAndLog() {
     // All good (or only stale mismatches) - log to file only, not console
     engineLogger.log('AUDIT-OK', summary);
     // Removed console.log - too noisy. Check engineLogger for details.
+    previouslyLoggedMismatches.clear();  // Reset tracking when all clear
   } else {
-    // Fresh mismatches found - log to console (but compact format)
+    // Filter out mismatches we've already logged (same device + same issues)
+    const newMismatches = freshMismatches.filter(m => {
+      const prev = previouslyLoggedMismatches.get(m.entityId);
+      const issueKey = m.issues.sort().join('|');
+      if (prev && prev.issueKey === issueKey) {
+        // Same issue already logged - skip (unless it's been > 30 min)
+        const timeSinceLog = Date.now() - prev.lastLogged;
+        if (timeSinceLog < 30 * 60 * 1000) return false;
+      }
+      return true;
+    });
+
+    // Log new mismatches to file regardless
     engineLogger.log('AUDIT-MISMATCH', summary, { mismatches: freshMismatches });
-    
-    console.log(`[AUDIT] ⚠️ ${freshMismatches.length} device mismatches (recent):`);
-    for (const m of freshMismatches) {
-      const shortName = m.entityId.replace('light.', '').replace('switch.', '');
-      const staleMin = Math.round(m.staleness / 60000);
-      const issues = m.issues.join(', ');
-      console.log(`  • ${shortName}: ${issues} (${staleMin}min ago)`);
+
+    // Only console.log if there are NEW mismatches (not repeats)
+    if (newMismatches.length > 0) {
+      console.log(`[AUDIT] ⚠️ ${newMismatches.length} device mismatches (recent):`);
+      for (const m of newMismatches) {
+        const shortName = m.entityId.replace('light.', '').replace('switch.', '');
+        const staleMin = Math.round(m.staleness / 60000);
+        const issues = m.issues.join(', ');
+        console.log(`  • ${shortName}: ${issues} (${staleMin}min ago)`);
+        
+        // Track that we logged this
+        previouslyLoggedMismatches.set(m.entityId, {
+          issueKey: m.issues.sort().join('|'),
+          lastLogged: Date.now()
+        });
+      }
     }
   }
 

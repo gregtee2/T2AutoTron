@@ -770,17 +770,21 @@
             }
         }
         
-        // Detect server restart (uptime goes backwards)
-        function checkForServerRestart(newUptime) {
+        // Detect engine restart (uptime goes backwards)
+        function checkForEngineRestart(newUptime) {
             if (lastKnownUptime !== null && newUptime < lastKnownUptime) {
                 const restartEvent = {
                     time: new Date().toISOString(),
                     previousUptime: lastKnownUptime,
                     newUptime: newUptime
                 };
-                serverRestarts.push(restartEvent);
-                showToast(`⚠️ Server restart detected! (was ${lastKnownUptime}min, now ${newUptime}min)`, 'info');
-                showNotification('T2 Server Restarted', `Previous uptime: ${lastKnownUptime} min`);
+                engineRestarts.push(restartEvent);
+                // More informative message - user might be returning to tab after being away
+                const uptimeStr = newUptime < 60 
+                    ? `${newUptime} min ago` 
+                    : `${Math.round(newUptime / 60)} hrs ago`;
+                showToast(`ℹ️ Engine restarted while you were away (${uptimeStr})`, 'info');
+                showNotification('T2 Engine Restarted', `Current uptime: ${newUptime} min`);
                 savePersistedData();
             }
             lastKnownUptime = newUptime;
@@ -1347,12 +1351,20 @@
             
             try {
                 // Fetch engine's expected device states (what automation thinks should happen)
-                const [graphResponse, eventsResponse, buffersResponse, deviceStatesResponse] = await Promise.all([
+                const [graphResponse, eventsResponse, buffersResponse, deviceStatesResponse, engineStatusResponse] = await Promise.all([
                     fetch(`${url}/api/engine/last-active`).catch(() => ({ ok: false })),
                     fetch(`${url}/api/engine/logs/device-history?hours=${selectedHours}`),
                     fetch(`${url}/api/debug/all`),
-                    fetch(`${url}/api/engine/device-states`).catch(() => ({ ok: false }))
+                    fetch(`${url}/api/engine/device-states`).catch(() => ({ ok: false })),
+                    fetch(`${url}/api/engine/status`).catch(() => ({ ok: false }))
                 ]);
+                
+                // Check if frontend is active (user is manually controlling)
+                let frontendActive = false;
+                if (engineStatusResponse.ok) {
+                    const engineStatus = await engineStatusResponse.json();
+                    frontendActive = engineStatus.frontendActive || false;
+                }
                 
                 let graphNodes = [];
                 if (graphResponse.ok) {
@@ -1426,6 +1438,9 @@
                         const actualHsColor = haDevice?.state?.hs_color || null;
                         const actualBrightness = haDevice?.state?.brightness || null;
                         
+                        // Get supported color modes to know if light can display colors
+                        const supportedColorModes = haDevice?.attributes?.supported_color_modes || [];
+                        
                         // Engine's expected state and color
                         const expectedState = device.expectedState || 'unknown';
                         const expectedHsv = device.expectedHsv || null;
@@ -1445,7 +1460,8 @@
                             expectedHsv,    // What color engine is sending
                             actualHsColor,  // What color HA reports [h, s]
                             actualBrightness, // What brightness HA reports (0-100)
-                            effectOverride: device.effectOverride  // Hue Effect is overriding color
+                            effectOverride: device.effectOverride,  // Hue Effect is overriding color
+                            supportedColorModes  // What color modes the light supports (e.g., ['hs', 'color_temp'])
                         };
                     });
                 } else {
@@ -1514,7 +1530,7 @@
                     });
                 }
                 
-                const { anomalies, activity } = detectAnomalies(events, comparison);
+                const { anomalies, activity } = detectAnomalies(events, comparison, frontendActive);
                 
                 // Store for export
                 currentAnomalies = anomalies;
@@ -1530,7 +1546,7 @@
             }
         }
         
-        function detectAnomalies(events, comparison) {
+        function detectAnomalies(events, comparison, frontendActive = false) {
             const anomalies = [];  // Real problems
             const activity = [];   // Expected behavior, informational
             
@@ -1566,21 +1582,35 @@
             });
             
             // Check for engine expected vs actual state mismatch (THE KEY CHECK)
-            comparison.forEach(item => {
-                if (item.expectedState !== 'unknown' && item.actualState !== item.expectedState) {
-                    anomalies.push({
-                        type: 'critical',
-                        title: 'State Mismatch',
-                        details: `${item.nodeTitle || item.deviceName}: Engine says ${item.expectedState.toUpperCase()}, HA says ${item.actualState.toUpperCase()}`
-                    });
-                }
-            });
+            // SKIP if frontend is active - user is manually overriding, this is intentional!
+            if (frontendActive) {
+                activity.push({
+                    type: 'info',
+                    title: 'Frontend Active',
+                    details: 'User is manually controlling devices - state mismatches are expected and not flagged as bugs'
+                });
+            } else {
+                comparison.forEach(item => {
+                    if (item.expectedState !== 'unknown' && item.actualState !== item.expectedState) {
+                        anomalies.push({
+                            type: 'critical',
+                            title: 'State Mismatch',
+                            details: `${item.nodeTitle || item.deviceName}: Engine says ${item.expectedState.toUpperCase()}, HA says ${item.actualState.toUpperCase()}`
+                        });
+                    }
+                });
+            }
             
             // Check for COLOR mismatch (engine sending one color, light showing different color)
             // ONLY flag if the light is actually ON - if light is OFF, HSV commands are harmless/ignored
             // SKIP if effectOverride is true - Hue Effect is intentionally overriding the color
+            // SKIP if light doesn't support color - halogen/dimmable lights can't display colors
+            const COLOR_MODES = ['hs', 'rgb', 'rgbw', 'rgbww', 'xy'];  // Modes that support color
             comparison.forEach(item => {
-                if (item.expectedHsv && item.actualHsColor && item.actualState === 'on' && !item.effectOverride) {
+                // Check if this light actually supports color
+                const supportsColor = item.supportedColorModes?.some(mode => COLOR_MODES.includes(mode));
+                
+                if (item.expectedHsv && item.actualHsColor && item.actualState === 'on' && !item.effectOverride && supportsColor) {
                     // expectedHsv is { hue: 0-1, saturation: 0-1, brightness: 0-254 }
                     // actualHsColor is [hue: 0-360, saturation: 0-100]
                     const expectedHue = Math.round((item.expectedHsv.hue || 0) * 360);
@@ -1773,8 +1803,8 @@
             const uptimeMinutes = Math.floor((e.uptime || 0) / 60000);
             document.getElementById('engineUptime').textContent = uptimeMinutes;
             
-            // Check for server restart (uptime went backwards)
-            checkForServerRestart(uptimeMinutes);
+            // Check for engine restart (uptime went backwards)
+            checkForEngineRestart(uptimeMinutes);
             
             // Show restart count and history
             document.getElementById('engineRestarts').textContent = serverRestarts.length;
