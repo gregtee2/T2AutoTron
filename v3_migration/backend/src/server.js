@@ -786,6 +786,39 @@ app.get('/api/version', (req, res) => {
   });
 });
 
+// Endpoint to download Local Agent files for addon users
+app.get('/api/agent/download/:file', (req, res) => {
+  const { file } = req.params;
+  const allowedFiles = ['t2_agent.py', 'start_agent.bat', 'README.md'];
+  
+  if (!allowedFiles.includes(file)) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+  
+  const agentDir = path.join(__dirname, 'localAgent');
+  const filePath = path.join(agentDir, file);
+  
+  res.download(filePath, file, (err) => {
+    if (err) {
+      console.error('Agent file download error:', err);
+      res.status(500).json({ error: 'Failed to download file' });
+    }
+  });
+});
+
+// List available agent files
+app.get('/api/agent/files', (req, res) => {
+  res.json({
+    description: 'Local Agent files for controlling Chatterbox from T2 addon',
+    files: [
+      { name: 't2_agent.py', description: 'Python agent script (main file)' },
+      { name: 'start_agent.bat', description: 'Windows batch file to start agent' },
+      { name: 'README.md', description: 'Setup instructions' }
+    ],
+    downloadUrl: '/api/agent/download/'
+  });
+});
+
 // Endpoint to list plugins - Moved before static files to ensure priority
 app.get('/api/plugins', async (req, res) => {
   debug('API Request: /api/plugins');

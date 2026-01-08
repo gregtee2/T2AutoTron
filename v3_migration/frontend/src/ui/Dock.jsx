@@ -3,6 +3,7 @@ import './Dock.css';
 import { SettingsModal } from './SettingsModal';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 import { CameraPanel } from './CameraPanel';
+import { ChatterboxPanel } from './ChatterboxPanel';
 import { socket } from '../socket';
 import { getLoadingState } from '../registries/PluginLoader';
 import { onPluginProgress } from '../registries/PluginLoader';
@@ -31,6 +32,7 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
     const [graphExpanded, setGraphExpanded] = useState(true);
     const [statusExpanded, setStatusExpanded] = useState(true);
     const [camerasExpanded, setCamerasExpanded] = useState(false);
+    const [chatterboxExpanded, setChatterboxExpanded] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [connectionStatus, setConnectionStatus] = useState({
         backend: socket.connected,
@@ -564,6 +566,12 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
             <CameraPanel 
                 isExpanded={camerasExpanded} 
                 onToggle={() => setCamerasExpanded(!camerasExpanded)} 
+            />
+
+            {/* Chatterbox TTS Panel - only shows if Local Agent is available */}
+            <ChatterboxPanel
+                isExpanded={chatterboxExpanded}
+                onToggle={() => setChatterboxExpanded(!chatterboxExpanded)}
             />
 
             {/* Settings Section */}

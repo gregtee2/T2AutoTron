@@ -39,6 +39,15 @@ if exist "C:\Chatterbox\server.py" (
     echo  Chatterbox not installed - skipping local TTS
 )
 
+REM Start Local Agent (enables browser-to-desktop process control)
+set "AGENT_DIR=%SCRIPT_DIR%v3_migration\backend\src\localAgent"
+if exist "%AGENT_DIR%\agent.js" (
+    echo  Starting Local Agent on port 5050...
+    start "T2 Local Agent" /D "%AGENT_DIR%" /MIN cmd /c node agent.js
+) else (
+    echo  Local Agent not found - skipping
+)
+
 echo  Starting backend server...
 echo  Backend dir: %BACKEND_DIR%
 start "T2AutoTron Backend" /D "%BACKEND_DIR%" cmd /k npm start
