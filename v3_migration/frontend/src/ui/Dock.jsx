@@ -449,6 +449,7 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
             <div className="dock-header" style={{ cursor: isMerged ? 'default' : 'grab' }}>
                 <div className="dock-header-row">
                     <span className="dock-title">⚙️ Control Panel</span>
+                    {appVersion && <span className="dock-version" title="Running version">v{appVersion}</span>}
                     <button
                         type="button"
                         className="dock-btn-small"
