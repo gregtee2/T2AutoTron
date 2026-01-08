@@ -2,23 +2,30 @@
 title T2 Local Agent
 color 0B
 
-echo.
-echo  ===============================================
-echo     T2AutoTron Local Agent
-echo  ===============================================
-echo.
-echo  This agent allows the T2 web UI (even when running
-echo  on a remote device like a Pi) to control Chatterbox
-echo  on this computer.
-echo.
-
-REM Try to find Python from Chatterbox venv first
-if exist "C:\Chatterbox\venv\Scripts\python.exe" (
-    echo  Using Chatterbox Python environment...
-    "C:\Chatterbox\venv\Scripts\python.exe" "%~dp0t2_agent.py" %*
-) else (
-    echo  Using system Python...
-    python "%~dp0t2_agent.py" %*
+REM Check if Python is installed
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo  ============================================
+    echo     ERROR: Python is not installed!
+    echo  ============================================
+    echo.
+    echo  The T2 Local Agent requires Python 3.8+
+    echo.
+    echo  Please install Python from:
+    echo     https://www.python.org/downloads/
+    echo.
+    echo  Make sure to check "Add Python to PATH"
+    echo  during installation!
+    echo.
+    pause
+    exit /b 1
 )
 
+REM Run the agent (it has its own setup wizard)
+python "%~dp0t2_agent.py" %*
+
+REM If we get here, the agent stopped
+echo.
+echo  Agent stopped.
 pause
