@@ -1201,6 +1201,10 @@ app.use('/api/audio', audioRoutes);
 const createMediaRoutes = require('./api/routes/mediaRoutes');
 app.use('/api/media', createMediaRoutes(io));
 
+// Local Agent download routes (for Chatterbox control)
+const agentRoutes = require('./api/routes/agentRoutes');
+app.use('/api/agent', agentRoutes);
+
 // Initialize DeviceService
 debug('Initializing DeviceService...');
 async function initializeDeviceService() {

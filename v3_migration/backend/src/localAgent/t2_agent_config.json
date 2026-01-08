@@ -1,0 +1,8 @@
+{
+  "chatterbox_dir": "C:\\Chatterbox",
+  "chatterbox_python": "C:\\Chatterbox\\venv\\Scripts\\python.exe",
+  "chatterbox_script": "server.py",
+  "chatterbox_port": 8100,
+  "agent_port": 5050,
+  "setup_complete": true
+}
