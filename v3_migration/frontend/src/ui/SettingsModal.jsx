@@ -226,16 +226,16 @@ const SETTINGS_CONFIG = [
         icon: '🎙️',
         description: 'AI voice generation for TTS Announcement node',
         settings: [
-            { key: 'ELEVENLABS_API_KEY', label: 'API Key', placeholder: 'Your ElevenLabs API key', type: 'password', isSecret: true, hint: 'Get one at elevenlabs.io' },
-            { key: 'PUBLIC_URL', label: 'Public URL', placeholder: 'http://192.168.1.x:3000', type: 'text', hint: 'URL reachable by your speakers (for audio playback)' }
+            { key: 'ELEVENLABS_API_KEY', label: 'API Key', placeholder: 'Your ElevenLabs API key', type: 'password', isSecret: true, hint: 'Get one at elevenlabs.io' }
         ]
     },
     {
         category: 'Chatterbox TTS',
         icon: '🤖',
-        description: 'Local AI voice generation (requires GPU server)',
+        description: 'Local AI voice generation using Chatterbox. Requires a GPU machine.',
         settings: [
-            { key: 'CHATTERBOX_URL', label: 'Server URL', placeholder: 'http://localhost:8100', type: 'text', hint: 'URL of Chatterbox server (local or remote GPU machine)' }
+            { key: 'CHATTERBOX_URL', label: 'Chatterbox Server', placeholder: 'http://192.168.1.x:8100', type: 'text', hint: 'URL of Chatterbox running on your GPU machine (e.g., http://192.168.1.47:8100)' },
+            { key: 'PUBLIC_URL', label: 'Audio URL (for speakers)', placeholder: 'http://homeassistant.local:8123', type: 'text', hint: 'HA Addon: http://homeassistant.local:8123 | Desktop: http://YOUR_IP:3000' }
         ]
     },
     {

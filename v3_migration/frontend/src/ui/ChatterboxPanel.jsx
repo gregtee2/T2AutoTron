@@ -98,8 +98,25 @@ export function ChatterboxPanel({ isExpanded, onToggle }) {
                             <span className="status-dot stopped"></span>
                             Agent not running
                         </div>
+                        
+                        <div className="chatterbox-setup-guide">
+                            <div className="setup-title">📋 Setup Guide</div>
+                            <ol className="setup-steps">
+                                <li><strong>Install Chatterbox</strong> on a GPU machine (Windows/Linux)</li>
+                                <li><strong>Download the agent</strong> files below to that machine</li>
+                                <li><strong>Run start_agent.bat</strong> - it starts the agent on :5050</li>
+                                <li><strong>Settings → Chatterbox TTS:</strong>
+                                    <ul>
+                                        <li>Chatterbox Server: <code>http://GPU_IP:8100</code></li>
+                                        <li>Audio URL: <code>http://homeassistant.local:8123</code></li>
+                                    </ul>
+                                </li>
+                                <li><strong>Disable ad blocker</strong> for this page (blocks localhost)</li>
+                            </ol>
+                        </div>
+                        
                         <div className="chatterbox-hint">
-                            To control Chatterbox from T2, download and run the Local Agent on your desktop:
+                            Download to your GPU machine:
                         </div>
                         <div className="chatterbox-actions">
                             <a 

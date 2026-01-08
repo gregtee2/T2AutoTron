@@ -553,6 +553,48 @@
     font-style: italic;
 }
 
+.chatterbox-setup-guide {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+}
+
+.chatterbox-setup-guide .setup-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #7fdbff;
+    margin-bottom: 6px;
+}
+
+.chatterbox-setup-guide .setup-steps {
+    font-size: 11px;
+    color: #b0bec5;
+    margin: 0;
+    padding-left: 18px;
+    line-height: 1.6;
+}
+
+.chatterbox-setup-guide .setup-steps li {
+    margin-bottom: 4px;
+}
+
+.chatterbox-setup-guide .setup-steps ul {
+    margin: 2px 0 0 0;
+    padding-left: 14px;
+    list-style-type: disc;
+}
+
+.chatterbox-setup-guide .setup-steps code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 10px;
+    color: #7fdbff;
+}
+
 .chatterbox-hint {
     font-size: 11px;
     color: var(--theme-textMuted, #8892a0);
