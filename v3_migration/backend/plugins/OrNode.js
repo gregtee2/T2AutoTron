@@ -39,8 +39,11 @@
         data(inputs) {
             const values = this.getInputValues(inputs);
             
-            // OR logic: any input must be true
-            const result = values.some(v => v);
+            // Use shared logic if available, fallback to inline
+            const sharedLogic = window.T2SharedLogic || {};
+            const result = sharedLogic.calculateOr 
+                ? sharedLogic.calculateOr(values)
+                : values.some(v => v);
 
             return { result };
         }

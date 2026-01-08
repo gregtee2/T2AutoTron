@@ -1123,26 +1123,31 @@
                 // If device is off, don't apply HSV (and don't turn it on!)
                 if (!isCurrentlyOn) continue;
                 
-                // Parse HSV input into HA format
+                // Use shared logic if available, otherwise fallback to inline
+                const sharedLogic = window.T2SharedLogic || {};
                 let hs_color = null;
                 let color_temp_kelvin = null;
                 let brightness = null;
                 
-                const useTemp = info.mode === 'temp' && info.colorTemp;
-                if (useTemp) {
-                    color_temp_kelvin = info.colorTemp;
+                if (sharedLogic.normalizeHSVInput) {
+                    const normalized = sharedLogic.normalizeHSVInput(info);
+                    hs_color = normalized.hs_color;
+                    color_temp_kelvin = normalized.colorTemp;
+                    brightness = normalized.brightness;
                 } else {
-                    // Convert various HSV input formats to HA's hs_color [hue_degrees, saturation_percent]
-                    if (Array.isArray(info.hs_color)) hs_color = info.hs_color;
-                    else if (info.h !== undefined && info.s !== undefined) hs_color = [info.h, (info.s ?? 0) * 100];
-                    else if (info.hue !== undefined && info.saturation !== undefined) hs_color = [info.hue * 360, info.saturation * 100];
+                    // Fallback - inline logic
+                    const useTemp = info.mode === 'temp' && info.colorTemp;
+                    if (useTemp) {
+                        color_temp_kelvin = info.colorTemp;
+                    } else {
+                        if (Array.isArray(info.hs_color)) hs_color = info.hs_color;
+                        else if (info.h !== undefined && info.s !== undefined) hs_color = [info.h, (info.s ?? 0) * 100];
+                        else if (info.hue !== undefined && info.saturation !== undefined) hs_color = [info.hue * 360, info.saturation * 100];
+                    }
+                    if (info.brightness !== undefined) brightness = info.brightness;
+                    else if (info.v !== undefined) brightness = Math.round((info.v ?? 0) * 255);
+                    if (brightness === 0) brightness = 1;
                 }
-                
-                // Convert brightness to HA's 0-255 scale
-                if (info.brightness !== undefined) brightness = info.brightness;
-                else if (info.v !== undefined) brightness = Math.round((info.v ?? 0) * 255);
-                // Clamp to minimum 1 - HSV should never turn off a device
-                if (brightness === 0) brightness = 1;
                 
                 // Build HA payload - HA handles all device-specific translation
                 const payload = { on: true, state: "on" };
@@ -1195,18 +1200,25 @@
             let hs_color = null;
             let brightness = null;
             if (turnOn && hsvInfo && typeof hsvInfo === 'object') {
-                // Parse various HSV input formats to HA's hs_color format
-                if (Array.isArray(hsvInfo.hs_color)) {
-                    hs_color = hsvInfo.hs_color;
-                } else if (hsvInfo.h !== undefined && hsvInfo.s !== undefined) {
-                    hs_color = [hsvInfo.h, (hsvInfo.s ?? 0) * 100];
-                } else if (hsvInfo.hue !== undefined && hsvInfo.saturation !== undefined) {
-                    hs_color = [hsvInfo.hue * 360, hsvInfo.saturation * 100];
-                }
-                if (hsvInfo.brightness !== undefined) {
-                    brightness = Math.max(1, Math.min(255, Math.round(hsvInfo.brightness)));
-                } else if (hsvInfo.v !== undefined) {
-                    brightness = Math.max(1, Math.round((hsvInfo.v ?? 0) * 255));
+                const sharedLogic = window.T2SharedLogic || {};
+                if (sharedLogic.normalizeHSVInput) {
+                    const normalized = sharedLogic.normalizeHSVInput(hsvInfo);
+                    hs_color = normalized.hs_color;
+                    brightness = normalized.brightness;
+                } else {
+                    // Fallback - inline logic
+                    if (Array.isArray(hsvInfo.hs_color)) {
+                        hs_color = hsvInfo.hs_color;
+                    } else if (hsvInfo.h !== undefined && hsvInfo.s !== undefined) {
+                        hs_color = [hsvInfo.h, (hsvInfo.s ?? 0) * 100];
+                    } else if (hsvInfo.hue !== undefined && hsvInfo.saturation !== undefined) {
+                        hs_color = [hsvInfo.hue * 360, hsvInfo.saturation * 100];
+                    }
+                    if (hsvInfo.brightness !== undefined) {
+                        brightness = Math.max(1, Math.min(255, Math.round(hsvInfo.brightness)));
+                    } else if (hsvInfo.v !== undefined) {
+                        brightness = Math.max(1, Math.round((hsvInfo.v ?? 0) * 255));
+                    }
                 }
             }
             

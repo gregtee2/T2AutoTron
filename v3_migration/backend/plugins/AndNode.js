@@ -46,8 +46,11 @@
         data(inputs) {
             const values = this.getInputValues(inputs);
             
-            // AND logic: all inputs must be true
-            const rawResult = values.every(v => v);
+            // Use shared logic if available, fallback to inline
+            const sharedLogic = window.T2SharedLogic || {};
+            const rawResult = sharedLogic.calculateAnd 
+                ? sharedLogic.calculateAnd(values)
+                : values.every(v => v);
             
             // Handle pulse mode if enabled
             const result = this.handlePulseMode(rawResult);

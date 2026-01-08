@@ -3,9 +3,20 @@
  * 
  * These are pure logic implementations without React/browser dependencies.
  * They can run in Node.js on the server.
+ * 
+ * Uses shared logic from v3_migration/shared/logic/ where available.
  */
 
 const registry = require('../BackendNodeRegistry');
+
+// Import shared logic
+let sharedTimeRangeLogic;
+try {
+    sharedTimeRangeLogic = require('../../../../shared/logic/TimeRangeLogic');
+} catch (e) {
+    console.warn('[TimeNodes] Shared logic not found, using inline implementation');
+    sharedTimeRangeLogic = null;
+}
 
 /**
  * Convert frontend time format (hour, minute, ampm) to 24h minutes
@@ -260,43 +271,37 @@ class TimeRangeNode {
   }
 
   data(inputs) {
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    // Normalize properties to match shared logic format
+    let props = this.properties;
     
-    // Support both property formats
-    let startH, startM, endH, endM;
-    if (this.properties.startHour !== undefined) {
-      // New format: separate hour/minute properties
-      startH = this.properties.startHour;
-      startM = this.properties.startMinute || 0;
-      endH = this.properties.endHour;
-      endM = this.properties.endMinute || 0;
-    } else if (this.properties.startTime) {
-      // Old format: "HH:MM" strings
-      [startH, startM] = this.properties.startTime.split(':').map(Number);
-      [endH, endM] = this.properties.endTime.split(':').map(Number);
-    } else {
-      // Fallback
-      startH = 0; startM = 0;
-      endH = 23; endM = 59;
+    // Handle old "HH:MM" string format
+    if (props.startHour === undefined && props.startTime) {
+      const [startH, startM] = props.startTime.split(':').map(Number);
+      const [endH, endM] = props.endTime.split(':').map(Number);
+      props = { startHour: startH, startMinute: startM, endHour: endH, endMinute: endM };
     }
     
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
+    // Use shared logic if available
+    if (sharedTimeRangeLogic && sharedTimeRangeLogic.calculateTimeRange) {
+      const result = sharedTimeRangeLogic.calculateTimeRange(props);
+      return { isInRange: result.isInRange };
+    }
+    
+    // Fallback to inline logic
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const startMinutes = (props.startHour || 0) * 60 + (props.startMinute || 0);
+    const endMinutes = (props.endHour || 23) * 60 + (props.endMinute || 59);
     
     let isInRange;
     if (startMinutes < endMinutes) {
-      // Normal case (e.g., 08:00 to 18:00)
       isInRange = currentMinutes >= startMinutes && currentMinutes < endMinutes;
     } else if (startMinutes > endMinutes) {
-      // Cross midnight (e.g., 22:00 to 02:00 next day)
       isInRange = currentMinutes >= startMinutes || currentMinutes < endMinutes;
     } else {
-      // Same start/end => entire day
       isInRange = true;
     }
 
-    // Output 'isInRange' to match frontend plugin!
     return { isInRange };
   }
 }

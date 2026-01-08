@@ -50,8 +50,11 @@
             const val1 = !!inputs.in0?.[0];
             const val2 = !!inputs.in1?.[0];
             
-            // XOR logic: exactly one input must be true
-            const result = val1 !== val2;
+            // Use shared logic if available, fallback to inline
+            const sharedLogic = window.T2SharedLogic || {};
+            const result = sharedLogic.calculateXor 
+                ? sharedLogic.calculateXor([val1, val2])
+                : val1 !== val2;
 
             return { result };
         }

@@ -3,9 +3,19 @@
  * 
  * Counter, Random, State Machine, and other utility nodes.
  * Pure Node.js implementation - no React/browser dependencies.
+ * Uses shared logic from v3_migration/shared/logic/UtilityLogic.js
  */
 
 const registry = require('../BackendNodeRegistry');
+
+// Load shared utility logic
+let sharedUtilityLogic;
+try {
+  sharedUtilityLogic = require('../../../../shared/logic/UtilityLogic');
+} catch (e) {
+  console.warn('[UtilityNodes] Failed to load shared UtilityLogic, using inline fallback');
+  sharedUtilityLogic = null;
+}
 
 /**
  * CounterNode - Counts trigger events
@@ -21,13 +31,13 @@ class CounterNode {
       threshold: 10,
       autoReset: false
     };
-    this._lastTrigger = false;
-    this._lastReset = false;
+    this._state = { lastTrigger: false, lastReset: false };
   }
 
   restore(data) {
     if (data.properties) {
       Object.assign(this.properties, data.properties);
+      this._state.count = data.properties.count ?? 0;
     }
   }
 
@@ -35,18 +45,29 @@ class CounterNode {
     const trigger = inputs.trigger?.[0];
     const reset = inputs.reset?.[0];
     
-    // Handle reset
-    if (reset && !this._lastReset) {
+    if (sharedUtilityLogic?.processCounter) {
+      const result = sharedUtilityLogic.processCounter(
+        this._state,
+        this.properties,
+        trigger,
+        reset
+      );
+      this.properties.count = result.count;
+      return {
+        count: result.count,
+        threshold: result.thresholdReached
+      };
+    }
+    
+    // Fallback - inline logic
+    if (reset && !this._state.lastReset) {
       this.properties.count = this.properties.initial;
     }
-    this._lastReset = !!reset;
+    this._state.lastReset = !!reset;
     
-    // Handle trigger (edge detection)
     let thresholdReached = false;
-    if (trigger && !this._lastTrigger) {
+    if (trigger && !this._state.lastTrigger) {
       this.properties.count += this.properties.step;
-      
-      // Check threshold
       if (this.properties.count >= this.properties.threshold) {
         thresholdReached = true;
         if (this.properties.autoReset) {
@@ -54,7 +75,7 @@ class CounterNode {
         }
       }
     }
-    this._lastTrigger = !!trigger;
+    this._state.lastTrigger = !!trigger;
     
     return {
       count: this.properties.count,
@@ -88,12 +109,16 @@ class RandomNode {
 
   _generate() {
     const { min, max, integer } = this.properties;
-    let value = min + Math.random() * (max - min);
-    if (integer) {
-      value = Math.round(value);
+    if (sharedUtilityLogic?.generateRandom) {
+      this.properties.currentValue = sharedUtilityLogic.generateRandom(min, max, integer);
+    } else {
+      let value = min + Math.random() * (max - min);
+      if (integer) {
+        value = Math.round(value);
+      }
+      this.properties.currentValue = value;
     }
-    this.properties.currentValue = value;
-    return value;
+    return this.properties.currentValue;
   }
 
   data(inputs) {

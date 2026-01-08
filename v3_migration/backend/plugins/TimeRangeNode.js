@@ -33,19 +33,25 @@
     };
 
     // -------------------------------------------------------------------------
-    // HELPERS
+    // HELPERS - Use shared logic if available, fallback to local
     // -------------------------------------------------------------------------
-    function formatAmPm(hour24, minute) {
+    const sharedLogic = window.T2SharedLogic || {};
+    
+    // Use shared functions or fallback to local implementations
+    const formatAmPm = sharedLogic.formatAmPm || function(hour24, minute) {
         const ampm = hour24 < 12 ? "AM" : "PM";
         let hour12 = hour24 % 12;
         if (hour12 === 0) hour12 = 12;
         const minuteStr = minute < 10 ? `0${minute}` : `${minute}`;
         return `${hour12}:${minuteStr} ${ampm}`;
-    }
+    };
 
-    function timeToMinutes(h, m) {
+    const timeToMinutes = sharedLogic.timeToMinutes || function(h, m) {
         return (h * 60) + m;
-    }
+    };
+    
+    // Use shared calculateTimeRange if available
+    const calculateTimeRange = sharedLogic.calculateTimeRange || null;
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -78,6 +84,14 @@
         }
 
         data() {
+            // Use shared logic if available
+            if (calculateTimeRange) {
+                const result = calculateTimeRange(this.properties);
+                this.log(`[Shared] hour=${new Date().getHours()}:${new Date().getMinutes()}, inRange=${result.isInRange}`);
+                return { isInRange: result.isInRange };
+            }
+            
+            // Fallback to inline logic (for backwards compatibility)
             const now = new Date();
             const currentMinutes = timeToMinutes(now.getHours(), now.getMinutes());
             const startMinutes = timeToMinutes(this.properties.startHour, this.properties.startMinute);
@@ -85,13 +99,10 @@
 
             let isInRange = false;
             if (startMinutes < endMinutes) {
-                // Normal case (e.g., 08:00 to 18:00)
                 isInRange = (currentMinutes >= startMinutes) && (currentMinutes < endMinutes);
             } else if (startMinutes > endMinutes) {
-                // Cross midnight (e.g., 22:00 to 02:00 next day)
                 isInRange = (currentMinutes >= startMinutes) || (currentMinutes < endMinutes);
             } else {
-                // Same start/end => entire day
                 isInRange = true;
             }
 

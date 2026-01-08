@@ -1189,6 +1189,10 @@ app.use('/api/engine', engineRoutes);
 const stockRoutes = require('./api/routes/stockRoutes');
 app.use('/api/stock', stockRoutes);
 
+// Shared logic API (serves calculation functions for frontend)
+const sharedLogicRoutes = require('./api/routes/sharedLogicRoutes');
+app.use('/api/shared-logic', sharedLogicRoutes);
+
 // Debug Dashboard API routes
 const debugRoutes = require('./api/routes/debugRoutes');
 app.use('/api/debug', debugRoutes);

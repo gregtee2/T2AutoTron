@@ -6,19 +6,33 @@
  * - HSVToRGBNode - HSV to RGB conversion
  * - RGBToHSVNode - RGB to HSV conversion
  * - ColorMixerNode - Blend two colors
+ * 
+ * Uses shared logic from v3_migration/shared/logic/ColorLogic.js
  */
 
 'use strict';
+
+// Load shared color logic
+let sharedColorLogic;
+try {
+    sharedColorLogic = require('../../../../shared/logic/ColorLogic');
+} catch (e) {
+    console.warn('[ColorNodes] Failed to load shared ColorLogic, using inline fallback');
+    sharedColorLogic = null;
+}
 
 // =========================================================================
 // SPLINE MATH (ported from 00_SplineBasePlugin.js)
 // =========================================================================
 
+// Use shared logic or fallback
 function lerp(a, b, t) {
+    if (sharedColorLogic?.lerp) return sharedColorLogic.lerp(a, b, t);
     return a + (b - a) * t;
 }
 
 function clamp(value, min, max) {
+    if (sharedColorLogic?.clamp) return sharedColorLogic.clamp(value, min, max);
     return Math.min(Math.max(value, min), max);
 }
 
@@ -115,6 +129,11 @@ function hueToRgb(hue) {
  * Convert RGB to HSV
  */
 function rgbToHsv(r, g, b) {
+    if (sharedColorLogic?.rgbToHsv) {
+        const result = sharedColorLogic.rgbToHsv(r, g, b);
+        return { hue: result.h / 360, sat: result.s, val: result.v }; // Normalize hue to 0-1
+    }
+    // Fallback
     r /= 255; g /= 255; b /= 255;
     const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
     const s = max === 0 ? 0 : d / max;
@@ -134,6 +153,10 @@ function rgbToHsv(r, g, b) {
  * Convert HSV to RGB
  */
 function hsvToRgb(h, s, v) {
+    if (sharedColorLogic?.hsvToRgb) {
+        return sharedColorLogic.hsvToRgb(h * 360, s, v); // Denormalize hue to 0-360
+    }
+    // Fallback
     let r, g, b;
     const i = Math.floor(h * 6);
     const f = h * 6 - i;

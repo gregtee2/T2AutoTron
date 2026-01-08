@@ -2,9 +2,29 @@
  * LogicNodes.js - Backend implementations of logic gate nodes
  * 
  * These are pure logic implementations without React/browser dependencies.
+ * Uses shared logic from v3_migration/shared/logic/LogicGateLogic.js
  */
 
 const registry = require('../BackendNodeRegistry');
+
+// Load shared logic functions
+let sharedLogic;
+try {
+  sharedLogic = require('../../../../shared/logic/LogicGateLogic');
+} catch (e) {
+  console.warn('[LogicNodes] Failed to load shared logic, using inline fallback');
+  sharedLogic = null;
+}
+
+// Helper to extract input values as flat array
+function getInputValues(inputs) {
+  const values = [];
+  for (const key in inputs) {
+    const inputArray = inputs[key] || [];
+    values.push(...inputArray);
+  }
+  return values;
+}
 
 /**
  * ANDNode - Outputs true only if all inputs are true
@@ -23,20 +43,8 @@ class ANDNode {
   }
 
   data(inputs) {
-    // Get all input values, flatten arrays
-    const values = [];
-    for (const key in inputs) {
-      const inputArray = inputs[key] || [];
-      values.push(...inputArray);
-    }
-    
-    // If no inputs, return false
-    if (values.length === 0) {
-      return { result: false };
-    }
-    
-    // AND: all must be truthy
-    const result = values.every(v => Boolean(v));
+    const values = getInputValues(inputs);
+    const result = sharedLogic ? sharedLogic.calculateAnd(values) : values.every(v => Boolean(v));
     return { result };
   }
 }
@@ -58,18 +66,8 @@ class ORNode {
   }
 
   data(inputs) {
-    const values = [];
-    for (const key in inputs) {
-      const inputArray = inputs[key] || [];
-      values.push(...inputArray);
-    }
-    
-    if (values.length === 0) {
-      return { result: false };
-    }
-    
-    // OR: at least one must be truthy
-    const result = values.some(v => Boolean(v));
+    const values = getInputValues(inputs);
+    const result = sharedLogic ? sharedLogic.calculateOr(values) : values.some(v => Boolean(v));
     return { result };
   }
 }
@@ -93,7 +91,8 @@ class NOTNode {
   data(inputs) {
     const inputValues = inputs.input || inputs.a || [];
     const value = inputValues[0];
-    return { result: !Boolean(value) };
+    const result = sharedLogic ? sharedLogic.calculateNot(value) : !Boolean(value);
+    return { result };
   }
 }
 
@@ -114,17 +113,11 @@ class XORNode {
   }
 
   data(inputs) {
-    const values = [];
-    for (const key in inputs) {
-      const inputArray = inputs[key] || [];
-      values.push(...inputArray);
+    const values = getInputValues(inputs);
+    if (sharedLogic) {
+      return { result: sharedLogic.calculateXor(values) };
     }
-    
-    if (values.length === 0) {
-      return { result: false };
-    }
-    
-    // XOR: count truthy values, result is true if count is odd
+    // Fallback
     const truthyCount = values.filter(v => Boolean(v)).length;
     return { result: truthyCount % 2 === 1 };
   }
@@ -154,19 +147,23 @@ class CompareNode {
     const value = inputValues[0] ?? 0;
     const compareValue = inputs.compare?.[0] ?? this.properties.compareValue;
     
-    let result = false;
-    switch (this.properties.operator) {
-      case '==': result = value == compareValue; break;
-      case '===': result = value === compareValue; break;
-      case '!=': result = value != compareValue; break;
-      case '!==': result = value !== compareValue; break;
-      case '>': result = value > compareValue; break;
-      case '<': result = value < compareValue; break;
-      case '>=': result = value >= compareValue; break;
-      case '<=': result = value <= compareValue; break;
-    }
+    const result = sharedLogic 
+      ? sharedLogic.compare(value, this.properties.operator, compareValue)
+      : this._inlineCompare(value, this.properties.operator, compareValue);
     
     return { result };
+  }
+
+  _inlineCompare(a, op, b) {
+    switch (op) {
+      case '==': return a == b;
+      case '!=': return a != b;
+      case '>': return a > b;
+      case '<': return a < b;
+      case '>=': return a >= b;
+      case '<=': return a <= b;
+      default: return false;
+    }
   }
 }
 
