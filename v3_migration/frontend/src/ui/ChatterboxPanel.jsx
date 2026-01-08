@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { apiUrl } from '../utils/apiBase';
 
 // Local Agent URL - runs on the same machine as the browser
 const AGENT_URL = 'http://localhost:5050';
@@ -102,14 +103,14 @@ export function ChatterboxPanel({ isExpanded, onToggle }) {
                         </div>
                         <div className="chatterbox-actions">
                             <a 
-                                href="/api/agent/download/t2_agent.py"
+                                href={apiUrl('/api/agent/download/t2_agent.py')}
                                 className="dock-btn"
                                 download
                             >
                                 📥 t2_agent.py
                             </a>
                             <a 
-                                href="/api/agent/download/start_agent.bat"
+                                href={apiUrl('/api/agent/download/start_agent.bat')}
                                 className="dock-btn"
                                 download
                             >
