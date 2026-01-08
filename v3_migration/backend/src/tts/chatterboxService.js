@@ -17,8 +17,16 @@ let voicesCache = null;
 let voicesCacheTime = 0;
 const VOICES_CACHE_TTL = 30 * 1000; // 30 seconds (voices are local files, cache short)
 
-// Audio files directory (shared with ElevenLabs)
-const AUDIO_DIR = path.join(__dirname, '../../audio/tts');
+// Detect HA addon environment
+const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
+
+// Audio files directory - use /config/www/tts in HA addon for /local/ URL access
+const AUDIO_DIR = IS_HA_ADDON && fs.existsSync('/config/www')
+  ? '/config/www/tts'
+  : path.join(__dirname, '../../audio/tts');
+
+// Log audio directory on startup
+console.log(`[ChatterboxService] IS_HA_ADDON=${IS_HA_ADDON}, AUDIO_DIR=${AUDIO_DIR}`);
 
 // Ensure audio directory exists
 if (!fs.existsSync(AUDIO_DIR)) {
@@ -221,12 +229,16 @@ async function generateSpeech(text, options = {}) {
     // Clean up old TTS files to prevent accumulation
     cleanupOldTTSFiles();
 
-    // Return the relative URL path (will be served by express static)
+    // Return the relative URL path
+    // In HA addon: use /local/tts/ which is served by HA Core from /config/www/tts/
+    // Elsewhere: use /audio/tts/ which is served by express static
+    const audioUrl = IS_HA_ADDON ? `/local/tts/${filename}` : `/audio/tts/${filename}`;
+
     return {
       success: true,
       filePath,
       filename,
-      audioUrl: `/audio/tts/${filename}`,
+      audioUrl,
       durationMs
     };
 
