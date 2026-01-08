@@ -13,6 +13,13 @@ const fs = require('fs');
 // Path to the localAgent folder
 const AGENT_DIR = path.join(__dirname, '../../localAgent');
 
+// Log on load
+console.log(`[AgentRoutes] AGENT_DIR = ${AGENT_DIR}`);
+console.log(`[AgentRoutes] AGENT_DIR exists = ${fs.existsSync(AGENT_DIR)}`);
+if (fs.existsSync(AGENT_DIR)) {
+    console.log(`[AgentRoutes] Files in AGENT_DIR: ${fs.readdirSync(AGENT_DIR).join(', ')}`);
+}
+
 /**
  * GET /api/agent/download/:filename
  * Serve agent files for download
