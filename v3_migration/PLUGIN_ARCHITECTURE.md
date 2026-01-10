@@ -2,6 +2,48 @@
 
 > **IMPORTANT FOR AI ASSISTANTS**: This document defines the plugin architecture for T2AutoTron. ALL new nodes should be created as plugins in `backend/plugins/`. Do NOT create nodes in `frontend/src/nodes/` - that folder is deprecated.
 
+## 🆕 Shared Logic Layer (v2.1.210+)
+
+**NEW as of January 2026**: Pure calculation functions are now shared between frontend and backend!
+
+```
+v3_migration/shared/logic/           ← SHARED CALCULATION FUNCTIONS
+├── index.js                         ← Aggregates all for backend require()
+├── LogicGateLogic.js               ← calculateAnd/Or/Not/Xor + smartCompare
+├── ColorLogic.js                   ← hsvToRgb, rgbToHsv, mixColors
+├── TimeRangeLogic.js               ← calculateTimeRange
+├── DelayLogic.js                   ← toMilliseconds, UNIT_MULTIPLIERS
+├── UtilityLogic.js                 ← processCounter, performMath, etc.
+└── DeviceLogic.js                  ← normalizeHSVInput, buildHAPayload
+```
+
+### Using Shared Logic in Frontend Plugins
+```javascript
+// Get from window global (loaded by 00_SharedLogicLoader.js)
+const T2SharedLogic = window.T2SharedLogic || {};
+const { smartCompare, hsvToRgb } = T2SharedLogic;
+
+// Use with optional fallback for safety
+const result = T2SharedLogic.smartCompare?.(a, op, b) ?? legacyFallback(a, op, b);
+```
+
+### Using Shared Logic in Backend Engine Nodes
+```javascript
+// Require directly from shared folder
+const { smartCompare, hsvToRgb } = require('../../../../shared/logic');
+
+// Use directly - always available
+const result = smartCompare(a, op, b);
+```
+
+### Benefits
+- ✅ Single source of truth for calculations (no more dual maintenance!)
+- ✅ Add logic once, both frontend and backend get it
+- ✅ Pure functions with no UI dependencies
+- ✅ Easy to test in isolation
+
+---
+
 ## 🆕 Two-Layer Architecture (v2.1.60+)
 
 T2AutoTron now has **two execution layers**:
@@ -10,22 +52,25 @@ T2AutoTron now has **two execution layers**:
 |-------|----------|---------|-----------|
 | **Frontend Plugins** | `backend/plugins/*.js` | Visual UI in browser | Browser open |
 | **Backend Engine Nodes** | `backend/src/engine/nodes/*.js` | 24/7 automation logic | Always (server-side) |
+| **Shared Logic** | `shared/logic/*.js` | Pure calculations | Both layers |
 
 ### Why Two Layers?
 
 - **Frontend plugins** render the visual node editor and handle user interaction
 - **Backend engine nodes** execute the same logic on the server, even when the browser is closed
+- **Shared logic** contains pure calculation functions used by both
 - This enables **24/7 automations** - your lights keep changing colors while you sleep!
 
 ### Which Files to Create?
 
-| Creating... | Frontend Plugin | Backend Node | Both? |
-|-------------|-----------------|--------------|-------|
-| New automation node | ✅ Yes | ✅ Yes | Yes - both! |
-| Visual-only node (e.g., color picker preview) | ✅ Yes | ❌ No | Frontend only |
-| Server-only logic (rare) | ❌ No | ✅ Yes | Backend only |
+| Creating... | Frontend Plugin | Backend Node | Shared Logic | 
+|-------------|-----------------|--------------|--------------|
+| New automation node | ✅ Yes | ✅ Yes | Extract pure calcs to shared |
+| Visual-only node | ✅ Yes | ❌ No | If has reusable calcs |
+| Server-only logic | ❌ No | ✅ Yes | If has reusable calcs |
+| New calculation function | ❌ No | ❌ No | ✅ Yes - add to shared! |
 
-**Most new nodes need BOTH** - a frontend plugin for the visual editor AND a backend node for 24/7 execution.
+**Most new nodes need BOTH** - a frontend plugin for the visual editor AND a backend node for 24/7 execution. **Extract pure calculations to shared/logic/** when possible!
 
 ---
 
@@ -41,6 +86,12 @@ T2AutoTron uses a **plugin-based architecture** where all visual nodes are loade
 
 ```
 v3_migration/
+├── shared/
+│   └── logic/                      ← SHARED CALCULATION FUNCTIONS (38 functions)
+│       ├── index.js                ← Aggregates all exports
+│       ├── LogicGateLogic.js       ← Logic gate calculations
+│       ├── ColorLogic.js           ← Color conversion
+│       └── ...
 ├── backend/
 │   ├── plugins/                    ← ALL NODES GO HERE
 │   │   ├── 00_ColorUtilsPlugin.js  ← Shared utilities (loads first)

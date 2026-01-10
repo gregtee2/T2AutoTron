@@ -1,7 +1,7 @@
 # T2AutoTron 2.1
 
 [![License](https://img.shields.io/github/license/gregtee2/T2AutoTron?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.235-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)
+[![Version](https://img.shields.io/badge/version-2.1.236-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)
 [![Open in VS Code](https://img.shields.io/badge/Open%20in-VS%20Code-blue?logo=visualstudiocode&style=flat-square)](https://open.vscode.dev/gregtee2/T2AutoTron)
 
 **Visual node-based smart home automation editor with a 24/7 backend engine** - your automations run even when you close the browser!
@@ -63,7 +63,7 @@ I'm sure there are others who'd appreciate a visual approach. But this is **beta
 
 | Category | Nodes |
 |----------|-------|
-| **Home Assistant** | HA Generic Device, HA Device Automation, HA Sensor |
+| **Home Assistant** | HA Generic Device, HA Device Automation, HA Sensor, **HA Thermostat** |
 | **Timer/Event** | Sunrise/Sunset, Time of Day, Time Range, Day of Week, Date Comparison, Delay, Debounce, Retriggerable |
 | **Logic** | AND, OR, NOT, XOR, NAND, NOR, Compare, Threshold, Conditional Switch, Priority Encoder, Latch, Toggle |
 | **Color** | All-in-One Color, HSV Control, HSV Modifier, Spline Timeline Color, Color Gradient |
@@ -286,6 +286,13 @@ Debug logging is disabled by default. To enable:
 ---
 
 ## 🆕 Recent Highlights (January 2026)
+
+### v2.1.236 - Thermostat Control 🌡️
+- **HAThermostatNode** - Control Nest, Ecobee, and any HA climate entity
+- **Visual Temperature Ring** - See current/target temps at a glance
+- **Mode Buttons** - Off/Heat/Cool/Auto with one click
+- **Full Automation** - Connect inputs to automate setpoints and modes
+- **Backend Support** - Works 24/7 even when browser is closed
 
 ### v2.1.235 - Color Grading Overhaul
 - **Kelvin Slider** - Real-world light temperatures (2000K-10000K)

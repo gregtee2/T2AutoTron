@@ -2,30 +2,89 @@
 
 ## 🚀 ACTIVE PROJECT: Unified Architecture (v3.0 Refactor)
 
-**Status**: POC Phase - Ready to Start  
+**Status**: ✅ PHASE 1 COMPLETE - Shared Logic Implemented  
 **Document**: `v3_migration/UNIFIED_ARCHITECTURE_PROPOSAL.md`  
-**Branch**: Create `feature/unified-architecture` before starting
+**Branch**: `main` (shared logic merged)
 
-### What We're Doing
-Eliminating duplicate code between frontend plugins (47 files) and backend engine nodes (45 classes). Currently the same logic is written twice - once for the pretty UI, once for the 24/7 engine. We want ONE definition that both use.
+### What We Did (January 2026)
+Instead of the full "unified node definition" approach, we implemented a **pragmatic shared logic layer**:
+- Created `v3_migration/shared/logic/*.js` with **38 pure calculation functions**
+- These are used by BOTH frontend plugins AND backend engine nodes
+- No UI code in shared logic - just pure math/calculations
 
-### Next Steps for Agent
-1. Create git branch: `feature/unified-architecture`
-2. Create folder: `v3_migration/shared/nodes/`
-3. Pick 3 test nodes: `CurrentTimeNode`, `DelayNode`, `HAGenericDeviceNode`
-4. Write unified definitions for those 3 (see proposal doc for format)
-5. Build loader that works in both frontend and backend
-6. Test that they actually work
+### Current Architecture
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    SHARED LOGIC LAYER                           │
+│         v3_migration/shared/logic/*.js (38 functions)           │
+│                                                                 │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │ TimeRangeLogic  │  │ LogicGateLogic  │  │   ColorLogic    │ │
+│  │ calculateTime   │  │ calculateAnd    │  │ hsvToRgb        │ │
+│  │ Range()         │  │ calculateOr     │  │ rgbToHsv        │ │
+│  └─────────────────┘  │ smartCompare    │  │ mixColors       │ │
+│                       └─────────────────┘  └─────────────────┘ │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │  DelayLogic     │  │  UtilityLogic   │  │  DeviceLogic    │ │
+│  │ toMilliseconds  │  │ processCounter  │  │ normalizeHSV    │ │
+│  │ UNIT_MULTIPLIERS│  │ performMath     │  │ buildHAPayload  │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+           ↓                                    ↓
+┌─────────────────────┐            ┌─────────────────────────────┐
+│  FRONTEND PLUGINS   │            │    BACKEND ENGINE NODES     │
+│  (browser/Rete.js)  │            │    (Node.js 24/7 server)    │
+│                     │            │                             │
+│  Loads via:         │            │  Loads via:                 │
+│  00_SharedLogic     │            │  require('../shared/logic') │
+│  Loader.js →        │            │                             │
+│  window.T2Shared    │            │                             │
+│  Logic              │            │                             │
+└─────────────────────┘            └─────────────────────────────┘
+```
 
-### Key Files to Read First
-- `v3_migration/UNIFIED_ARCHITECTURE_PROPOSAL.md` - Full context and plan
-- `backend/plugins/CurrentTimeNode.js` - Example frontend plugin
-- `backend/src/engine/nodes/TimeNodes.js` - Example backend node class
+### Files in shared/logic/
+| File | Functions | Used By |
+|------|-----------|---------|
+| `TimeRangeLogic.js` | `calculateTimeRange()` | TimeRangeNode |
+| `LogicGateLogic.js` | `calculateAnd/Or/Not/Xor/Nand/Nor/Xnor`, `smartCompare`, `checkThreshold` | All logic gates, ComparisonNode |
+| `ColorLogic.js` | `hsvToRgb`, `rgbToHsv`, `mixColors`, `clamp` | All color nodes via 00_ColorUtilsPlugin |
+| `DelayLogic.js` | `toMilliseconds`, `UNIT_MULTIPLIERS` | DelayNode |
+| `UtilityLogic.js` | `processCounter`, `generateRandom`, `performMath`, `scaleValue` | Utility nodes |
+| `DeviceLogic.js` | `normalizeHSVInput`, `buildHAPayload`, `determineTriggerAction` | Device nodes |
+| `AndGateLogic.js` | AND gate specifics | AndNode |
+| `index.js` | Aggregates all exports | Backend require() |
 
-### Human Context
-- Owner is NOT a programmer - use caveman explanations
-- AI agent time ≠ human time (200 human hours ≈ 6-10 agent hours)
-- Frontend UI stays mostly the same - just how nodes are defined changes
+### How to Use Shared Logic
+
+**In Frontend Plugins:**
+```javascript
+// At top of plugin (after checking dependencies)
+const T2SharedLogic = window.T2SharedLogic || {};
+const { calculateAnd, smartCompare, hsvToRgb } = T2SharedLogic;
+
+// Use with fallback for safety
+const result = T2SharedLogic.smartCompare?.(a, op, b) ?? legacyCompare(a, op, b);
+```
+
+**In Backend Engine Nodes:**
+```javascript
+const { smartCompare, calculateAnd, hsvToRgb } = require('../../../../shared/logic');
+
+// Use directly - always available
+const result = smartCompare(a, op, b);
+```
+
+### Next Steps (Future Work)
+- Migrate more calculation logic to shared (currently ~60% of duplicated logic is shared)
+- Consider full unified node definitions for v4.0 if shared logic approach works well
+- Add more shared utility functions as patterns emerge
+
+### Key Files
+- `v3_migration/shared/logic/` - All shared logic modules
+- `backend/plugins/00_SharedLogicLoader.js` - Frontend loader
+- `backend/src/server.js` - `/api/shared-logic/` endpoints
+- Individual plugin files that use shared logic
 
 ### ⚠️ Server Management Rules
 - **NEVER start the server** when you want the user to test something - they manage their own server
@@ -113,11 +172,39 @@ When documenting fixes or explaining problems, use this format:
 
 ### Recent Caveman Fixes:
 
+#### Oklab Color Space for Perceptually Uniform Gradients (2026-01-09) - v2.1.234
+- **What broke**: Nothing broke - this is an improvement! Color gradients from red→green were going through muddy browns.
+- **Why it needed fixing**: RGB interpolation takes the "straight line" through color space, which passes through desaturated colors. Red + Green in RGB = muddy brown.
+- **The fix**: Added Oklab color space functions to `ColorLogic.js` (`rgbToOklab`, `oklabToRgb`, `mixColorsOklab`). Updated SplineTimelineColorNode to use Oklab interpolation for custom color stops.
+- **Now it works because**: Oklab (2020) is a perceptually uniform color space. Red→Green goes through vibrant yellows/oranges instead of browns. Both canvas preview and actual output use Oklab for consistency.
+
+#### Shared ColorLogic.js Property Name Mismatch (2026-01-09) - v2.1.234
+- **What broke**: Timeline Color node in custom color mode was outputting `{ saturation: null, brightness: 254, rgb: {...} }` - missing `hue` entirely and `saturation` was `null`. Debug Dashboard showed saturation variance (100% engine vs 75% HA).
+- **Why it broke**: When we centralized color functions into `shared/logic/ColorLogic.js`, the new `rgbToHsv()` returned `{ h, s, v }` but SplineTimelineColorNode expected `{ hue, sat, val }`. When code did `hsv.hue`, it got `undefined`. And `undefined * saturation = NaN`, which becomes `null` in JSON.
+- **The fix**: Updated `ColorLogic.js` `rgbToHsv()` to return **both** formats: `{ h, s, v, hue, sat, val }`. The `hue` is normalized 0-1 (for legacy nodes), while `h` is 0-360 degrees (standard).
+- **Now it works because**: The shared function speaks both "languages" - old code using `hsv.hue` and new code using `hsv.h` both work.
+
+---
+
 #### Hue/WiZ Effect Restore Turning Lights ON at Midnight (2026-01-06) - v2.1.207
 - **What broke**: Office Floor Lights stayed ON at midnight when the effect trigger went FALSE. Debug Dashboard showed "Engine says OFF, HA says ON".
 - **Why it broke**: HueEffectNode's `restorePreviousStates()` was turning lights back ON because they were ON when the effect started. This overrode the downstream HAGenericDeviceNode's turn_off command.
 - **The fix**: Modified `restorePreviousStates()` in both backend HADeviceNodes.js and frontend HueEffectNode.js to only clear the effect (`effect: 'none'`), NOT restore on/off state. Same fix applied to WizEffectNode.
 - **Now it works because**: Effect nodes only clear the effect. On/off control is exclusively handled by downstream HAGenericDeviceNode - no more override fight.
+
+---
+
+#### Debug Dashboard Color Timeline Enhancement (2026-01-09) - v2.1.212
+- **What broke**: Debug Dashboard showed device ON/OFF state in timeline but couldn't show what COLOR the lights were at each point in time. User wanted to see "Was it really red at 8pm like it should be?"
+- **Why it broke**: Nothing was broken per se - the feature didn't exist. Timeline segments were just gray rectangles representing ON state duration, no actual color information.
+- **The fix**: 
+  1. Added `hsvToRgb()` function to Dashboard to convert HSV → CSS rgb() colors
+  2. Updated `/api/engine/logs/device-history` to parse JSON data from log lines (HSV values after `|` pipe)
+  3. Timeline segments now use actual device color as background (based on hue from log events)
+  4. Current segment shows split bar: engine color on top half, HA actual color on bottom half
+  5. Orange border appears when colors differ by >10° (mismatch indicator)
+  6. Click popup shows color swatches with HSV values for both engine and HA
+- **Now it works because**: Every device command logs its HSV values. The Dashboard extracts these from logs and renders them as actual colors. You can now visually see "green from 6pm-8pm, blue from 8pm-10pm" instead of just "ON from 6pm-10pm".
 
 ---
 
@@ -817,10 +904,11 @@ Implementation notes:
 
 ### Infrastructure Plugins (00_ prefix)
 Files prefixed with `00_` load first and provide shared utilities:
+- `00_SharedLogicLoader.js` → `window.T2SharedLogic` (38 shared calculation functions - NEW!)
 - `00_BaseNodePlugin.js` → `window.T2Node` base class
 - `00_SharedControlsPlugin.js` → `window.T2Controls` (buttons, dropdowns, HelpIcon, NodeHeader, etc.)
 - `00_HABasePlugin.js` → `window.T2HAUtils` (Home Assistant helpers)
-- `00_ColorUtilsPlugin.js` → `window.ColorUtils` (color conversion)
+- `00_ColorUtilsPlugin.js` → `window.ColorUtils` (color conversion - now uses T2SharedLogic internally)
 - `00_NodeComponentsPlugin.js` → Shared node UI component utilities
 - `00_LogicGateBasePlugin.js` → `window.LogicGateBase` base class for logic gates
 
@@ -1518,7 +1606,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 2 | Refactor plugins to T2Node | ⏳ Partial | Some use it, not all |
 | 3 | Event Log App filter | 🔴 Broken | App events not showing - needs investigation |
 
-### 🟢 RECENTLY ADDED (2.1.55 - 2.1.189)
+### 🟢 RECENTLY ADDED (2.1.55 - 2.1.212)
 
 | # | Feature | Notes |
 |---|---------|-------|
@@ -1557,6 +1645,10 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 32 | **Smart HSV Exclusion** | v2.1.106 - Effect lights auto-excluded from downstream HSV commands via metadata |
 | 33 | **Group Navigation Buttons** | v2.1.107 - Quick-jump buttons in Event Log header to zoom to Backdrop groups |
 | 34 | **server.js Modularization** | v2.1.166 - Extracted Settings, Telegram, Debug routes (1482→984 lines, -34%) |
+| 35 | **PriorityEncoderNode** | v2.1.212 - New logic node: outputs the index of the first TRUE input (1-8 inputs). Backend + frontend implementation. |
+| 36 | **Device Timeline Colors** | v2.1.212 - Debug Dashboard timeline segments now show actual light colors (HSV extracted from log events). |
+| 37 | **Split Bar Color Comparison** | v2.1.212 - Current timeline segment shows split bar: engine color (top) vs HA actual color (bottom). Orange border when colors differ >10°. |
+| 38 | **AllInOneColorNode Tooltips** | v2.1.212 - Added comprehensive tooltips with `?` icons explaining all inputs, outputs, and controls. |
 
 ### 🟢 RECENTLY FIXED
 
@@ -1600,6 +1692,8 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/engine/status"
 | 36 | **Stale state after overnight** | v2.1.209 - Device state bars now auto-refresh on socket reconnect AND when user returns to tab (visibilitychange). No more stale data after sleep/screensaver. |
 | 37 | **Engine not mirroring frontend** | v2.1.210 - Engine's `deviceStates` was out of sync when frontend active. Moved state tracking BEFORE skip check in `controlDevice()`. Engine now mirrors frontend exactly. |
 | 38 | **Debug node breaking data flow** | v2.1.211 - Debug node was `null` (frontend-only) in backend registry. Added backend `DebugNode` pass-through implementation so data flows correctly through Debug → downstream nodes. |
+| 39 | **Device Timeline choppy segments** | v2.1.212 - Timeline segments now merge properly into continuous bars. Was showing separate segments for each log entry instead of merged state spans. |
+| 40 | **Sender/Receiver dropdown drag** | v2.1.212 - Clicking dropdown to select buffer no longer drags the node. Added `stopPropagation()` to pointer events on dropdowns. |
 
 ### 🟢 POST-BETA / LOW PRIORITY
 
