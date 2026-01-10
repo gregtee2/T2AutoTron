@@ -267,7 +267,7 @@
             margin-bottom: 4px;
         }
         .timeline-bar {
-            height: 20px;
+            height: 24px;
             background: #1a1a2e;
             border-radius: 4px;
             overflow: hidden;
@@ -277,6 +277,30 @@
         .timeline-segment {
             height: 100%;
             min-width: 2px;
+            position: relative;
+        }
+        /* Split segment: top half = engine color, bottom half = HA reported color */
+        .timeline-segment.color-segment {
+            display: flex;
+            flex-direction: column;
+        }
+        .timeline-segment .engine-color {
+            height: 50%;
+            width: 100%;
+        }
+        .timeline-segment .ha-color {
+            height: 50%;
+            width: 100%;
+        }
+        /* Mismatch indicator - striped border between halves */
+        .timeline-segment.mismatch::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: repeating-linear-gradient(90deg, #ff0 0, #ff0 3px, transparent 3px, transparent 6px);
         }
         .timeline-segment.on { background: #4caf50; }
         .timeline-segment.off { background: #333; }
@@ -700,12 +724,19 @@
     <script>
         let data = { engine: {}, buffers: {}, lights: [] };
         let eventLogData = [];
+        let timelineEventData = []; // All events including HSV for timeline colors
         let fullLogData = []; // All events including decisions/skips
         let graphData = null;
         let selectedHours = 1;
         let refreshInterval = null;
         let lastBugCount = 0;
         let notificationsEnabled = false;
+        
+        // Node lookup map: nodeId -> { nodeTitle, deviceName, entityId }
+        let nodeInfoMap = {};
+        
+        // Store HA device current states for timeline color comparison
+        let haDeviceStates = {}; // entityId -> { state, hue, sat, bri }
         
         // Store anomalies and activity for export
         let currentAnomalies = [];
@@ -715,6 +746,128 @@
         // Track server uptime to detect restarts
         let lastKnownUptime = null;
         let serverRestarts = [];
+        
+        // HSV to RGB conversion for timeline colors
+        function hsvToRgb(h, s, v) {
+            // h in 0-1, s in 0-1, v in 0-1
+            let r, g, b;
+            const i = Math.floor(h * 6);
+            const f = h * 6 - i;
+            const p = v * (1 - s);
+            const q = v * (1 - f * s);
+            const t = v * (1 - (1 - f) * s);
+            switch (i % 6) {
+                case 0: r = v; g = t; b = p; break;
+                case 1: r = q; g = v; b = p; break;
+                case 2: r = p; g = v; b = t; break;
+                case 3: r = p; g = q; b = v; break;
+                case 4: r = t; g = p; b = v; break;
+                case 5: r = v; g = p; b = q; break;
+            }
+            return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+        }
+        
+        // Extract HSV from event data (parses log format)
+        function extractHsvFromEvent(event) {
+            if (!event.data) return null;
+            try {
+                // data field contains the JSON details
+                const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                if (data.newHue !== undefined) {
+                    return {
+                        hue: parseFloat(data.newHue),
+                        sat: data.sat !== undefined ? parseFloat(data.sat) : 1,
+                        bri: data.bri !== undefined ? parseFloat(data.bri) / 255 : 1
+                    };
+                }
+            } catch (e) {}
+            // Try regex from action string
+            const hueMatch = event.action?.match(/hue[=:]?\s*([\d.]+)/i);
+            if (hueMatch) {
+                const hue = parseFloat(hueMatch[1]);
+                return { hue: hue > 1 ? hue / 360 : hue, sat: 1, bri: 1 };
+            }
+            return null;
+        }
+        
+        // Fetch node info for friendly name lookup
+        async function fetchNodeInfo(url) {
+            try {
+                // First fetch ALL node labels (includes trigger nodes, inject nodes, etc.)
+                const labelsResp = await fetch(`${url}/api/engine/node-labels`);
+                if (labelsResp.ok) {
+                    const labelsData = await labelsResp.json();
+                    if (labelsData.success && labelsData.nodeLabels) {
+                        nodeInfoMap = {};
+                        for (const [nodeId, info] of Object.entries(labelsData.nodeLabels)) {
+                            nodeInfoMap[nodeId] = {
+                                nodeTitle: info.label || 'Unknown Node',
+                                nodeType: info.type || '',
+                                deviceName: '',
+                                entityId: ''
+                            };
+                        }
+                        console.log(`[Dashboard] Loaded ${Object.keys(nodeInfoMap).length} node labels`);
+                    }
+                }
+                
+                // Then enrich with device-specific info (entity IDs, device names)
+                const devResp = await fetch(`${url}/api/engine/device-states`);
+                if (devResp.ok) {
+                    const devData = await devResp.json();
+                    if (devData.success && devData.deviceStates) {
+                        devData.deviceStates.forEach(d => {
+                            if (d.nodeId && nodeInfoMap[d.nodeId]) {
+                                // Enrich existing entry
+                                nodeInfoMap[d.nodeId].deviceName = d.deviceName || '';
+                                nodeInfoMap[d.nodeId].entityId = d.entityId || '';
+                                // Prefer nodeTitle from device-states if available
+                                if (d.nodeTitle) {
+                                    nodeInfoMap[d.nodeId].nodeTitle = d.nodeTitle;
+                                }
+                            } else if (d.nodeId) {
+                                // Add new entry
+                                nodeInfoMap[d.nodeId] = {
+                                    nodeTitle: d.nodeTitle || 'Unknown Node',
+                                    deviceName: d.deviceName || '',
+                                    entityId: d.entityId || ''
+                                };
+                            }
+                            // Store HA current state for timeline color comparison
+                            if (d.entityId && d.haState) {
+                                haDeviceStates[d.entityId] = {
+                                    state: d.haState.state,
+                                    hue: d.haState.hs_color?.[0],
+                                    sat: d.haState.hs_color?.[1],
+                                    bri: d.haState.brightness
+                                };
+                                console.log(`[Dashboard] Stored HA state for ${d.entityId}: hue=${d.haState.hs_color?.[0]}, sat=${d.haState.hs_color?.[1]}, bri=${d.haState.brightness}`);
+                            }
+                        });
+                        console.log(`[Dashboard] Enriched with ${devData.deviceStates.length} device states`);
+                    }
+                }
+            } catch (e) {
+                console.warn('[Dashboard] Could not fetch node info:', e.message);
+            }
+        }
+        
+        // Get friendly name for a nodeId or entity
+        function getFriendlyName(idOrEntity) {
+            // First check if it's a nodeId we know
+            if (nodeInfoMap[idOrEntity]) {
+                const info = nodeInfoMap[idOrEntity];
+                return info.nodeTitle || info.deviceName || idOrEntity;
+            }
+            // Check if any node has this entityId
+            for (const [nodeId, info] of Object.entries(nodeInfoMap)) {
+                if (info.entityId === idOrEntity || info.entityId === `light.${idOrEntity}` || info.entityId === `switch.${idOrEntity}`) {
+                    return info.nodeTitle || info.deviceName || idOrEntity;
+                }
+            }
+            // Fallback: clean up the entity ID
+            return idOrEntity.replace('light.', '').replace('switch.', '').replace(/_/g, ' ');
+        }
         
         // Auto-detect server URL when served from backend
         function getDefaultUrl() {
@@ -778,7 +931,7 @@
                     previousUptime: lastKnownUptime,
                     newUptime: newUptime
                 };
-                engineRestarts.push(restartEvent);
+                serverRestarts.push(restartEvent);
                 // More informative message - user might be returning to tab after being away
                 const uptimeStr = newUptime < 60 
                     ? `${newUptime} min ago` 
@@ -918,6 +1071,9 @@
             document.getElementById('status').className = 'status loading';
             document.getElementById('status').textContent = 'Connecting...';
             
+            // Fetch node info for friendly name lookups
+            await fetchNodeInfo(url);
+            
             await refresh();
             
             // Enable auto-refresh by default
@@ -978,13 +1134,27 @@
                     // Store full log for decision panel
                     fullLogData = result.history || [];
                     
-                    // Filter for on/off events only (for timeline and event log)
+                    // Timeline needs ALL events including HSV changes for color display
+                    timelineEventData = fullLogData.filter(event => {
+                        const action = (event.action || '').toLowerCase();
+                        const category = (event.category || '').toUpperCase();
+                        // Include ON/OFF, HSV changes, and triggers
+                        return action.includes('turn_on') || action.includes('turn_off') || 
+                               action.includes('→ true') || action.includes('→ false') ||
+                               category.includes('HSV') || category === 'TRIGGER';
+                    });
+                    
+                    // Filter for on/off events only (for event log display)
                     eventLogData = fullLogData.filter(event => {
                         const action = (event.action || '').toLowerCase();
                         return action.includes('turn_on') || action.includes('turn_off') || 
                                action.includes('→ true') || action.includes('→ false') ||
                                event.category === 'TRIGGER';
                     });
+                    
+                    // Refresh HA device states for split-bar color comparison
+                    await fetchNodeInfo(url);
+                    
                     renderEventLog();
                     renderTimeline();
                     renderDecisionLog();
@@ -1146,7 +1316,9 @@
         let segmentIdCounter = 0;
         
         function renderTimeline() {
-            if (eventLogData.length === 0) {
+            // Use timelineEventData which includes HSV color events
+            const eventsToRender = timelineEventData.length > 0 ? timelineEventData : eventLogData;
+            if (eventsToRender.length === 0) {
                 document.getElementById('timelineContainer').innerHTML = '<div class="no-data">No events to show</div>';
                 return;
             }
@@ -1155,71 +1327,92 @@
             timelineSegmentData = {};
             segmentIdCounter = 0;
             
-            // Group events by device
+            // Group events by device (use entity or nodeId as key)
             const deviceEvents = {};
-            eventLogData.forEach(e => {
-                const entity = (e.entity || 'unknown').replace('light.', '').replace('switch.', '');
-                if (!deviceEvents[entity]) deviceEvents[entity] = [];
-                deviceEvents[entity].push(e);
+            eventsToRender.forEach(e => {
+                // Try to get a key - prefer entity, fall back to any ID-like field
+                let rawKey = e.entity || e.nodeId || e.device;
+                
+                // If no key, try to extract nodeId from action string (format: "nodeId: value → value")
+                if (!rawKey && e.action) {
+                    const nodeIdMatch = e.action.match(/^([a-f0-9]{16}):/i);
+                    if (nodeIdMatch) {
+                        rawKey = nodeIdMatch[1];
+                    }
+                }
+                
+                if (!rawKey) rawKey = 'unknown';
+                const key = rawKey.replace('light.', '').replace('switch.', '');
+                if (!deviceEvents[key]) deviceEvents[key] = [];
+                deviceEvents[key].push(e);
             });
             
             const now = Date.now();
             const windowStart = now - (selectedHours * 60 * 60 * 1000);
             const windowMs = now - windowStart;
             
-            const html = Object.entries(deviceEvents).map(([device, events]) => {
+            const html = Object.entries(deviceEvents).map(([deviceKey, events]) => {
+                // Get friendly name for display
+                const displayName = getFriendlyName(deviceKey);
+                
                 // Sort events by time
                 events.sort((a, b) => new Date(a.time) - new Date(b.time));
                 
                 // Build timeline segments with event data
+                // Key fix: Only create new segment when STATE changes, not on every event
                 let segments = [];
                 let lastTime = windowStart;
                 let lastState = 'off';
-                let segmentEvents = []; // Events that caused this state
+                let segmentStartTime = windowStart;
+                let segmentEvents = []; // Events within this state period
                 
                 events.forEach(e => {
                     const eventTime = new Date(e.time).getTime();
                     if (eventTime < windowStart) return;
                     
-                    // Gap before this event - save previous segment
-                    if (eventTime > lastTime) {
-                        const width = ((eventTime - lastTime) / windowMs) * 100;
+                    // Determine new state from this event
+                    let newState = lastState; // Default: no change
+                    if (e.action?.includes('turn_on') || e.action?.includes('→ true')) {
+                        newState = 'on';
+                    } else if (e.action?.includes('turn_off') || e.action?.includes('→ false')) {
+                        newState = 'off';
+                    }
+                    
+                    // Only create a new segment if state CHANGES
+                    if (newState !== lastState) {
+                        // Save the previous segment (from segmentStartTime to eventTime)
+                        const width = ((eventTime - segmentStartTime) / windowMs) * 100;
                         if (width > 0.5) {
                             segments.push({ 
                                 state: lastState, 
                                 width,
-                                startTime: lastTime,
+                                startTime: segmentStartTime,
                                 endTime: eventTime,
                                 events: [...segmentEvents],
-                                device
+                                device: displayName
                             });
                         }
-                    }
-                    
-                    // Update state based on this event
-                    if (e.action?.includes('turn_on') || e.action?.includes('→ true')) {
-                        lastState = 'on';
-                        segmentEvents = [e]; // Start new segment's events
-                    } else if (e.action?.includes('turn_off') || e.action?.includes('→ false')) {
-                        lastState = 'off';
+                        // Start new segment
+                        segmentStartTime = eventTime;
                         segmentEvents = [e];
+                        lastState = newState;
                     } else {
-                        // Other events (like HSV changes) - add to current segment
+                        // Same state - just add event to current segment
                         segmentEvents.push(e);
                     }
                     lastTime = eventTime;
                 });
                 
                 // Final segment to now
-                if (lastTime < now) {
-                    const width = ((now - lastTime) / windowMs) * 100;
+                if (segmentStartTime < now) {
+                    const width = ((now - segmentStartTime) / windowMs) * 100;
                     segments.push({ 
                         state: lastState, 
                         width,
-                        startTime: lastTime,
+                        startTime: segmentStartTime,
                         endTime: now,
                         events: [...segmentEvents],
-                        device,
+                        device: displayName,
                         isCurrent: true
                     });
                 }
@@ -1231,17 +1424,85 @@
                     const startStr = new Date(s.startTime).toLocaleTimeString();
                     const endStr = s.isCurrent ? 'now' : new Date(s.endTime).toLocaleTimeString();
                     const duration = formatDuration(s.endTime - s.startTime);
-                    const tooltip = `${s.state.toUpperCase()} | ${startStr} - ${endStr} (${duration}) | Click for details`;
                     
-                    return `<div class="timeline-segment ${s.state} clickable" 
-                        style="width: ${s.width}%" 
+                    // Try to extract engine color from events
+                    let engineColor = null;
+                    let engineHsv = null;
+                    if (s.state === 'on' && s.events && s.events.length > 0) {
+                        // Look for the most recent event with HSV data
+                        for (let i = s.events.length - 1; i >= 0; i--) {
+                            const hsv = extractHsvFromEvent(s.events[i]);
+                            if (hsv) {
+                                engineHsv = hsv;
+                                engineColor = hsvToRgb(hsv.hue > 1 ? hsv.hue / 360 : hsv.hue, hsv.sat, hsv.bri);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // For current segment, get HA's actual color
+                    let haColor = null;
+                    let haHsv = null;
+                    let hasMismatch = false;
+                    if (s.isCurrent && s.state === 'on') {
+                        // Look up entity from the first event
+                        const entity = s.events?.[0]?.entity;
+                        console.log(`[Timeline] Current segment for ${entity}, haDeviceStates keys:`, Object.keys(haDeviceStates));
+                        if (entity && haDeviceStates[entity]) {
+                            const ha = haDeviceStates[entity];
+                            console.log(`[Timeline] Found HA state for ${entity}:`, ha);
+                            if (ha.hue !== undefined && ha.bri !== undefined) {
+                                haHsv = {
+                                    hue: ha.hue / 360, // HA uses 0-360
+                                    sat: (ha.sat ?? 100) / 100, // HA uses 0-100
+                                    bri: (ha.bri ?? 100) / 100 // getState() returns 0-100, convert to 0-1
+                                };
+                                haColor = hsvToRgb(haHsv.hue, haHsv.sat, haHsv.bri);
+                                
+                                // Check for mismatch (>10° hue difference)
+                                if (engineHsv) {
+                                    const engineHue360 = engineHsv.hue > 1 ? engineHsv.hue : engineHsv.hue * 360;
+                                    const haHue360 = ha.hue;
+                                    const hueDiff = Math.abs(engineHue360 - haHue360);
+                                    hasMismatch = hueDiff > 10 && hueDiff < 350; // Allow wrap-around
+                                }
+                            }
+                        }
+                    }
+                    
+                    // If we have color data, use the color-segment style
+                    const hasColor = s.state === 'on' && engineColor;
+                    const segmentClass = hasColor ? 'color-segment' : s.state;
+                    
+                    // Build style - for color segments, use actual colors
+                    let style = `width: ${s.width}%`;
+                    if (hasColor) {
+                        if (s.isCurrent && haColor) {
+                            // Split bar: engine on top, HA on bottom
+                            style += `; background: linear-gradient(to bottom, ${engineColor} 50%, ${haColor} 50%)`;
+                            if (hasMismatch) {
+                                style += `; border: 2px solid #ff9800`; // Orange border for mismatch
+                            }
+                        } else {
+                            // Just engine color
+                            style += `; background: ${engineColor}`;
+                        }
+                    }
+                    
+                    const colorInfo = engineColor ? ` | Engine: ${engineColor}` : '';
+                    const haInfo = haColor ? ` | HA: ${haColor}` : '';
+                    const mismatchInfo = hasMismatch ? ' ⚠️ MISMATCH' : '';
+                    const tooltip = `${s.state.toUpperCase()}${colorInfo}${haInfo}${mismatchInfo} | ${startStr} - ${endStr} (${duration}) | Click for details`;
+                    
+                    return `<div class="timeline-segment ${segmentClass} clickable${hasMismatch ? ' mismatch' : ''}" 
+                        style="${style}" 
                         title="${tooltip}"
                         onclick="showSegmentDetails('${segId}')"></div>`;
                 }).join('');
                 
                 return `
                     <div class="timeline-device">
-                        <div class="timeline-label">${device}</div>
+                        <div class="timeline-label">${displayName}</div>
                         <div class="timeline-bar">
                             ${segmentsHtml}
                             <div class="timeline-now"></div>
@@ -1271,20 +1532,96 @@
             const duration = formatDuration(seg.endTime - seg.startTime);
             const stateClass = seg.state === 'on' ? 'on' : 'off';
             
+            // Extract color info from events
+            let colorHtml = '';
+            let engineHsv = null;
+            if (seg.state === 'on' && seg.events && seg.events.length > 0) {
+                for (let i = seg.events.length - 1; i >= 0; i--) {
+                    const hsv = extractHsvFromEvent(seg.events[i]);
+                    if (hsv) {
+                        engineHsv = hsv;
+                        const hue360 = hsv.hue > 1 ? hsv.hue : (hsv.hue * 360);
+                        const engineColor = hsvToRgb(hsv.hue > 1 ? hsv.hue / 360 : hsv.hue, hsv.sat, hsv.bri);
+                        colorHtml = `
+                            <div class="event-popup-row">
+                                <span class="event-popup-label">Engine Color:</span>
+                                <span class="event-popup-value">
+                                    <span style="display:inline-flex; align-items:center; gap:8px;">
+                                        <span style="width:24px; height:24px; border-radius:4px; background:${engineColor}; border:1px solid #555;"></span>
+                                        <span>Hue: ${hue360.toFixed(0)}° Sat: ${(hsv.sat*100).toFixed(0)}% Bri: ${(hsv.bri*100).toFixed(0)}%</span>
+                                    </span>
+                                </span>
+                            </div>
+                        `;
+                        break;
+                    }
+                }
+            }
+            
+            // For current segment, show HA's actual color too
+            let haColorHtml = '';
+            if (seg.isCurrent && seg.state === 'on') {
+                const entity = seg.events?.[0]?.entity;
+                if (entity && haDeviceStates[entity]) {
+                    const ha = haDeviceStates[entity];
+                    if (ha.hue !== undefined && ha.bri !== undefined) {
+                        const haHue = ha.hue;
+                        const haSat = ha.sat ?? 100;
+                        const haBri = ha.bri; // Already 0-100 from API (getState normalizes)
+                        const haColor = hsvToRgb(haHue / 360, haSat / 100, haBri / 100);
+                        
+                        // Check for mismatch
+                        let mismatchWarning = '';
+                        if (engineHsv) {
+                            const engineHue360 = engineHsv.hue > 1 ? engineHsv.hue : engineHsv.hue * 360;
+                            const hueDiff = Math.abs(engineHue360 - haHue);
+                            if (hueDiff > 10 && hueDiff < 350) {
+                                mismatchWarning = `<span style="color:#ff9800; margin-left:8px;">⚠️ ${hueDiff.toFixed(0)}° difference!</span>`;
+                            }
+                        }
+                        
+                        haColorHtml = `
+                            <div class="event-popup-row">
+                                <span class="event-popup-label">HA Actual:</span>
+                                <span class="event-popup-value">
+                                    <span style="display:inline-flex; align-items:center; gap:8px;">
+                                        <span style="width:24px; height:24px; border-radius:4px; background:${haColor}; border:1px solid #555;"></span>
+                                        <span>Hue: ${haHue.toFixed(0)}° Sat: ${haSat.toFixed(0)}% Bri: ${haBri.toFixed(0)}%</span>
+                                        ${mismatchWarning}
+                                    </span>
+                                </span>
+                            </div>
+                        `;
+                    }
+                }
+            }
+            
             // Build events list HTML
             let eventsHtml = '';
             if (seg.events && seg.events.length > 0) {
                 eventsHtml = seg.events.map(e => {
                     const time = new Date(e.time).toLocaleTimeString();
                     const action = e.action || 'Unknown';
-                    const isOn = action.includes('turn_on') || action.includes('→ true');
+                    const isOn = action.includes('turn_on') || action.includes('turn_off') === false && action.includes('→');
                     const isOff = action.includes('turn_off') || action.includes('→ false');
-                    const actionClass = isOn ? 'on' : (isOff ? 'off' : '');
+                    const isHsv = (e.category || '').toUpperCase().includes('HSV');
+                    
+                    // Show color swatch for HSV events
+                    let colorSwatch = '';
+                    if (isHsv) {
+                        const hsv = extractHsvFromEvent(e);
+                        if (hsv) {
+                            const col = hsvToRgb(hsv.hue > 1 ? hsv.hue / 360 : hsv.hue, hsv.sat, hsv.bri);
+                            colorSwatch = `<span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:${col}; border:1px solid #555; margin-right:4px;"></span>`;
+                        }
+                    }
+                    
+                    const actionClass = isOn ? 'on' : (isOff ? 'off' : (isHsv ? '' : ''));
                     const category = e.category || '';
                     return `
                         <div class="event-popup-event">
                             <span class="event-popup-event-time">${time}</span>
-                            <span class="event-popup-event-action ${actionClass}">${action}</span>
+                            <span class="event-popup-event-action ${actionClass}">${colorSwatch}${action}</span>
                             ${category ? `<span style="color:#666; margin-left:8px;">[${category}]</span>` : ''}
                         </div>
                     `;
@@ -1304,6 +1641,8 @@
                         <span class="event-popup-label">State:</span>
                         <span class="event-popup-value ${stateClass}">${seg.state.toUpperCase()}</span>
                     </div>
+                    ${colorHtml}
+                    ${haColorHtml}
                     <div class="event-popup-row">
                         <span class="event-popup-label">Duration:</span>
                         <span class="event-popup-value">${duration}</span>

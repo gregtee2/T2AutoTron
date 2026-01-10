@@ -143,13 +143,16 @@ class CompareNode {
   }
 
   data(inputs) {
-    const inputValues = inputs.value || inputs.input || inputs.a || [];
+    const inputValues = inputs.value || inputs.input || inputs.a || inputs.in || [];
     const value = inputValues[0] ?? 0;
     const compareValue = inputs.compare?.[0] ?? this.properties.compareValue;
     
-    const result = sharedLogic 
-      ? sharedLogic.compare(value, this.properties.operator, compareValue)
-      : this._inlineCompare(value, this.properties.operator, compareValue);
+    // Prefer smartCompare (handles numeric vs string), fall back to compare
+    const result = sharedLogic?.smartCompare 
+      ? sharedLogic.smartCompare(value, this.properties.operator, compareValue)
+      : sharedLogic?.compare
+        ? sharedLogic.compare(value, this.properties.operator, compareValue)
+        : this._inlineCompare(value, this.properties.operator, compareValue);
     
     return { result };
   }
@@ -275,6 +278,49 @@ class EdgeDetectorNode {
   }
 }
 
+/**
+ * PriorityEncoderNode - Outputs the index of the first TRUE input
+ * Perfect for converting multiple conditions (months, days, scenes) into integers
+ */
+class PriorityEncoderNode {
+  constructor() {
+    this.id = null;
+    this.label = 'Priority Encoder';
+    this.properties = {
+      inputCount: 4,
+      labels: [],
+      defaultValue: 0
+    };
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+
+  data(inputs) {
+    const inputCount = this.properties.inputCount || 4;
+    
+    // Find first true input
+    for (let i = 1; i <= inputCount; i++) {
+      const inputVal = inputs[`in_${i}`]?.[0];
+      if (inputVal === true) {
+        return { 
+          value: i,
+          active: true
+        };
+      }
+    }
+    
+    // No true input found
+    return { 
+      value: this.properties.defaultValue ?? 0,
+      active: false
+    };
+  }
+}
+
 // Register nodes
 registry.register('ANDNode', ANDNode);
 registry.register('ORNode', ORNode);
@@ -283,6 +329,7 @@ registry.register('XORNode', XORNode);
 registry.register('CompareNode', CompareNode);
 registry.register('SwitchNode', SwitchNode);
 registry.register('EdgeDetectorNode', EdgeDetectorNode);
+registry.register('PriorityEncoderNode', PriorityEncoderNode);
 
 // Also register with alternate names used in some plugins
 registry.register('ANDGateNode', ANDNode);
@@ -290,4 +337,4 @@ registry.register('ORGateNode', ORNode);
 registry.register('NOTGateNode', NOTNode);
 registry.register('XORGateNode', XORNode);
 
-module.exports = { ANDNode, ORNode, NOTNode, XORNode, CompareNode, SwitchNode, EdgeDetectorNode };
+module.exports = { ANDNode, ORNode, NOTNode, XORNode, CompareNode, SwitchNode, EdgeDetectorNode, PriorityEncoderNode };

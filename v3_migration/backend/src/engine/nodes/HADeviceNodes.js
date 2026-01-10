@@ -1312,6 +1312,8 @@ class HAGenericDeviceNode {
           satDiff: satDiff.toFixed(4),
           briDiff: briDiff.toFixed(1),
           newHue: hsv.hue?.toFixed(4),
+          sat: hsv.saturation?.toFixed(4),  // Actual saturation for dashboard color display
+          bri: hsv.brightness?.toFixed(1),  // Actual brightness for dashboard color display
           lastHue: this.lastSentHsv?.hue?.toFixed(4),
           timeSinceLastSend: Math.round(timeSinceLastSend / 1000) + 's'
         });
@@ -2648,6 +2650,153 @@ class TTSAnnouncementNode {
 
 registry.register('TTSAnnouncementNode', TTSAnnouncementNode);
 
+// ============================================================================
+// HAThermostatNode - Backend thermostat/climate control
+// ============================================================================
+class HAThermostatNode {
+  constructor() {
+    this.properties = {
+      deviceId: null,
+      currentTemp: null,
+      targetTemp: null,
+      targetTempHigh: null,
+      targetTempLow: null,
+      hvacMode: 'off',
+      hvacAction: 'idle',
+      humidity: null,
+      tempUnit: '°F',
+      minTemp: 50,
+      maxTemp: 90,
+      lastCommandTime: 0,
+      lastFetchTime: 0
+    };
+    this.outputs = {
+      current_temp: null,
+      target_temp_out: null,
+      hvac_mode_out: 'off',
+      hvac_action: 'idle',
+      humidity: null
+    };
+    this._lastTargetTemp = null;
+    this._lastHvacMode = null;
+  }
+
+  async data(inputs) {
+    const targetTempInput = inputs.target_temp?.[0];
+    const hvacModeInput = inputs.hvac_mode?.[0];
+
+    // Get HA config
+    const config = getHAConfig();
+    if (!config || !config.host || !config.token) {
+      return this.outputs;
+    }
+
+    const entityId = this.properties.deviceId;
+    if (!entityId) {
+      return this.outputs;
+    }
+
+    const cleanEntityId = entityId.replace(/^ha_/, '');
+    const now = Date.now();
+
+    // Fetch current state periodically (every 30 seconds)
+    if (now - this.properties.lastFetchTime > 30000) {
+      try {
+        const response = await fetch(`${config.host}/api/states/${cleanEntityId}`, {
+          headers: { Authorization: `Bearer ${config.token}` }
+        });
+        if (response.ok) {
+          const state = await response.json();
+          const attrs = state.attributes || {};
+          
+          this.properties.currentTemp = attrs.current_temperature ?? null;
+          this.properties.targetTemp = attrs.temperature ?? null;
+          this.properties.targetTempHigh = attrs.target_temp_high ?? null;
+          this.properties.targetTempLow = attrs.target_temp_low ?? null;
+          this.properties.hvacMode = state.state || 'off';
+          this.properties.hvacAction = attrs.hvac_action || 'idle';
+          this.properties.humidity = attrs.current_humidity ?? null;
+          this.properties.tempUnit = attrs.temperature_unit || '°F';
+          this.properties.minTemp = attrs.min_temp || 50;
+          this.properties.maxTemp = attrs.max_temp || 90;
+          
+          this.properties.lastFetchTime = now;
+        }
+      } catch (e) {
+        if (VERBOSE) console.error('[HAThermostatNode] Fetch error:', e.message);
+      }
+    }
+
+    // Handle target temperature input
+    if (targetTempInput !== undefined && targetTempInput !== null) {
+      const temp = Number(targetTempInput);
+      if (!isNaN(temp) && temp !== this._lastTargetTemp) {
+        // Throttle commands to 5 seconds
+        if (now - this.properties.lastCommandTime > 5000) {
+          try {
+            await fetch(`${config.host}/api/services/climate/set_temperature`, {
+              method: 'POST',
+              headers: { 
+                Authorization: `Bearer ${config.token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                entity_id: cleanEntityId,
+                temperature: temp
+              })
+            });
+            this._lastTargetTemp = temp;
+            this.properties.targetTemp = temp;
+            this.properties.lastCommandTime = now;
+            if (VERBOSE) console.log(`[HAThermostatNode] Set temp to ${temp}`);
+          } catch (e) {
+            if (VERBOSE) console.error('[HAThermostatNode] Set temp error:', e.message);
+          }
+        }
+      }
+    }
+
+    // Handle HVAC mode input
+    if (hvacModeInput && hvacModeInput !== this._lastHvacMode) {
+      const validModes = ['off', 'heat', 'cool', 'heat_cool', 'auto', 'dry', 'fan_only'];
+      if (validModes.includes(hvacModeInput)) {
+        if (now - this.properties.lastCommandTime > 5000) {
+          try {
+            await fetch(`${config.host}/api/services/climate/set_hvac_mode`, {
+              method: 'POST',
+              headers: { 
+                Authorization: `Bearer ${config.token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                entity_id: cleanEntityId,
+                hvac_mode: hvacModeInput
+              })
+            });
+            this._lastHvacMode = hvacModeInput;
+            this.properties.hvacMode = hvacModeInput;
+            this.properties.lastCommandTime = now;
+            if (VERBOSE) console.log(`[HAThermostatNode] Set mode to ${hvacModeInput}`);
+          } catch (e) {
+            if (VERBOSE) console.error('[HAThermostatNode] Set mode error:', e.message);
+          }
+        }
+      }
+    }
+
+    // Update outputs
+    this.outputs.current_temp = this.properties.currentTemp;
+    this.outputs.target_temp_out = this.properties.targetTemp;
+    this.outputs.hvac_mode_out = this.properties.hvacMode;
+    this.outputs.hvac_action = this.properties.hvacAction;
+    this.outputs.humidity = this.properties.humidity;
+
+    return this.outputs;
+  }
+}
+
+registry.register('HAThermostatNode', HAThermostatNode);
+
 module.exports = { 
   HADeviceStateNode, 
   HADeviceFieldNode,
@@ -2660,6 +2809,7 @@ module.exports = {
   HueEffectNode,
   WizEffectNode,
   TTSAnnouncementNode,
+  HAThermostatNode,
   getHAConfig,
   bulkStateCache  // Exposed for engine reconciliation
 };

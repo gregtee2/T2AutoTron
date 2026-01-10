@@ -139,6 +139,8 @@ class BackendNodeRegistry {
       'HA Lock Control': 'HALockNode',
       'HA Device Field': 'HADeviceFieldNode',  // Field extractor for Timeline Color inputs
       'Device State': 'HADeviceStateNode',
+      'Thermostat': 'HAThermostatNode',
+      'HA Thermostat': 'HAThermostatNode',
       
       // Device nodes
       'Hue Light': 'HueLightNode',

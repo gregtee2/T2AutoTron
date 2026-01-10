@@ -67,13 +67,45 @@
     }
 
     /**
+     * XNOR gate - true if even number of inputs are true (inverse of XOR)
+     * @param {boolean[]} values - Array of boolean values
+     * @returns {boolean}
+     */
+    function calculateXnor(values) {
+        return !calculateXor(values);
+    }
+
+    /**
+     * IMPLIES - logical implication (A → B = NOT A OR B)
+     * @param {boolean} a - Antecedent
+     * @param {boolean} b - Consequent
+     * @returns {boolean}
+     */
+    function calculateImplies(a, b) {
+        return !Boolean(a) || Boolean(b);
+    }
+
+    /**
+     * BICOND - biconditional (A ↔ B, true when both same)
+     * @param {boolean} a - First value
+     * @param {boolean} b - Second value
+     * @returns {boolean}
+     */
+    function calculateBicond(a, b) {
+        return Boolean(a) === Boolean(b);
+    }
+
+    /**
      * Compare two values using an operator
      * @param {*} a - First value
-     * @param {string} operator - Comparison operator (==, !=, >, <, >=, <=)
+     * @param {string} operator - Comparison operator (==, !=, >, <, >=, <=, =)
      * @param {*} b - Second value
      * @returns {boolean}
      */
     function compare(a, operator, b) {
+        // Normalize '=' to '==' for convenience
+        if (operator === '=') operator = '==';
+        
         switch (operator) {
             case '==': return a == b;
             case '===': return a === b;
@@ -85,6 +117,30 @@
             case '<=': return a <= b;
             default: return false;
         }
+    }
+
+    /**
+     * Smart compare - tries numeric first, falls back to string
+     * Used by ComparisonNode to handle mixed inputs
+     * @param {*} a - First value
+     * @param {string} operator - Comparison operator
+     * @param {*} b - Second value
+     * @returns {boolean}
+     */
+    function smartCompare(a, operator, b) {
+        // Normalize '=' to '=='
+        if (operator === '=') operator = '==';
+        
+        // Try numeric comparison first
+        const numA = parseFloat(a);
+        const numB = parseFloat(b);
+        
+        if (!isNaN(numA) && !isNaN(numB)) {
+            return compare(numA, operator, numB);
+        }
+        
+        // Fall back to string comparison
+        return compare(String(a), operator, String(b));
     }
 
     /**
@@ -121,7 +177,11 @@
     exports.calculateXor = calculateXor;
     exports.calculateNand = calculateNand;
     exports.calculateNor = calculateNor;
+    exports.calculateXnor = calculateXnor;
+    exports.calculateImplies = calculateImplies;
+    exports.calculateBicond = calculateBicond;
     exports.compare = compare;
+    exports.smartCompare = smartCompare;
     exports.checkThreshold = checkThreshold;
 
 })(typeof exports !== 'undefined' ? exports : (window.T2SharedLogic = window.T2SharedLogic || {}));

@@ -114,23 +114,32 @@
     }
 
     /**
+     * Unit multipliers constant (milliseconds per unit)
+     */
+    const UNIT_MULTIPLIERS = {
+        'ms': 1,
+        'sec': 1000,
+        'seconds': 1000,
+        'min': 60000,
+        'minutes': 60000,
+        'hours': 3600000
+    };
+
+    /**
      * Convert delay value and unit to milliseconds
      * 
      * @param {number} value - Delay value
-     * @param {string} unit - 'ms', 'sec', 'min'
+     * @param {string} unit - 'ms', 'sec', 'seconds', 'min', 'minutes', 'hours'
      * @returns {number} - Delay in milliseconds
      */
     function toMilliseconds(value, unit) {
-        switch (unit) {
-            case 'ms': return value;
-            case 'sec': return value * 1000;
-            case 'min': return value * 60 * 1000;
-            default: return value * 1000; // Default to seconds
-        }
+        const multiplier = UNIT_MULTIPLIERS[unit] || UNIT_MULTIPLIERS['seconds'];
+        return Math.round(value * multiplier);
     }
 
     // Export for both Node.js and browser
     exports.createDelayState = createDelayState;
     exports.toMilliseconds = toMilliseconds;
+    exports.UNIT_MULTIPLIERS = UNIT_MULTIPLIERS;
 
 })(typeof exports !== 'undefined' ? exports : (window.T2SharedLogic = window.T2SharedLogic || {}));

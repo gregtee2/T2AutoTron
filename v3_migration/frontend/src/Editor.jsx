@@ -11,7 +11,7 @@ import "./sockets"; // Import socket patch globally
 
 
 // Debug mode - set to true to enable verbose console logging
-window.EDITOR_DEBUG = false;
+window.EDITOR_DEBUG = true;
 const EDITOR_DEBUG = window.EDITOR_DEBUG;
 const debug = (...args) => EDITOR_DEBUG && console.debug('[Editor]', ...args);
 
@@ -25,29 +25,31 @@ import { apiUrl } from "./utils/apiBase";
 
 // Custom Socket Component - adds data-socket-type and title for CSS styling
 const CustomSocket = React.memo(({ data, socketKey, side }) => {
-    // Get socket type name from the socket object
+    // Get socket type name directly from the socket object
+    // This determines both color AND compatibility (same color = can connect)
     const socketType = data?.name || 'any';
     
-    // Determine semantic type from socket key (hsv_in, hsv_out, scene_hsv, etc.)
-    let semanticType = socketType;
-    if (socketKey && typeof socketKey === 'string') {
-        const keyLower = socketKey.toLowerCase();
-        if (keyLower.includes('hsv') || keyLower.includes('color')) {
-            semanticType = 'hsv_info';
-        } else if (keyLower.includes('trigger') || keyLower.includes('enable') || keyLower.includes('active')) {
-            semanticType = 'boolean';
-        } else if (keyLower.includes('light') || keyLower.includes('device')) {
-            semanticType = 'light_info';
-        }
+    // Map socket types to color groups based on COMPATIBILITY rules from sockets.js:
+    // - boolean: STRICT (green) - only connects to boolean/any
+    // - number/string: COMPATIBLE (blue) - connect to each other + any
+    // - object/hsv_info/light_info: COMPATIBLE (purple) - connect to each other + any  
+    // - any: WILDCARD (white/rainbow) - connects to everything
+    let colorGroup = socketType;
+    
+    // Group compatible types to same color
+    if (socketType === 'string') {
+        colorGroup = 'number'; // String uses same color as number (they're compatible)
+    } else if (socketType === 'hsv_info' || socketType === 'light_info') {
+        colorGroup = 'object'; // HSV/light use same color as object (they're compatible)
     }
     
-    // Build title for tooltip and CSS fallback matching
-    const title = `${socketKey || 'socket'} (${semanticType})`;
+    // Build title for tooltip
+    const title = `${socketKey || 'socket'} (${socketType})`;
     
     // Only set structural styles - let CSS handle colors via data-socket-type attribute
     return React.createElement('div', {
         className: 'rete-socket',
-        'data-socket-type': semanticType,
+        'data-socket-type': colorGroup,
         title: title
     });
 });
@@ -347,6 +349,8 @@ export function Editor() {
         const render = new ReactPlugin({ createRoot });
         const engine = new DataflowEngine();
 
+        console.log('[EDITOR] ============ Editor created, setting up pipes ============');
+
         // Register engine with editor
         editor.use(engine);
 
@@ -638,8 +642,73 @@ export function Editor() {
             }
         }));
 
-        // Connection preset for classic connection rendering
-        connection.addPreset(ConnectionPresets.classic.setup());
+        // Connection validation function - checks socket type compatibility
+        const canMakeConnection = (source, target) => {
+            // source = { nodeId, key (output name) }
+            // target = { nodeId, key (input name) }
+            console.log('[CONNECTION] Validating:', source, '→', target);
+            
+            const sourceNode = editor.getNode(source.nodeId);
+            const targetNode = editor.getNode(target.nodeId);
+            
+            if (!sourceNode || !targetNode) {
+                console.warn('[CONNECTION] Missing node');
+                return true; // Allow if we can't validate
+            }
+            
+            const sourceOutput = sourceNode.outputs?.[source.key];
+            const targetInput = targetNode.inputs?.[target.key];
+            
+            if (!sourceOutput?.socket || !targetInput?.socket) {
+                console.warn('[CONNECTION] Missing socket');
+                return true; // Allow if we can't validate
+            }
+            
+            const sourceSocket = sourceOutput.socket;
+            const targetSocket = targetInput.socket;
+            
+            console.log('[CONNECTION] Socket types:', sourceSocket.name, '→', targetSocket.name);
+            
+            // Use our socket validation logic
+            const canConnect = sourceSocket.canConnectTo?.(targetSocket) ?? 
+                               ClassicPreset.Socket.canConnect?.(sourceSocket, targetSocket) ?? true;
+            
+            console.log('[CONNECTION] Result:', canConnect);
+            
+            if (!canConnect) {
+                // Show toast notification
+                if (window.T2Toast) {
+                    window.T2Toast.warning(
+                        `Cannot connect ${sourceSocket.name} to ${targetSocket.name}`,
+                        { duration: 2000 }
+                    );
+                }
+            }
+            
+            return canConnect;
+        };
+
+        // Connection preset for classic connection rendering WITH validation
+        connection.addPreset(ConnectionPresets.classic.setup({
+            canMakeConnection: canMakeConnection
+        }));
+
+        // Add connection validation pipe
+        connection.addPipe(context => {
+            if (context.type === 'connectionpick') {
+                // Store picked socket info for validation
+                window._t2PendingConnection = context.data;
+            } else if (context.type === 'connectiondrop') {
+                // Connection attempt - validate it
+                const data = context.data;
+                if (data && data.initial && data.socket) {
+                    // This is where we'd validate, but the drop event doesn't have full info
+                    // The actual validation happens in the editor pipe on 'connectioncreate'
+                }
+                window._t2PendingConnection = null;
+            }
+            return context;
+        });
 
         editor.use(area);
         area.use(connection);
@@ -1082,6 +1151,65 @@ export function Editor() {
         window.addEventListener('pointermove', onPointerMove);
         window.addEventListener('pointerup', onPointerUp);
         // --------------------------------------
+
+        // DEBUG: Log ALL editor events to find connection-related ones
+        editor.addPipe(context => {
+            if (context.type.includes('connection')) {
+                console.log('[EDITOR EVENT]', context.type, context.data);
+            }
+            return context;
+        });
+
+        // Socket connection validation - intercept connections BEFORE they're created
+        // Returns undefined to cancel invalid connections
+        editor.addPipe(context => {
+            if (context.type === 'connectioncreate') {
+                const { data } = context;
+                console.log('[CONNECTION] Attempting connection:', data.sourceOutput, '→', data.targetInput);
+                
+                // Get the source and target nodes/sockets
+                const sourceNode = editor.getNode(data.source);
+                const targetNode = editor.getNode(data.target);
+                
+                if (sourceNode && targetNode) {
+                    const sourceOutput = sourceNode.outputs[data.sourceOutput];
+                    const targetInput = targetNode.inputs[data.targetInput];
+                    
+                    if (sourceOutput?.socket && targetInput?.socket) {
+                        const sourceSocket = sourceOutput.socket;
+                        const targetSocket = targetInput.socket;
+                        
+                        console.log('[CONNECTION] Socket types:', sourceSocket.name, '→', targetSocket.name);
+                        
+                        // Check socket compatibility using our canConnect logic
+                        const canConnect = sourceSocket.canConnectTo?.(targetSocket) ?? 
+                                           ClassicPreset.Socket.canConnect?.(sourceSocket, targetSocket) ?? true;
+                        
+                        console.log('[CONNECTION] canConnect result:', canConnect);
+                        
+                        if (!canConnect) {
+                            console.warn(`[CONNECTION BLOCKED] ${sourceSocket.name} → ${targetSocket.name} (incompatible types)`);
+                            
+                            // Show toast notification to user
+                            if (window.T2Toast) {
+                                window.T2Toast.warning(
+                                    `Cannot connect ${sourceSocket.name} to ${targetSocket.name}`,
+                                    { duration: 2000 }
+                                );
+                            }
+                            
+                            // Return undefined to cancel the connection
+                            return undefined;
+                        }
+                    } else {
+                        console.warn('[CONNECTION] Missing socket info:', { sourceOutput, targetInput });
+                    }
+                } else {
+                    console.warn('[CONNECTION] Missing nodes:', { sourceNode: !!sourceNode, targetNode: !!targetNode });
+                }
+            }
+            return context;
+        });
 
         // Trigger process on connection changes
         editor.addPipe(context => {

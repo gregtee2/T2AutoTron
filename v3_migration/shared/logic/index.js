@@ -33,7 +33,11 @@ module.exports = {
     calculateXor: LogicGateLogic.calculateXor,
     calculateNand: LogicGateLogic.calculateNand,
     calculateNor: LogicGateLogic.calculateNor,
+    calculateXnor: LogicGateLogic.calculateXnor,
+    calculateImplies: LogicGateLogic.calculateImplies,
+    calculateBicond: LogicGateLogic.calculateBicond,
     compare: LogicGateLogic.compare,
+    smartCompare: LogicGateLogic.smartCompare,
     checkThreshold: LogicGateLogic.checkThreshold,
     
     // Convenience re-exports - Colors
@@ -51,6 +55,7 @@ module.exports = {
     // Convenience re-exports - Delay
     createDelayState: DelayLogic.createDelayState,
     toMilliseconds: DelayLogic.toMilliseconds,
+    UNIT_MULTIPLIERS: DelayLogic.UNIT_MULTIPLIERS,
     
     // Convenience re-exports - Device Control
     normalizeHSVInput: DeviceLogic.normalizeHSVInput,

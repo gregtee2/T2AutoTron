@@ -17,6 +17,15 @@ const path = require('path');
 const deviceAudit = require('../../engine/deviceAudit');
 const commandTracker = require('../../engine/commandTracker');
 
+// Lazy-load homeAssistantManager to avoid circular dependencies
+let homeAssistantManager = null;
+function getHAManager() {
+  if (!homeAssistantManager) {
+    homeAssistantManager = require('../../devices/managers/homeAssistantManager');
+  }
+  return homeAssistantManager;
+}
+
 // Get the graphs directory - uses GRAPH_SAVE_PATH env var in Docker, or falls back to local path
 function getGraphsDir() {
   if (process.env.GRAPH_SAVE_PATH) {
@@ -190,6 +199,36 @@ router.post('/load', express.json(), async (req, res) => {
         error: `Failed to load graph from ${graphPath}`
       });
     }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/engine/node-labels
+ * Get all loaded node instances with their labels/titles (for debug dashboard)
+ */
+router.get('/node-labels', (req, res) => {
+  try {
+    const { engine } = getEngine();
+    
+    const nodeLabels = {};
+    for (const [nodeId, node] of engine.nodes) {
+      const props = node.properties || {};
+      nodeLabels[nodeId] = {
+        label: props.customTitle || props.customName || node.label || node.constructor?.name || 'Unknown',
+        type: node.constructor?.name || node.label || 'Unknown'
+      };
+    }
+    
+    res.json({
+      success: true,
+      nodeLabels,
+      count: Object.keys(nodeLabels).length
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -376,6 +415,29 @@ router.get('/device-states', async (req, res) => {
           trackedState: node.deviceStates?.[entityId],
           lastOutput: output
         });
+      }
+    }
+    
+    // Fetch actual HA states for all entities to enable split-bar comparison
+    const haManager = getHAManager();
+    for (const device of deviceStates) {
+      if (device.entityId) {
+        try {
+          const result = await haManager.getState(device.entityId);
+          // getState returns { success: true, state: { state, brightness, hs_color, ... } }
+          if (result && result.success && result.state) {
+            const haState = result.state;
+            device.haState = {
+              state: haState.state,
+              brightness: haState.brightness, // Already normalized to 0-100 by getState()
+              hs_color: haState.hs_color,     // [hue, sat] where hue is 0-360, sat is 0-100
+              rgb_color: haState.attributes?.rgb_color,
+              color_temp: haState.attributes?.color_temp
+            };
+          }
+        } catch (e) {
+          // Ignore errors fetching individual device states
+        }
       }
     }
     
@@ -953,12 +1015,6 @@ router.get('/logs/device-history', (req, res) => {
         timestamp = new Date(); // Will be approximate
       }
       
-      // Extract entity ID if present (in message or data)
-      const entityMatch = line.match(/((?:light|switch|sensor|climate|cover|fan|media_player)\.[a-z0-9_]+)/i);
-      const entityId = entityMatch ? entityMatch[1] : null;
-      
-      if (entityFilter && entityId && !entityId.includes(entityFilter)) continue;
-      
       // Extract category - now third [...] block (ISO, local time, then category)
       // Or second [...] block for legacy format
       const categoryMatch = line.match(/\[([A-Z][A-Z0-9-]+)\]/);
@@ -968,13 +1024,47 @@ router.get('/logs/device-history', (req, res) => {
       const messageMatch = line.match(/^\[[^\]]+\]\s*\[[^\]]+\]\s*(.+?)(?:\s*\||\s*$)/);
       const message = messageMatch ? messageMatch[1].trim() : line;
       
-      history.push({
-        time: timestamp.toISOString(),
-        timeLocal: timestamp.toLocaleString(),
-        category,
-        entity: entityId,
-        action: message
-      });
+      // Extract JSON data after pipe (|) if present
+      const dataMatch = line.match(/\|\s*(\{.+\})\s*$/);
+      let data = null;
+      if (dataMatch) {
+        try {
+          data = JSON.parse(dataMatch[1]);
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      }
+      
+      // For HSV-CHANGE events with multiple entities, create an entry for EACH entity
+      // This ensures the dashboard timeline shows colors for all devices, not just the first
+      if (category === 'HA-HSV-CHANGE' && data?.entities && Array.isArray(data.entities)) {
+        for (const entityId of data.entities) {
+          if (entityFilter && !entityId.includes(entityFilter)) continue;
+          history.push({
+            time: timestamp.toISOString(),
+            timeLocal: timestamp.toLocaleString(),
+            category,
+            entity: entityId,
+            action: message,
+            data: data
+          });
+        }
+      } else {
+        // Standard single-entity extraction
+        const entityMatch = line.match(/((?:light|switch|sensor|climate|cover|fan|media_player)\.[a-z0-9_]+)/i);
+        const entityId = entityMatch ? entityMatch[1] : null;
+        
+        if (entityFilter && entityId && !entityId.includes(entityFilter)) continue;
+        
+        history.push({
+          time: timestamp.toISOString(),
+          timeLocal: timestamp.toLocaleString(),
+          category,
+          entity: entityId,
+          action: message,
+          data: data
+        });
+      }
     }
     
     res.json({

@@ -475,6 +475,45 @@
   transform: scale(1.1);
 }
 
+/* Gradient slider - transparent track so gradient shows through */
+.aio-gradient-slider {
+  background: transparent !important;
+}
+
+.aio-gradient-slider::-webkit-slider-runnable-track {
+  background: transparent !important;
+  height: 12px;
+}
+
+.aio-gradient-slider::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -2px;
+  background: #ffffff !important;
+  border: 2px solid #333 !important;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3);
+}
+
+.aio-gradient-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 6px rgba(0,0,0,0.7), 0 0 12px rgba(255,255,255,0.5);
+}
+
+/* Firefox support for gradient sliders */
+.aio-gradient-slider::-moz-range-track {
+  background: transparent !important;
+  height: 12px;
+}
+
+.aio-gradient-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #ffffff !important;
+  border: 2px solid #333 !important;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3);
+}
+
 .aio-section-header,
 .hsv-section-header {
   font-size: 10px;
@@ -3990,4 +4029,159 @@
   box-shadow: 0 0 25px rgba(255, 170, 0, 0.4),
               inset 0 0 30px rgba(255, 170, 0, 0.1);
   border-color: #ffcc00;
+}
+
+/* ============================================================================
+   THERMOSTAT NODE
+   ============================================================================ */
+
+.thermostat-node {
+  padding: 12px;
+}
+
+.thermostat-node .thermostat-dropdown {
+  width: 100%;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.thermostat-node .thermostat-dropdown:focus {
+  outline: none;
+  border-color: rgba(0, 243, 255, 0.6);
+}
+
+.thermostat-node .temp-ring-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.thermostat-node .temp-ring {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border-width: 4px;
+  border-style: solid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.thermostat-node .temp-ring.heating {
+  border-color: #ff6b35;
+  box-shadow: 0 0 20px rgba(255, 107, 53, 0.4);
+}
+
+.thermostat-node .temp-ring.cooling {
+  border-color: #00bcd4;
+  box-shadow: 0 0 20px rgba(0, 188, 212, 0.4);
+}
+
+.thermostat-node .temp-ring.idle {
+  border-color: #888;
+  box-shadow: 0 0 20px rgba(136, 136, 136, 0.2);
+}
+
+.thermostat-node .temp-ring.off {
+  border-color: #444;
+  box-shadow: none;
+}
+
+.thermostat-node .temp-current {
+  font-size: 36px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.thermostat-node .temp-target {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+.thermostat-node .temp-action {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.thermostat-node .mode-buttons {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.thermostat-node .mode-btn {
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.thermostat-node .mode-btn:hover {
+  background: rgba(0, 243, 255, 0.15);
+  border-color: rgba(0, 243, 255, 0.5);
+}
+
+.thermostat-node .mode-btn.active {
+  background: rgba(0, 243, 255, 0.3);
+  border-color: rgba(0, 243, 255, 0.8);
+  color: #00f3ff;
+}
+
+.thermostat-node .temp-slider-container {
+  margin-bottom: 12px;
+}
+
+.thermostat-node .temp-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.thermostat-node .temp-slider {
+  width: 100%;
+  accent-color: var(--ring-color, #00f3ff);
+}
+
+.thermostat-node .humidity-display {
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 8px;
+}
+
+.thermostat-node .loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.thermostat-node .error-message {
+  color: #ff6b6b;
+  font-size: 11px;
+  text-align: center;
+  margin-top: 8px;
 }

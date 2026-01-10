@@ -58,7 +58,9 @@
      * @param {number} r - Red (0-255)
      * @param {number} g - Green (0-255)
      * @param {number} b - Blue (0-255)
-     * @returns {object} { h, s, v } where h is 0-360, s and v are 0-1
+     * @returns {object} { h, s, v, hue, sat, val } where:
+     *   - h is 0-360 (degrees), s and v are 0-1
+     *   - hue is 0-1 (normalized), sat and val are 0-1 (aliases for backwards compatibility)
      */
     function rgbToHsv(r, g, b) {
         r /= 255;
@@ -81,7 +83,15 @@
             }
         }
 
-        return { h, s, v };
+        // Return both formats for backwards compatibility:
+        // - h/s/v: standard format (h in degrees 0-360)
+        // - hue/sat/val: legacy format used by some nodes (hue normalized 0-1)
+        return { 
+            h, s, v,
+            hue: h / 360,  // Normalized 0-1 for nodes expecting this format
+            sat: s,
+            val: v
+        };
     }
 
     /**
@@ -159,6 +169,113 @@
         return { r: 0, g: 0, b: 0 };
     }
 
+    // =========================================================================
+    // OKLAB COLOR SPACE - Perceptually Uniform Color Interpolation
+    // =========================================================================
+    // Oklab (2020) produces smoother, more natural color gradients than RGB/HSV.
+    // Red → Green goes through vibrant yellows instead of muddy browns.
+    // Reference: https://bottosson.github.io/posts/oklab/
+
+    /**
+     * Convert sRGB to linear RGB (remove gamma correction)
+     */
+    function srgbToLinear(c) {
+        return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    }
+
+    /**
+     * Convert linear RGB to sRGB (apply gamma correction)
+     */
+    function linearToSrgb(c) {
+        return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+    }
+
+    /**
+     * Convert RGB (0-255) to Oklab
+     * @param {number} r - Red (0-255)
+     * @param {number} g - Green (0-255)
+     * @param {number} b - Blue (0-255)
+     * @returns {object} { L, a, b } where L is 0-1, a and b are roughly -0.4 to 0.4
+     */
+    function rgbToOklab(r, g, b) {
+        // Normalize and linearize
+        const lr = srgbToLinear(r / 255);
+        const lg = srgbToLinear(g / 255);
+        const lb = srgbToLinear(b / 255);
+
+        // RGB to LMS (cone response)
+        const l = 0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb;
+        const m = 0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb;
+        const s = 0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb;
+
+        // Cube root
+        const l_ = Math.cbrt(l);
+        const m_ = Math.cbrt(m);
+        const s_ = Math.cbrt(s);
+
+        // LMS to Oklab
+        return {
+            L: 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+            a: 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+            b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+        };
+    }
+
+    /**
+     * Convert Oklab to RGB (0-255)
+     * @param {number} L - Lightness (0-1)
+     * @param {number} a - Green-red axis (roughly -0.4 to 0.4)
+     * @param {number} b - Blue-yellow axis (roughly -0.4 to 0.4)
+     * @returns {object} { r, g, b } each 0-255
+     */
+    function oklabToRgb(L, a, b) {
+        // Oklab to LMS
+        const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+        const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+        const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+
+        // Cube
+        const l = l_ * l_ * l_;
+        const m = m_ * m_ * m_;
+        const s = s_ * s_ * s_;
+
+        // LMS to linear RGB
+        const lr = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+        const lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+        const lb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+
+        // Apply gamma and scale to 0-255
+        return {
+            r: Math.round(clamp(linearToSrgb(lr), 0, 1) * 255),
+            g: Math.round(clamp(linearToSrgb(lg), 0, 1) * 255),
+            b: Math.round(clamp(linearToSrgb(lb), 0, 1) * 255)
+        };
+    }
+
+    /**
+     * Interpolate between two RGB colors in Oklab space (perceptually uniform)
+     * This produces much smoother gradients than RGB or HSV interpolation.
+     * @param {object} color1 - { r, g, b } each 0-255
+     * @param {object} color2 - { r, g, b } each 0-255
+     * @param {number} t - Interpolation factor (0 = color1, 1 = color2)
+     * @returns {object} { r, g, b } each 0-255
+     */
+    function mixColorsOklab(color1, color2, t) {
+        t = clamp(t, 0, 1);
+        
+        // Convert to Oklab
+        const lab1 = rgbToOklab(color1.r || 0, color1.g || 0, color1.b || 0);
+        const lab2 = rgbToOklab(color2.r || 0, color2.g || 0, color2.b || 0);
+        
+        // Linear interpolation in Oklab space
+        const L = lerp(lab1.L, lab2.L, t);
+        const a = lerp(lab1.a, lab2.a, t);
+        const b = lerp(lab1.b, lab2.b, t);
+        
+        // Convert back to RGB
+        return oklabToRgb(L, a, b);
+    }
+
     // Export for both Node.js and browser
     exports.clamp = clamp;
     exports.lerp = lerp;
@@ -167,5 +284,9 @@
     exports.mixColors = mixColors;
     exports.hsvToCss = hsvToCss;
     exports.parseColor = parseColor;
+    // Oklab functions
+    exports.rgbToOklab = rgbToOklab;
+    exports.oklabToRgb = oklabToRgb;
+    exports.mixColorsOklab = mixColorsOklab;
 
 })(typeof exports !== 'undefined' ? exports : (window.T2SharedLogic = window.T2SharedLogic || {}));
