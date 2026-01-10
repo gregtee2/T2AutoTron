@@ -41,3 +41,8 @@ v3_migration/crashes/*.log
 v3_migration/crashes/*.json
 v3_migration/crashes/.running
 *.log
+
+# Ignore generated/temporary files (prevents repo bloat)
+v3_migration/backend/audio/
+*.wav
+*.mp3

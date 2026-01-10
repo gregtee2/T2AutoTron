@@ -29,5 +29,5 @@ REM Commit with auto-backup message
 git commit -m "auto-backup: %timestamp%"
 echo [%timestamp%] Auto-backup committed successfully
 
-REM Optional: uncomment to auto-push
-REM git push origin main
+REM Push to GitHub for offsite backup
+git push origin main

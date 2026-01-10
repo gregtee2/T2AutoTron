@@ -92,6 +92,57 @@ const result = smartCompare(a, op, b);
 - Starting servers when the user is already running one creates chaos (port conflicts, multiple instances)
 - After making changes, just tell the user "restart your server and test" - don't do it for them
 
+### 🚨 CRITICAL: Git Commit Rules (READ THIS - DISASTERS HAVE OCCURRED)
+
+**In January 2026, days of plugin work was lost because agents committed docs/version bumps but NOT the actual plugin files!**
+
+#### Before EVERY commit, run `git status` and verify:
+1. **The actual code files you modified are staged** (plugins, engine nodes, frontend components)
+2. Not JUST docs, CHANGELOG, version bumps, or addon submodule updates
+
+#### The Correct Commit Workflow:
+```bash
+# 1. SEE what's changed
+git status
+
+# 2. Stage EVERYTHING that was worked on (not just docs!)
+git add v3_migration/backend/plugins/     # Plugin files
+git add v3_migration/backend/src/         # Backend engine/routes
+git add v3_migration/frontend/src/        # Frontend components
+git add v3_migration/shared/logic/        # Shared logic
+git add .github/copilot-instructions.md   # Docs (if updated)
+
+# 3. Commit with descriptive message
+git commit -m "feat: Description of actual feature"
+
+# 4. Push to main (development branch)
+git push origin main
+```
+
+#### ❌ WRONG (What caused the disaster):
+```bash
+# Only committed docs, forgot the actual plugin files!
+git add .github/copilot-instructions.md
+git add home-assistant-addons
+git commit -m "docs: Update for v2.1.235"  # WHERE ARE THE PLUGINS?!
+```
+
+#### ✅ CORRECT:
+```bash
+# Commit ALL changed files - the whole enchilada!
+git add -A  # Or explicitly add each changed directory
+git status  # VERIFY plugins are staged!
+git commit -m "feat: Add Nuke sliders to AllInOneColorNode"
+```
+
+#### Commit Message Prefixes:
+- `feat:` - New feature (usually involves plugin/engine changes)
+- `fix:` - Bug fix (usually involves code changes)
+- `docs:` - Documentation ONLY (no code changes)
+- `chore:` - Maintenance (submodule updates, version bumps)
+
+**If your commit message says `feat:` or `fix:`, there MUST be code files (not just docs) in the commit!**
+
 ---
 
 ## ⚠️ CRITICAL: Frontend/Backend Priority Design (DO NOT CHANGE)
