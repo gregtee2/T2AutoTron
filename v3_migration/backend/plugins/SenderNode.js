@@ -232,6 +232,7 @@
                         className: 'sender-text-input',
                         value: bufferName,
                         onChange: (e) => setBufferName(e.target.value),
+                        onPointerDown: (e) => e.stopPropagation(),
                         placeholder: "Buffer Name"
                     }),
                     HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.name, size: 10 })

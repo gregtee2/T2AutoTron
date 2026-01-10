@@ -12,6 +12,28 @@
     const RefComponent = window.RefComponent;
     const sockets = window.sockets;
 
+    // Get shared controls (HelpIcon for tooltips)
+    const { HelpIcon } = window.T2Controls || {};
+
+    // Tooltip definitions for all inputs, outputs, and controls
+    const tooltips = {
+        node: "All-in-One Color Control\n\nA comprehensive color picker that outputs HSV values.\nSupports RGB sliders, HSV sliders, color temperature,\nand a quick-pick palette.\n\nConnect HSV Out to device nodes to control light colors.",
+        inputs: {
+            hsv_in: "Optional HSV input for pass-through.\nIf connected, this value flows to output\nunless Scene HSV is also connected.",
+            scene_hsv: "Scene override input.\nWhen connected, this takes priority over\nall manual controls and HSV In.\nUseful for timeline or automation control."
+        },
+        outputs: {
+            hsv_out: "HSV color output.\nContains: hue (0-1), saturation (0-1),\nbrightness (0-255), colorTemp (K),\nand transition time (ms)."
+        },
+        controls: {
+            rgb: "Adjust Red, Green, Blue channels directly.\nValues 0-255. Changes sync to HSV automatically.",
+            hsv: "Adjust Hue (0-360°), Saturation (0-100%),\nand Brightness (0-255).\nType values directly or use sliders.",
+            temp: "Color temperature in Kelvin.\n1800K = warm/candlelight\n4000K = neutral white\n6500K = cool/daylight",
+            transition: "Transition time in milliseconds.\nHow long the light takes to fade to new color.\n0 = instant, 1000 = 1 second fade.",
+            autoTrigger: "When enabled, automatically sends output\nat the specified interval.\nUseful for animations or periodic updates."
+        }
+    };
+
     // -------------------------------------------------------------------------
     // CSS is now loaded from node-styles.css via index.css
     // -------------------------------------------------------------------------
@@ -110,18 +132,161 @@
     // -------------------------------------------------------------------------
     // COMPONENT
     // -------------------------------------------------------------------------
-    const Slider = ({ label, value, min, max, onChange, step = 1 }) => {
+    
+    // -------------------------------------------------------------------------
+    // NUKE-STYLE GRADIENT SLIDER HELPER
+    // Returns inline style with gradient background showing current value
+    // -------------------------------------------------------------------------
+    const getSliderGradient = (value, min, max, type = 'default') => {
+        const percent = ((value - min) / (max - min)) * 100;
+        
+        switch (type) {
+            case 'hue':
+                // Rainbow gradient for hue (0-360)
+                return {
+                    background: `linear-gradient(to right, 
+                        hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), 
+                        hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%))`
+                };
+            case 'red':
+                return {
+                    background: `linear-gradient(90deg, 
+                        rgba(80, 0, 0, 0.8) 0%, 
+                        rgba(255, 0, 0, 0.9) ${percent}%, 
+                        rgba(40, 0, 0, 0.4) ${percent}%)`
+                };
+            case 'green':
+                return {
+                    background: `linear-gradient(90deg, 
+                        rgba(0, 80, 0, 0.8) 0%, 
+                        rgba(0, 255, 0, 0.9) ${percent}%, 
+                        rgba(0, 40, 0, 0.4) ${percent}%)`
+                };
+            case 'blue':
+                return {
+                    background: `linear-gradient(90deg, 
+                        rgba(0, 0, 80, 0.8) 0%, 
+                        rgba(0, 100, 255, 0.9) ${percent}%, 
+                        rgba(0, 0, 40, 0.4) ${percent}%)`
+                };
+            case 'saturation':
+                return {
+                    background: `linear-gradient(90deg, 
+                        rgba(128, 128, 128, 0.6) 0%, 
+                        rgba(255, 100, 200, 0.9) ${percent}%, 
+                        rgba(60, 60, 60, 0.4) ${percent}%)`
+                };
+            case 'brightness':
+                return {
+                    background: `linear-gradient(90deg, 
+                        rgba(0, 0, 0, 0.9) 0%, 
+                        rgba(255, 255, 255, 0.95) ${percent}%, 
+                        rgba(30, 30, 30, 0.5) ${percent}%)`
+                };
+            case 'temp':
+                // Warm (orange) to cool (blue) gradient
+                return {
+                    background: `linear-gradient(to right, 
+                        rgb(255, 147, 41), rgb(255, 197, 143), rgb(255, 255, 255), 
+                        rgb(201, 226, 255), rgb(147, 188, 255))`
+                };
+            default:
+                // Tron-style cyan glow fill
+                return {
+                    background: `linear-gradient(90deg, 
+                        rgba(0, 243, 255, 0.5) 0%, 
+                        rgba(0, 243, 255, 0.4) ${percent}%, 
+                        rgba(0, 243, 255, 0.15) ${percent}%)`
+                };
+        }
+    };
+
+    // -------------------------------------------------------------------------
+    // NUKE-STYLE SLIDER COMPONENT
+    // Enhanced slider with colored gradient background showing value visually
+    // -------------------------------------------------------------------------
+    const NukeSlider = ({ label, value, min, max, onChange, step = 1, tooltip, showNumberInput = false, sliderType = 'default' }) => {
+        const gradientStyle = getSliderGradient(value, min, max, sliderType);
+        
         return React.createElement('div', { className: 'aio-slider-container' }, [
-            React.createElement('span', { key: 'label', className: 'aio-slider-label' }, label),
-            React.createElement('input', {
-                key: 'input',
-                type: 'range',
-                min, max, step,
-                value,
-                onChange: (e) => onChange(Number(e.target.value)),
-                className: 'aio-range-input'
-            }),
-            React.createElement('span', { key: 'val', className: 'aio-slider-value' }, value)
+            // Label row with optional help icon
+            React.createElement('div', { 
+                key: 'label-row',
+                style: { display: 'flex', alignItems: 'center', gap: '4px' }
+            }, [
+                React.createElement('span', { key: 'label', className: 'aio-slider-label' }, label),
+                tooltip && HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltip, size: 11 })
+            ]),
+            // Slider container with gradient background (Nuke-style)
+            React.createElement('div', {
+                key: 'slider-row',
+                style: { 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px', 
+                    width: '100%'
+                }
+            }, [
+                // Gradient background wrapper
+                React.createElement('div', {
+                    key: 'slider-wrapper',
+                    style: {
+                        flex: 1,
+                        position: 'relative',
+                        height: '18px',
+                        borderRadius: '4px',
+                        overflow: 'hidden',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.4)',
+                        ...gradientStyle
+                    }
+                }, [
+                    React.createElement('input', {
+                        key: 'input',
+                        type: 'range',
+                        min, max, step,
+                        value,
+                        onChange: (e) => onChange(Number(e.target.value)),
+                        onPointerDown: (e) => e.stopPropagation(),
+                        className: 'aio-gradient-slider',
+                        style: { 
+                            width: '100%',
+                            height: '100%',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            margin: 0,
+                            cursor: 'ew-resize'
+                        }
+                    })
+                ]),
+                // Number input field for direct value entry
+                showNumberInput ? React.createElement('input', {
+                    key: 'number',
+                    type: 'number',
+                    min, max, step,
+                    value,
+                    onChange: (e) => {
+                        let v = Number(e.target.value);
+                        if (!isNaN(v)) {
+                            v = Math.max(min, Math.min(max, v));
+                            onChange(v);
+                        }
+                    },
+                    onPointerDown: (e) => e.stopPropagation(),
+                    className: 'aio-number-input',
+                    style: {
+                        width: '50px',
+                        padding: '2px 4px',
+                        background: '#1a1a2a',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        borderRadius: '3px',
+                        color: '#fff',
+                        fontSize: '11px',
+                        textAlign: 'center'
+                    }
+                }) : React.createElement('span', { key: 'val', className: 'aio-slider-value' }, value)
+            ])
         ]);
     };
 
@@ -252,7 +417,9 @@
                         style: { cursor: "pointer", fontSize: "12px", userSelect: "none", color: 'var(--node-color-color, #f48fb1)' },
                         onPointerDown: (e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }
                     }, isCollapsed ? "▶" : "▼"),
-                    React.createElement('div', { key: 'title', className: 'hsv-node-title', style: { flex: 1, textAlign: 'center' } }, data.label)
+                    React.createElement('span', { key: 'icon', style: { fontSize: '14px' } }, '🎨'),
+                    React.createElement('div', { key: 'title', className: 'hsv-node-title', style: { flex: 1, textAlign: 'center' } }, data.label),
+                    HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.node, size: 14 })
                 ])
             ]),
 
@@ -266,13 +433,15 @@
                                 init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: input.socket, nodeId: data.id, side: "input", key } }),
                                 unmount: ref => emit({ type: "unmount", data: { element: ref } })
                             }),
-                            React.createElement('span', { key: 'label', className: 'ha-socket-label' }, input.label)
+                            React.createElement('span', { key: 'label', className: 'ha-socket-label' }, input.label),
+                            tooltips.inputs[key] && HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.inputs[key], size: 11 })
                         ])
                     )
                 ),
                 React.createElement('div', { key: 'outputs', className: 'outputs' }, 
                     Object.entries(data.outputs).map(([key, output]) => 
                         React.createElement('div', { key: key, style: { display: "flex", alignItems: "center", gap: "8px", justifyContent: 'flex-end', marginBottom: '4px' } }, [
+                            tooltips.outputs[key] && HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.outputs[key], size: 11 }),
                             React.createElement('span', { key: 'label', className: 'ha-socket-label' }, output.label),
                             React.createElement(RefComponent, {
                                 key: 'ref',
@@ -300,32 +469,44 @@
 
                 // RGB Sliders
                 React.createElement('div', { key: 'rgb', style: { borderBottom: "1px solid rgba(0, 243, 255, 0.1)", paddingBottom: "8px", marginBottom: "8px" } }, [
-                    React.createElement('div', { key: 'h', className: 'aio-section-header' }, 'RGB Channels'),
-                    React.createElement(Slider, { key: 'r', label: "Red", value: state.red, min: 0, max: 255, onChange: v => updateHSVFromRGB(v, state.green, state.blue) }),
-                    React.createElement(Slider, { key: 'g', label: "Green", value: state.green, min: 0, max: 255, onChange: v => updateHSVFromRGB(state.red, v, state.blue) }),
-                    React.createElement(Slider, { key: 'b', label: "Blue", value: state.blue, min: 0, max: 255, onChange: v => updateHSVFromRGB(state.red, state.green, v) })
+                    React.createElement('div', { key: 'h', className: 'aio-section-header', style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
+                        'RGB Channels',
+                        HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.rgb, size: 12 })
+                    ]),
+                    React.createElement(NukeSlider, { key: 'r', label: "Red", value: state.red, min: 0, max: 255, onChange: v => updateHSVFromRGB(v, state.green, state.blue), showNumberInput: true, sliderType: 'red' }),
+                    React.createElement(NukeSlider, { key: 'g', label: "Green", value: state.green, min: 0, max: 255, onChange: v => updateHSVFromRGB(state.red, v, state.blue), showNumberInput: true, sliderType: 'green' }),
+                    React.createElement(NukeSlider, { key: 'b', label: "Blue", value: state.blue, min: 0, max: 255, onChange: v => updateHSVFromRGB(state.red, state.green, v), showNumberInput: true, sliderType: 'blue' })
                 ]),
 
                 // HSV Sliders
                 React.createElement('div', { key: 'hsv', style: { borderBottom: "1px solid rgba(0, 243, 255, 0.1)", paddingBottom: "8px", marginBottom: "8px" } }, [
-                    React.createElement('div', { key: 'h', className: 'aio-section-header' }, 'HSV Control'),
-                    React.createElement(Slider, { key: 'hue', label: "Hue", value: state.hueShift, min: 0, max: 360, onChange: v => updateRGBFromHueSat(v, state.saturation, state.brightness) }),
-                    React.createElement(Slider, { key: 'sat', label: "Sat", value: state.saturation, min: 0, max: 100, onChange: v => updateRGBFromHueSat(state.hueShift, v, state.brightness) }),
-                    React.createElement(Slider, { key: 'bri', label: "Bri", value: state.brightness, min: 0, max: 255, onChange: handleBrightnessChange })
+                    React.createElement('div', { key: 'h', className: 'aio-section-header', style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
+                        'HSV Control',
+                        HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.hsv, size: 12 })
+                    ]),
+                    React.createElement(NukeSlider, { key: 'hue', label: "Hue", value: state.hueShift, min: 0, max: 360, onChange: v => updateRGBFromHueSat(v, state.saturation, state.brightness), showNumberInput: true, sliderType: 'hue' }),
+                    React.createElement(NukeSlider, { key: 'sat', label: "Sat", value: state.saturation, min: 0, max: 100, onChange: v => updateRGBFromHueSat(state.hueShift, v, state.brightness), showNumberInput: true, sliderType: 'saturation' }),
+                    React.createElement(NukeSlider, { key: 'bri', label: "Bri", value: state.brightness, min: 0, max: 255, onChange: handleBrightnessChange, showNumberInput: true, sliderType: 'brightness' })
                 ]),
 
                 // Temp Sliders
                 React.createElement('div', { key: 'temp', style: { borderBottom: "1px solid rgba(0, 243, 255, 0.1)", paddingBottom: "8px", marginBottom: "8px" } }, [
-                    React.createElement('div', { key: 'h', className: 'aio-section-header' }, 'Temperature'),
-                    React.createElement(Slider, { key: 't', label: "Temp (K)", value: state.colorTemp, min: 1800, max: 6500, step: 50, onChange: v => updateRGBFromTemp(v) })
+                    React.createElement('div', { key: 'h', className: 'aio-section-header', style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
+                        'Temperature',
+                        HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.temp, size: 12 })
+                    ]),
+                    React.createElement(NukeSlider, { key: 't', label: "Temp (K)", value: state.colorTemp, min: 1800, max: 6500, step: 50, onChange: v => updateRGBFromTemp(v), showNumberInput: true, sliderType: 'temp' })
                 ]),
 
                 // Settings
                 React.createElement('div', { key: 'settings' }, [
-                    React.createElement('div', { key: 'h', className: 'aio-section-header' }, 'Settings'),
-                    React.createElement(Slider, { key: 'trans', label: "Trans (ms)", value: state.transitionTime, min: 0, max: 5000, step: 100, onChange: v => updateState({ transitionTime: v }) }),
+                    React.createElement('div', { key: 'h', className: 'aio-section-header', style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
+                        'Settings',
+                        HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.transition, size: 12 })
+                    ]),
+                    React.createElement(NukeSlider, { key: 'trans', label: "Trans (ms)", value: state.transitionTime, min: 0, max: 5000, step: 100, onChange: v => updateState({ transitionTime: v }), showNumberInput: true }),
                     React.createElement('div', { key: 'auto', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' } }, [
-                        React.createElement('label', { key: 'chk', className: 'aio-checkbox-container' }, [
+                        React.createElement('label', { key: 'chk', className: 'aio-checkbox-container', style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
                             React.createElement('input', {
                                 key: 'in',
                                 type: 'checkbox',
@@ -334,7 +515,8 @@
                                 onPointerDown: (e) => e.stopPropagation(),
                                 onChange: e => updateState({ enableAutoTrigger: e.target.checked })
                             }),
-                            React.createElement('span', { key: 'lbl' }, "Auto Trigger")
+                            React.createElement('span', { key: 'lbl' }, "Auto Trigger"),
+                            HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.autoTrigger, size: 11 })
                         ]),
                         state.enableAutoTrigger && React.createElement('div', { key: 'int', style: { display: 'flex', alignItems: 'center', gap: '5px' } }, [
                             React.createElement('span', { key: 'l', className: 'aio-slider-label', style: { width: 'auto' } }, "Interval:"),
@@ -343,6 +525,7 @@
                                 type: 'number',
                                 value: state.autoInterval,
                                 onChange: e => updateState({ autoInterval: Number(e.target.value) }),
+                                onPointerDown: (e) => e.stopPropagation(),
                                 style: { width: '60px', background: 'rgba(0,0,0,0.3)', border: '1px solid #f48fb1', color: '#f48fb1', fontSize: '11px', padding: '2px 4px' }
                             })
                         ])

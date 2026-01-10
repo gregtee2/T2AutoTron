@@ -62,7 +62,8 @@
         controls: {
             filterType: "Filter device list by type:\n• All: Show everything\n• Lights: light.* entities\n• Switches: switch.* entities\n• Fans, Covers, etc.",
             triggerMode: "How trigger input controls devices:\n• Follow: Match trigger (on/off)\n• Toggle: Each trigger flips state\n• Turn On: Only turn on\n• Turn Off: Only turn off\n• Pulse: Brief on, then off",
-            transitionTime: "Fade time for lights in milliseconds.\n1000ms = 1 second smooth transition."
+            transitionTime: "Fade time for lights in milliseconds.\n1000ms = 1 second smooth transition.",
+            enforceState: "Enable to periodically re-sync device state.\n\nEvery 60 seconds, checks if device matches trigger.\nIf device was changed externally (e.g., Hue app),\nit will be corrected to match what T2 expects.\n\nUse for 'always on' lights that shouldn't be\nturned off by other apps or schedules."
         }
     };
 
@@ -281,7 +282,8 @@
                 transitionTime: 1000,
                 filterType: "All",
                 triggerMode: "Follow",
-                customTitle: ""  // User-editable title for the node
+                customTitle: "",  // User-editable title for the node
+                enforceState: false  // Periodically enforce device state matches trigger
             };
 
             this.lastTriggerValue = false;
@@ -407,6 +409,12 @@
             if (this.controls.trigger_mode) this.controls.trigger_mode.value = this.properties.triggerMode || "Follow";
             if (this.controls.transition) this.controls.transition.value = this.properties.transitionTime;
             if (this.controls.debug) this.controls.debug.value = false;
+            if (this.controls.enforce_state) this.controls.enforce_state.value = this.properties.enforceState || false;
+            
+            // Start enforce interval if it was enabled in saved state
+            if (this.properties.enforceState) {
+                this.startEnforceInterval();
+            }
 
             this.properties.selectedDeviceIds.forEach((id, index) => {
                 const base = `device_${index}_`;
@@ -561,6 +569,69 @@
             this.addControl("trigger_btn", new ButtonControl("🔄 Manual Trigger", () => this.onTrigger()));
             this.addControl("transition", new NumberControl("Transition (ms)", 1000, (v) => this.properties.transitionTime = v, { min: 0, max: 10000 }));
             this.addControl("debug", new SwitchControl("Debug Logs", false, (v) => this.properties.debug = v));
+            this.addControl("enforce_state", new SwitchControl("Enforce State", false, (v) => {
+                this.properties.enforceState = v;
+                if (v) {
+                    this.startEnforceInterval();
+                    // Immediately check and sync
+                    this.checkAndEnforceState();
+                } else {
+                    this.stopEnforceInterval();
+                }
+            }));
+        }
+
+        // Start periodic enforcement of device state (every 60 seconds)
+        startEnforceInterval() {
+            this.stopEnforceInterval(); // Clear any existing
+            this._enforceIntervalId = setInterval(() => {
+                this.checkAndEnforceState();
+            }, 60000); // Check every 60 seconds
+            if (this.properties.debug) {
+                console.log('[HAGenericDeviceNode] Enforce State interval started');
+            }
+        }
+
+        // Stop the enforcement interval
+        stopEnforceInterval() {
+            if (this._enforceIntervalId) {
+                clearInterval(this._enforceIntervalId);
+                this._enforceIntervalId = null;
+                if (this.properties.debug) {
+                    console.log('[HAGenericDeviceNode] Enforce State interval stopped');
+                }
+            }
+        }
+
+        // Check if device state matches what trigger says it should be, and fix if not
+        async checkAndEnforceState() {
+            if (!this.properties.enforceState) return;
+            
+            const expectedOn = !!this.lastTriggerValue;
+            const mode = this.properties.triggerMode || "Follow";
+            
+            // Only enforce in Follow mode - other modes are edge-triggered
+            if (mode !== "Follow") return;
+            
+            let mismatchFound = false;
+            
+            for (const id of this.properties.selectedDeviceIds) {
+                if (!id) continue;
+                const state = this.perDeviceState[id];
+                const actualOn = state?.on ?? false;
+                
+                if (expectedOn !== actualOn) {
+                    mismatchFound = true;
+                    if (this.properties.debug) {
+                        console.log(`[HAGenericDeviceNode] ENFORCE: Device ${id} is ${actualOn ? 'ON' : 'OFF'} but should be ${expectedOn ? 'ON' : 'OFF'}`);
+                    }
+                }
+            }
+            
+            if (mismatchFound) {
+                console.log(`[HAGenericDeviceNode] Enforce State: Correcting mismatch (trigger=${expectedOn})`);
+                await this.setDevicesState(expectedOn, expectedOn ? this.lastHsvInfo : null);
+            }
         }
         
         // New method: Refresh both device list AND individual device states
@@ -637,7 +708,13 @@
                     if (document.visibilityState === 'visible' && window.socket?.connected) {
                         // User returned to tab - refresh device states to ensure UI is current
                         // Small delay to let socket stabilize after tab becomes active
-                        setTimeout(() => this.refreshSelectedDeviceStates(), 500);
+                        setTimeout(() => {
+                            this.refreshSelectedDeviceStates();
+                            // After refreshing states, check if enforcement is needed
+                            if (this.properties.enforceState) {
+                                setTimeout(() => this.checkAndEnforceState(), 1000);
+                            }
+                        }, 500);
                     }
                 };
                 document.addEventListener('visibilitychange', this._onVisibilityChange);
@@ -1438,7 +1515,8 @@
                 transitionTime: this.properties.transitionTime || 1000,
                 debug: this.properties.debug ?? false,
                 autoRefreshInterval: this.properties.autoRefreshInterval || 30000,
-                customTitle: this.properties.customTitle || ""
+                customTitle: this.properties.customTitle || "",
+                enforceState: this.properties.enforceState || false
             };
         }
 
@@ -1453,6 +1531,9 @@
         }
 
         destroy() {
+            // Stop enforce state interval
+            this.stopEnforceInterval();
+            
             // Remove socket listeners to prevent memory leaks
             if (window.socket) {
                 if (this._onDeviceStateUpdate) window.socket.off("device-state-update", this._onDeviceStateUpdate);

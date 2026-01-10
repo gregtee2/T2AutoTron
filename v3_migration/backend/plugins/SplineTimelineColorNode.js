@@ -273,7 +273,7 @@
                         return rgb;
                     }
                     
-                    // Find and interpolate between two stops in RGB space
+                    // Find and interpolate between two stops using Oklab for perceptually uniform blending
                     for (let i = 0; i < sortedStops.length - 1; i++) {
                         if (position >= sortedStops[i].position && position <= sortedStops[i + 1].position) {
                             const t = (position - sortedStops[i].position) / (sortedStops[i + 1].position - sortedStops[i].position);
@@ -281,7 +281,13 @@
                             const rgb1 = sortedStops[i].rgb || hueToRgb(sortedStops[i].hue);
                             const rgb2 = sortedStops[i + 1].rgb || hueToRgb(sortedStops[i + 1].hue);
                             
-                            // Linear RGB interpolation - direct path, no color wheel!
+                            // Use Oklab color space for perceptually uniform blending
+                            // This produces vibrant intermediate colors (red→green goes through yellow, not brown)
+                            if (window.ColorUtils && window.ColorUtils.mixColorsOklab) {
+                                return window.ColorUtils.mixColorsOklab(rgb1, rgb2, t);
+                            }
+                            
+                            // Fallback: Linear RGB interpolation
                             return {
                                 r: Math.round(rgb1.r + t * (rgb2.r - rgb1.r)),
                                 g: Math.round(rgb1.g + t * (rgb2.g - rgb1.g)),
@@ -1328,7 +1334,7 @@
                 return { hue: h, sat: s, val: max };
             };
 
-            // Calculate color from position - RGB interpolation for custom mode
+            // Calculate color from position - Oklab interpolation for custom mode (perceptually uniform)
             let rgb, hue;
             const colorStops = this.properties.colorStops || [];
             if (this.properties.colorMode === 'custom' && Array.isArray(colorStops) && colorStops.length >= 2) {
@@ -1339,18 +1345,24 @@
                 } else if (position >= stops[stops.length - 1].position) {
                     rgb = stops[stops.length - 1].rgb || hueToRgb(stops[stops.length - 1].hue || 0);
                 } else {
-                    // Find and interpolate between stops in RGB space
+                    // Find and interpolate between stops using Oklab for perceptually uniform blending
                     for (let i = 0; i < stops.length - 1; i++) {
                         if (position >= stops[i].position && position <= stops[i + 1].position) {
                             const t = (position - stops[i].position) / (stops[i + 1].position - stops[i].position);
                             const rgb1 = stops[i].rgb || hueToRgb(stops[i].hue || 0);
                             const rgb2 = stops[i + 1].rgb || hueToRgb(stops[i + 1].hue || 0);
-                            // Linear RGB interpolation
-                            rgb = {
-                                r: Math.round(rgb1.r + t * (rgb2.r - rgb1.r)),
-                                g: Math.round(rgb1.g + t * (rgb2.g - rgb1.g)),
-                                b: Math.round(rgb1.b + t * (rgb2.b - rgb1.b))
-                            };
+                            
+                            // Use Oklab for perceptually uniform color mixing (vibrant intermediates)
+                            if (window.ColorUtils && window.ColorUtils.mixColorsOklab) {
+                                rgb = window.ColorUtils.mixColorsOklab(rgb1, rgb2, t);
+                            } else {
+                                // Fallback: Linear RGB interpolation
+                                rgb = {
+                                    r: Math.round(rgb1.r + t * (rgb2.r - rgb1.r)),
+                                    g: Math.round(rgb1.g + t * (rgb2.g - rgb1.g)),
+                                    b: Math.round(rgb1.b + t * (rgb2.b - rgb1.b))
+                                };
+                            }
                             break;
                         }
                     }

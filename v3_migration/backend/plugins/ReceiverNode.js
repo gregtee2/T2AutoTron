@@ -198,7 +198,8 @@
                         key: 'select',
                         className: 'receiver-select',
                         value: selectedBuffer,
-                        onChange: handleSelect
+                        onChange: handleSelect,
+                        onPointerDown: (e) => e.stopPropagation()
                     }, [
                         React.createElement('option', { key: 'none', value: '' }, "Select Buffer..."),
                         ...availableBuffers.map(b => React.createElement('option', { key: b, value: b }, b))
