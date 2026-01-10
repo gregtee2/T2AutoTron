@@ -297,12 +297,21 @@
         const [outputState, setOutputState] = useState(data.properties.outputValue);
         const [debug, setDebug] = useState(data.properties.debug);
 
-        // Unit conversion helpers
-        const UNIT_MULTIPLIERS = {
+        // Unit conversion - use shared logic if available
+        const sharedLogic = window.T2SharedLogic || {};
+        const UNIT_MULTIPLIERS = sharedLogic.UNIT_MULTIPLIERS || {
             'ms': 1,
             'seconds': 1000,
             'minutes': 60000,
             'hours': 3600000
+        };
+
+        // Use shared toMilliseconds if available
+        const toMs = (value, unit) => {
+            if (typeof sharedLogic.toMilliseconds === 'function') {
+                return sharedLogic.toMilliseconds(value, unit);
+            }
+            return Math.round(value * UNIT_MULTIPLIERS[unit]);
         };
 
         // CRITICAL: Clean up timers when component unmounts to prevent memory leak
@@ -315,7 +324,7 @@
         }, [data]);
 
         const updateDelay = (value, unit) => {
-            const ms = Math.round(value * UNIT_MULTIPLIERS[unit]);
+            const ms = toMs(value, unit);
             setDelayMs(ms);
             setDelayValue(value);
             setDelayUnit(unit);

@@ -121,8 +121,8 @@
 
             // Inputs
             this.addInput('trigger', new ClassicPreset.Input(sockets.boolean, 'Trigger'));
-            this.addInput('message', new ClassicPreset.Input(sockets.any, 'Message'));
-            this.addInput('streamUrl', new ClassicPreset.Input(sockets.any, 'Stream URL'));
+            this.addInput('message', new ClassicPreset.Input(sockets.string, 'Message'));
+            this.addInput('streamUrl', new ClassicPreset.Input(sockets.string, 'Stream URL'));
             // Dynamic per-speaker inputs (volume, active, station) added via updateVolumeInputs()
 
             // Outputs
@@ -2339,32 +2339,52 @@
             }
         };
 
-        // Render sockets
-        const renderInputs = () => {
-            return Object.entries(data.inputs || {}).map(([key, input]) => {
+        // Render sockets - when collapsed, stack them at same position for bundled wire effect
+        const renderInputs = (collapsed = false) => {
+            return Object.entries(data.inputs || {}).map(([key, input], index) => {
                 const socket = input.socket;
                 return React.createElement('div', {
                     key: `input-${key}`,
-                    style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }
+                    style: collapsed 
+                        ? { 
+                            // Collapsed: stack all sockets at same position
+                            position: index === 0 ? 'relative' : 'absolute',
+                            top: 0,
+                            left: 0,
+                            display: 'flex', 
+                            alignItems: 'center'
+                        }
+                        : { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }
                 }, [
                     React.createElement(window.RefComponent, {
                         key: 'ref',
                         init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'input', key, nodeId: data.id, element: ref, payload: socket } }),
                         unmount: (ref) => emit({ type: 'unmount', data: { element: ref } })
                     }),
-                    React.createElement('span', { key: 'label', style: { fontSize: '12px', color: '#c5cdd3' } }, input.label || key)
+                    // Only show label when expanded
+                    !collapsed && React.createElement('span', { key: 'label', style: { fontSize: '12px', color: '#c5cdd3' } }, input.label || key)
                 ]);
             });
         };
 
-        const renderOutputs = () => {
-            return Object.entries(data.outputs || {}).map(([key, output]) => {
+        const renderOutputs = (collapsed = false) => {
+            return Object.entries(data.outputs || {}).map(([key, output], index) => {
                 const socket = output.socket;
                 return React.createElement('div', {
                     key: `output-${key}`,
-                    style: { display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginBottom: '4px' }
+                    style: collapsed
+                        ? {
+                            // Collapsed: stack all sockets at same position
+                            position: index === 0 ? 'relative' : 'absolute',
+                            top: 0,
+                            right: 0,
+                            display: 'flex',
+                            alignItems: 'center'
+                        }
+                        : { display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginBottom: '4px' }
                 }, [
-                    React.createElement('span', { key: 'label', style: { fontSize: '12px', color: '#c5cdd3' } }, output.label || key),
+                    // Only show label when expanded
+                    !collapsed && React.createElement('span', { key: 'label', style: { fontSize: '12px', color: '#c5cdd3' } }, output.label || key),
                     React.createElement(window.RefComponent, {
                         key: 'ref',
                         init: (ref) => emit({ type: 'render', data: { type: 'socket', side: 'output', key, nodeId: data.id, element: ref, payload: socket } }),
@@ -2532,6 +2552,8 @@
                         const newVal = !showIOSection;
                         setShowIOSection(newVal);
                         data.properties.showIOSection = newVal;
+                        // Tell Rete to recalculate connection positions after React re-renders
+                        setTimeout(() => window.T2Controls?.updateNodeLayout?.(data.id), 50);
                     },
                     onPointerDown: (e) => e.stopPropagation(),
                     style: { ...sectionHeaderStyle, padding: '6px 8px', background: '#16213e' }
@@ -2541,12 +2563,37 @@
                     ),
                     React.createElement('span', { key: 'arrow', style: { fontSize: '10px' } }, showIOSection ? '▼' : '▶')
                 ]),
-                showIOSection && React.createElement('div', { 
+                // ALWAYS render sockets - when collapsed, stack them at single point for wire bundling
+                // This keeps socket DOM elements in place so Rete can track connections
+                React.createElement('div', { 
                     key: 'io-content', 
-                    style: { padding: '8px', display: 'flex', justifyContent: 'space-between' } 
+                    style: { 
+                        padding: showIOSection ? '8px' : '4px 8px', 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        transition: 'padding 0.15s ease-out'
+                    } 
                 }, [
-                    React.createElement('div', { key: 'inputs', style: { display: 'flex', flexDirection: 'column' } }, renderInputs()),
-                    React.createElement('div', { key: 'outputs', style: { display: 'flex', flexDirection: 'column' } }, renderOutputs())
+                    // Inputs container - when collapsed, use relative positioning for stacking
+                    React.createElement('div', { 
+                        key: 'inputs', 
+                        style: { 
+                            display: 'flex', 
+                            flexDirection: 'column',
+                            position: 'relative',
+                            minHeight: showIOSection ? 'auto' : '12px'
+                        } 
+                    }, renderInputs(!showIOSection)),
+                    // Outputs container - when collapsed, use relative positioning for stacking
+                    React.createElement('div', { 
+                        key: 'outputs', 
+                        style: { 
+                            display: 'flex', 
+                            flexDirection: 'column',
+                            position: 'relative',
+                            minHeight: showIOSection ? 'auto' : '12px'
+                        } 
+                    }, renderOutputs(!showIOSection))
                 ])
             ]),
 
@@ -2558,6 +2605,8 @@
                         const newVal = !showSpeakersSection;
                         setShowSpeakersSection(newVal);
                         data.properties.showSpeakersSection = newVal;
+                        // Tell Rete to recalculate connection positions after React re-renders
+                        setTimeout(() => window.T2Controls?.updateNodeLayout?.(data.id), 50);
                     },
                     onPointerDown: (e) => e.stopPropagation(),
                     style: { ...sectionHeaderStyle, padding: '6px 8px', background: '#16213e' }
@@ -2665,6 +2714,8 @@
                         const newVal = !showStreamSection;
                         setShowStreamSection(newVal);
                         data.properties.showStreamSection = newVal;
+                        // Tell Rete to recalculate connection positions after React re-renders
+                        setTimeout(() => window.T2Controls?.updateNodeLayout?.(data.id), 50);
                     },
                     onPointerDown: (e) => e.stopPropagation(),
                     style: { ...sectionHeaderStyle, padding: '6px 8px', background: '#16213e' }
@@ -3124,6 +3175,8 @@
                         const newVal = !showTTSSection;
                         setShowTTSSection(newVal);
                         data.properties.showTTSSection = newVal;
+                        // Tell Rete to recalculate connection positions after React re-renders
+                        setTimeout(() => window.T2Controls?.updateNodeLayout?.(data.id), 50);
                     },
                     onPointerDown: (e) => e.stopPropagation(),
                     style: { ...sectionHeaderStyle, padding: '6px 8px', background: '#16213e' }

@@ -2,8 +2,42 @@
 
 ## T2AutoTron Plugin Architecture Guide
 
-**Last Updated:** December 6, 2025  
-**DRY Score:** A- (17.5% shared infrastructure)
+**Last Updated:** January 8, 2026  
+**DRY Score:** A (38 shared logic functions + 17.5% shared infrastructure)
+
+---
+
+## 🆕 Shared Logic Layer (v2.1.210+)
+
+**NEW**: Pure calculation functions are now shared between frontend and backend!
+
+### Available in `window.T2SharedLogic` (frontend) or `require('../shared/logic')` (backend):
+
+| Category | Functions |
+|----------|-----------|
+| **Logic Gates** | `calculateAnd`, `calculateOr`, `calculateNot`, `calculateXor`, `calculateNand`, `calculateNor`, `calculateXnor`, `calculateImplies`, `calculateBicond` |
+| **Comparison** | `smartCompare(a, op, b)`, `compare(a, op, b)`, `checkThreshold(value, threshold, op)` |
+| **Color** | `hsvToRgb(h, s, v)`, `rgbToHsv(r, g, b)`, `mixColors(color1, color2, ratio)`, `clamp(value, min, max)` |
+| **Time** | `calculateTimeRange(start, end, currentTime)` |
+| **Delay** | `toMilliseconds(value, unit)`, `UNIT_MULTIPLIERS` |
+| **Utility** | `processCounter()`, `generateRandom()`, `performMath()`, `scaleValue()`, `processToggle()` |
+| **Device** | `normalizeHSVInput()`, `buildHAPayload()`, `determineTriggerAction()`, `convertBrightness()` |
+
+### Usage in Frontend Plugins
+```javascript
+// Get shared logic (loaded by 00_SharedLogicLoader.js)
+const T2SharedLogic = window.T2SharedLogic || {};
+const { smartCompare, hsvToRgb, calculateAnd } = T2SharedLogic;
+
+// Use with optional fallback
+const result = T2SharedLogic.smartCompare?.(a, '==', b) ?? (a === b);
+```
+
+### Usage in Backend Engine Nodes
+```javascript
+const { smartCompare, hsvToRgb, calculateAnd } = require('../../../../shared/logic');
+const result = smartCompare(a, '==', b);  // Always available
+```
 
 ---
 
@@ -184,11 +218,13 @@ const { NumberControl, DropdownControl, SwitchControl } = window.T2Controls;
 
 ## 📊 Current Architecture Stats
 
-- **Total plugins:** 36 files
-- **Shared infrastructure:** 6 files (2,030 lines, 17.5%)
-- **Node plugins:** 30 files (9,541 lines)
-- **Nodes using T2Controls:** 11/30 (37%)
-- **Nodes using T2HAUtils:** 3/30 (10%)
+- **Total plugins:** 36+ files
+- **Shared infrastructure:** 7 files (including 00_SharedLogicLoader.js)
+- **Shared logic functions:** 38 (in `shared/logic/*.js`)
+- **Node plugins:** 30+ files
+- **Nodes using T2Controls:** 15+ (growing)
+- **Nodes using T2HAUtils:** 5+ (growing)
+- **Nodes using T2SharedLogic:** 6+ (growing)
 
 ---
 

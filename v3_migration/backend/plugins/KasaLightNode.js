@@ -705,7 +705,14 @@
                     React.createElement('div', { 
                         key: 'toggle',
                         style: { cursor: "pointer", fontSize: "12px", userSelect: "none" },
-                        onPointerDown: (e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }
+                        onPointerDown: (e) => { 
+                            e.stopPropagation(); 
+                            setIsCollapsed(!isCollapsed);
+                            // Tell Rete to recalculate connection positions after React re-renders
+                            setTimeout(() => {
+                                window.T2Controls?.updateNodeLayout?.(data.id);
+                            }, 50);
+                        }
                     }, isCollapsed ? "▶" : "▼"),
                     // Editable custom title
                     isEditingTitle

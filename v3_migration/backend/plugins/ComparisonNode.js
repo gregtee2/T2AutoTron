@@ -92,6 +92,13 @@
 
             if (inputVal === undefined) return { result: false };
 
+            // Use shared smartCompare if available (handles numeric vs string automatically)
+            const sharedLogic = window.T2SharedLogic || {};
+            if (typeof sharedLogic.smartCompare === 'function') {
+                return { result: sharedLogic.smartCompare(inputVal, operator, compareVal) };
+            }
+
+            // Fallback: inline logic
             let result = false;
 
             // Try numeric comparison first

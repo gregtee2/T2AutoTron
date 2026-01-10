@@ -685,7 +685,26 @@
                         React.createElement('span', { key: 'arrow', style: { transition: 'transform 0.2s' } }, 
                             rawValuesExpanded ? '▼' : '▶'),
                         React.createElement('span', { key: 'label' }, "Raw Values"),
-                        React.createElement('span', { key: 'count', style: { marginLeft: 'auto', color: '#666' } }, "(7)")
+                        React.createElement('span', { key: 'count', style: { marginLeft: 'auto', color: '#666' } }, "(7)"),
+                        // When collapsed, render all sockets stacked at single point (wire bunching)
+                        !rawValuesExpanded && React.createElement('div', {
+                            key: 'collapsed-sockets',
+                            style: { position: 'relative', width: '20px', height: '20px', marginLeft: '8px' }
+                        }, [
+                            ['temp_value', 'humidity_value', 'wind_value', 'solar_value', 'hourly_rain_value', 'event_rain_value', 'daily_rain_value'].map((key, index) => 
+                                React.createElement('div', {
+                                    key: key,
+                                    style: {
+                                        position: index === 0 ? 'relative' : 'absolute',
+                                        top: 0,
+                                        right: 0
+                                    }
+                                }, React.createElement(RefComponent, {
+                                    init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: data.outputs[key]?.socket, nodeId: data.id, side: "output", key } }),
+                                    unmount: ref => emit({ type: "unmount", data: { element: ref } })
+                                }))
+                            )
+                        ])
                     ]),
                     // Expanded content - vertical list with right-aligned sockets
                     rawValuesExpanded && React.createElement('div', { 
@@ -771,10 +790,22 @@
             ]),
             isCollapsed && React.createElement('div', { key: 'collapsed', className: "weather-io-container" }, [
                 React.createElement('div', { key: 'spacer', style: { flex: 1 } }),
-                React.createElement('div', { key: 'outs', className: "outputs" }, 
-                    Object.entries(data.outputs).map(([key, output]) => 
-                        React.createElement('div', { key: key, style: { display: "flex", alignItems: "center", gap: "8px", justifyContent: 'flex-end', marginBottom: '4px' } }, [
-                            React.createElement('span', { key: 'l', className: "weather-socket-label", style: { color: evalResults[key] ? '#4caf50' : '#aaa' } }, output.label),
+                // When collapsed, stack all outputs at same position for wire bunching effect
+                React.createElement('div', { key: 'outs', className: "outputs", style: { position: 'relative' } }, 
+                    Object.entries(data.outputs).map(([key, output], index) => 
+                        React.createElement('div', { 
+                            key: key, 
+                            style: { 
+                                // Stack all sockets at same position - first one is relative, rest are absolute
+                                position: index === 0 ? 'relative' : 'absolute',
+                                top: 0,
+                                right: 0,
+                                display: "flex", 
+                                alignItems: "center", 
+                                justifyContent: 'flex-end'
+                            } 
+                        }, [
+                            // Hide labels when collapsed
                             React.createElement(RefComponent, { 
                                 key: 'r',
                                 init: ref => emit({ type: "render", data: { type: "socket", element: ref, payload: output.socket, nodeId: data.id, side: "output", key } }), 

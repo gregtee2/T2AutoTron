@@ -1103,7 +1103,36 @@
         // Utilities
         stopPropagation,
         baseInputStyle,
-        labelStyle
+        labelStyle,
+        
+        /**
+         * Update node visuals after collapse/expand or size change.
+         * This tells Rete to recalculate connection endpoints.
+         * @param {string} nodeId - The node ID to update
+         */
+        updateNodeLayout: (nodeId) => {
+            if (!nodeId) return;
+            
+            const area = window._t2Area;
+            const editor = window._t2Editor;
+            
+            if (!area || !editor) return;
+            
+            // Update the node itself
+            area.update('node', nodeId);
+            
+            // Also update all connections connected to this node
+            try {
+                const connections = editor.getConnections();
+                for (const conn of connections) {
+                    if (conn.source === nodeId || conn.target === nodeId) {
+                        area.update('connection', conn.id);
+                    }
+                }
+            } catch (e) {
+                // Silently ignore errors
+            }
+        }
     };
 
     // console.log("[SharedControlsPlugin] Registered window.T2Controls with", Object.keys(window.T2Controls).length, "exports");

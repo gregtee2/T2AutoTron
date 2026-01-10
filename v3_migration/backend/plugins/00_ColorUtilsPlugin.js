@@ -1,9 +1,13 @@
 // ColorUtilsPlugin.js - Shared color conversion utilities for backend plugins
 // This file must be loaded BEFORE other color-related plugins
 // Exposes window.ColorUtils for use by HSVControlNode, HSVModifierNode, etc.
+// Uses T2SharedLogic when available for core color functions
 
 (function() {
     // Debug: console.log("[ColorUtilsPlugin] Loading shared...");
+
+    // Get shared logic (loaded by 00_SharedLogicLoader.js)
+    const getSharedLogic = () => window.T2SharedLogic || {};
 
     const ColorUtils = {
         /**
@@ -14,6 +18,18 @@
          * @returns {{hue: number, sat: number, val: number}} - hue (0-1), sat (0-1), val (0-1)
          */
         rgbToHsv: (r, g, b) => {
+            const shared = getSharedLogic();
+            if (typeof shared.rgbToHsv === 'function') {
+                // Shared logic returns { h, s, v } with h in 0-360
+                // We need { hue, sat, val } with hue in 0-1
+                const result = shared.rgbToHsv(r, g, b);
+                return { 
+                    hue: (result.h || 0) / 360, 
+                    sat: result.s || 0, 
+                    val: result.v || 0 
+                };
+            }
+            // Fallback inline implementation
             r /= 255; g /= 255; b /= 255;
             const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
             const s = max === 0 ? 0 : d / max;
@@ -37,6 +53,14 @@
          * @returns {number[]} - [r, g, b] each 0-255
          */
         hsvToRgb: (h, s, v) => {
+            const shared = getSharedLogic();
+            if (typeof shared.hsvToRgb === 'function') {
+                // Shared logic expects h in 0-360, returns { r, g, b }
+                // We receive h in 0-1 and need to return [r, g, b] array
+                const result = shared.hsvToRgb(h * 360, s, v);
+                return [result.r || 0, result.g || 0, result.b || 0];
+            }
+            // Fallback inline implementation
             const i = Math.floor(h * 6), f = h * 6 - i;
             const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
             let r, g, b;
@@ -149,93 +173,11 @@
          * @returns {number}
          */
         clamp: (value, min, max) => {
+            const shared = getSharedLogic();
+            if (typeof shared.clamp === 'function') {
+                return shared.clamp(value, min, max);
+            }
             return Math.max(min, Math.min(max, value));
-        },
-
-        // -------------------------------------------------------------------------
-        // OKLAB COLOR SPACE - Perceptually uniform color mixing
-        // Added 2026-01-09 for vibrant gradients (red→green through yellows, not browns)
-        // -------------------------------------------------------------------------
-
-        /**
-         * Convert RGB to Oklab color space
-         * Oklab is perceptually uniform - equal steps feel equally different to humans
-         * @param {number} r - Red (0-255)
-         * @param {number} g - Green (0-255)
-         * @param {number} b - Blue (0-255)
-         * @returns {{L: number, a: number, b: number}} - Oklab components
-         */
-        rgbToOklab: (r, g, b) => {
-            // Normalize to 0-1
-            r /= 255; g /= 255; b /= 255;
-            
-            // sRGB to linear RGB
-            const toLinear = (c) => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-            const lr = toLinear(r), lg = toLinear(g), lb = toLinear(b);
-            
-            // Linear RGB to LMS
-            const l = 0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb;
-            const m = 0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb;
-            const s = 0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb;
-            
-            // LMS to Oklab
-            const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
-            return {
-                L: 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
-                a: 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
-                b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
-            };
-        },
-
-        /**
-         * Convert Oklab to RGB color space
-         * @param {number} L - Lightness (0-1)
-         * @param {number} a - Green-red axis
-         * @param {number} b - Blue-yellow axis
-         * @returns {{r: number, g: number, b: number}} - RGB values 0-255
-         */
-        oklabToRgb: (L, a, b) => {
-            // Oklab to LMS
-            const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
-            const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
-            const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
-            
-            const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
-            
-            // LMS to linear RGB
-            const lr = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
-            const lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
-            const lb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
-            
-            // Linear RGB to sRGB
-            const toSrgb = (c) => c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1/2.4) - 0.055;
-            
-            return {
-                r: Math.round(Math.max(0, Math.min(255, toSrgb(lr) * 255))),
-                g: Math.round(Math.max(0, Math.min(255, toSrgb(lg) * 255))),
-                b: Math.round(Math.max(0, Math.min(255, toSrgb(lb) * 255)))
-            };
-        },
-
-        /**
-         * Mix two colors in Oklab space for perceptually uniform blending
-         * Unlike RGB mixing, this produces vibrant intermediate colors
-         * (red→green goes through yellow/orange, not muddy brown)
-         * @param {object} color1 - First color {r, g, b}
-         * @param {object} color2 - Second color {r, g, b}
-         * @param {number} t - Blend factor (0 = color1, 1 = color2)
-         * @returns {{r: number, g: number, b: number}} - Blended RGB color
-         */
-        mixColorsOklab: (color1, color2, t) => {
-            const ok1 = ColorUtils.rgbToOklab(color1.r, color1.g, color1.b);
-            const ok2 = ColorUtils.rgbToOklab(color2.r, color2.g, color2.b);
-            
-            // Linear interpolation in Oklab space
-            const L = ok1.L + t * (ok2.L - ok1.L);
-            const a = ok1.a + t * (ok2.a - ok1.a);
-            const b = ok1.b + t * (ok2.b - ok1.b);
-            
-            return ColorUtils.oklabToRgb(L, a, b);
         }
     };
 

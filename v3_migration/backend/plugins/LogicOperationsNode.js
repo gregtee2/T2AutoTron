@@ -225,21 +225,54 @@
                 }
             }
 
-            // 4. Execute Logic Mode
+            // 4. Execute Logic Mode using shared logic if available
             let result = false;
             const mode = this.properties.mode;
             const A = booleanValues[0];
             const B = booleanValues[1]; // Only relevant for some modes
+            const sharedLogic = window.T2SharedLogic || {};
 
             switch (mode) {
-                case "AND": result = booleanValues.every(v => v); break;
-                case "OR": result = booleanValues.some(v => v); break;
-                case "NAND": result = !booleanValues.every(v => v); break;
-                case "NOR": result = !booleanValues.some(v => v); break;
-                case "XOR": result = booleanValues.filter(v => v).length % 2 === 1; break;
-                case "XNOR": result = booleanValues.filter(v => v).length % 2 === 0; break;
-                case "IMPLIES": result = !A || B; break;
-                case "BICOND": result = A === B; break;
+                case "AND": 
+                    result = typeof sharedLogic.calculateAnd === 'function' 
+                        ? sharedLogic.calculateAnd(booleanValues) 
+                        : booleanValues.every(v => v); 
+                    break;
+                case "OR": 
+                    result = typeof sharedLogic.calculateOr === 'function'
+                        ? sharedLogic.calculateOr(booleanValues)
+                        : booleanValues.some(v => v); 
+                    break;
+                case "NAND": 
+                    result = typeof sharedLogic.calculateNand === 'function'
+                        ? sharedLogic.calculateNand(booleanValues)
+                        : !booleanValues.every(v => v); 
+                    break;
+                case "NOR": 
+                    result = typeof sharedLogic.calculateNor === 'function'
+                        ? sharedLogic.calculateNor(booleanValues)
+                        : !booleanValues.some(v => v); 
+                    break;
+                case "XOR": 
+                    result = typeof sharedLogic.calculateXor === 'function'
+                        ? sharedLogic.calculateXor(booleanValues)
+                        : booleanValues.filter(v => v).length % 2 === 1; 
+                    break;
+                case "XNOR": 
+                    result = typeof sharedLogic.calculateXnor === 'function'
+                        ? sharedLogic.calculateXnor(booleanValues)
+                        : booleanValues.filter(v => v).length % 2 === 0; 
+                    break;
+                case "IMPLIES": 
+                    result = typeof sharedLogic.calculateImplies === 'function'
+                        ? sharedLogic.calculateImplies(A, B)
+                        : !A || B; 
+                    break;
+                case "BICOND": 
+                    result = typeof sharedLogic.calculateBicond === 'function'
+                        ? sharedLogic.calculateBicond(A, B)
+                        : A === B; 
+                    break;
                 case "RisingEdge":
                     if (this.previousA !== null) {
                         result = !this.previousA && A;
