@@ -1247,6 +1247,243 @@ class TTSMessageSchedulerNode {
 registry.register('TTSMessageSchedulerNode', TTSMessageSchedulerNode);
 
 /**
+ * StationScheduleNode - Schedule radio stations throughout the day
+ * 
+ * Returns station index and volume based on current time and schedule entries.
+ */
+class StationScheduleNode {
+  constructor() {
+    this.id = null;
+    this.label = 'Station Schedule';
+    this.properties = {
+      stations: [
+        { name: 'Station 1', url: '' },
+        { name: 'Station 2', url: '' },
+        { name: 'Station 3', url: '' }
+      ],
+      schedule: [
+        { time: '06:00', stationIndex: 0, volume: 50 },
+        { time: '12:00', stationIndex: 1, volume: 50 },
+        { time: '18:00', stationIndex: 2, volume: 50 }
+      ],
+      lastOutputStation: null,
+      lastOutputVolume: null
+    };
+    this._lastActiveTime = null;
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+
+  getCurrentActiveEntry() {
+    const schedule = this.properties.schedule;
+    if (!schedule || schedule.length === 0) return null;
+    
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    // Sort schedule by time
+    const sorted = [...schedule].sort((a, b) => {
+      const [aH, aM] = a.time.split(':').map(Number);
+      const [bH, bM] = b.time.split(':').map(Number);
+      return (aH * 60 + aM) - (bH * 60 + bM);
+    });
+    
+    // Find the most recent entry that has passed
+    let activeEntry = sorted[sorted.length - 1]; // Default to last (wraps from previous day)
+    for (const entry of sorted) {
+      const [h, m] = entry.time.split(':').map(Number);
+      const entryMinutes = h * 60 + m;
+      if (entryMinutes <= currentMinutes) {
+        activeEntry = entry;
+      }
+    }
+    return activeEntry;
+  }
+
+  data(inputs) {
+    const activeEntry = this.getCurrentActiveEntry();
+    const stationIndex = activeEntry?.stationIndex ?? 0;
+    const volume = activeEntry?.volume ?? 50;
+    
+    this.properties.lastOutputStation = stationIndex;
+    this.properties.lastOutputVolume = volume;
+    
+    return { station: stationIndex, volume: volume };
+  }
+}
+
+registry.register('StationScheduleNode', StationScheduleNode);
+
+/**
+ * WizEffectNode - Trigger WiZ light effects via Home Assistant
+ * 
+ * Sends effect commands when trigger goes HIGH, restores when LOW.
+ * Backend version handles the HA API calls.
+ */
+class WizEffectNode {
+  constructor() {
+    this.id = null;
+    this.label = 'WiZ Effect';
+    this.properties = {
+      entityIds: [],
+      effect: 'Fireplace',
+      speed: 100,
+      lastTrigger: null,
+      previousStates: {}
+    };
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+
+  async sendEffect(effect) {
+    const haManager = require('../../devices/managers/homeAssistantManager');
+    
+    for (const entityId of this.properties.entityIds) {
+      try {
+        // Strip 'ha_' prefix if present
+        const cleanId = entityId.replace(/^ha_/, '');
+        
+        // Capture current state before applying effect
+        const currentState = await haManager.getState(cleanId);
+        if (currentState) {
+          this.properties.previousStates[entityId] = currentState;
+        }
+        
+        // Call HA service to set effect
+        await haManager.callService('light', 'turn_on', {
+          entity_id: cleanId,
+          effect: effect
+        });
+      } catch (err) {
+        console.error(`[WizEffectNode] Failed to send effect to ${entityId}: ${err.message}`);
+      }
+    }
+  }
+
+  async restoreStates() {
+    const haManager = require('../../devices/managers/homeAssistantManager');
+    
+    for (const entityId of this.properties.entityIds) {
+      try {
+        const cleanId = entityId.replace(/^ha_/, '');
+        
+        // Just clear the effect - let downstream nodes handle on/off
+        await haManager.callService('light', 'turn_on', {
+          entity_id: cleanId,
+          effect: 'none'
+        });
+      } catch (err) {
+        console.error(`[WizEffectNode] Failed to clear effect on ${entityId}: ${err.message}`);
+      }
+    }
+    this.properties.previousStates = {};
+  }
+
+  data(inputs) {
+    const trigger = inputs.trigger?.[0];
+    const hsvIn = inputs.hsv_in?.[0];
+    const effectInput = inputs.effect_name?.[0];
+    const currentEffect = effectInput || this.properties.effect;
+    
+    const wasTriggered = this.properties.lastTrigger === true;
+    const isTriggered = trigger === true;
+    const hasLights = this.properties.entityIds && this.properties.entityIds.length > 0;
+    
+    // Build HSV output with exclusion metadata when effect is active
+    const buildHsvOutput = (active) => {
+      if (!hsvIn) return null;
+      
+      if (active && hasLights) {
+        const existingExcludes = hsvIn._excludeDevices || [];
+        const ourExcludes = this.properties.entityIds || [];
+        const allExcludes = [...new Set([...existingExcludes, ...ourExcludes])];
+        
+        return {
+          ...hsvIn,
+          _excludeDevices: allExcludes
+        };
+      }
+      
+      return hsvIn;
+    };
+    
+    // Rising edge - activate effect
+    if (isTriggered && !wasTriggered && hasLights && currentEffect) {
+      this.sendEffect(currentEffect);
+      this.properties.lastTrigger = trigger;
+      return { hsv_out: buildHsvOutput(true), applied: true, active: true };
+    }
+    
+    // Falling edge - clear effect (not restore state)
+    if (!isTriggered && wasTriggered && hasLights) {
+      this.restoreStates();
+      this.properties.lastTrigger = trigger;
+      return { hsv_out: buildHsvOutput(false), applied: false, active: false };
+    }
+    
+    this.properties.lastTrigger = trigger;
+    return { 
+      hsv_out: buildHsvOutput(isTriggered), 
+      applied: isTriggered && hasLights, 
+      active: isTriggered 
+    };
+  }
+}
+
+registry.register('WizEffectNode', WizEffectNode);
+
+/**
+ * PriorityEncoderNode - Outputs index of first TRUE input
+ * 
+ * Checks inputs in_1 through in_N, returns the number of the first one that's true.
+ */
+class PriorityEncoderNode {
+  constructor() {
+    this.id = null;
+    this.label = 'Priority Encoder';
+    this.properties = {
+      inputCount: 4,
+      labels: [],
+      defaultValue: 0
+    };
+  }
+
+  restore(data) {
+    if (data.properties) {
+      Object.assign(this.properties, data.properties);
+    }
+  }
+
+  data(inputs) {
+    // Find first true input
+    for (let i = 1; i <= this.properties.inputCount; i++) {
+      const inputVal = inputs[`in_${i}`]?.[0];
+      if (inputVal === true) {
+        return { 
+          value: i,
+          active: true
+        };
+      }
+    }
+    // No true input found
+    return { 
+      value: this.properties.defaultValue,
+      active: false
+    };
+  }
+}
+
+registry.register('PriorityEncoderNode', PriorityEncoderNode);
+
+/**
  * DebugNode - Pass-through node for debugging
  * 
  * Frontend version displays values in the UI and logs to console.
@@ -1296,5 +1533,8 @@ module.exports = {
   StringConcatNode,
   UpcomingEventsNode,
   TTSMessageSchedulerNode,
+  StationScheduleNode,
+  WizEffectNode,
+  PriorityEncoderNode,
   DebugNode
 };

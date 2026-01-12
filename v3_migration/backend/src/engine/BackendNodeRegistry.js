@@ -171,6 +171,19 @@ class BackendNodeRegistry {
       'TTS Message Scheduler': 'TTSMessageSchedulerNode',
       'Event Announcer': null,  // Frontend-only (manages UI scheduled events display)
       
+      // String nodes
+      'String Concat': 'StringConcatNode',
+      'Text String': 'TextStringNode',
+      
+      // Schedule nodes
+      'Station Schedule': 'StationScheduleNode',
+      
+      // Effect nodes
+      'WiZ Effect': 'WizEffectNode',
+      
+      // Logic nodes
+      'Priority Encoder': 'PriorityEncoderNode',
+      
       // Buffer/wireless connection nodes - MUST run on backend
       'Sender': 'SenderNode',
       'Receiver': 'ReceiverNode',

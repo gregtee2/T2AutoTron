@@ -79,8 +79,8 @@ async function loadRoutes(app, io, deviceService) {
   const routesDir = path.join(__dirname, '../api/routes');
   const files = await fs.readdir(routesDir);
 
-  // Routes that are mounted elsewhere (not by pluginLoader)
-  const excludeRoutes = ['engineRoutes.js', 'stockRoutes.js', 'settingsRoutes.js', 'telegramRoutes.js', 'debugRoutes.js', 'sharedLogicRoutes.js'];
+  // Routes that are mounted elsewhere (not by pluginLoader) or export router directly (not factory functions)
+  const excludeRoutes = ['engineRoutes.js', 'stockRoutes.js', 'settingsRoutes.js', 'telegramRoutes.js', 'debugRoutes.js', 'sharedLogicRoutes.js', 'audioRoutes.js', 'agentRoutes.js'];
 
   for (const file of files) {
     if (file.endsWith('Routes.js') && !excludeRoutes.includes(file)) {
