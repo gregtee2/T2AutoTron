@@ -120,8 +120,38 @@ class BackendEngine {
       // Then sync device states from HA reality
       await this.syncDeviceStatesFromHA();
       
+      // Force all device nodes to resend their current HSV on next tick
+      // This ensures colors sync immediately after handoff instead of waiting for "significant change"
+      this.forceHsvResync();
+      
     } catch (err) {
       console.error(`[BackendEngine] Failed to handle frontend inactive:`, err.message);
+    }
+  }
+
+  /**
+   * Force all HAGenericDeviceNode instances to resend their current HSV on next tick.
+   * Called during frontend→backend handoff to immediately sync colors.
+   * 
+   * The problem: Timeline colors advance continuously. When frontend hands off to backend,
+   * the device still has the old color from 30+ seconds ago. Backend waits for "significant
+   * change" before sending, creating a gap where device color doesn't match timeline.
+   * 
+   * The fix: Clear lastSentHsv on all device nodes, forcing immediate send on next tick.
+   */
+  forceHsvResync() {
+    let resetCount = 0;
+    for (const node of this.nodes.values()) {
+      if (node.type === 'HAGenericDeviceNode') {
+        // Clear throttling state - this forces the node to send its current HSV immediately
+        node.lastSentHsv = null;
+        node.lastSendTime = 0;
+        resetCount++;
+      }
+    }
+    if (resetCount > 0) {
+      console.log(`[BackendEngine] Force HSV resync: cleared throttle state on ${resetCount} device nodes`);
+      engineLogger.logEngineEvent('HSV-RESYNC', { nodeCount: resetCount, reason: 'frontend-handoff' });
     }
   }
 

@@ -265,6 +265,12 @@ When documenting fixes or explaining problems, use this format:
 - **The fix**: Added a backend `DebugNode` implementation in `UtilityNodes.js` - simple pass-through that returns `{ output: input }`. Updated `BackendNodeRegistry.js` to map `'Debug'` to `'DebugNode'` instead of `null`.
 - **Now it works because**: Data flows through Debug nodes on the backend just like on the frontend. The Debug node passes through its input unchanged, so downstream nodes (like Conditional Integer Output) get the correct values.
 
+#### Color Mismatch During Frontend/Backend Handoff (2026-01-12) - v2.1.236
+- **What broke**: Debug Dashboard showed massive color differences (e.g., Engine Color: 226° vs HA Actual: 30°) during frontend→backend handoff.
+- **Why it broke**: Timeline colors advance continuously based on time. When frontend hands off to backend (browser closes, 30s heartbeat timeout), the device still has the OLD color from when frontend was in control. Backend waits for "significant change" (5% hue diff) before sending new colors, so there's a gap where device color doesn't match the timeline.
+- **The fix**: Added `forceHsvResync()` method in BackendEngine.js. When backend takes over, it clears `lastSentHsv` and `lastSendTime` on all HAGenericDeviceNode instances. This forces them to immediately send their current HSV on the next tick, bypassing the "significant change" throttle.
+- **Now it works because**: When you close the browser, the backend immediately syncs the current timeline color to all devices instead of waiting for the next natural color change.
+
 #### Backend Engine Not Mirroring Frontend State (2026-01-06) - v2.1.210
 - **What broke**: Debug Dashboard showed "State Mismatch" anomalies like "Engine says OFF, HA says ON" even though both frontend and backend were running correctly. The engine's `deviceStates` was out of sync with reality.
 - **Why it broke**: When frontend is active, the backend engine's `controlDevice()` was doing an early return to skip the API call - but it was ALSO skipping the internal state tracking! So when frontend turned a light ON, the engine's `deviceStates` never got updated.
