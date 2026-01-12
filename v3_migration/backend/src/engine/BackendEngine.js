@@ -135,7 +135,7 @@ class BackendEngine {
     try {
       // Get current HA states
       const haManager = require('../devices/managers/homeAssistantManager');
-      await haManager.refreshStates(); // Force fresh fetch
+      // Note: States are kept fresh via WebSocket push - no need to force refresh
       
       let syncCount = 0;
       for (const node of this.nodes.values()) {
@@ -143,8 +143,9 @@ class BackendEngine {
         if (node.type === 'HAGenericDeviceNode' && node.properties?.devices) {
           for (const device of node.properties.devices) {
             if (device.entityId) {
-              const haState = haManager.getDeviceState(device.entityId);
-              const isOn = haState?.state === 'on';
+              // Use getState() which fetches fresh if not in cache
+              const haState = await haManager.getState(device.entityId);
+              const isOn = haState?.state === 'on' || haState?.on === true;
               
               // Update lastTrigger to match reality
               if (node.lastTrigger !== isOn) {
