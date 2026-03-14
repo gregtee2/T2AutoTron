@@ -2,6 +2,7 @@ const express = require('express');
 const Joi = require('joi');
 const homeAssistantMediaPlayerManager = require('../../devices/managers/homeAssistantMediaPlayerManager');
 const logWithTimestamp = require('../../logging/logWithTimestamp');
+const requireLocalOrPin = require('../middleware/requireLocalOrPin');
 
 module.exports = function (io) {
   const router = express.Router();
@@ -49,7 +50,7 @@ module.exports = function (io) {
     }
   });
 
-  router.put('/:id/state', async (req, res) => {
+  router.put('/:id/state', requireLocalOrPin, async (req, res) => {
     const { id } = req.params;
     const body = req.body;
     logWithTimestamp(`Updating state of HA media player ${id}: ${JSON.stringify(body)}`, 'info');

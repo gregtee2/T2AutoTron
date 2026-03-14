@@ -3,6 +3,7 @@ const Joi = require('joi');
 const chalk = require('chalk');
 const homeAssistantManager = require('../../devices/managers/homeAssistantManager');
 const commandTracker = require('../../engine/commandTracker');
+const requireLocalOrPin = require('../middleware/requireLocalOrPin');
 
 // In-memory cache for device states
 const stateCache = new Map();
@@ -84,7 +85,7 @@ module.exports = function (io) {
   });
 
   // PUT /:id/state - Update state of a specific device
-  router.put('/:id/state', async (req, res) => {
+  router.put('/:id/state', requireLocalOrPin, async (req, res) => {
     const { id } = req.params;
     const body = req.body;
     
@@ -205,7 +206,7 @@ module.exports = function (io) {
   });
 
   // POST /service - Call any HA service (light.turn_on, switch.toggle, etc.)
-  router.post('/service', async (req, res) => {
+  router.post('/service', requireLocalOrPin, async (req, res) => {
     const { domain, service, entity_id, data } = req.body;
     
     if (!domain || !service) {
@@ -229,7 +230,7 @@ module.exports = function (io) {
       };
 
       // Log the actual payload being sent to HA
-      console.log(`[HA Service] Sending to ${haHost}/api/services/${domain}/${service}:`, JSON.stringify(payload));
+      if (VERBOSE) console.log(`[HA Service] Sending to ${haHost}/api/services/${domain}/${service}:`, JSON.stringify(payload));
 
       const response = await fetch(`${haHost}/api/services/${domain}/${service}`, {
         method: 'POST',

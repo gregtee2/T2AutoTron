@@ -13,6 +13,7 @@
 const engine = require('./BackendEngine');
 const registry = require('./BackendNodeRegistry');
 const path = require('path');
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 const fs = require('fs').promises;
 
 // Set global reference so nodes can access the engine
@@ -33,7 +34,7 @@ async function loadBuiltinNodes() {
         if (typeof nodeModule.register === 'function') {
           nodeModule.register(registry);
         }
-        console.log(`[Engine] Loaded node module: ${file}`);
+        if (VERBOSE) console.log(`[Engine] Loaded node module: ${file}`);
       } catch (error) {
         console.error(`[Engine] Failed to load ${file}: ${error.message}`);
       }
@@ -51,7 +52,7 @@ async function autoStart() {
   // Use GRAPH_SAVE_PATH env var in Docker, or fall back to local path
   const savedGraphsDir = process.env.GRAPH_SAVE_PATH || path.join(__dirname, '..', '..', '..', 'Saved_Graphs');
   const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
-  console.log(`[Engine] autoStart: Looking for graph at ${lastActivePath}`);
+  if (VERBOSE) console.log(`[Engine] autoStart: Looking for graph at ${lastActivePath}`);
   
   try {
     // Check if there's a last active graph

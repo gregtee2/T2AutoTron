@@ -625,7 +625,7 @@ export function Dock({ onSave, onLoad, onLoadExample, onClear, onExport, onImpor
                     <button 
                         onClick={() => {
                             // Open debug dashboard - works for both local and add-on
-                            const dashboardUrl = `${window.location.origin}/tools/debug_dashboard.html`;
+                            const dashboardUrl = `${window.location.origin}/debug`;
                             window.open(dashboardUrl, '_blank');
                         }}
                         className="dock-btn"

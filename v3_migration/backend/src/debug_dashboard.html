@@ -558,19 +558,20 @@
     <div class="config-bar">
         <input type="text" id="backendUrl" placeholder="Backend URL (e.g., http://192.168.1.100:3000)">
         <button onclick="connect()">Connect</button>
-        <button class="secondary" onclick="loadEventLog()">📋 Events</button>
+        <button onclick="refreshAll()">🔄 Refresh All</button>
         <button class="secondary" onclick="runComparison()">🔍 Compare</button>
         <button class="secondary" onclick="exportLogs()">📥 Export</button>
         <button class="secondary danger" onclick="clearSession()">🗑️ Clear</button>
         <div class="auto-refresh">
-            <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
+            <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()" checked>
             <label for="autoRefresh">Auto</label>
             <select id="refreshRate" onchange="updateRefreshRate()">
-                <option value="3000">3s</option>
-                <option value="5000" selected>5s</option>
                 <option value="10000">10s</option>
                 <option value="30000">30s</option>
+                <option value="60000" selected>60s</option>
+                <option value="120000">2m</option>
             </select>
+            <span id="refreshCountdown" style="font-size: 11px; color: #888; margin-left: 5px;"></span>
         </div>
         <span class="status loading" id="status">Not connected</span>
         <span class="response-time" id="responseTime"></span>
@@ -646,7 +647,7 @@
             <div class="panel-title">
                 📊 Device Timeline
                 <div class="panel-actions">
-                    <button onclick="loadEventLog().then(renderTimeline)">Refresh</button>
+                    <button onclick="sessionCleared = false; loadEventLog().then(renderTimeline)">Refresh</button>
                 </div>
             </div>
             <div class="hours-selector">
@@ -731,6 +732,7 @@
         let refreshInterval = null;
         let lastBugCount = 0;
         let notificationsEnabled = false;
+        let sessionCleared = false; // Flag to prevent auto-refresh after clear
         
         // Node lookup map: nodeId -> { nodeTitle, deviceName, entityId }
         let nodeInfoMap = {};
@@ -773,6 +775,19 @@
             try {
                 // data field contains the JSON details
                 const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                
+                // Format 1: HA-DEVICE-SUCCESS with payload containing hs_color and brightness
+                // e.g., {"payload":{"hs_color":[0,89],"brightness":254}}
+                if (data.payload?.hs_color && data.payload?.brightness !== undefined) {
+                    const [hue, sat] = data.payload.hs_color;
+                    return {
+                        hue: hue,           // Already 0-360
+                        sat: sat / 100,     // Convert 0-100 to 0-1
+                        bri: data.payload.brightness / 255  // Convert 0-255 to 0-1
+                    };
+                }
+                
+                // Format 2: Legacy format with newHue, sat, bri
                 if (data.newHue !== undefined) {
                     return {
                         hue: parseFloat(data.newHue),
@@ -1007,14 +1022,21 @@
         }
         
         function clearSession() {
-            if (!confirm('Clear all session data (events, restart history)?')) return;
+            if (!confirm('Clear all session data (events, restart history, timeline)?')) return;
             eventLogData = [];
             serverRestarts = [];
             lastKnownUptime = null;
+            timelineSegmentData = {};
+            timelineEventData = [];
+            fullLogData = [];
+            sessionCleared = true; // Prevent auto-refresh from re-populating
             localStorage.removeItem('t2debug_session');
             document.getElementById('engineRestarts').textContent = '0';
             document.getElementById('restartHistory').innerHTML = '';
-            document.getElementById('eventLog').innerHTML = '<div class="no-data">Session cleared</div>';
+            document.getElementById('eventLog').innerHTML = '<div class="no-data">Session cleared - click Refresh to reload</div>';
+            document.getElementById('timelineContainer').innerHTML = '<div class="no-data">Session cleared - click Refresh to reload</div>';
+            document.getElementById('decisionLog').innerHTML = '<div class="no-data">Session cleared</div>';
+            document.getElementById('eventCount').textContent = '0 events';
             showToast('Session data cleared', 'success');
         }
         
@@ -1042,15 +1064,31 @@
         
         function toggleAutoRefresh() {
             const enabled = document.getElementById('autoRefresh').checked;
+            const countdownEl = document.getElementById('refreshCountdown');
+            
+            // Clear any existing timers
+            if (refreshInterval) clearInterval(refreshInterval);
+            if (window.countdownInterval) clearInterval(window.countdownInterval);
+            
             if (enabled) {
                 const rate = parseInt(document.getElementById('refreshRate').value);
-                if (refreshInterval) clearInterval(refreshInterval);
-                refreshInterval = setInterval(refresh, rate);
+                window.nextRefreshTime = Date.now() + rate;
+                
+                // Start refresh interval
+                refreshInterval = setInterval(() => {
+                    refresh();
+                    window.nextRefreshTime = Date.now() + rate;
+                }, rate);
+                
+                // Start countdown display
+                window.countdownInterval = setInterval(() => {
+                    const remaining = Math.max(0, Math.ceil((window.nextRefreshTime - Date.now()) / 1000));
+                    countdownEl.textContent = `(${remaining}s)`;
+                }, 1000);
+                countdownEl.textContent = `(${rate/1000}s)`;
             } else {
-                if (refreshInterval) {
-                    clearInterval(refreshInterval);
-                    refreshInterval = null;
-                }
+                refreshInterval = null;
+                countdownEl.textContent = '';
             }
         }
         
@@ -1081,6 +1119,18 @@
             toggleAutoRefresh();
         }
         
+        // Manual refresh all button - refreshes everything immediately
+        async function refreshAll() {
+            const url = document.getElementById('backendUrl').value.trim();
+            if (!url) {
+                alert('Please connect first');
+                return;
+            }
+            document.getElementById('status').textContent = '🔄 Refreshing...';
+            await refresh();
+            document.getElementById('status').textContent = '✓ Connected';
+        }
+        
         async function refresh() {
             const url = document.getElementById('backendUrl').value.trim();
             if (!url) return;
@@ -1103,6 +1153,12 @@
                     renderEngine();
                     renderBuffers();
                     renderLights();
+                    
+                    // Refresh event logs, timeline, and decision log
+                    loadEventLog();
+                    
+                    // Also refresh the comparison/anomaly detection (fixes stale data bug)
+                    runComparison();
                     
                     document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
                 } else {
@@ -1316,6 +1372,11 @@
         let segmentIdCounter = 0;
         
         function renderTimeline() {
+            // Skip rendering if session was cleared (user must click Refresh to reload)
+            if (sessionCleared) {
+                return;
+            }
+            
             // Use timelineEventData which includes HSV color events
             const eventsToRender = timelineEventData.length > 0 ? timelineEventData : eventLogData;
             if (eventsToRender.length === 0) {
@@ -1952,6 +2013,15 @@
                 if (item.expectedHsv && item.actualHsColor && item.actualState === 'on' && !item.effectOverride && supportsColor) {
                     // expectedHsv is { hue: 0-1, saturation: 0-1, brightness: 0-254 }
                     // actualHsColor is [hue: 0-360, saturation: 0-100]
+                    
+                    // Skip if saturation is very low - hue is meaningless for white/near-white light
+                    const expectedSat = (item.expectedHsv.saturation || 0) * 100;  // Convert to 0-100
+                    const actualSat = item.actualHsColor[1] || 0;  // Already 0-100
+                    if (expectedSat < 5 && actualSat < 5) {
+                        // Both are essentially white, skip hue comparison
+                        return;
+                    }
+                    
                     const expectedHue = Math.round((item.expectedHsv.hue || 0) * 360);
                     const actualHue = Math.round(item.actualHsColor[0] || 0);
                     

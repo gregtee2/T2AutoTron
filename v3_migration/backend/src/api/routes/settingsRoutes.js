@@ -395,7 +395,7 @@ router.post('/test', requireLocalOrPin, express.json(), async (req, res) => {
     logger.log(`Settings test for ${service}: ${result.success ? 'success' : 'failed'}`, 'info', false, 'settings:test');
   } catch (error) {
     logger.log(`Settings test failed: ${error.message}`, 'error', false, 'settings:test');
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

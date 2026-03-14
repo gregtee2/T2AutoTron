@@ -8,9 +8,10 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../../logging/logger');
+const requireLocalOrPin = require('../middleware/requireLocalOrPin');
 
 // POST /api/telegram/send - Send a Telegram notification
-router.post('/send', express.json(), async (req, res) => {
+router.post('/send', requireLocalOrPin, express.json(), async (req, res) => {
   const { message } = req.body;
   
   if (!message) {

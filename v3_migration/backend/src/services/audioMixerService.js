@@ -190,7 +190,7 @@ class AudioMixerService extends EventEmitter {
         res.setHeader('icy-pub', '0');
         
         this.clients.add(res);
-        console.log(`[AudioMixer] Client connected (${this.clients.size} total)`);
+        if (VERBOSE) console.log(`[AudioMixer] Client connected (${this.clients.size} total)`);
         
         // Send buffered audio for quick start
         for (const chunk of this.audioBuffer) {
@@ -202,7 +202,7 @@ class AudioMixerService extends EventEmitter {
         // Handle client disconnect
         res.on('close', () => {
             this.clients.delete(res);
-            console.log(`[AudioMixer] Client disconnected (${this.clients.size} remaining)`);
+            if (VERBOSE) console.log(`[AudioMixer] Client disconnected (${this.clients.size} remaining)`);
         });
         
         // Auto-start if not running
@@ -273,7 +273,7 @@ class AudioMixerService extends EventEmitter {
                 const msg = data.toString().trim();
                 // Always log TTS encoding progress for debugging
                 if (msg.includes('time=') || msg.includes('size=')) {
-                    console.log(`[AudioMixer] TTS encode: ${msg.substring(0, 100)}`);
+                    if (VERBOSE) console.log(`[AudioMixer] TTS encode: ${msg.substring(0, 100)}`);
                 }
             });
 

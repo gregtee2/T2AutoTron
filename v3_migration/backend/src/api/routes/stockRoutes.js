@@ -15,8 +15,8 @@ const logger = require('../../logging/logger');
 router.get('/:symbol', async (req, res) => {
     const symbol = req.params.symbol?.toUpperCase().trim();
     
-    if (!symbol) {
-        return res.status(400).json({ error: 'Symbol required' });
+    if (!symbol || !/^[A-Z0-9.^=\-]{1,12}$/.test(symbol)) {
+        return res.status(400).json({ success: false, error: 'Invalid or missing stock symbol' });
     }
 
     try {
@@ -30,7 +30,7 @@ router.get('/:symbol', async (req, res) => {
 
         if (!response.ok) {
             logger.log(`[Stock] Yahoo API error for ${symbol}: HTTP ${response.status}`, 'error');
-            return res.status(response.status).json({ error: `Yahoo API error: ${response.status}` });
+            return res.status(response.status).json({ success: false, error: `Yahoo API error: ${response.status}` });
         }
 
         const data = await response.json();
@@ -38,12 +38,12 @@ router.get('/:symbol', async (req, res) => {
         if (data.chart?.error) {
             const errMsg = data.chart.error.description || 'Unknown API error';
             logger.log(`[Stock] Yahoo API error for ${symbol}: ${errMsg}`, 'error');
-            return res.status(400).json({ error: errMsg });
+            return res.status(400).json({ success: false, error: errMsg });
         }
 
         const result = data.chart?.result?.[0];
         if (!result) {
-            return res.status(404).json({ error: 'No data returned' });
+            return res.status(404).json({ success: false, error: 'No data returned' });
         }
 
         const meta = result.meta;
@@ -51,7 +51,7 @@ router.get('/:symbol', async (req, res) => {
         const previousClose = meta.previousClose || meta.chartPreviousClose;
 
         if (currentPrice === undefined || previousClose === undefined) {
-            return res.status(500).json({ error: 'Price data unavailable' });
+            return res.status(500).json({ success: false, error: 'Price data unavailable' });
         }
 
         const priceChange = currentPrice - previousClose;
@@ -73,7 +73,7 @@ router.get('/:symbol', async (req, res) => {
 
     } catch (error) {
         logger.log(`[Stock] Fetch error for ${symbol}: ${error.message}`, 'error');
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ success: false, error: 'Failed to fetch stock data' });
     }
 });
 

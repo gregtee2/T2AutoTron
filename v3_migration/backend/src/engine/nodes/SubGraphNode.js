@@ -93,7 +93,6 @@ class SubGraphNode {
  */
 function register(registry) {
     registry.register('SubGraphNode', SubGraphNode);
-    console.log('[SubGraphNode] Registered with backend engine');
 }
 
 module.exports = { SubGraphNode, register };

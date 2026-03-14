@@ -16,6 +16,9 @@ const router = express.Router();
 const path = require('path');
 const deviceAudit = require('../../engine/deviceAudit');
 const commandTracker = require('../../engine/commandTracker');
+const requireLocalOrPin = require('../middleware/requireLocalOrPin');
+
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 
 // Lazy-load homeAssistantManager to avoid circular dependencies
 let homeAssistantManager = null;
@@ -76,7 +79,7 @@ router.get('/status', (req, res) => {
  * POST /api/engine/start
  * Start the backend engine
  */
-router.post('/start', async (req, res) => {
+router.post('/start', requireLocalOrPin, async (req, res) => {
   try {
     const { engine, registry } = getEngine();
     const engineModule = require('../../engine');
@@ -128,7 +131,7 @@ router.post('/start', async (req, res) => {
  * POST /api/engine/stop
  * Stop the backend engine
  */
-router.post('/stop', (req, res) => {
+router.post('/stop', requireLocalOrPin, (req, res) => {
   try {
     const { engine } = getEngine();
     engine.stop();
@@ -154,7 +157,7 @@ router.post('/stop', (req, res) => {
  * Load a graph file into the engine
  * Body: { graphPath: string } or { graphName: string }
  */
-router.post('/load', express.json(), async (req, res) => {
+router.post('/load', requireLocalOrPin, express.json(), async (req, res) => {
   try {
     const { engine, registry } = getEngine();
     const engineModule = require('../../engine');
@@ -169,11 +172,20 @@ router.post('/load', express.json(), async (req, res) => {
     // If graphName provided, resolve to full path
     if (req.body.graphName && !graphPath) {
       const savedGraphsDir = getGraphsDir();
-      graphPath = path.join(savedGraphsDir, req.body.graphName);
+      // Sanitize: strip path separators to prevent directory traversal
+      const safeName = path.basename(req.body.graphName);
+      graphPath = path.join(savedGraphsDir, safeName);
       
       // Add .json extension if missing
       if (!graphPath.endsWith('.json')) {
         graphPath += '.json';
+      }
+      
+      // Security: ensure resolved path stays within graphs directory
+      const resolvedPath = path.resolve(graphPath);
+      const resolvedDir = path.resolve(savedGraphsDir);
+      if (!resolvedPath.startsWith(resolvedDir)) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
       }
     }
     
@@ -184,7 +196,7 @@ router.post('/load', express.json(), async (req, res) => {
       });
     }
     
-    console.log(`[Engine API] Loading graph from: ${graphPath}`);
+    if (VERBOSE) console.log(`[Engine API] Loading graph from: ${graphPath}`);
     const success = await engine.loadGraph(graphPath);
     
     if (success) {
@@ -465,7 +477,7 @@ router.get('/device-states', async (req, res) => {
  * POST /api/engine/tick
  * Force a single engine tick (for testing)
  */
-router.post('/tick', async (req, res) => {
+router.post('/tick', requireLocalOrPin, async (req, res) => {
   try {
     const { engine } = getEngine();
     
@@ -495,17 +507,17 @@ router.post('/tick', async (req, res) => {
  * Returns the last active graph JSON for frontend auto-load
  */
 router.get('/last-active', async (req, res) => {
-  console.log('[Engine API] GET /last-active called');
+  if (VERBOSE) console.log('[Engine API] GET /last-active called');
   try {
     const fs = require('fs').promises;
     const savedGraphsDir = getGraphsDir();
     const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
-    console.log('[Engine API] Looking for:', lastActivePath);
+    if (VERBOSE) console.log('[Engine API] Looking for:', lastActivePath);
     
     try {
       const content = await fs.readFile(lastActivePath, 'utf-8');
       const graphData = JSON.parse(content);
-      console.log('[Engine API] Found last active graph with', graphData.nodes?.length || 0, 'nodes');
+      if (VERBOSE) console.log('[Engine API] Found last active graph with', graphData.nodes?.length || 0, 'nodes');
       
       res.json({
         success: true,
@@ -514,7 +526,7 @@ router.get('/last-active', async (req, res) => {
       });
     } catch (err) {
       // No last active graph exists
-      console.log('[Engine API] No last active graph found');
+      if (VERBOSE) console.log('[Engine API] No last active graph found');
       res.json({
         success: false,
         error: 'No last active graph found',
@@ -535,9 +547,8 @@ router.get('/last-active', async (req, res) => {
  * Save the current graph as the last active graph (for auto-load on reconnect)
  * Also used by sendBeacon on browser close to sync unsaved changes
  */
-router.post('/save-active', async (req, res) => {
-  // Debug: Log ALL incoming requests to this endpoint
-  console.log(`[Engine API] /save-active received, body type: ${typeof req.body}, hasNodes: ${!!req.body?.nodes}, contentType: ${req.get('content-type')}`);
+router.post('/save-active', requireLocalOrPin, async (req, res) => {
+  if (VERBOSE) console.log(`[Engine API] /save-active received, body type: ${typeof req.body}, hasNodes: ${!!req.body?.nodes}, contentType: ${req.get('content-type')}`);
   
   try {
     const fs = require('fs').promises;
@@ -551,7 +562,7 @@ router.post('/save-active', async (req, res) => {
     
     // Log beacon arrivals for debugging sync-on-close feature
     if (graphData?.syncedOnClose) {
-      console.log(`[Engine API] Received sync-on-close beacon (${graphData.nodes?.length || 0} nodes)`);
+      if (VERBOSE) console.log(`[Engine API] Received sync-on-close beacon (${graphData.nodes?.length || 0} nodes)`);
     }
     
     if (!graphData || !graphData.nodes) {
@@ -571,16 +582,16 @@ router.post('/save-active', async (req, res) => {
       if (engine && engine.running) {
         // Don't hot-reload if frontend is controlling - it will disrupt audio
         if (engine.shouldSkipDeviceCommands && engine.shouldSkipDeviceCommands()) {
-          console.log('[Engine API] Skipping hot-reload - frontend is active');
+          if (VERBOSE) console.log('[Engine API] Skipping hot-reload - frontend is active');
         } else if (graphData.nodes && graphData.nodes.length > 0) {
           // Use hotReload with parsed data instead of loadGraph with file path
           // This avoids race conditions and handles empty graphs gracefully
           await engine.hotReload(graphData);
-          console.log('[Engine API] Graph hot-reloaded into engine');
+          if (VERBOSE) console.log('[Engine API] Graph hot-reloaded into engine');
         } else {
           // Graph was cleared - stop the engine gracefully
           engine.stop();
-          console.log('[Engine API] Graph cleared - engine stopped');
+          if (VERBOSE) console.log('[Engine API] Graph cleared - engine stopped');
         }
       }
     } catch (err) {
@@ -606,8 +617,8 @@ router.post('/save-active', async (req, res) => {
  * POST /api/engine/save-graph
  * Save a graph with a specific filename
  */
-router.post('/save-graph', async (req, res) => {
-  console.log('[Engine API] POST /save-graph called');
+router.post('/save-graph', requireLocalOrPin, async (req, res) => {
+  if (VERBOSE) console.log('[Engine API] POST /save-graph called');
   try {
     const fs = require('fs').promises;
     const savedGraphsDir = getGraphsDir();
@@ -641,14 +652,14 @@ router.post('/save-graph', async (req, res) => {
     const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
     await fs.writeFile(lastActivePath, JSON.stringify(graph, null, 2), 'utf-8');
     
-    console.log(`[Engine API] Saved graph as "${finalName}" (${graph.nodes?.length || 0} nodes)`);
+    if (VERBOSE) console.log(`[Engine API] Saved graph as "${finalName}" (${graph.nodes?.length || 0} nodes)`);
     
     // Hot-reload into engine
     try {
       const { engine } = getEngine();
       if (engine && engine.running && graph.nodes && graph.nodes.length > 0) {
         await engine.hotReload(graph);
-        console.log('[Engine API] Graph hot-reloaded into engine');
+        if (VERBOSE) console.log('[Engine API] Graph hot-reloaded into engine');
       }
     } catch (err) {
       console.warn('[Engine API] Could not reload into engine:', err.message);

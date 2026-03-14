@@ -14,13 +14,14 @@
 const express = require('express');
 const router = express.Router();
 const audioMixer = require('../../services/audioMixerService');
+const requireLocalOrPin = require('../middleware/requireLocalOrPin');
 
 /**
  * GET /api/audio/stream
  * The actual audio stream - point speakers to this URL
  */
 router.get('/stream', (req, res) => {
-    console.log('[AudioMixer API] New stream client connecting...');
+    if (process.env.VERBOSE_LOGGING === 'true') console.log('[AudioMixer API] New stream client connecting...');
     audioMixer.addClient(res);
 });
 
@@ -124,7 +125,7 @@ router.get('/status', (req, res) => {
  * POST /api/audio/start
  * Start the audio mixer
  */
-router.post('/start', (req, res) => {
+router.post('/start', requireLocalOrPin, (req, res) => {
     audioMixer.start();
     res.json({ success: true, message: 'Audio mixer started' });
 });
@@ -133,7 +134,7 @@ router.post('/start', (req, res) => {
  * POST /api/audio/stop
  * Stop the audio mixer
  */
-router.post('/stop', (req, res) => {
+router.post('/stop', requireLocalOrPin, (req, res) => {
     audioMixer.stop();
     res.json({ success: true, message: 'Audio mixer stopped' });
 });
@@ -143,10 +144,10 @@ router.post('/stop', (req, res) => {
  * Change the source stream URL
  * Body: { url: "http://..." }
  */
-router.post('/set-source', (req, res) => {
+router.post('/set-source', requireLocalOrPin, (req, res) => {
     const { url } = req.body;
     if (!url) {
-        return res.status(400).json({ error: 'Missing url parameter' });
+        return res.status(400).json({ success: false, error: 'Missing url parameter' });
     }
     audioMixer.setStreamUrl(url);
     res.json({ success: true, streamUrl: url });
@@ -157,17 +158,17 @@ router.post('/set-source', (req, res) => {
  * Play TTS through the mixer
  * Body: { audioFile: "/path/to/tts.wav" }
  */
-router.post('/tts', async (req, res) => {
+router.post('/tts', requireLocalOrPin, async (req, res) => {
     const { audioFile } = req.body;
     if (!audioFile) {
-        return res.status(400).json({ error: 'Missing audioFile parameter' });
+        return res.status(400).json({ success: false, error: 'Missing audioFile parameter' });
     }
     
     try {
         const success = await audioMixer.playTTS(audioFile);
         res.json({ success, message: success ? 'TTS played' : 'TTS playback failed' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 

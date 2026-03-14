@@ -7,6 +7,7 @@
  */
 
 const registry = require('../BackendNodeRegistry');
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 
 // Load shared utility logic
 let sharedUtilityLogic;
@@ -235,7 +236,7 @@ class StateMachineNode {
     const timer = this._getStateTimer(newState);
     this.remainingSeconds = timer || 0;
     
-    console.log(`[StateMachine ${this.id?.slice(-6) || '???'}] ${previousState} → ${newState} (${reason})${timer ? `, timer: ${timer}s` : ''}`);
+    if (VERBOSE) console.log(`[StateMachine ${this.id?.slice(-6) || '???'}] ${previousState} → ${newState} (${reason})${timer ? `, timer: ${timer}s` : ''}`);
     
     return true;
   }

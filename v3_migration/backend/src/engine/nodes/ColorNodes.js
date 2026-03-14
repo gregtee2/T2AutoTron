@@ -661,8 +661,7 @@ function register(registry) {
     registry.register('HSVToRGBNode', HSVToRGBNode);
     registry.register('RGBToHSVNode', RGBToHSVNode);
     registry.register('ColorMixerNode', ColorMixerNode);
-    
-    console.log('[ColorNodes] Registered: SplineTimelineColorNode, HSVToRGBNode, RGBToHSVNode, ColorMixerNode');
+}
 }
 
 module.exports = { register };

@@ -30,7 +30,7 @@ router.get('/', (req, res) => {
         res.json({ modules: files });
     } catch (err) {
         console.error('[SharedLogic] Error listing modules:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, error: 'Failed to list modules' });
     }
 });
 
@@ -41,17 +41,23 @@ router.get('/', (req, res) => {
 router.get('/:name', (req, res) => {
     try {
         const name = req.params.name;
+
+        // Validate: alphanumeric + underscore only (prevents path traversal)
+        if (!/^[A-Za-z0-9_]+$/.test(name)) {
+            return res.status(400).json({ success: false, error: 'Invalid module name' });
+        }
+
         const filePath = path.join(logicDir, `${name}.js`);
         
         if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ error: `Module '${name}' not found` });
+            return res.status(404).json({ success: false, error: `Module '${name}' not found` });
         }
         
         const content = fs.readFileSync(filePath, 'utf-8');
         res.type('application/javascript').send(content);
     } catch (err) {
         console.error('[SharedLogic] Error loading module:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, error: 'Failed to load module' });
     }
 });
 

@@ -93,7 +93,23 @@ class TimeOfDayNode {
 
   restore(data) {
     if (data.properties) {
-      Object.assign(this.properties, data.properties);
+      const p = data.properties;
+      // Only restore configuration properties, not runtime state
+      if (p.start_hour !== undefined) this.properties.start_hour = p.start_hour;
+      if (p.start_minute !== undefined) this.properties.start_minute = p.start_minute;
+      if (p.start_ampm !== undefined) this.properties.start_ampm = p.start_ampm;
+      if (p.start_enabled !== undefined) this.properties.start_enabled = p.start_enabled;
+      if (p.stop_hour !== undefined) this.properties.stop_hour = p.stop_hour;
+      if (p.stop_minute !== undefined) this.properties.stop_minute = p.stop_minute;
+      if (p.stop_ampm !== undefined) this.properties.stop_ampm = p.stop_ampm;
+      if (p.stop_enabled !== undefined) this.properties.stop_enabled = p.stop_enabled;
+      if (p.startTime !== undefined) this.properties.startTime = p.startTime;
+      if (p.endTime !== undefined) this.properties.endTime = p.endTime;
+      if (p.mode !== undefined) this.properties.mode = p.mode;
+      if (p.pulseMode !== undefined) this.properties.pulseMode = p.pulseMode;
+      if (p.customName !== undefined) this.properties.customName = p.customName;
+      if (p.timezone !== undefined) this.properties.timezone = p.timezone;
+      // DO NOT restore currentState - it will be calculated fresh in data()
     }
   }
 

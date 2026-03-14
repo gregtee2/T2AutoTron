@@ -4,6 +4,7 @@
 
 const express = require('express');
 const discoveryService = require('../../devices/services/discoveryService');
+const requireLocalOrPin = require('../middleware/requireLocalOrPin');
 
 module.exports = (io, deviceService) => {
     const router = express.Router();
@@ -14,9 +15,10 @@ module.exports = (io, deviceService) => {
      * 
      * Body: { timeout: 5000 } (optional, in milliseconds)
      */
-    router.post('/scan', async (req, res) => {
+    router.post('/scan', requireLocalOrPin, async (req, res) => {
         try {
-            const timeout = req.body.timeout || 5000;
+            const rawTimeout = parseInt(req.body?.timeout, 10);
+            const timeout = (!isNaN(rawTimeout) && rawTimeout >= 1000 && rawTimeout <= 30000) ? rawTimeout : 5000;
             
             if (discoveryService.isScanInProgress()) {
                 return res.status(409).json({

@@ -17,6 +17,7 @@ const express = require('express');
 const router = express.Router();
 const homeAssistantManager = require('../../devices/managers/homeAssistantManager');
 const logWithTimestamp = require('../../logging/logWithTimestamp');
+const requireLocalOrPin = require('../middleware/requireLocalOrPin');
 
 // Verbose logging flag
 const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
@@ -32,7 +33,7 @@ function createMediaRoutes(io) {
      * POST /play - Play media on a speaker
      * Body: { entityId, mediaUrl, mediaType, volume }
      */
-    router.post('/play', async (req, res) => {
+    router.post('/play', requireLocalOrPin, async (req, res) => {
         const { entityId, mediaUrl, mediaType = 'music', volume } = req.body;
 
         if (!entityId || !mediaUrl) {
@@ -80,7 +81,7 @@ function createMediaRoutes(io) {
      * POST /stop - Stop media playback
      * Body: { entityId }
      */
-    router.post('/stop', async (req, res) => {
+    router.post('/stop', requireLocalOrPin, async (req, res) => {
         const { entityId } = req.body;
 
         if (!entityId) {
@@ -115,7 +116,7 @@ function createMediaRoutes(io) {
      * POST /pause - Pause media playback
      * Body: { entityId }
      */
-    router.post('/pause', async (req, res) => {
+    router.post('/pause', requireLocalOrPin, async (req, res) => {
         const { entityId } = req.body;
 
         if (!entityId) {
@@ -150,7 +151,7 @@ function createMediaRoutes(io) {
      * POST /resume - Resume media playback
      * Body: { entityId }
      */
-    router.post('/resume', async (req, res) => {
+    router.post('/resume', requireLocalOrPin, async (req, res) => {
         const { entityId } = req.body;
 
         if (!entityId) {
@@ -185,7 +186,7 @@ function createMediaRoutes(io) {
      * POST /volume - Set volume level
      * Body: { entityId, volume (0-1) }
      */
-    router.post('/volume', async (req, res) => {
+    router.post('/volume', requireLocalOrPin, async (req, res) => {
         const { entityId, volume } = req.body;
 
         if (!entityId || volume === undefined) {

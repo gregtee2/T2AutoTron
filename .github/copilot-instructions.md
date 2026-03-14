@@ -80,6 +80,186 @@ const result = smartCompare(a, op, b);
 - Consider full unified node definitions for v4.0 if shared logic approach works well
 - Add more shared utility functions as patterns emerge
 
+---
+
+## 📌 PINNED: Future Features (Do Not Start Without User Approval)
+
+### 🎥 Camera System - Blue Iris-style Live View (IN PROGRESS)
+
+**Status**: ✅ Core architecture complete, live streaming working at 30fps
+**Goal**: Full-featured camera management inspired by Blue Iris
+
+#### Current Implementation (January 2026)
+
+**Architecture:**
+```
+┌─────────────────┐     ┌─────────────────────────────────────────────┐
+│  IP Camera      │     │              CameraService                  │
+│  RTSP Stream    │────▶│  ┌─────────────────────────────────────┐   │
+│  (H.264)        │     │  │ CameraWorker (per camera)           │   │
+└─────────────────┘     │  │  - FFmpeg with CUDA decode          │   │
+                        │  │  - RTSP → JPEG @ 30fps              │   │
+                        │  │  - Stores in FrameBuffer (150 frames)│   │
+                        │  └─────────────────────────────────────┘   │
+                        └─────────────────────────────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Frontend (CameraPanel.jsx)                                         │
+│  - Grid view: 1x1, 2x2, 3x3, 4x4                                   │
+│  - Multi-camera popout (separate window)                            │
+│  - Single camera popout with fast refresh                           │
+│  - Live/Snap toggle                                                 │
+│  - Camera discovery                                                 │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Files:**
+| File | Purpose |
+|------|---------|
+| `backend/src/cameras/CameraService.js` | Singleton managing all camera workers |
+| `backend/src/cameras/CameraWorker.js` | FFmpeg RTSP→JPEG extraction per camera |
+| `backend/src/cameras/FrameBuffer.js` | Ring buffer storing 150 frames (5 sec @ 30fps) |
+| `backend/src/api/cameras/index.js` | REST API: `/api/cameras/*` |
+| `backend/config/cameras.json` | Camera configuration (IP, credentials, paths) |
+| `frontend/src/ui/CameraPanel.jsx` | React UI for camera grid and popouts |
+
+**FFmpeg Settings (CameraWorker.js):**
+```javascript
+// NVIDIA hardware decode (RTX 6000 Pro)
+args.push('-hwaccel', 'cuda');
+
+// Input: RTSP with robust settings
+args.push(
+    '-rtsp_transport', 'tcp',
+    '-fflags', '+discardcorrupt+genpts+nobuffer',
+    '-flags', 'low_delay',
+    '-thread_queue_size', '4096',
+    '-analyzeduration', '5000000',  // 5 sec for Reolink
+    '-probesize', '5000000',        // 5 MB probe
+    '-i', rtspUrl,
+    '-an'  // No audio
+);
+
+// Output: High quality JPEG
+args.push(
+    '-vf', `fps=${this.targetFps}`,  // Default 30fps
+    '-f', 'image2pipe',
+    '-vcodec', 'mjpeg',
+    '-q:v', '2',                     // Quality: 1-31, lower = better
+    '-'
+);
+```
+
+**⚠️ CRITICAL LESSONS LEARNED:**
+
+1. **Don't force sub-streams!** CameraService had code that secretly replaced `_main` with `_sub` and `subtype=0` with `subtype=1` "for ML bandwidth". This caused 480p output instead of 4K. The fix: use the configured rtspPath directly.
+
+2. **Never use `-skip_frame nokey`!** This flag makes FFmpeg only decode keyframes (I-frames), resulting in 1 frame every 2 seconds. It's for seeking, not live playback.
+
+3. **Frame size filter prevents green frames**: Skip frames < 10KB (corrupt/incomplete frames from startup are tiny).
+
+4. **`-b:v` vs `-q:v` for MJPEG**: Use `-q:v 2` (quality scale 1-31) not `-b:v 50M` (bitrate) for image output.
+
+**Completed Features:**
+- ✅ Grid Layout View (1x1, 2x2, 3x3, 4x4)
+- ✅ Live Stream Support - RTSP via FFmpeg @ 30fps
+- ✅ GPU Acceleration - NVIDIA CUDA decode
+- ✅ Multi-camera Popout - Separate window with grid
+- ✅ Single Camera Popout - Fast refresh real-time view
+- ✅ Camera Discovery - Scans subnet for IP cameras
+- ✅ Main stream support (full resolution, not sub-stream)
+
+**Remaining Features:**
+- ⏳ Drag-to-Resize individual tiles
+- ⏳ Camera Groups by location
+- ⏳ PTZ Controls
+- ⏳ Recording Controls
+- ⏳ Motion Detection Zones
+- ⏳ Right-Click Context Menu
+
+### 🤖 AI Vision Detection System
+**Goal**: Local AI-powered object detection for cameras using RTX 6000 Pro (Blackwell)
+
+**Architecture:**
+```
+┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
+│  IP Camera      │────▶│  Python Vision       │────▶│  T2AutoTron     │
+│  RTSP Feed      │     │  Service (FastAPI)   │     │  Vision Node    │
+└─────────────────┘     │  - YOLOv11           │     │  - Trigger out  │
+                        │  - Grounding DINO    │     │  - Objects list │
+                        │  - LLaVA (optional)  │     │  - Confidence   │
+                        └──────────────────────┘     └─────────────────┘
+```
+
+**Recommended Models:**
+- **YOLOv11** - Real-time detection (100+ FPS), 80+ object classes
+- **Grounding DINO** - Open vocabulary ("find person in red shirt")
+- **LLaVA/Qwen2-VL** - Scene description for TTS alerts
+
+**Node Outputs:**
+- `person_detected` (boolean) - Trigger when person in frame
+- `detections` (array) - List of detected objects with confidence
+- `description` (string) - Natural language scene description
+
+**Use Cases:**
+- Person at front door → Turn on porch lights, send notification
+- Pet in kitchen → TTS announcement
+- Package on porch → Alert
+- Car in driveway → Trigger automation
+
+### 🗣️ Chatterbox TTS Integration
+
+**Status**: ✅ Implemented - Local GPU-accelerated text-to-speech
+**Location**: `chatterbox/chatterbox-master/` (source) + `backend/src/localAgent/` (bridge)
+
+**What is Chatterbox?**
+Chatterbox is a high-quality TTS engine that runs locally on your GPU. It supports voice cloning and produces natural-sounding speech. T2AutoTron integrates with it for smart home announcements.
+
+**Architecture:**
+```
+┌─────────────────────────┐          ┌─────────────────────────┐
+│  T2 Addon (Pi/Server)   │          │  Your Desktop (GPU)     │
+│  Web UI (port 3000)     │◄────────►│  Chatterbox (port 8100) │
+│                         │  Browser │  Local Agent (port 5050)│
+└─────────────────────────┘          └─────────────────────────┘
+```
+
+The **Local Agent** (`t2_agent.py`) runs on your desktop and bridges the gap between:
+- T2's web UI (which runs in your browser, even if T2 backend is on a Pi)
+- Chatterbox TTS (which needs a GPU, so it runs on your desktop)
+
+**Key Files:**
+| File | Purpose |
+|------|---------|
+| `backend/src/localAgent/t2_agent.py` | Python agent that controls Chatterbox |
+| `backend/src/localAgent/agent.js` | Node.js alternative agent |
+| `backend/src/localAgent/start_agent.bat` | Windows launcher |
+| `backend/src/localAgent/README.md` | Full setup documentation |
+| `chatterbox/chatterbox-master/` | Chatterbox TTS source code |
+
+**API Endpoints (Local Agent on port 5050):**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/status` | GET | Agent health check |
+| `/chatterbox/status` | GET | Check if Chatterbox is running |
+| `/chatterbox/start` | POST | Start Chatterbox |
+| `/chatterbox/stop` | POST | Stop Chatterbox |
+
+**Quick Start:**
+1. Run `start_agent.bat` on your desktop (or `python t2_agent.py`)
+2. Agent listens on port 5050
+3. Open T2 in browser → "🗣️ Chatterbox TTS" panel appears in Control Panel
+4. Click Start to launch Chatterbox
+
+**Configuration:**
+Edit `t2_agent.py` to set your Chatterbox path:
+```python
+DEFAULT_CHATTERBOX_DIR = r"C:\Chatterbox"  # Change if needed
+```
+
+---
+
 ### Key Files
 - `v3_migration/shared/logic/` - All shared logic modules
 - `backend/plugins/00_SharedLogicLoader.js` - Frontend loader
@@ -226,6 +406,25 @@ When documenting fixes or explaining problems, use this format:
 ### Recent Caveman Fixes (Last 2 Weeks)
 
 > **📁 Older fixes archived in:** `.github/ARCHIVED_CAVEMAN_FIXES.md`
+
+#### Camera Sub-Stream Quality Bug (2026-01-13) - v2.1.238
+- **What broke**: Camera quality was terrible (13 KB/frame) despite high-quality FFmpeg settings
+- **Why**: CameraService.js had sneaky code that secretly forced sub-streams for "ML bandwidth":
+  ```javascript
+  // This code was REPLACING user's config!
+  if (rtspPath.includes('_main')) rtspPath = rtspPath.replace('_main', '_sub');
+  if (rtspPath.includes('subtype=0')) rtspPath = rtspPath.replace('subtype=0', 'subtype=1');
+  ```
+- **Fix**: Removed the forced sub-stream code - use configured rtspPath directly
+- **Files**: `backend/src/cameras/CameraService.js`
+- **Lesson**: Config said `subtype=0` (4K), code secretly used `subtype=1` (480p). Always check if middleware is modifying your inputs!
+
+#### Camera Keyframe-Only Bug (2026-01-13) - v2.1.238  
+- **What broke**: Reolink cameras showing timestamps jumping 2 seconds (02:32:26 → 02:32:28 → 02:32:30)
+- **Why**: Added `-skip_frame nokey` to prevent green frames, but this makes FFmpeg ONLY decode keyframes
+- **Fix**: Removed `-skip_frame nokey` flag - it's for seeking, not live playback
+- **Files**: `backend/src/cameras/CameraWorker.js`
+- **Lesson**: `-skip_frame nokey` = "only show keyframes (I-frames)" which are 2 sec apart. Use frame size filtering instead.
 
 #### Color Mismatch During Frontend/Backend Handoff (2026-01-12) - v2.1.237
 - **What broke**: Debug Dashboard showed massive color differences (Engine: 226° vs HA: 30°) during handoff

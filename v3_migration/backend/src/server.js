@@ -154,6 +154,28 @@ io.on('error', (error) => {
   console.error('Socket.IO server error:', error.message);
 });
 
+// Socket.IO auth middleware — same logic as requireLocalOrPin (HTTP)
+const authManager = require('./api/middleware/authMiddleware');
+io.use((socket, next) => {
+  const ip = socket.handshake.address || '';
+  // Allow loopback
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.endsWith('::1')) {
+    return next();
+  }
+  // Allow Docker internal in HA addon mode
+  if (IS_HA_ADDON && (ip.startsWith('172.') || ip.startsWith('::ffff:172.') ||
+      ip.startsWith('192.168.') || ip.startsWith('::ffff:192.168.') ||
+      ip.startsWith('10.') || ip.startsWith('::ffff:10.'))) {
+    return next();
+  }
+  // Otherwise require PIN via handshake auth or headers
+  const pin = socket.handshake.auth?.pin || socket.handshake.headers?.['x-app-pin'] || '';
+  if (pin && authManager.verifyPin(pin)) {
+    return next();
+  }
+  return next(new Error('Authentication required'));
+});
+
 // Update service for checking updates
 const updateService = require('./services/updateService');
 
@@ -883,7 +905,7 @@ app.get('/', async (req, res) => {
     
     // Log headers in addon mode for debugging (first request only)
     if (IS_HA_ADDON && !app._ingressLogged) {
-      console.log('[Ingress Debug] Request headers:', JSON.stringify(req.headers, null, 2));
+      if (DEBUG) console.log('[Ingress Debug] Request headers:', JSON.stringify(req.headers, null, 2));
       app._ingressLogged = true;
     }
     
@@ -893,7 +915,7 @@ app.get('/', async (req, res) => {
       // Inject base tag for HA ingress - ensures all relative paths work
       const baseTag = `<base href="${ingressPath}">`;
       html = html.replace('<head>', `<head>\n    ${baseTag}`);
-      console.log(`[Ingress] Serving index.html with base: ${ingressPath}`);
+      if (DEBUG) console.log(`[Ingress] Serving index.html with base: ${ingressPath}`);
     }
     
     res.type('html').send(html);
@@ -915,6 +937,23 @@ app.use('/plugins', (req, res, next) => {
 }, express.static(path.join(__dirname, '../plugins')));
 app.use('/tools', express.static(path.join(__dirname, '../../tools')));
 app.use('/audio', express.static(path.join(__dirname, '../audio'))); // TTS audio files
+
+// HLS Streams - serve FFmpeg-generated HLS segments for live camera viewing
+// Uses no-cache headers since segments are constantly updated
+// NOTE: Streams are created in backend/streams/ (not backend/src/streams/)
+app.use('/streams', (req, res, next) => {
+  // Allow CORS for HLS.js
+  res.set('Access-Control-Allow-Origin', '*');
+  // Short cache for .ts segments, no cache for .m3u8 playlist
+  if (req.path.endsWith('.m3u8')) {
+    res.set('Cache-Control', 'no-cache, no-store');
+    res.set('Content-Type', 'application/vnd.apple.mpegurl');
+  } else if (req.path.endsWith('.ts')) {
+    res.set('Cache-Control', 'max-age=10');
+    res.set('Content-Type', 'video/mp2t');
+  }
+  next();
+}, express.static(path.join(__dirname, '../streams')));  // Go up one level from src/
 
 
 // Debug Dashboard - accessible at /debug from any environment
@@ -1165,13 +1204,24 @@ app.use('/api/settings', settingsRoutes);
 // Increase body limit for large graphs (107+ nodes = ~2MB)
 app.use(express.json({ limit: '5mb' }));
 
+// --- Security middleware (BEFORE routes) ---
+app.use(require('./api/middleware/csp'));
+app.use(require('./config/cors'));
+
+// Rate limiting on API endpoints
+const rateLimit = require('express-rate-limit');
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300,                  // 300 requests per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' }
+});
+app.use('/api/', apiLimiter);
+
 // Telegram routes
 const telegramRoutes = require('./api/routes/telegramRoutes');
 app.use('/api/telegram', telegramRoutes);
-
-app.use(require('./api/middleware/csp'));
-app.use(require('./config/cors'));
-app.use(require('./api/middleware/errorHandler'));
 
 // Update routes
 const updateRoutes = require('./api/updateRoutes');
@@ -1208,6 +1258,14 @@ app.use('/api/media', createMediaRoutes(io));
 // Local Agent download routes (for Chatterbox control)
 const agentRoutes = require('./api/routes/agentRoutes');
 app.use('/api/agent', agentRoutes);
+
+// --- Error handling (AFTER all routes) ---
+// 404 handler for unmatched API routes
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+// Global error handler
+app.use(require('./api/middleware/errorHandler'));
 
 // Initialize DeviceService
 debug('Initializing DeviceService...');
@@ -1333,6 +1391,25 @@ async function startServer() {
     await setupRoutes(deviceService);
     debug('Initializing modules...');
     await initializeModules(deviceService);
+    
+    // Initialize Camera Service (always-on frame capture for ML)
+    // Set DISABLE_CAMERAS=true in .env to skip camera startup
+    const CAMERAS_ENABLED = process.env.DISABLE_CAMERAS !== 'true';
+    if (CAMERAS_ENABLED) {
+      debug('Initializing Camera Service...');
+      try {
+        const { cameraService } = require('./cameras');
+        await cameraService.initialize();
+        cameraService.startAll();
+        console.log('[CameraService] ✓ Started - cameras capturing for ML pipeline');
+      } catch (camErr) {
+        console.warn('[CameraService] ⚠ Failed to start:', camErr.message);
+        // Non-fatal - server continues without camera service
+      }
+    } else {
+      console.log('[CameraService] ⏸ Disabled via DISABLE_CAMERAS=true');
+    }
+    
     debug('Starting server on port...');
     const PORT = config.get('port');
     const HOST = process.env.HOST || '0.0.0.0';  // Bind to all interfaces for Docker/HA
@@ -1349,7 +1426,7 @@ async function startServer() {
       process.stdin.resume();
     }
     
-    console.log('[Server] Keep-alive active, handles:', process._getActiveHandles().length);
+    if (DEBUG) console.log('[Server] Keep-alive active, handles:', process._getActiveHandles().length);
   } catch (err) {
     console.error('Startup error:', err.message);
     logger.log(`Startup failed: ${err.message}`, 'error', false, 'error:startup');
@@ -1362,9 +1439,22 @@ startServer();
 // Track if we've received a shutdown signal to prevent double-shutdown
 let shuttingDown = false;
 
+// In HA add-on mode (Docker), handle SIGINT/SIGTERM for graceful shutdown
+// In desktop mode, ignore SIGINT completely - it's usually VS Code terminal artifacts
+// Note: IS_HA_ADDON is already declared at top of file
+
 process.on('SIGINT', async () => {
   console.log('[SIGINT] Received SIGINT signal');
   
+  // Desktop mode: ALWAYS ignore SIGINT
+  // The user doesn't stop T2 with Ctrl+C - they close the terminal or use Task Manager
+  // VS Code terminals constantly send spurious SIGINTs when running other commands
+  if (!IS_HA_ADDON) {
+    console.log('[SIGINT] Desktop mode - ignoring signal (close terminal to stop server)');
+    return;
+  }
+  
+  // HA Add-on mode: Handle graceful shutdown
   // Second Ctrl+C = force exit immediately
   if (shuttingDown) {
     console.log('[SIGINT] Force exiting...');

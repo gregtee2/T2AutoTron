@@ -11,6 +11,8 @@ const registry = require('./BackendNodeRegistry');
 const engineLogger = require('./engineLogger');
 const { AutoTronBuffer } = require('./nodes/BufferNodes');
 
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+
 class BackendEngine {
   constructor() {
     this.nodes = new Map();           // nodeId → node instance
@@ -113,7 +115,7 @@ class BackendEngine {
         const graphJson = JSON.parse(fs.readFileSync(lastActivePath, 'utf-8'));
         if (graphJson?.nodes?.length > 0) {
           await this.hotReload(graphJson);
-          console.log(`[BackendEngine] Reloaded graph (${graphJson.nodes.length} nodes, ${graphJson.connections?.length || 0} connections)`);
+          if (VERBOSE) console.log(`[BackendEngine] Reloaded graph (${graphJson.nodes.length} nodes, ${graphJson.connections?.length || 0} connections)`);
         }
       }
       
@@ -150,7 +152,7 @@ class BackendEngine {
       }
     }
     if (resetCount > 0) {
-      console.log(`[BackendEngine] Force HSV resync: cleared throttle state on ${resetCount} device nodes`);
+      if (VERBOSE) console.log(`[BackendEngine] Force HSV resync: cleared throttle state on ${resetCount} device nodes`);
       engineLogger.logEngineEvent('HSV-RESYNC', { nodeCount: resetCount, reason: 'frontend-handoff' });
     }
   }
@@ -160,7 +162,7 @@ class BackendEngine {
    * Called when frontend goes inactive so backend doesn't fight with frontend's changes.
    */
   async syncDeviceStatesFromHA() {
-    console.log(`[BackendEngine] Syncing device states from HA...`);
+    if (VERBOSE) console.log(`[BackendEngine] Syncing device states from HA...`);
     
     try {
       // Get current HA states
@@ -187,7 +189,7 @@ class BackendEngine {
         }
       }
       
-      console.log(`[BackendEngine] Synced ${syncCount} device states from HA`);
+      if (VERBOSE) console.log(`[BackendEngine] Synced ${syncCount} device states from HA`);
     } catch (err) {
       console.error(`[BackendEngine] Failed to sync from HA:`, err.message);
     }
@@ -233,15 +235,15 @@ class BackendEngine {
    */
   async loadGraph(graphPath) {
     try {
-      console.log(`[BackendEngine] Attempting to load: ${graphPath}`);
+      if (VERBOSE) console.log(`[BackendEngine] Attempting to load: ${graphPath}`);
       const graphJson = await fs.readFile(graphPath, 'utf8');
       const graph = JSON.parse(graphJson);
       this.graphPath = graphPath;
       
       await this.loadGraphData(graph);
       
-      console.log(`[BackendEngine] Loaded graph from ${graphPath}`);
-      console.log(`[BackendEngine] Nodes: ${this.nodes.size}, Connections: ${this.connections.length}`);
+      if (VERBOSE) console.log(`[BackendEngine] Loaded graph from ${graphPath}`);
+      if (VERBOSE) console.log(`[BackendEngine] Nodes: ${this.nodes.size}, Connections: ${this.connections.length}`);
       
       return true;
     } catch (error) {
@@ -511,7 +513,7 @@ class BackendEngine {
       const { bulkStateCache } = require('./nodes/HADeviceNodes');
       
       // Refresh cache to get current HA states
-      console.log('[BackendEngine] Reconciling device states with Home Assistant...');
+      if (VERBOSE) console.log('[BackendEngine] Reconciling device states with Home Assistant...');
       await bulkStateCache.refreshCache();
       
       const stateCache = bulkStateCache.states;
@@ -541,7 +543,7 @@ class BackendEngine {
         haEntityCount: stateCache.size 
       });
       
-      console.log(`[BackendEngine] ✅ Reconciliation complete: ${reconciledNodes} device nodes, ${totalDevices} devices synced with HA`);
+      if (VERBOSE) console.log(`[BackendEngine] Reconciliation complete: ${reconciledNodes} device nodes, ${totalDevices} devices synced with HA`);
       
       return { success: true, reconciledNodes, totalDevices };
     } catch (error) {
@@ -640,11 +642,11 @@ class BackendEngine {
     // Only restart if there are nodes to process
     if (wasRunning && this.nodes.size > 0) {
       await this.start();
-      console.log('[BackendEngine] Hot-reloaded graph and restarted');
+      if (VERBOSE) console.log('[BackendEngine] Hot-reloaded graph and restarted');
     } else if (wasRunning) {
-      console.log('[BackendEngine] Hot-reload: graph is empty, staying stopped');
+      if (VERBOSE) console.log('[BackendEngine] Hot-reload: graph is empty, staying stopped');
     } else {
-      console.log('[BackendEngine] Hot-reloaded graph (engine was not running)');
+      if (VERBOSE) console.log('[BackendEngine] Hot-reloaded graph (engine was not running)');
     }
   }
 

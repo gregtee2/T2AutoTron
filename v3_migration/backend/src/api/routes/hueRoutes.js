@@ -3,6 +3,7 @@ const express = require('express');
 const { LightState } = require('node-hue-api').v3.lightStates;
 const Joi = require('joi');
 const logWithTimestamp = require('../../logging/logWithTimestamp');
+const requireLocalOrPin = require('../middleware/requireLocalOrPin');
 
 // Verbose logging flag
 const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
@@ -80,7 +81,7 @@ module.exports = function (hueApi, hueLights, io) { // Added io parameter
         }
     });
 
-    router.put('/:id/state', async (req, res) => {
+    router.put('/:id/state', requireLocalOrPin, async (req, res) => {
         const { id } = req.params;
         const { on, hue, sat, bri, effect, transitiontime } = req.body;
         if (VERBOSE) logWithTimestamp(`PUT /api/lights/hue/${id}/state: ${JSON.stringify(req.body)}`, 'info');
@@ -130,7 +131,7 @@ module.exports = function (hueApi, hueLights, io) { // Added io parameter
         }
     });
 
-    router.post('/:id/off', async (req, res) => {
+    router.post('/:id/off', requireLocalOrPin, async (req, res) => {
         const { id } = req.params;
         logWithTimestamp(`Turning off Hue light ${id}`, 'info');
         try {

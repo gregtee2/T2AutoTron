@@ -76,7 +76,32 @@
 
         restore(state) {
             if (state.properties) {
-                Object.assign(this.properties, state.properties);
+                // Only restore configuration properties, not runtime state
+                const p = state.properties;
+                if (p.customName !== undefined) this.properties.customName = p.customName;
+                if (p.start_hour !== undefined) this.properties.start_hour = p.start_hour;
+                if (p.start_minute !== undefined) this.properties.start_minute = p.start_minute;
+                if (p.start_ampm !== undefined) this.properties.start_ampm = p.start_ampm;
+                if (p.start_enabled !== undefined) this.properties.start_enabled = p.start_enabled;
+                if (p.stop_hour !== undefined) this.properties.stop_hour = p.stop_hour;
+                if (p.stop_minute !== undefined) this.properties.stop_minute = p.stop_minute;
+                if (p.stop_ampm !== undefined) this.properties.stop_ampm = p.stop_ampm;
+                if (p.stop_enabled !== undefined) this.properties.stop_enabled = p.stop_enabled;
+                if (p.cycle_hour !== undefined) this.properties.cycle_hour = p.cycle_hour;
+                if (p.cycle_minute !== undefined) this.properties.cycle_minute = p.cycle_minute;
+                if (p.cycle_ampm !== undefined) this.properties.cycle_ampm = p.cycle_ampm;
+                if (p.cycle_duration !== undefined) this.properties.cycle_duration = p.cycle_duration;
+                if (p.cycle_enabled !== undefined) this.properties.cycle_enabled = p.cycle_enabled;
+                if (p.timezone !== undefined) this.properties.timezone = p.timezone;
+                if (p.debug !== undefined) this.properties.debug = p.debug;
+                if (p.pulseMode !== undefined) this.properties.pulseMode = p.pulseMode;
+                
+                // Always start with fresh runtime state (will be calculated on mount)
+                this.properties.currentState = false;
+                this.properties.status = "Initializing...";
+                this.properties.next_on_date = null;
+                this.properties.next_off_date = null;
+                this.properties.next_cycle_date = null;
             }
         }
 

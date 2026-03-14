@@ -484,17 +484,45 @@
 
 
 
-            // On first call after load, do minimal bookkeeping.
-            // Important: in Follow mode we want a second evaluation to detect the
-            // trigger connection and perform an initial sync (so devices don't get
-            // stuck ON when the trigger is FALSE).
+            // On first call after load, sync devices to match trigger input (for Follow mode)
+            // This is a HARD RESET - no edge detection, just match the input state
             if (this.skipInitialTrigger) {
                 this.skipInitialTrigger = false;
 
                 const mode = this.properties.triggerMode || "Follow";
-                // For non-Follow modes, preserve the old behavior: record the current
-                // trigger so we don't accidentally fire a toggle/pulse on load.
-                if (mode !== "Follow") {
+                const nodeTitle = this.properties.customTitle || this.label || 'HAGenericDevice';
+                
+                // DEBUG: Log what we see during initial sync
+                console.log(`[HAGenericDeviceNode] SYNC CHECK: ${nodeTitle} → triggerRaw=${triggerRaw}, trigger=${trigger}, hasConnection=${hasConnection}, mode=${mode}`);
+                
+                // For Follow mode with a connection: SYNC DEVICES TO MATCH TRIGGER NOW
+                if (mode === "Follow" && hasConnection) {
+                    console.log(`[HAGenericDeviceNode] SYNC on load: ${nodeTitle} → trigger=${trigger}`);
+                    await this.setDevicesState(trigger, trigger ? hsvInput : null);
+                    this.lastTriggerValue = trigger;
+                    this.hadConnection = hasConnection;
+                }
+                // For Follow mode WITHOUT connection but we might have a trigger wire:
+                // Check if we have a trigger wire but the upstream hasn't processed yet
+                // In this case, schedule a retry to sync later
+                else if (mode === "Follow" && !hasConnection) {
+                    // Check if any wires are connected to our trigger input
+                    const hasTriggerWire = this._checkHasTriggerWire();
+                    if (hasTriggerWire) {
+                        console.log(`[HAGenericDeviceNode] SYNC DELAYED: ${nodeTitle} has trigger wire but upstream not ready, retrying in 500ms`);
+                        // Retry after upstream nodes have processed
+                        setTimeout(() => {
+                            this.skipInitialTrigger = true;
+                            this.triggerUpdate();
+                        }, 500);
+                    } else {
+                        console.log(`[HAGenericDeviceNode] NO TRIGGER WIRE: ${nodeTitle} - not syncing`);
+                        this.lastTriggerValue = trigger;
+                        this.hadConnection = hasConnection;
+                    }
+                }
+                // For non-Follow modes, record state without syncing
+                else {
                     this.lastTriggerValue = trigger;
                     this.hadConnection = hasConnection;
                 }
@@ -503,8 +531,6 @@
                 if (hsvInput && typeof hsvInput === 'object') {
                     this.lastHsvInfo = JSON.stringify(hsvInput);
                 }
-                // Note: setDevicesState() is NOT called here anymore
-                // The graphLoadComplete handler will sync devices after all connections are ready
             } else {
                 if (hsvInput && typeof hsvInput === 'object') {
                     const hsvString = JSON.stringify(hsvInput);
@@ -558,6 +584,27 @@
         }
 
         triggerUpdate() { if (this.changeCallback) this.changeCallback(); }
+
+        // Check if we have any wire connected to our trigger input
+        // This helps distinguish "no connection" from "connection exists but upstream not processed yet"
+        _checkHasTriggerWire() {
+            // Try to access the Rete editor to check connections
+            if (typeof window === 'undefined') return false;
+            
+            const editor = window.reteEditorInstance;
+            if (!editor) return false;
+            
+            try {
+                const connections = editor.getConnections();
+                // Look for any connection where target is this node and targetInput is 'trigger'
+                const triggerWire = connections.find(c => 
+                    c.target === this.id && c.targetInput === 'trigger'
+                );
+                return !!triggerWire;
+            } catch (e) {
+                return false;
+            }
+        }
 
         setupControls() {
             // Filter options: All, Light, Switch (includes HA switches and Kasa plugs/wall switches)
@@ -770,12 +817,14 @@
                     // First update - records lastTriggerValue and hadConnection
                     this.triggerUpdate();
 
-                    // SETTLING DELAY: Wait 1 second before syncing devices
+                    // SETTLING DELAY: Wait 1 second before triggering sync
                     // This allows all nodes (especially Receiver nodes reading buffers)
-                    // to process their inputs. Without this delay, devices may briefly
-                    // turn ON then OFF because Receivers haven't read their buffer values yet.
+                    // to process their inputs first.
                     setTimeout(() => {
-                        try { this.triggerUpdate(); } catch (e) {}
+                        // Reset the skip flag and trigger an update
+                        // The data() method will handle syncing devices to match trigger input
+                        this.skipInitialTrigger = true;
+                        this.triggerUpdate();
                     }, 1000);
                 };
                 
@@ -1269,8 +1318,28 @@
             if (typeof window !== 'undefined' && window.graphLoading) return;
             
             this.updateStatus(turnOn ? "Turning On..." : "Turning Off...");
-            const ids = this.properties.selectedDeviceIds.filter(Boolean);
+            let ids = this.properties.selectedDeviceIds.filter(Boolean);
             if (ids.length === 0) return;
+            
+            // Check for device exclusions from upstream HueEffectNodes
+            // These devices are under effect control and should not receive on/off or HSV commands
+            const excludeDevices = hsvInfo?._excludeDevices || [];
+            if (excludeDevices.length > 0) {
+                ids = ids.filter(id => {
+                    if (excludeDevices.includes(id)) {
+                        if (this.properties.debug) {
+                            console.log(`[HAGenericDeviceNode] Skipping ${id} - under effect control (setDevicesState)`);
+                        }
+                        return false;
+                    }
+                    return true;
+                });
+                if (ids.length === 0) {
+                    this.updateStatus("All devices under effect control");
+                    return;
+                }
+            }
+            
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
             
             // Parse HSV info for color values when turning on
@@ -1338,13 +1407,16 @@
                     // OPTIMISTIC UPDATE: Trust the command we just sent
                     // Don't wait for HA to confirm - Zigbee devices can take 1-3 seconds
                     // This prevents the UI showing "off" when we just sent "on"
-                    const brightnessPercent = brightness !== null ? Math.round((brightness / 255) * 100) : (this.perDeviceState[id]?.brightness || 0);
+                    // When turning OFF, set brightness to 0 (not the old cached value)
+                    const brightnessPercent = turnOn 
+                        ? (brightness !== null ? Math.round((brightness / 255) * 100) : (this.perDeviceState[id]?.brightness || 100))
+                        : 0;  // OFF = 0 brightness
                     this.perDeviceState[id] = {
                         ...this.perDeviceState[id],
                         on: turnOn,
                         state: turnOn ? "on" : "off",
-                        ...(hs_color ? { hs_color } : {}),
-                        ...(brightnessPercent ? { brightness: brightnessPercent } : {})
+                        brightness: brightnessPercent,
+                        ...(hs_color ? { hs_color } : {})
                     };
                     this.updateDeviceControls(id, this.perDeviceState[id]);
                     

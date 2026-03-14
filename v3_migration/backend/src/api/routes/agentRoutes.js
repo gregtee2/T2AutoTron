@@ -12,12 +12,14 @@ const fs = require('fs');
 
 // Path to the localAgent folder
 const AGENT_DIR = path.join(__dirname, '../../localAgent');
+const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 
-// Log on load
-console.log(`[AgentRoutes] AGENT_DIR = ${AGENT_DIR}`);
-console.log(`[AgentRoutes] AGENT_DIR exists = ${fs.existsSync(AGENT_DIR)}`);
-if (fs.existsSync(AGENT_DIR)) {
-    console.log(`[AgentRoutes] Files in AGENT_DIR: ${fs.readdirSync(AGENT_DIR).join(', ')}`);
+if (VERBOSE) {
+    console.log(`[AgentRoutes] AGENT_DIR = ${AGENT_DIR}`);
+    console.log(`[AgentRoutes] AGENT_DIR exists = ${fs.existsSync(AGENT_DIR)}`);
+    if (fs.existsSync(AGENT_DIR)) {
+        console.log(`[AgentRoutes] Files in AGENT_DIR: ${fs.readdirSync(AGENT_DIR).join(', ')}`);
+    }
 }
 
 /**
@@ -30,7 +32,7 @@ router.get('/download/:filename', (req, res) => {
     // Security: Only allow specific files
     const allowedFiles = ['t2_agent.py', 'start_agent.bat'];
     if (!allowedFiles.includes(filename)) {
-        return res.status(404).json({ error: 'File not found' });
+        return res.status(404).json({ success: false, error: 'File not found' });
     }
     
     const filePath = path.join(AGENT_DIR, filename);
@@ -38,7 +40,7 @@ router.get('/download/:filename', (req, res) => {
     // Check if file exists
     if (!fs.existsSync(filePath)) {
         console.error(`[Agent] File not found: ${filePath}`);
-        return res.status(404).json({ error: 'File not found', path: filePath });
+        return res.status(404).json({ success: false, error: 'File not found' });
     }
     
     // Set headers for download
@@ -52,7 +54,7 @@ router.get('/download/:filename', (req, res) => {
     fileStream.on('error', (err) => {
         console.error(`[Agent] Error streaming file: ${err.message}`);
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Error reading file' });
+            res.status(500).json({ success: false, error: 'Error reading file' });
         }
     });
 });

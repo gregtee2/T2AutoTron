@@ -1023,7 +1023,10 @@ class HAGenericDeviceNode {
       }
       
       // Record current trigger value for tracking
-      if (trigger !== undefined) {
+      // EXCEPT: For Follow mode with trigger=false, we want to delay this until
+      // warmupComplete so we can check for device mismatches first
+      const mode = this.properties.triggerMode || 'Follow';
+      if (trigger !== undefined && !(mode === 'Follow' && !trigger)) {
         this.lastTrigger = trigger;
       }
       this.hadConnection = hasConnection;
@@ -1031,8 +1034,29 @@ class HAGenericDeviceNode {
     }
     
     // Mark warmup complete on first post-warmup tick
+    // SIMPLE SYNC: For Follow mode, just sync devices to match trigger input
     if (!this.warmupComplete) {
       this.warmupComplete = true;
+      
+      const mode = this.properties.triggerMode || 'Follow';
+      const nodeLabel = this.properties.customTitle || this.label || this.id;
+      
+      // Debug log what we see at warmup complete
+      if (VERBOSE) console.log(`[HAGenericDevice] WARMUP COMPLETE: ${nodeLabel} → mode=${mode}, trigger=${trigger}, hasConnection=${hasConnection}, entities=${entityIds.length}`);
+      
+      // For Follow mode with a connection: SYNC DEVICES TO MATCH TRIGGER NOW
+      // No edge detection - this is a hard reset on engine start
+      if (mode === 'Follow' && hasConnection && trigger !== undefined) {
+        if (VERBOSE) console.log(`[HAGenericDevice] SYNC on start: ${nodeLabel} → trigger=${trigger}`);
+        engineLogger.log('HA-SYNC-START', `Syncing devices to trigger=${trigger}`, { 
+          entities: entityIds 
+        });
+        
+        for (const entityId of entityIds) {
+          await this.controlDevice(entityId, !!trigger, trigger ? hsv : null);
+          this.deviceStates[entityId] = !!trigger;
+        }
+      }
       
       // Process any command that was queued during warmup
       if (this.pendingWarmupCommand) {
@@ -1043,8 +1067,6 @@ class HAGenericDeviceNode {
           entities: entityIds 
         });
         
-        // Execute the queued command
-        const mode = this.properties.triggerMode || 'Follow';
         for (const entityId of entityIds) {
           if (mode === 'Follow') {
             await this.controlDevice(entityId, !!cmd.trigger, cmd.trigger ? cmd.hsv : null);
@@ -1053,15 +1075,7 @@ class HAGenericDeviceNode {
         }
       }
       
-      // Record initial state
-      if (trigger !== undefined) {
-        this.lastTrigger = trigger;
-        engineLogger.log('HA-DEVICE', 'Warmup complete, initial state recorded', { 
-          trigger, 
-          entities: entityIds,
-          mode: this.properties.triggerMode || 'Follow'
-        });
-      }
+      this.lastTrigger = trigger;
       this.hadConnection = hasConnection;
       return { is_on: !!trigger };
     }
@@ -1103,9 +1117,27 @@ class HAGenericDeviceNode {
         const minInterval = hasSignificantChange ? MIN_FAST_INTERVAL : MIN_UPDATE_INTERVAL;
         
         if (shouldSend && timeSinceLastSend >= minInterval) {
+          // Check for device exclusions from upstream HueEffectNodes
+          // These devices are under effect control and should not receive HSV commands
+          const excludeDevices = hsv._excludeDevices || [];
+          const filteredEntityIds = entityIds.filter(id => {
+            const prefixedId = `ha_${id}`;
+            if (excludeDevices.includes(id) || excludeDevices.includes(prefixedId)) {
+              engineLogger.log('HA-EXCLUDE', `Skipping ${id} - under effect control`, { excludeDevices });
+              return false;
+            }
+            return true;
+          });
+          
+          if (filteredEntityIds.length === 0) {
+            // All devices excluded, nothing to do
+            return { is_on: !!this.lastTrigger };
+          }
+          
           const reason = !this.lastSentHsv ? 'hsv_only_first' : 'hsv_only_significant';
           engineLogger.log('HA-HSV-ONLY', `No trigger connected, applying HSV to ON devices only`, { 
-            entities: entityIds,
+            entities: filteredEntityIds,
+            excluded: excludeDevices.length,
             reason: reason,
             timeSinceLastSend: Math.round(timeSinceLastSend / 1000) + 's'
           });
@@ -1113,7 +1145,7 @@ class HAGenericDeviceNode {
           this.lastSentHsv = { ...hsv };
           this.lastSendTime = now;
           
-          for (const entityId of entityIds) {
+          for (const entityId of filteredEntityIds) {
             // Only apply HSV to devices that are ALREADY ON
             // Check device state from cache - don't turn on devices just to apply color!
             const isCurrentlyOn = this.deviceStates[`ha_${entityId}`] || this.deviceStates[entityId];
@@ -1179,7 +1211,7 @@ class HAGenericDeviceNode {
     if (risingEdge || fallingEdge || shouldActOnNewConnection || deviceMismatch) {
       // Log the edge detection for debugging
       const nodeLabel = this.properties.customTitle || this.label || this.id;
-      console.log(`[HAGenericDevice] ${nodeLabel}: Edge detected! trigger=${trigger}, lastTrigger=${this.lastTrigger}, risingEdge=${risingEdge}, fallingEdge=${fallingEdge}`);
+      if (VERBOSE) console.log(`[HAGenericDevice] ${nodeLabel}: Edge detected! trigger=${trigger}, lastTrigger=${this.lastTrigger}, risingEdge=${risingEdge}, fallingEdge=${fallingEdge}`);
       
       engineLogger.logTriggerChange(this.id || 'HAGenericDevice', this.lastTrigger, trigger, 
         risingEdge ? 'RISING_EDGE' : fallingEdge ? 'FALLING_EDGE' : deviceMismatch ? 'DEVICE_MISMATCH' : 'NEW_CONNECTION');
@@ -1187,7 +1219,19 @@ class HAGenericDeviceNode {
       
       const mode = this.properties.triggerMode || 'Follow';
       
-      for (const entityId of entityIds) {
+      // Check for device exclusions from upstream HueEffectNodes
+      // These devices are under effect control and should not receive trigger commands
+      const excludeDevices = hsv?._excludeDevices || [];
+      const filteredEntityIds = entityIds.filter(id => {
+        const prefixedId = `ha_${id}`;
+        if (excludeDevices.includes(id) || excludeDevices.includes(prefixedId)) {
+          engineLogger.log('HA-EXCLUDE', `Skipping ${id} - under effect control (trigger path)`, { excludeDevices });
+          return false;
+        }
+        return true;
+      });
+      
+      for (const entityId of filteredEntityIds) {
         let shouldTurnOn = false;
         let reason = '';
         
@@ -1301,11 +1345,28 @@ class HAGenericDeviceNode {
       const minInterval = hasSignificantChange ? MIN_FAST_INTERVAL : MIN_UPDATE_INTERVAL;
       
       if (shouldSend && timeSinceLastSend >= minInterval) {
+        // Check for device exclusions from upstream HueEffectNodes
+        const excludeDevices = hsv._excludeDevices || [];
+        const filteredEntityIds = entityIds.filter(id => {
+          const prefixedId = `ha_${id}`;
+          if (excludeDevices.includes(id) || excludeDevices.includes(prefixedId)) {
+            engineLogger.log('HA-EXCLUDE', `Skipping ${id} - under effect control (HSV update path)`, { excludeDevices });
+            return false;
+          }
+          return true;
+        });
+        
+        if (filteredEntityIds.length === 0) {
+          // All devices excluded, nothing to do
+          return { is_on: !!this.lastTrigger };
+        }
+        
         const reason = !this.lastSentHsv ? 'first_send' 
                      : hasSignificantChange ? 'significant' 
                      : 'periodic_small';
         engineLogger.log('HA-HSV-CHANGE', `HSV changed, sending command`, { 
-          entities: entityIds,
+          entities: filteredEntityIds,
+          excluded: excludeDevices.length,
           reason: reason,
           minInterval: minInterval + 'ms',
           hueDiff: hueDiff.toFixed(4),
@@ -1320,7 +1381,7 @@ class HAGenericDeviceNode {
         const oldHsv = this.lastSentHsv ? { ...this.lastSentHsv } : null;
         this.lastSentHsv = { ...hsv };
         this.lastSendTime = now;
-        for (const entityId of entityIds) {
+        for (const entityId of filteredEntityIds) {
           // Track for periodic summary log
           hsvUpdateTracker.track(entityId, oldHsv, hsv);
           await this.controlDevice(entityId, true, hsv);
@@ -1892,8 +1953,8 @@ class HueEffectNode {
       }
     }
 
-    console.log(`[HueEffectNode] Captured states for ${Object.keys(this.properties.previousStates).length} lights`);
-    console.log(`[HueEffectNode] 🎨 Applying effect "${effect}" to ${entityIds.length} lights`);
+    if (VERBOSE) console.log(`[HueEffectNode] Captured states for ${Object.keys(this.properties.previousStates).length} lights`);
+    if (VERBOSE) console.log(`[HueEffectNode] Applying effect "${effect}" to ${entityIds.length} lights`);
 
     // Send effect to all lights
     let successCount = 0;
@@ -1903,7 +1964,7 @@ class HueEffectNode {
       if (result.success) successCount++;
     }
 
-    console.log(`[HueEffectNode] ✅ Effect sent to ${successCount}/${entityIds.length} lights`);
+    if (VERBOSE) console.log(`[HueEffectNode] Effect sent to ${successCount}/${entityIds.length} lights`);
     this.isEffectActive = true;
   }
 
@@ -1912,11 +1973,11 @@ class HueEffectNode {
     const prevStates = this.properties.previousStates;
 
     if (!entityIds || entityIds.length === 0 || !prevStates || Object.keys(prevStates).length === 0) {
-      console.log('[HueEffectNode] No previous states to restore');
+      if (VERBOSE) console.log('[HueEffectNode] No previous states to restore');
       return;
     }
 
-    console.log(`[HueEffectNode] 🔄 Clearing effect on ${entityIds.length} lights (NOT restoring on/off state)`);
+    if (VERBOSE) console.log(`[HueEffectNode] Clearing effect on ${entityIds.length} lights`);
 
     let successCount = 0;
     for (const entityId of entityIds) {
@@ -1938,7 +1999,7 @@ class HueEffectNode {
         
         // If light was off before effect started, leave it - downstream will handle it
         if (!prev.on) {
-          console.log(`[HueEffectNode] Light ${cleanId} was OFF before effect - skipping (downstream will handle)`);
+          if (VERBOSE) console.log(`[HueEffectNode] Light ${cleanId} was OFF before effect - skipping`);
           successCount++;
           continue;
         }
@@ -1947,7 +2008,7 @@ class HueEffectNode {
         // Don't send brightness/color here as the Timeline/HSV input will provide that
         const serviceData = { effect: 'none' };
         
-        console.log(`[HueEffectNode] Clearing effect on ${cleanId} (was ON before effect)`);
+        if (VERBOSE) console.log(`[HueEffectNode] Clearing effect on ${cleanId}`);
         await this.callHAService('light', 'turn_on', cleanId, serviceData);
         successCount++;
       } catch (err) {
@@ -1955,7 +2016,7 @@ class HueEffectNode {
       }
     }
 
-    console.log(`[HueEffectNode] ✅ Cleared effect on ${successCount}/${entityIds.length} lights`);
+    if (VERBOSE) console.log(`[HueEffectNode] Cleared effect on ${successCount}/${entityIds.length} lights`);
     this.properties.previousStates = {};
     this.isEffectActive = false;
   }
@@ -2109,8 +2170,8 @@ class WizEffectNode {
       }
     }
 
-    console.log(`[WizEffectNode] Captured states for ${Object.keys(this.properties.previousStates).length} lights`);
-    console.log(`[WizEffectNode] 🎨 Applying WiZ effect "${effect}" to ${entityIds.length} lights`);
+    if (VERBOSE) console.log(`[WizEffectNode] Captured states for ${Object.keys(this.properties.previousStates).length} lights`);
+    if (VERBOSE) console.log(`[WizEffectNode] Applying WiZ effect "${effect}" to ${entityIds.length} lights`);
 
     // Send effect to all lights
     let successCount = 0;
@@ -2120,7 +2181,7 @@ class WizEffectNode {
       if (result.success) successCount++;
     }
 
-    console.log(`[WizEffectNode] ✅ Effect sent to ${successCount}/${entityIds.length} lights`);
+    if (VERBOSE) console.log(`[WizEffectNode] Effect sent to ${successCount}/${entityIds.length} lights`);
     this.isEffectActive = true;
   }
 
@@ -2129,11 +2190,11 @@ class WizEffectNode {
     const prevStates = this.properties.previousStates;
 
     if (!entityIds || entityIds.length === 0 || !prevStates || Object.keys(prevStates).length === 0) {
-      console.log('[WizEffectNode] No previous states to restore');
+      if (VERBOSE) console.log('[WizEffectNode] No previous states to restore');
       return;
     }
 
-    console.log(`[WizEffectNode] 🔄 Clearing effect on ${entityIds.length} lights (NOT restoring on/off state)`);
+    if (VERBOSE) console.log(`[WizEffectNode] Clearing effect on ${entityIds.length} lights`);
 
     let successCount = 0;
     for (const entityId of entityIds) {
@@ -2149,13 +2210,13 @@ class WizEffectNode {
         
         // If light was off before effect started, skip it
         if (!prev.on) {
-          console.log(`[WizEffectNode] Light ${cleanId} was OFF before effect - skipping (downstream will handle)`);
+          if (VERBOSE) console.log(`[WizEffectNode] Light ${cleanId} was OFF before effect - skipping`);
           successCount++;
           continue;
         }
 
         // Just clear the effect - downstream HSV input will apply the correct color
-        console.log(`[WizEffectNode] Clearing effect on ${cleanId} (was ON before effect)`);
+        if (VERBOSE) console.log(`[WizEffectNode] Clearing effect on ${cleanId}`);
         await this.callHAService('light', 'turn_on', cleanId, {});
         successCount++;
       } catch (err) {
@@ -2163,7 +2224,7 @@ class WizEffectNode {
       }
     }
 
-    console.log(`[WizEffectNode] ✅ Cleared effect on ${successCount}/${entityIds.length} lights`);
+    if (VERBOSE) console.log(`[WizEffectNode] Cleared effect on ${successCount}/${entityIds.length} lights`);
     this.properties.previousStates = {};
     this.isEffectActive = false;
   }
@@ -2558,15 +2619,15 @@ class TTSAnnouncementNode {
       // Skip TTS if frontend is active (let frontend handle it)
       const engine = getEngine();
       const shouldSkip = engine && engine.shouldSkipDeviceCommands();
-      console.log(`[AudioOutput-DEBUG] TTS trigger detected. engine=${!!engine}, frontendActive=${engine?.frontendActive}, shouldSkip=${shouldSkip}`);
+      if (VERBOSE) console.log(`[AudioOutput] TTS trigger detected. engine=${!!engine}, frontendActive=${engine?.frontendActive}, shouldSkip=${shouldSkip}`);
       
       if (shouldSkip) {
-        console.log(`[AudioOutput] 🖥️ Frontend active: skipping backend TTS`);
+        if (VERBOSE) console.log(`[AudioOutput] Frontend active: skipping backend TTS`);
         this.outputs.streaming = this.properties.isStreaming;
         return this.outputs;
       }
       
-      console.log(`[AudioOutput] 🔊 Backend TTS proceeding (frontend not active)`);
+      if (VERBOSE) console.log(`[AudioOutput] Backend TTS proceeding (frontend not active)`);
 
       const message = (dynamicMessage !== undefined && dynamicMessage !== null && dynamicMessage !== '')
         ? dynamicMessage 

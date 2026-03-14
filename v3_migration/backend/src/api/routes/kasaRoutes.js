@@ -2,6 +2,7 @@
 const express = require('express');
 const { kasaManager } = require('../../devices/managers/kasaManager');
 const logger = require('../../logging/logger');
+const requireLocalOrPin = require('../middleware/requireLocalOrPin');
 
 const router = express.Router();
 
@@ -48,7 +49,7 @@ module.exports = function (io) {
     }
   });
 
-  router.post('/:id/toggle', async (req, res) => {
+  router.post('/:id/toggle', requireLocalOrPin, async (req, res) => {
     const { id } = req.params;
     try {
       await logger.log(`Toggling device kasa_${id}`, 'info', false, `kasa:toggle:${id}`);
@@ -82,7 +83,7 @@ module.exports = function (io) {
     }
   });
 
-  router.post('/:id/on', async (req, res) => {
+  router.post('/:id/on', requireLocalOrPin, async (req, res) => {
     const { id } = req.params;
     const { hsv, transition } = req.body;
     try {
@@ -128,7 +129,7 @@ module.exports = function (io) {
     }
   });
 
-  router.post('/:id/off', async (req, res) => {
+  router.post('/:id/off', requireLocalOrPin, async (req, res) => {
     const { id } = req.params;
     const { transition } = req.body;
     try {
@@ -165,7 +166,7 @@ module.exports = function (io) {
     }
   });
 
-  router.post('/:id/brightness', async (req, res) => {
+  router.post('/:id/brightness', requireLocalOrPin, async (req, res) => {
     const { id } = req.params;
     const { brightness, transition } = req.body;
     if (typeof brightness !== 'number' || brightness < 1 || brightness > 100) {
@@ -201,7 +202,7 @@ module.exports = function (io) {
     }
   });
 
-  router.post('/:id/color', async (req, res) => {
+  router.post('/:id/color', requireLocalOrPin, async (req, res) => {
     const { id } = req.params;
     const { hsv, transition } = req.body;
     if (!hsv || typeof hsv.hue !== 'number' || typeof hsv.saturation !== 'number' || typeof hsv.brightness !== 'number') {
@@ -272,7 +273,7 @@ module.exports = function (io) {
     }
   });
 
-  router.post('/:id/state', async (req, res) => {
+  router.post('/:id/state', requireLocalOrPin, async (req, res) => {
     const { id } = req.params;
     const { on, hsv, transition } = req.body;
     try {

@@ -4,12 +4,15 @@ const router = express.Router();
 
 module.exports = (io, matterManager) => {
     router.get('/homepod/status', async (req, res) => {
-        const homePod = matterManager.getHomePod();
-        if (!homePod) {
-            res.json({ success: false, message: 'HomePod not discovered' });
-        } else {
+        try {
+            const homePod = matterManager.getHomePod();
+            if (!homePod) {
+                return res.json({ success: false, error: 'HomePod not discovered' });
+            }
             const connected = await matterManager.verifyHomePodConnection();
             res.json({ success: true, connected, details: homePod });
+        } catch (error) {
+            res.status(500).json({ success: false, error: error.message });
         }
     });
 
