@@ -43,13 +43,14 @@ function getClientIp(req) {
  * - Authorization: Bearer <PIN>
  */
 module.exports = function requireLocalOrPin(req, res, next) {
+  // In HA add-on mode, HA's own ingress authentication handles security.
+  // Adding another auth layer breaks device control and is redundant.
+  if (IS_HA_ADDON) return next();
+
   const clientIp = getClientIp(req);
 
   // Always allow loopback
   if (isLoopbackIp(clientIp)) return next();
-
-  // In HA add-on mode, trust Docker internal network (ingress proxy)
-  if (IS_HA_ADDON && isDockerInternal(clientIp)) return next();
 
   const headerPin = req.get('X-APP-PIN');
   const auth = req.get('Authorization') || '';

@@ -1212,7 +1212,7 @@ app.use(require('./config/cors'));
 const rateLimit = require('express-rate-limit');
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300,                  // 300 requests per window per IP
+  max: IS_HA_ADDON ? 0 : 5000, // 0 = unlimited in addon (local only), 5000 for desktop
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later' }
