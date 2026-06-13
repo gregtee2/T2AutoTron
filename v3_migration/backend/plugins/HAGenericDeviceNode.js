@@ -1196,8 +1196,26 @@
                     this.perDeviceState[id] = data.state;
                     this.updateDeviceControls(id, data.state);
                     // updateDeviceControls already calls triggerUpdate and _t2Area.update
+                    return data.state;
                 }
             } catch (e) { console.error("Failed to fetch state for", id, e); }
+            return null;
+        }
+
+        async isDeviceActuallyOn(id) {
+            const freshState = await this.fetchDeviceState(id);
+            if (!freshState) {
+                if (this.properties.debug) {
+                    console.log(`[HAGenericDeviceNode] Skipping HSV for ${id} - current HA state unavailable`);
+                }
+                return false;
+            }
+
+            const isOn = freshState?.on === true || freshState?.state === 'on';
+            if (!isOn && this.properties.debug) {
+                console.log(`[HAGenericDeviceNode] Skipping HSV for ${id} - HA says device is off`);
+            }
+            return isOn;
         }
 
         async applyHSVInput(info) {
@@ -1241,10 +1259,9 @@
                 const deviceType = device?.type || (id.includes('.') ? id.split('.')[0].replace(/^ha_/, '') : 'light');
                 const isLight = deviceType === "light" || deviceType === "bulb";
                 
-                // HSV input should NOT turn on a device that is off
-                // Only the Trigger input can change device on/off state
-                const currentState = this.perDeviceState[id];
-                const isCurrentlyOn = currentState?.on || currentState?.state === 'on';
+                // HSV input should NOT turn on a device that is off.
+                // Verify against HA now; the local cache can be stale after schedules/manual changes.
+                const isCurrentlyOn = await this.isDeviceActuallyOn(id);
                 
                 // If device is off, don't apply HSV (and don't turn it on!)
                 if (!isCurrentlyOn) continue;

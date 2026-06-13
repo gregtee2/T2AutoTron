@@ -796,6 +796,31 @@ class HAGenericDeviceNode {
     this.lastHsv = null;
   }
 
+  async isEntityActuallyOn(entityId, context = 'hsv_update') {
+    const state = await bulkStateCache.getState(entityId);
+
+    if (!state) {
+      engineLogger.log('HA-HSV-SKIP', `No current HA state for ${entityId}; skipping HSV update`, {
+        context,
+        reason: 'state_unknown'
+      });
+      return false;
+    }
+
+    const isOn = state.state === 'on' || state.state === 'open' || state.state === 'playing';
+    this.deviceStates[entityId] = isOn;
+    this.deviceStates[`ha_${entityId}`] = isOn;
+
+    if (!isOn) {
+      engineLogger.log('HA-HSV-SKIP', `${entityId} is ${state.state}; skipping HSV update so it stays off`, {
+        context,
+        reason: 'device_off'
+      });
+    }
+
+    return isOn;
+  }
+
   /**
    * Reconcile node state with actual HA device states before engine starts.
    * This prevents firing commands at startup for devices already in correct state.
@@ -1142,18 +1167,24 @@ class HAGenericDeviceNode {
             timeSinceLastSend: Math.round(timeSinceLastSend / 1000) + 's'
           });
           
-          this.lastSentHsv = { ...hsv };
           this.lastSendTime = now;
+          let sentCount = 0;
           
           for (const entityId of filteredEntityIds) {
-            // Only apply HSV to devices that are ALREADY ON
-            // Check device state from cache - don't turn on devices just to apply color!
-            const isCurrentlyOn = this.deviceStates[`ha_${entityId}`] || this.deviceStates[entityId];
+            // Only apply HSV to devices that HA says are currently ON.
+            // The local deviceStates map can be stale after schedules/manual changes,
+            // and light.turn_on with color would wake an OFF light back up.
+            const isCurrentlyOn = await this.isEntityActuallyOn(entityId, 'hsv_only');
             if (isCurrentlyOn) {
               // Send turn_on with color - HA interprets this as "apply color to this already-on light"
               await this.controlDevice(entityId, true, hsv);
+              sentCount++;
             }
             // If device is OFF, skip it - don't turn it on just to apply a color
+          }
+
+          if (sentCount > 0) {
+            this.lastSentHsv = { ...hsv };
           }
         }
       } else if (engineLogger.getLogLevel() >= 2) {
@@ -1378,13 +1409,21 @@ class HAGenericDeviceNode {
           lastHue: this.lastSentHsv?.hue?.toFixed(4),
           timeSinceLastSend: Math.round(timeSinceLastSend / 1000) + 's'
         });
-        const oldHsv = this.lastSentHsv ? { ...this.lastSentHsv } : null;
-        this.lastSentHsv = { ...hsv };
         this.lastSendTime = now;
+        const oldHsv = this.lastSentHsv ? { ...this.lastSentHsv } : null;
+        let sentCount = 0;
         for (const entityId of filteredEntityIds) {
+          const isCurrentlyOn = await this.isEntityActuallyOn(entityId, 'trigger_hsv_update');
+          if (!isCurrentlyOn) continue;
+
           // Track for periodic summary log
           hsvUpdateTracker.track(entityId, oldHsv, hsv);
           await this.controlDevice(entityId, true, hsv);
+          sentCount++;
+        }
+
+        if (sentCount > 0) {
+          this.lastSentHsv = { ...hsv };
         }
       }
       // Removed HA-HSV-WAITING log - summary tracker provides periodic updates
