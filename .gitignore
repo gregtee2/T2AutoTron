@@ -2,6 +2,8 @@
 node_modules/
 package-lock.json
 yarn.lock
+!v3_migration/backend/package-lock.json
+!v3_migration/frontend/package-lock.json
 
 # Build outputs
 dist/

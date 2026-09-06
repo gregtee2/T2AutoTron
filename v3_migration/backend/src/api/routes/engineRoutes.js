@@ -14,9 +14,15 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path');
+const fs = require('fs').promises;
 const deviceAudit = require('../../engine/deviceAudit');
 const commandTracker = require('../../engine/commandTracker');
+const { prepareGraphForSave } = require('../../engine/graphDocument');
+const { graphFilename, resolveGraphPath, readStoredGraph, writeJsonAtomic } = require('../../engine/graphStorage');
 const requireLocalOrPin = require('../middleware/requireLocalOrPin');
+
+// Includes logs, timers and audit endpoints, not only graph mutations.
+router.use(requireLocalOrPin);
 
 const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 
@@ -38,9 +44,34 @@ function getGraphsDir() {
   return path.join(__dirname, '..', '..', '..', '..', 'Saved_Graphs');
 }
 
+function sendGraphSaveError(res, error) {
+  return res.status(error.statusCode || 500).json({
+    success: false,
+    persisted: false,
+    error: error.message,
+    code: error.code,
+    expectedRevision: error.expectedRevision,
+    currentRevision: error.actualRevision,
+    persistence: error.persistence,
+    activation: { status: 'not_attempted' },
+    cleanupErrors: error.cleanupErrors
+  });
+}
+
 // Lazy-load engine to avoid circular dependencies
 let engine = null;
 let registry = null;
+let graphSaveQueue = Promise.resolve();
+let startRequestGeneration = 0;
+
+function withGraphSaveLock(task) {
+  // Hold through activation, not just disk I/O: hotReload may temporarily stop
+  // the engine. A later save must not skip activation or activate out of order.
+  // This is process-local and covers REST operations only, not socket handlers.
+  const run = graphSaveQueue.then(task, task);
+  graphSaveQueue = run.catch(() => undefined);
+  return run;
+}
 
 function getEngine() {
   if (!engine) {
@@ -52,11 +83,84 @@ function getEngine() {
   return { engine, registry };
 }
 
+async function activateSavedGraph(graph) {
+  try {
+    const { engine } = getEngine();
+    // Preserve frontend priority. Do not queue an activation for later; handoff
+    // reads the latest active file, not a stale snapshot captured by this save.
+    if (engine.frontendActive) return { status: 'deferred', reason: 'frontend_active' };
+    if (engine.shouldSkipDeviceCommands?.()) {
+      return { status: 'deferred', reason: 'engine_busy' };
+    }
+    const result = engine.running
+      ? await engine.hotReload(graph)
+      : await engine.loadGraphData(graph);
+    if (result === false) throw new Error('Engine rejected the saved graph');
+    // Loading an empty graph is essential: stop alone leaves old nodes available
+    // to a subsequent Start. Also replace stale nodes when already stopped.
+    if (graph.nodes.length === 0) {
+      engine.stop();
+      deviceAudit.stopPeriodicAudit();
+    }
+    return {
+      status: graph.nodes.length === 0 ? 'cleared' : 'activated',
+      revision: graph.revision,
+      running: engine.running
+    };
+  } catch (error) {
+    console.warn('[Engine API] Graph persisted but activation failed:', error.message);
+    return { status: 'failed', error: error.message, code: error.code };
+  }
+}
+
+async function persistAndActivateGraph(graph, filename) {
+  return withGraphSaveLock(async () => {
+    const savedGraphsDir = path.resolve(getGraphsDir());
+    await fs.mkdir(savedGraphsDir, { recursive: true });
+    const requestedActivePath = path.join(savedGraphsDir, '.last_active.json');
+    const lastActivePath = await resolveGraphPath(requestedActivePath, savedGraphsDir, { allowMissing: true });
+    const filePath = filename
+      ? await resolveGraphPath(path.join(savedGraphsDir, filename), savedGraphsDir, { allowMissing: true })
+      : null;
+    const currentGraph = await readStoredGraph(requestedActivePath, savedGraphsDir);
+    // All saves compare against the ACTIVE revision. Named files are snapshots
+    // of that same revision stream, not independently revisioned documents.
+    const nextGraph = prepareGraphForSave(graph, currentGraph);
+    const serialized = JSON.stringify(nextGraph, null, 2);
+    const persistence = {
+      status: 'pending',
+      active: { filename: '.last_active.json', persisted: false, revision: currentGraph?.revision || 0 },
+      ...(filename ? { named: { filename, persisted: false } } : {})
+    };
+    try {
+      // Two independent atomic file replacements, NOT an atomic transaction.
+      // If the second fails, keep/report the named snapshot and leave active
+      // unchanged. Do not roll back over files another process may have touched.
+      if (filePath) {
+        await writeJsonAtomic(filePath, serialized);
+        persistence.named.persisted = true;
+        persistence.named.revision = nextGraph.revision;
+      }
+      await writeJsonAtomic(lastActivePath, serialized);
+      persistence.active.persisted = true;
+      persistence.active.revision = nextGraph.revision;
+      persistence.status = 'complete';
+    } catch (error) {
+      persistence.status = persistence.named?.persisted ? 'partial' : 'failed';
+      error.persistence = persistence;
+      error.actualRevision = currentGraph?.revision || 0;
+      throw error;
+    }
+    const activation = await activateSavedGraph(nextGraph);
+    return { graph: nextGraph, persistence, activation };
+  });
+}
+
 /**
  * GET /api/engine/status
  * Returns the current engine status
  */
-router.get('/status', (req, res) => {
+router.get('/status', requireLocalOrPin, (req, res) => {
   const { engine } = getEngine();
   const status = engine.getStatus();
   
@@ -68,7 +172,15 @@ router.get('/status', (req, res) => {
       connectionCount: status.connectionCount,
       tickCount: status.tickCount,
       lastTickTime: status.lastTickTime,
-      uptime: status.running ? Date.now() - status.startTime : 0,
+      lastTickCompletedTime: status.lastTickCompletedTime,
+      lastTickDurationMs: status.lastTickDurationMs,
+      lastTickError: status.lastTickError,
+      nodeErrors: status.nodeErrors,
+      loading: status.loading,
+      starting: status.starting,
+      lastReconciliation: status.lastReconciliation,
+      loadDiagnostics: status.loadDiagnostics,
+      uptime: status.running ? status.uptime : 0,
       frontendActive: status.frontendActive,
       frontendLastSeen: status.frontendLastSeen
     }
@@ -81,46 +193,35 @@ router.get('/status', (req, res) => {
  */
 router.post('/start', requireLocalOrPin, async (req, res) => {
   try {
-    const { engine, registry } = getEngine();
-    const engineModule = require('../../engine');
-    
-    // Load builtin nodes if not already loaded
-    if (registry.size === 0) {
-      await engineModule.loadBuiltinNodes();
-    }
-    
-    // Load last active graph if no graph is loaded
-    if (engine.nodes.size === 0) {
-      const savedGraphsDir = getGraphsDir();
-      const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
-      
-      try {
-        await engine.loadGraph(lastActivePath);
-      } catch (err) {
-        // No last active graph - that's fine
-        console.log('[Engine API] No last active graph found');
+    const generation = startRequestGeneration;
+    const assertNotCancelled = () => {
+      if (generation !== startRequestGeneration) {
+        throw Object.assign(new Error('Engine start cancelled by Stop'), { statusCode: 409 });
       }
-    }
-    
-    if (engine.nodes.size === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'No graph loaded. Load a graph first.'
-      });
-    }
-    
-    await engine.start();
-    
-    // Start periodic device audit (every 5 minutes)
-    deviceAudit.startPeriodicAudit();
-    
-    res.json({
-      success: true,
-      message: 'Engine started',
-      status: engine.getStatus()
+    };
+    const response = await withGraphSaveLock(async () => {
+      assertNotCancelled();
+      const { engine, registry } = getEngine();
+      if (registry.size === 0) await require('../../engine').loadBuiltinNodes();
+      assertNotCancelled();
+      if (engine.nodes.size === 0) {
+        const savedGraphsDir = path.resolve(getGraphsDir());
+        const graph = await readStoredGraph(path.join(savedGraphsDir, '.last_active.json'), savedGraphsDir);
+        assertNotCancelled();
+        if (graph) await engine.loadGraphData(graph);
+      }
+      assertNotCancelled();
+      if (engine.nodes.size === 0) {
+        return { statusCode: 400, success: false, error: 'No graph loaded. Load a graph first.' };
+      }
+      await engine.start();
+      deviceAudit.startPeriodicAudit();
+      return { statusCode: 200, success: true, message: 'Engine started', status: engine.getStatus() };
     });
+    const { statusCode, ...body } = response;
+    res.status(statusCode).json(body);
   } catch (error) {
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       error: error.message
     });
@@ -133,6 +234,8 @@ router.post('/start', requireLocalOrPin, async (req, res) => {
  */
 router.post('/stop', requireLocalOrPin, (req, res) => {
   try {
+    // Stop stays immediate and invalidates Starts waiting behind a save/read.
+    startRequestGeneration++;
     const { engine } = getEngine();
     engine.stop();
     
@@ -159,60 +262,31 @@ router.post('/stop', requireLocalOrPin, (req, res) => {
  */
 router.post('/load', requireLocalOrPin, express.json(), async (req, res) => {
   try {
-    const { engine, registry } = getEngine();
-    const engineModule = require('../../engine');
-    
-    // Load builtin nodes if not already loaded
-    if (registry.size === 0) {
-      await engineModule.loadBuiltinNodes();
+    const savedGraphsDir = path.resolve(getGraphsDir());
+    const body = req.body || {};
+    const namedPath = body.graphName !== undefined ? graphFilename(body.graphName) : null;
+    const graphPath = body.graphPath ?? namedPath;
+    if (typeof graphPath !== 'string' || !graphPath.trim() || graphPath.includes('\0')) {
+      return res.status(400).json({ success: false, error: 'graphPath or graphName required' });
     }
-    
-    let graphPath = req.body.graphPath;
-    
-    // If graphName provided, resolve to full path
-    if (req.body.graphName && !graphPath) {
-      const savedGraphsDir = getGraphsDir();
-      // Sanitize: strip path separators to prevent directory traversal
-      const safeName = path.basename(req.body.graphName);
-      graphPath = path.join(savedGraphsDir, safeName);
-      
-      // Add .json extension if missing
-      if (!graphPath.endsWith('.json')) {
-        graphPath += '.json';
-      }
-      
-      // Security: ensure resolved path stays within graphs directory
-      const resolvedPath = path.resolve(graphPath);
-      const resolvedDir = path.resolve(savedGraphsDir);
-      if (!resolvedPath.startsWith(resolvedDir)) {
-        return res.status(403).json({ success: false, error: 'Access denied' });
-      }
-    }
-    
-    if (!graphPath) {
-      return res.status(400).json({
-        success: false,
-        error: 'graphPath or graphName required'
-      });
-    }
-    
-    if (VERBOSE) console.log(`[Engine API] Loading graph from: ${graphPath}`);
-    const success = await engine.loadGraph(graphPath);
-    
-    if (success) {
-      res.json({
-        success: true,
-        message: `Graph loaded: ${path.basename(graphPath)}`,
-        status: engine.getStatus()
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        error: `Failed to load graph from ${graphPath}`
-      });
-    }
+    const response = await withGraphSaveLock(async () => {
+      const graph = await readStoredGraph(graphPath, savedGraphsDir);
+      if (!graph) return { statusCode: 404, success: false, error: 'Graph not found' };
+      const { registry } = getEngine();
+      if (registry.size === 0) await require('../../engine').loadBuiltinNodes();
+      const activation = await activateSavedGraph(graph);
+      return {
+        statusCode: activation.status === 'failed' ? 500 : 200,
+        success: activation.status !== 'failed',
+        message: activation.status === 'deferred' ? 'Graph activation deferred; save-active is required for handoff' : `Graph loaded: ${path.basename(graphPath)}`,
+        activation,
+        status: getEngine().engine.getStatus()
+      };
+    });
+    const { statusCode, ...bodyResponse } = response;
+    res.status(statusCode).json(bodyResponse);
   } catch (error) {
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       error: error.message
     });
@@ -223,7 +297,7 @@ router.post('/load', requireLocalOrPin, express.json(), async (req, res) => {
  * GET /api/engine/node-labels
  * Get all loaded node instances with their labels/titles (for debug dashboard)
  */
-router.get('/node-labels', (req, res) => {
+router.get('/node-labels', requireLocalOrPin, (req, res) => {
   try {
     const { engine } = getEngine();
     
@@ -253,7 +327,7 @@ router.get('/node-labels', (req, res) => {
  * GET /api/engine/nodes
  * List all registered node types in the backend engine
  */
-router.get('/nodes', async (req, res) => {
+router.get('/nodes', requireLocalOrPin, async (req, res) => {
   try {
     const { registry } = getEngine();
     const engineModule = require('../../engine');
@@ -280,7 +354,7 @@ router.get('/nodes', async (req, res) => {
  * GET /api/engine/outputs
  * Get current outputs from all nodes
  */
-router.get('/outputs', (req, res) => {
+router.get('/outputs', requireLocalOrPin, (req, res) => {
   try {
     const { engine } = getEngine();
     
@@ -308,7 +382,7 @@ router.get('/outputs', (req, res) => {
  * based on the tracked device states (not just trigger input).
  * Used by debug dashboard to compare "engine expected state" vs "actual HA state".
  */
-router.get('/device-states', async (req, res) => {
+router.get('/device-states', requireLocalOrPin, async (req, res) => {
   try {
     const { engine } = getEngine();
     
@@ -506,36 +580,22 @@ router.post('/tick', requireLocalOrPin, async (req, res) => {
  * GET /api/engine/last-active
  * Returns the last active graph JSON for frontend auto-load
  */
-router.get('/last-active', async (req, res) => {
+router.get('/last-active', requireLocalOrPin, async (req, res) => {
   if (VERBOSE) console.log('[Engine API] GET /last-active called');
   try {
-    const fs = require('fs').promises;
-    const savedGraphsDir = getGraphsDir();
+    const savedGraphsDir = path.resolve(getGraphsDir());
     const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
-    if (VERBOSE) console.log('[Engine API] Looking for:', lastActivePath);
-    
-    try {
-      const content = await fs.readFile(lastActivePath, 'utf-8');
-      const graphData = JSON.parse(content);
-      if (VERBOSE) console.log('[Engine API] Found last active graph with', graphData.nodes?.length || 0, 'nodes');
-      
-      res.json({
-        success: true,
-        graph: graphData,
-        source: '.last_active.json'
-      });
-    } catch (err) {
-      // No last active graph exists
-      if (VERBOSE) console.log('[Engine API] No last active graph found');
-      res.json({
+    const graphData = await readStoredGraph(lastActivePath, savedGraphsDir);
+    if (!graphData) {
+      return res.json({
         success: false,
         error: 'No last active graph found',
         graph: null
       });
     }
+    res.json({ success: true, graph: graphData, source: '.last_active.json' });
   } catch (error) {
-    console.error('[Engine API] Error in last-active:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       error: error.message
     });
@@ -546,137 +606,53 @@ router.get('/last-active', async (req, res) => {
  * POST /api/engine/save-active
  * Save the current graph as the last active graph (for auto-load on reconnect)
  * Also used by sendBeacon on browser close to sync unsaved changes
+ * Body: graph document with baseRevision (required once active revision > 0).
+ * 200 means persisted; inspect activation.status for activated/cleared/deferred/failed.
  */
 router.post('/save-active', requireLocalOrPin, async (req, res) => {
-  if (VERBOSE) console.log(`[Engine API] /save-active received, body type: ${typeof req.body}, hasNodes: ${!!req.body?.nodes}, contentType: ${req.get('content-type')}`);
-  
   try {
-    const fs = require('fs').promises;
-    const savedGraphsDir = getGraphsDir();
-    const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
-    
-    // Ensure directory exists
-    await fs.mkdir(savedGraphsDir, { recursive: true });
-    
-    const graphData = req.body;
-    
-    // Log beacon arrivals for debugging sync-on-close feature
-    if (graphData?.syncedOnClose) {
-      if (VERBOSE) console.log(`[Engine API] Received sync-on-close beacon (${graphData.nodes?.length || 0} nodes)`);
-    }
-    
-    if (!graphData || !graphData.nodes) {
-      console.log('[Engine API] Invalid graph data received:', typeof graphData);
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid graph data - must contain nodes array'
-      });
-    }
-    
-    await fs.writeFile(lastActivePath, JSON.stringify(graphData, null, 2), 'utf-8');
-    
-    // Also hot-reload into engine if it's running AND frontend is not active
-    // Skip hot-reload when frontend is active to avoid disrupting streams/TTS
-    try {
-      const { engine } = getEngine();
-      if (engine && engine.running) {
-        // Don't hot-reload if frontend is controlling - it will disrupt audio
-        if (engine.shouldSkipDeviceCommands && engine.shouldSkipDeviceCommands()) {
-          if (VERBOSE) console.log('[Engine API] Skipping hot-reload - frontend is active');
-        } else if (graphData.nodes && graphData.nodes.length > 0) {
-          // Use hotReload with parsed data instead of loadGraph with file path
-          // This avoids race conditions and handles empty graphs gracefully
-          await engine.hotReload(graphData);
-          if (VERBOSE) console.log('[Engine API] Graph hot-reloaded into engine');
-        } else {
-          // Graph was cleared - stop the engine gracefully
-          engine.stop();
-          if (VERBOSE) console.log('[Engine API] Graph cleared - engine stopped');
-        }
-      }
-    } catch (err) {
-      // Don't fail the save if engine reload fails
-      console.warn('[Engine API] Could not reload into engine:', err.message);
-    }
-    
+    const { graph, persistence, activation } = await persistAndActivateGraph(req.body);
     res.json({
       success: true,
+      persisted: true,
       message: 'Graph saved as last active',
-      nodeCount: graphData.nodes?.length || 0
+      nodeCount: graph.nodes.length,
+      revision: graph.revision,
+      projectId: graph.projectId,
+      persistence,
+      activation
     });
   } catch (error) {
-    console.error('[Engine API] Error in save-active:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    if (!error.statusCode || error.statusCode >= 500) console.error('[Engine API] Error in save-active:', error);
+    sendGraphSaveError(res, error);
   }
 });
 
 /**
  * POST /api/engine/save-graph
  * Save a graph with a specific filename
+ * Body: { filename, graph: { ...document, baseRevision } }.
+ * baseRevision targets the active stream, not the named snapshot's revision.
+ * A failed second write reports persistence.status='partial'; it is not rolled back.
  */
 router.post('/save-graph', requireLocalOrPin, async (req, res) => {
-  if (VERBOSE) console.log('[Engine API] POST /save-graph called');
   try {
-    const fs = require('fs').promises;
-    const savedGraphsDir = getGraphsDir();
-    
-    const { filename, graph } = req.body;
-    if (!filename || !graph) {
-      return res.status(400).json({
-        success: false,
-        error: 'Must provide filename and graph data'
-      });
-    }
-    
-    // Sanitize filename - allow alphanumeric, underscores, hyphens, spaces
-    const safeName = filename.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
-    if (!safeName) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid filename'
-      });
-    }
-    
-    const finalName = safeName.endsWith('.json') ? safeName : `${safeName}.json`;
-    const filePath = path.join(savedGraphsDir, finalName);
-    
-    // Ensure directory exists
-    await fs.mkdir(savedGraphsDir, { recursive: true });
-    
-    await fs.writeFile(filePath, JSON.stringify(graph, null, 2), 'utf-8');
-    
-    // Also save as last active so engine picks it up
-    const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
-    await fs.writeFile(lastActivePath, JSON.stringify(graph, null, 2), 'utf-8');
-    
-    if (VERBOSE) console.log(`[Engine API] Saved graph as "${finalName}" (${graph.nodes?.length || 0} nodes)`);
-    
-    // Hot-reload into engine
-    try {
-      const { engine } = getEngine();
-      if (engine && engine.running && graph.nodes && graph.nodes.length > 0) {
-        await engine.hotReload(graph);
-        if (VERBOSE) console.log('[Engine API] Graph hot-reloaded into engine');
-      }
-    } catch (err) {
-      console.warn('[Engine API] Could not reload into engine:', err.message);
-    }
-    
+    const finalName = graphFilename(req.body?.filename);
+    const { graph, persistence, activation } = await persistAndActivateGraph(req.body?.graph, finalName);
     res.json({
       success: true,
+      persisted: true,
       message: `Graph saved as ${finalName}`,
       filename: finalName,
-      nodeCount: graph.nodes?.length || 0
+      nodeCount: graph.nodes.length,
+      revision: graph.revision,
+      projectId: graph.projectId,
+      persistence,
+      activation
     });
   } catch (error) {
-    console.error('[Engine API] Error in save-graph:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    if (!error.statusCode || error.statusCode >= 500) console.error('[Engine API] Error in save-graph:', error);
+    sendGraphSaveError(res, error);
   }
 });
 
@@ -684,7 +660,7 @@ router.post('/save-graph', requireLocalOrPin, async (req, res) => {
  * GET /api/engine/graphs
  * List all saved graph files on the server
  */
-router.get('/graphs', async (req, res) => {
+router.get('/graphs', requireLocalOrPin, async (req, res) => {
   try {
     const fs = require('fs').promises;
     const savedGraphsDir = getGraphsDir();
@@ -693,7 +669,7 @@ router.get('/graphs', async (req, res) => {
     try {
       const entries = await fs.readdir(savedGraphsDir, { withFileTypes: true });
       files = entries
-        .filter(entry => entry.isFile() && entry.name.endsWith('.json') && !entry.name.startsWith('.'))
+        .filter(entry => entry.isFile() && entry.name.endsWith('.json') && !entry.name.startsWith('.') && entry.name.toLowerCase() !== 'cameras.json')
         .map(entry => entry.name);
     } catch (err) {
       // Directory might not exist yet
@@ -744,30 +720,12 @@ router.get('/graphs', async (req, res) => {
  * GET /api/engine/graphs/:name
  * Get a specific saved graph by name
  */
-router.get('/graphs/:name', async (req, res) => {
+router.get('/graphs/:name', requireLocalOrPin, async (req, res) => {
   try {
-    const fs = require('fs').promises;
-    const savedGraphsDir = getGraphsDir();
-    
-    let graphName = req.params.name;
-    if (!graphName.endsWith('.json')) {
-      graphName += '.json';
-    }
-    
-    const graphPath = path.join(savedGraphsDir, graphName);
-    
-    // Security: ensure the resolved path is within the graphs directory
-    const resolvedPath = path.resolve(graphPath);
-    const resolvedDir = path.resolve(savedGraphsDir);
-    if (!resolvedPath.startsWith(resolvedDir)) {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied'
-      });
-    }
-    
-    const content = await fs.readFile(graphPath, 'utf8');
-    const graph = JSON.parse(content);
+    const savedGraphsDir = path.resolve(getGraphsDir());
+    const graphName = graphFilename(req.params.name);
+    const graph = await readStoredGraph(graphName, savedGraphsDir);
+    if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' });
     
     res.json({
       success: true,
@@ -782,7 +740,7 @@ router.get('/graphs/:name', async (req, res) => {
       });
     }
     console.error('[Engine API] Error loading graph:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       error: error.message
     });
@@ -793,7 +751,7 @@ router.get('/graphs/:name', async (req, res) => {
  * GET /api/engine/buffers
  * Get all AutoTronBuffer values
  */
-router.get('/buffers', (req, res) => {
+router.get('/buffers', requireLocalOrPin, (req, res) => {
   const { engine } = getEngine();
   
   // Import AutoTronBuffer from BufferNodes

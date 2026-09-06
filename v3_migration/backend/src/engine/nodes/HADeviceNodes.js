@@ -28,6 +28,11 @@ function getEngine() {
   return _engine;
 }
 
+function shouldSkipDeviceCommand() {
+  const engine = getEngine();
+  return Boolean(engine && engine.shouldSkipDeviceCommands && engine.shouldSkipDeviceCommands());
+}
+
 // Use native fetch (Node 18+) or node-fetch
 const fetch = globalThis.fetch || require('node-fetch');
 
@@ -137,6 +142,8 @@ const bulkStateCache = {
   states: new Map(),        // entityId → state object
   lastFetchTime: 0,
   fetchPromise: null,       // Prevents duplicate fetches
+  nextFetchAllowedAt: 0,
+  lastFetchError: null,
   CACHE_TTL: 2000,          // 2 seconds - fast enough for responsive updates
   
   /**
@@ -168,6 +175,10 @@ const bulkStateCache = {
     if (!config.token) {
       return;
     }
+
+    if (Date.now() < this.nextFetchAllowedAt) {
+      return;
+    }
     
     // Create a promise that all waiters can share
     this.fetchPromise = (async () => {
@@ -182,6 +193,8 @@ const bulkStateCache = {
         });
         
         if (!response.ok) {
+          this.lastFetchError = `HTTP ${response.status}`;
+          this.nextFetchAllowedAt = Date.now() + 5000;
           console.error(`[BulkStateCache] Failed to fetch states: HTTP ${response.status}`);
           return;
         }
@@ -201,8 +214,12 @@ const bulkStateCache = {
         }
         
         this.lastFetchTime = Date.now();
+        this.lastFetchError = null;
+        this.nextFetchAllowedAt = 0;
         // Success logs removed - too noisy. Only log errors.
       } catch (error) {
+        this.lastFetchError = error.message;
+        this.nextFetchAllowedAt = Date.now() + 5000;
         console.error(`[BulkStateCache] Error fetching states: ${error.message}`);
       } finally {
         this.fetchPromise = null;
@@ -597,6 +614,14 @@ class HAServiceCallNode {
   }
 
   async callService(serviceData = {}) {
+    if (shouldSkipDeviceCommand()) {
+      engineLogger.log('HA-SERVICE-SKIP', `${this.properties.domain}.${this.properties.service}`, {
+        reason: 'frontend-active',
+        entityId: this.properties.entityId
+      });
+      return { success: true, skipped: true };
+    }
+
     const config = getHAConfig();
     if (!config.token) {
       console.error('[HAServiceCallNode] No HA_TOKEN configured');
@@ -703,6 +728,13 @@ class HALightControlNode {
       return { success: false };
     }
 
+    if (shouldSkipDeviceCommand()) {
+      engineLogger.log('HA-LIGHT-SKIP', `${this.properties.entityId} ${on ? 'turn_on' : 'turn_off'}`, {
+        reason: 'frontend-active'
+      });
+      return { success: true, skipped: true };
+    }
+
     const service = on ? 'turn_on' : 'turn_off';
     const url = `${config.host}/api/services/light/${service}`;
     
@@ -773,6 +805,7 @@ class HALightControlNode {
 class HAGenericDeviceNode {
   constructor() {
     this.id = null;
+    this.type = 'HAGenericDeviceNode';
     this.label = 'HA Generic Device';
     this.properties = {
       selectedDeviceIds: [],
@@ -1722,6 +1755,13 @@ class HALockNode {
 
   async sendLockCommand(action, isRetry = false) {
     if (!this.properties.deviceId) return;
+
+    if (shouldSkipDeviceCommand()) {
+      engineLogger.log('HA-LOCK-SKIP', `${this.properties.deviceId} ${action}`, {
+        reason: 'frontend-active'
+      });
+      return;
+    }
     
     // Throttle commands (but allow retries)
     const now = Date.now();
@@ -1927,6 +1967,13 @@ class HueEffectNode {
   }
 
   async callHAService(domain, service, entityId, data = {}) {
+    if (shouldSkipDeviceCommand()) {
+      engineLogger.log('HA-HUE-EFFECT-SKIP', `${entityId} ${domain}.${service}`, {
+        reason: 'frontend-active'
+      });
+      return { success: true, skipped: true };
+    }
+
     const config = getHAConfig();
     if (!config.token) {
       console.error('[HueEffectNode] No HA_TOKEN configured');
@@ -2145,6 +2192,13 @@ class WizEffectNode {
   }
 
   async callHAService(domain, service, entityId, data = {}) {
+    if (shouldSkipDeviceCommand()) {
+      engineLogger.log('HA-WIZ-EFFECT-SKIP', `${entityId} ${domain}.${service}`, {
+        reason: 'frontend-active'
+      });
+      return { success: true, skipped: true };
+    }
+
     const config = getHAConfig();
     if (!config.token) {
       console.error('[WizEffectNode] No HA_TOKEN configured');
@@ -2827,8 +2881,10 @@ class HAThermostatNode {
       }
     }
 
+    const skipCommands = shouldSkipDeviceCommand();
+
     // Handle target temperature input
-    if (targetTempInput !== undefined && targetTempInput !== null) {
+    if (!skipCommands && targetTempInput !== undefined && targetTempInput !== null) {
       const temp = Number(targetTempInput);
       if (!isNaN(temp) && temp !== this._lastTargetTemp) {
         // Throttle commands to 5 seconds
@@ -2857,7 +2913,7 @@ class HAThermostatNode {
     }
 
     // Handle HVAC mode input
-    if (hvacModeInput && hvacModeInput !== this._lastHvacMode) {
+    if (!skipCommands && hvacModeInput && hvacModeInput !== this._lastHvacMode) {
       const validModes = ['off', 'heat', 'cool', 'heat_cool', 'auto', 'dry', 'fan_only'];
       if (validModes.includes(hvacModeInput)) {
         if (now - this.properties.lastCommandTime > 5000) {

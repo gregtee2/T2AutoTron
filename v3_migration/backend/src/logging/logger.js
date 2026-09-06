@@ -1,15 +1,21 @@
 // logging/logger.js - FIXED WITH LEVEL METHODS
+const { EventEmitter } = require('events');
 const logWithTimestamp = require('./logWithTimestamp');
 const LOG_LEVELS = { error: 3, warn: 2, info: 1, debug: 0 };
 const MIN_LOG_LEVEL = LOG_LEVELS[process.env.LOG_LEVEL?.toLowerCase()] ?? LOG_LEVELS.info;
 const VERBOSE_LOGGING = process.env.VERBOSE_LOGGING === 'true';
 
-class Logger {
+class Logger extends EventEmitter {
+  constructor() {
+    super();
+  }
+
   async log(message, level = 'info', noDelay = false, key = null, metadata) {
     if (!message || typeof message !== 'string') return;
     const logLevel = LOG_LEVELS[level.toLowerCase()];
     if (logLevel < MIN_LOG_LEVEL || (!VERBOSE_LOGGING && logLevel <= LOG_LEVELS.info)) return;
     await logWithTimestamp(`${message}${metadata ? ` ${JSON.stringify(metadata)}` : ''}`, level, noDelay);
+    this.emit('log', message, level, metadata);
   }
 
   // ADD THESE METHODS

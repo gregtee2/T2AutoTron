@@ -22,6 +22,7 @@ class AuthManager {
      * @returns {boolean}
      */
     verifyPin(pin) {
+        if (typeof pin !== 'string' || pin.length > 1024) return false;
         // Allow APP_PIN changes at runtime (Settings API updates process.env)
         const currentPin = process.env.APP_PIN || this.correctPin || '1234';
         if (currentPin !== this.correctPin) {
@@ -111,8 +112,9 @@ class AuthManager {
 const authManager = new AuthManager();
 
 // Clean up expired sessions every hour
-setInterval(() => {
+const sessionCleanupTimer = setInterval(() => {
     authManager.cleanupExpiredSessions();
 }, 60 * 60 * 1000);
+sessionCleanupTimer.unref?.();
 
 module.exports = authManager;

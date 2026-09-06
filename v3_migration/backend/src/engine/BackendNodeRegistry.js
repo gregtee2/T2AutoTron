@@ -166,7 +166,7 @@ class BackendNodeRegistry {
       'Filter': 'FilterNode',
       'Smooth': 'SmoothNode',
       'Combine': 'CombineNode',
-      'Watchdog': 'CounterNode',  // Use Counter as fallback
+      'Watchdog': 'WatchdogNode',
       'Sub-Graph': 'SubGraphNode',
       'TTS Message Scheduler': 'TTSMessageSchedulerNode',
       'Event Announcer': null,  // Frontend-only (manages UI scheduled events display)

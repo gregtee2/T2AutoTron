@@ -36,6 +36,10 @@ export function apiUrl(path) {
     const base = getApiBase();
     // Ensure path starts with /
     const normalizedPath = path.startsWith('/') ? path : '/' + path;
+    // Some callers pre-resolve before authFetch; do not prefix twice.
+    if (base && (normalizedPath === base || normalizedPath.startsWith(base + '/'))) {
+        return normalizedPath;
+    }
     return base + normalizedPath;
 }
 

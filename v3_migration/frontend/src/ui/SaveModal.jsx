@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './SaveModal.css';
-import { apiUrl } from '../utils/apiBase';
+import { authFetch } from '../auth/authClient';
 
 /**
  * SaveModal - Dialog for saving graphs with custom filenames
@@ -27,9 +27,9 @@ export function SaveModal({ isOpen, onClose, onSave, currentGraphData }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(apiUrl('/api/engine/graphs'));
+      const response = await authFetch('/api/engine/graphs');
       const data = await response.json();
-      if (data.success) {
+      if (response.ok && data.success) {
         setExistingGraphs(data.graphs || []);
       } else {
         setError('Failed to load existing graphs');
@@ -52,7 +52,7 @@ export function SaveModal({ isOpen, onClose, onSave, currentGraphData }) {
     setError(null);
 
     try {
-      const response = await fetch(apiUrl('/api/engine/save-graph'), {
+      const response = await authFetch('/api/engine/save-graph', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -62,11 +62,11 @@ export function SaveModal({ isOpen, onClose, onSave, currentGraphData }) {
       });
 
       const data = await response.json();
-      if (data.success) {
+      if (response.ok && data.success) {
         if (window.T2Toast) {
           window.T2Toast.success(`Saved as "${data.filename}"`, 3000);
         }
-        onSave?.(data.filename);
+        onSave?.(data, currentGraphData);
         onClose();
       } else {
         setError(data.error || 'Failed to save graph');

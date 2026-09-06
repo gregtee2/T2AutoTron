@@ -11,11 +11,11 @@
  * - Why (what triggered the command - time schedule, input change, etc.)
  * 
  * This creates a "crime scene log" so when something weird happens,
- * we can trace back exactly what happened.
+ * we can trace what happened. Timing suggests an origin; it does not prove it.
  */
 
-const fs = require('fs');
 const path = require('path');
+const BoundedLogWriter = require('../logging/BoundedLogWriter');
 
 // Verbose logging flag
 const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
@@ -27,7 +27,7 @@ const COMMAND_LOG = path.join(LOG_DIR, 'command_history.log');
 const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB max
 
 // Recent commands cache for correlation
-// entityId → { timestamp, source, reason, payload }
+// entityId → { sentAt (numeric milliseconds), timestamp (ISO), source, reason, payload }
 const recentCommands = new Map();
 const CORRELATION_WINDOW = 10000; // 10 seconds - if we sent a command, expect state change within this
 
@@ -40,51 +40,10 @@ const CONSOLE_DEDUP_WINDOW = 2000; // 2 seconds - don't log same device to conso
 const commandHistory = [];
 const MAX_HISTORY = 1000;
 
-let logStream = null;
-
-function ensureLogDir() {
-  if (!fs.existsSync(LOG_DIR)) {
-    fs.mkdirSync(LOG_DIR, { recursive: true });
-  }
-}
-
-function rotateIfNeeded() {
-  try {
-    if (fs.existsSync(COMMAND_LOG)) {
-      const stats = fs.statSync(COMMAND_LOG);
-      if (stats.size > MAX_LOG_SIZE) {
-        const backupFile = COMMAND_LOG + '.old';
-        if (fs.existsSync(backupFile)) {
-          fs.unlinkSync(backupFile);
-        }
-        fs.renameSync(COMMAND_LOG, backupFile);
-      }
-    }
-  } catch (err) {
-    // Ignore rotation errors
-  }
-}
-
-function initLogger() {
-  ensureLogDir();
-  rotateIfNeeded();
-  
-  try {
-    logStream = fs.createWriteStream(COMMAND_LOG, { flags: 'a' });
-  } catch (err) {
-    console.error('[CommandTracker] Failed to open log file:', err.message);
-  }
-}
+const logWriter = new BoundedLogWriter({ filePath: COMMAND_LOG, maxFileBytes: MAX_LOG_SIZE });
 
 function writeLog(entry) {
-  if (!logStream) {
-    initLogger();
-  }
-  
-  const line = JSON.stringify(entry);
-  if (logStream) {
-    logStream.write(line + '\n');
-  }
+  logWriter.write(`${JSON.stringify(entry)}\n`);
   
   // Also keep in memory
   commandHistory.push(entry);
@@ -163,14 +122,16 @@ function logIncomingStateChange({ entityId, oldState, newState, context, attribu
   const ourCommand = recentCommands.get(rawEntityId);
   const now = Date.now();
   const timeSinceCommand = ourCommand ? (now - ourCommand.sentAt) : null;
-  const wasUs = ourCommand && timeSinceCommand < CORRELATION_WINDOW;
+  // Keep the legacy wasUs return field for callers, but it means only a timing
+  // match, not proof of causation. A backwards clock jump is not a match.
+  const wasUs = Boolean(ourCommand && timeSinceCommand >= 0 && timeSinceCommand < CORRELATION_WINDOW);
   
   // Determine source based on context and correlation
   let source = 'External (no context)';  // Default when HA doesn't provide context
   let sourceDetails = null;
   
   if (wasUs) {
-    source = 'T2AutoTron (confirmed)';
+    source = 'T2AutoTron (probable)';
     sourceDetails = {
       nodeId: ourCommand.nodeId,
       nodeType: ourCommand.nodeType,
@@ -205,13 +166,13 @@ function logIncomingStateChange({ entityId, oldState, newState, context, attribu
   
   writeLog(entry);
   
-  // Console log for visibility - only when VERBOSE or for T2-confirmed changes
+  // Console log for visibility - only when VERBOSE or for probable T2 changes
   // Transient state flaps (off→unavailable→off) are noisy, keep in log file only
   if (oldState !== newState) {
     const isTransient = (oldState === 'unavailable' || newState === 'unavailable');
-    const isT2Confirmed = source.includes('T2AutoTron');
+    const isT2Probable = source.includes('T2AutoTron');
     
-    if (VERBOSE || (isT2Confirmed && !isTransient)) {
+    if (VERBOSE || (isT2Probable && !isTransient)) {
       const shortEntity = rawEntityId.split('.').pop();
       const emoji = getStateEmoji(rawEntityId, newState);
       console.log(`[←STATE] ${emoji} ${shortEntity}: ${oldState} → ${newState} | Source: ${source}`);
@@ -244,7 +205,7 @@ function getPendingCommands() {
   const pending = [];
   
   for (const [entityId, cmd] of recentCommands) {
-    const age = now - cmd.timestamp;
+    const age = now - cmd.sentAt;
     pending.push({
       entityId,
       action: cmd.action,
@@ -312,17 +273,32 @@ function getStateEmoji(entityId, state) {
 }
 
 /**
- * Close log stream
+ * Drain accepted records and close the file; always resolves to writer status.
+ * Terminal operation: later file entries are rejected and counted.
  */
 function close() {
-  if (logStream) {
-    logStream.end();
-    logStream = null;
-  }
+  clearInterval(cacheCleanupTimer);
+  process.removeListener('beforeExit', close);
+  return logWriter.close();
 }
 
-// Auto-close on exit
-process.on('exit', close);
+function getWriterStatus() {
+  return logWriter.getStatus();
+}
+
+const cacheCleanupTimer = setInterval(() => {
+  const cutoff = Date.now() - CORRELATION_WINDOW * 2;
+  for (const [entityId, command] of recentCommands) {
+    if (command.sentAt < cutoff) recentCommands.delete(entityId);
+  }
+  for (const [entityId, loggedAt] of lastConsoleLogs) {
+    if (loggedAt < cutoff) lastConsoleLogs.delete(entityId);
+  }
+}, 60000);
+cacheCleanupTimer.unref?.();
+
+// Natural exit only; explicit shutdown must await close() before process.exit().
+process.once('beforeExit', close);
 
 module.exports = {
   logOutgoingCommand,
@@ -330,5 +306,6 @@ module.exports = {
   getHistory,
   getPendingCommands,
   close,
+  getWriterStatus,
   COMMAND_LOG
 };

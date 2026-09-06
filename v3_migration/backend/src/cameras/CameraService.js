@@ -23,12 +23,8 @@
  * └─────────────────────────────────────────────────────────────┘
  */
 
-const fs = require('fs');
-const path = require('path');
 const CameraWorker = require('./CameraWorker');
-
-// Path to cameras config (same location as cameras.js API uses)
-const CAMERAS_FILE = path.join(__dirname, '..', '..', 'config', 'cameras.json');
+const { cameraConfigStore } = require('./cameraConfigStore');
 
 class CameraService {
     constructor() {
@@ -75,22 +71,13 @@ class CameraService {
      * Load cameras from JSON config
      */
     _loadCamerasConfig() {
-        try {
-            if (!fs.existsSync(CAMERAS_FILE)) {
-                console.log('[CameraService] No cameras.json found');
-                return [];
-            }
-
-            const data = fs.readFileSync(CAMERAS_FILE, 'utf8');
-            const config = JSON.parse(data);
-            
-            // Config can be { cameras: [...] } or just [...]
-            const cameras = config.cameras || (Array.isArray(config) ? config : []);
-            return cameras;
-        } catch (err) {
-            console.error('[CameraService] Error loading cameras.json:', err.message);
-            return [];
-        }
+        // Explicit service startup (not module import) performs any migration.
+        const config = cameraConfigStore.initialize();
+        return config.cameras.map(camera => ({
+            ...camera,
+            username: camera.username || config.defaultCredentials.username,
+            password: camera.password || config.defaultCredentials.password
+        }));
     }
 
     /**
@@ -115,6 +102,7 @@ class CameraService {
         const rtspPath = camera.rtspPath;
         
         const config = {
+            ...camera,
             ip: camera.ip,
             name: camera.name || camera.ip,
             username: camera.username || 'admin',
@@ -365,7 +353,16 @@ class CameraService {
      */
     async reload() {
         console.log('[CameraService] Reloading configuration...');
-        
+
+        // Validate before stopping existing workers. The shared store provides
+        // the last successfully saved snapshot, including credentials.
+        cameraConfigStore.load();
+        if (this.healthCheckTimer) {
+            clearInterval(this.healthCheckTimer);
+            this.healthCheckTimer = null;
+        }
+        this.running = false;
+
         // Stop all current workers
         this.stopAll();
         this.workers.clear();

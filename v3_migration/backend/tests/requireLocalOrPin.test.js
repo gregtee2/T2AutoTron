@@ -129,11 +129,7 @@ describe('requireLocalOrPin', () => {
 
     const dockerIps = [
       '172.30.32.2',
-      '::ffff:172.30.32.2',
-      '192.168.1.50',
-      '::ffff:192.168.1.50',
-      '10.0.0.5',
-      '::ffff:10.0.0.5'
+      '::ffff:172.30.32.2'
     ];
 
     test.each(dockerIps)('allows Docker-internal IP %s in HA mode', (ip) => {
@@ -145,6 +141,43 @@ describe('requireLocalOrPin', () => {
       const { req, res, next } = buildReqRes({ ip });
       middleware(req, res, next);
       expect(next).toHaveBeenCalled();
+    });
+
+    test.each(['192.168.1.50', '172.16.0.5', '172.31.255.254', '172.30.32.3'])('requires a PIN for non-ingress peer %s in HA mode', (ip) => {
+      jest.resetModules();
+      process.env.APP_PIN = 'testpin99';
+      process.env.SUPERVISOR_TOKEN = 'fake_supervisor_token';
+      const middleware = require('../src/api/middleware/requireLocalOrPin');
+      const { req, res, next } = buildReqRes({ ip });
+
+      middleware(req, res, next);
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    test('does not trust forwarded or Express proxy IP over the connected peer', () => {
+      const { req, res, next } = buildReqRes({
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '203.0.113.5' },
+        headers: { 'X-Forwarded-For': '172.30.32.2', 'X-Ingress-Path': '/forged' }
+      });
+      requireLocalOrPin(req, res, next);
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    test('does not treat arbitrary IPv6 addresses ending in ::1 as loopback', () => {
+      jest.resetModules();
+      process.env.APP_PIN = 'testpin99';
+      process.env.SUPERVISOR_TOKEN = 'fake_supervisor_token';
+      const middleware = require('../src/api/middleware/requireLocalOrPin');
+      const { req, res, next } = buildReqRes({ ip: '2001:db8::1' });
+
+      middleware(req, res, next);
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
     });
 
     test('rejects Docker-internal IP when NOT in HA mode', () => {

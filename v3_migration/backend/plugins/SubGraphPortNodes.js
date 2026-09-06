@@ -17,6 +17,19 @@
     const React = window.React;
     const { useState, useEffect, useRef } = React;
     const sockets = window.sockets;
+    const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
+    const portValue = values => values.length > 1 ? values.slice() : values[0];
+    const savedPortProperties = properties => ({
+        portName: properties.portName,
+        portType: properties.portType,
+        portId: properties.portId
+    });
+    function restorePort(node, state) {
+        const props = state?.data?.properties || state?.properties || state?.data || state || {};
+        for (const key of ['portName', 'portType', 'portId']) {
+            if (hasOwn(props, key)) node.properties[key] = props[key];
+        }
+    }
     
     // =========================================================================
     // SubGraph Input Node - Exposes an INPUT on the parent SubGraphNode
@@ -38,21 +51,19 @@
         }
         
         data(inputs) {
-            // The value comes from the parent's exposed input - stored in properties
+            // The parent also forwards this connection-list directly to downstream
+            // inputs. Runtime values must not be serialized as saved configuration.
             return {
-                value: this.properties._inputValue
+                value: hasOwn(this, '_inputValues') ? portValue(this._inputValues) : this.properties._inputValue
             };
         }
         
         serialize() {
-            return { ...this.properties };
+            return savedPortProperties(this.properties);
         }
         
         restore(state) {
-            const props = state.properties || state;
-            if (props) {
-                Object.assign(this.properties, props);
-            }
+            restorePort(this, state);
         }
     }
     
@@ -203,25 +214,23 @@
             };
             
             // This node has an INPUT (receives data from inside the sub-graph)
-            this.addInput('value', new ClassicPreset.Input(sockets.any, 'Value'));
+            this.addInput('value', new ClassicPreset.Input(sockets.any, 'Value', true));
         }
         
         data(inputs) {
             // Store the incoming value so the parent can read it
-            const value = inputs.value?.[0];
+            const values = hasOwn(inputs, 'value') ? (Array.isArray(inputs.value) ? inputs.value : [inputs.value]) : [];
+            const value = portValue(values);
             this.properties._outputValue = value;
             return {};
         }
         
         serialize() {
-            return { ...this.properties };
+            return savedPortProperties(this.properties);
         }
         
         restore(state) {
-            const props = state.properties || state;
-            if (props) {
-                Object.assign(this.properties, props);
-            }
+            restorePort(this, state);
         }
     }
     

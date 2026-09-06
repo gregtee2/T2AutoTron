@@ -10,6 +10,7 @@ const path = require('path');
 const registry = require('./BackendNodeRegistry');
 const engineLogger = require('./engineLogger');
 const { AutoTronBuffer } = require('./nodes/BufferNodes');
+const dependencyOrder = require('./dependencyOrder');
 
 const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 
@@ -22,7 +23,17 @@ class BackendEngine {
     this.tickInterval = null;
     this.tickRate = 100;              // ms between ticks (10 Hz)
     this.lastTickTime = null;
+    this.lastTickCompletedTime = null;
+    this.lastTickDurationMs = null;
+    this.lastTickError = null;
     this.tickCount = 0;
+    this.tickPromise = null;
+    this.graphGeneration = 0;
+    this.lifecycleGeneration = 0;      // Stop invalidates pending starts AND in-flight ticks
+    this.lifecycleQueue = Promise.resolve();
+    this.startPromise = null;
+    this.loading = false;
+    this.lastReconciliation = null;
     this.graphPath = null;
     this.startedAt = null;              // Timestamp when engine started
     this.debug = process.env.ENGINE_DEBUG === 'true' || process.env.VERBOSE_LOGGING === 'true';
@@ -31,10 +42,13 @@ class BackendEngine {
     // This prevents the engine and UI from fighting over device control
     this.frontendActive = false;
     this.frontendLastSeen = null;
+    this.frontendHandoffPromise = null;
     
     // Scheduled events registry - nodes register their upcoming events here
     // This enables UpcomingEventsNode to work in headless mode
     this.scheduledEventsRegistry = new Map();  // nodeId → [{time, action, deviceName}]
+    this.loadDiagnostics = { skippedNodeTypes: [], skippedConnections: [] };
+    this.nodeErrors = new Map();
   }
 
   /**
@@ -92,7 +106,15 @@ class BackendEngine {
       // When frontend goes inactive, sync backend node states from HA reality
       // This prevents backend from "correcting" things that frontend intentionally set
       if (wasActive && !active) {
-        this.onFrontendInactive();
+        const handoffPromise = this.onFrontendInactive().catch(error => {
+          console.error('[BackendEngine] Frontend handoff failed:', error.message);
+        });
+        const trackedHandoff = handoffPromise.finally(() => {
+          if (this.frontendHandoffPromise === trackedHandoff) {
+            this.frontendHandoffPromise = null;
+          }
+        });
+        this.frontendHandoffPromise = trackedHandoff;
       }
     }
   }
@@ -108,12 +130,12 @@ class BackendEngine {
       // First, reload the latest graph from disk (frontend may have made changes)
       const path = require('path');
       const fs = require('fs');
-      const savedGraphsDir = path.join(__dirname, '../../..', 'Saved_Graphs');
+      const savedGraphsDir = process.env.GRAPH_SAVE_PATH || path.join(__dirname, '../../..', 'Saved_Graphs');
       const lastActivePath = path.join(savedGraphsDir, '.last_active.json');
       
       if (fs.existsSync(lastActivePath)) {
         const graphJson = JSON.parse(fs.readFileSync(lastActivePath, 'utf-8'));
-        if (graphJson?.nodes?.length > 0) {
+        if (graphJson && Array.isArray(graphJson.nodes)) {
           await this.hotReload(graphJson);
           if (VERBOSE) console.log(`[BackendEngine] Reloaded graph (${graphJson.nodes.length} nodes, ${graphJson.connections?.length || 0} connections)`);
         }
@@ -172,19 +194,24 @@ class BackendEngine {
       let syncCount = 0;
       for (const node of this.nodes.values()) {
         // Only sync HAGenericDeviceNode types
-        if (node.type === 'HAGenericDeviceNode' && node.properties?.devices) {
-          for (const device of node.properties.devices) {
-            if (device.entityId) {
-              // Use getState() which fetches fresh if not in cache
-              const haState = await haManager.getState(device.entityId);
-              const isOn = haState?.state === 'on' || haState?.on === true;
-              
-              // Update lastTrigger to match reality
-              if (node.lastTrigger !== isOn) {
-                node.lastTrigger = isOn;
-                syncCount++;
-              }
-            }
+        if (node.type === 'HAGenericDeviceNode' && Array.isArray(node.properties?.selectedDeviceIds)) {
+          for (const deviceId of node.properties.selectedDeviceIds) {
+            const entityId = typeof deviceId === 'string' ? deviceId.replace(/^ha_/, '') : null;
+            if (!entityId) continue;
+
+            // Use getState() which fetches fresh if not in cache. The manager
+            // returns an envelope, while a few test/adaptor implementations
+            // may return the state object directly.
+            const result = await haManager.getState(entityId);
+            const haState = result?.state && typeof result.state === 'object' ? result.state : result;
+            if (!haState || typeof haState !== 'object' || haState.state === undefined) continue;
+
+            const isOn = haState.state === 'on' || haState.state === 'open' ||
+              haState.state === 'playing' || haState.on === true;
+            node.deviceStates = node.deviceStates || {};
+            node.deviceStates[entityId] = isOn;
+            node.deviceStates[`ha_${entityId}`] = isOn;
+            syncCount++;
           }
         }
       }
@@ -205,6 +232,10 @@ class BackendEngine {
    * @returns {boolean} True if backend should skip commands (frontend is active)
    */
   shouldSkipDeviceCommands() {
+    if (this.loading || this.frontendHandoffPromise) {
+      return true;
+    }
+
     // If frontend is active and was seen recently (within 30 seconds), skip backend commands
     // Frontend controls devices directly; backend is the fallback
     if (this.frontendActive) {
@@ -215,7 +246,8 @@ class BackendEngine {
       }
       // Frontend claims active but no heartbeat in 30s - it might be sleeping
       console.log(`[BackendEngine] Frontend claims active but no heartbeat in ${Math.round(timeSinceHeartbeat/1000)}s - backend taking over`);
-      this.frontendActive = false;
+      this.setFrontendActive(false);
+      return true;
     }
     return false;
   }
@@ -235,17 +267,20 @@ class BackendEngine {
    */
   async loadGraph(graphPath) {
     try {
-      if (VERBOSE) console.log(`[BackendEngine] Attempting to load: ${graphPath}`);
-      const graphJson = await fs.readFile(graphPath, 'utf8');
-      const graph = JSON.parse(graphJson);
-      this.graphPath = graphPath;
-      
-      await this.loadGraphData(graph);
-      
-      if (VERBOSE) console.log(`[BackendEngine] Loaded graph from ${graphPath}`);
-      if (VERBOSE) console.log(`[BackendEngine] Nodes: ${this.nodes.size}, Connections: ${this.connections.length}`);
-      
-      return true;
+      // Queue the read as well, so a following Start cannot activate the old
+      // graph while this requested file is still being read. Do not nest the
+      // queued loadGraphData() call inside this lifecycle operation.
+      return await this._queueLifecycle(async () => {
+        if (VERBOSE) console.log(`[BackendEngine] Attempting to load: ${graphPath}`);
+        const graphJson = await fs.readFile(graphPath, 'utf8');
+        const prepared = this._prepareGraph(JSON.parse(graphJson));
+        await this._replaceGraph(prepared);
+        this.graphPath = graphPath;
+
+        if (VERBOSE) console.log(`[BackendEngine] Loaded graph from ${graphPath}`);
+        if (VERBOSE) console.log(`[BackendEngine] Nodes: ${this.nodes.size}, Connections: ${this.connections.length}`);
+        return true;
+      });
     } catch (error) {
       console.error(`[BackendEngine] Failed to load graph: ${error.message}`);
       console.error(`[BackendEngine] Stack: ${error.stack}`);
@@ -258,93 +293,162 @@ class BackendEngine {
    * @param {object} graph - Parsed graph object
    */
   async loadGraphData(graph) {
-    // Clear existing state
-    this.nodes.clear();
-    this.connections = [];
-    this.outputs.clear();
+    const prepared = this._prepareGraph(graph);
+    return this._queueLifecycle(() => this._replaceGraph(prepared));
+  }
 
-    // IMPORTANT: clear shared buffers on graph load.
-    // Otherwise, stale values from a previous run can persist and re-trigger devices.
-    try {
-      AutoTronBuffer.clear();
-      if (this.debug) {
-        console.log('[BackendEngine] Cleared AutoTronBuffer on graph load');
-      }
-    } catch (e) {
-      console.warn('[BackendEngine] Failed to clear AutoTronBuffer on graph load:', e?.message || e);
+  // Only lifecycle operations wait on this queue. A tick must NEVER wait on
+  // it or on frontendHandoffPromise: data() can initiate handoff via the
+  // synchronous shouldSkipDeviceCommands() guard, which queues hotReload.
+  _queueLifecycle(operation) {
+    const result = this.lifecycleQueue.then(operation);
+    this.lifecycleQueue = result.catch(() => {});
+    return result;
+  }
+
+  /** Validate topology without constructing nodes or touching the live graph. */
+  _prepareGraph(graph) {
+    if (!graph || typeof graph !== 'object' || !Array.isArray(graph.nodes) ||
+        (graph.connections !== undefined && !Array.isArray(graph.connections))) {
+      throw new Error('Invalid graph: nodes array is required and connections must be an array when present');
     }
 
-    // Handle both old format (direct nodes array) and new format (nested structure)
-    const nodesData = graph.nodes || [];
-    const connectionsData = graph.connections || [];
+    const sourceNodeIds = new Set();
+    for (const nodeData of graph.nodes) {
+      if (!nodeData || typeof nodeData !== 'object' || !nodeData.id) {
+        throw new Error('Invalid graph: every node must have an id');
+      }
+      if (sourceNodeIds.has(nodeData.id)) {
+        throw new Error(`Invalid graph: duplicate node id "${nodeData.id}"`);
+      }
+      sourceNodeIds.add(nodeData.id);
+    }
 
-    // Instantiate nodes from registry
-    for (const nodeData of nodesData) {
-      // Try multiple ways to find the node type
+    const connectionsData = graph.connections || [];
+    for (const connection of connectionsData) {
+      if (!connection || !sourceNodeIds.has(connection.source) || !sourceNodeIds.has(connection.target)) {
+        throw new Error('Invalid graph: every connection must reference existing nodes');
+      }
+    }
+
+    const descriptors = new Map();
+    const skippedNodeTypes = new Set();
+    for (const nodeData of graph.nodes) {
       let nodeType = nodeData.name || nodeData.type;
       let NodeClass = nodeType ? registry.get(nodeType) : null;
-      
-      // Fallback: try to find by label (display name)
+
       if (!NodeClass && nodeData.label) {
         const byLabel = registry.getByLabel(nodeData.label);
         if (byLabel) {
           if (byLabel.skipReason) {
-            // Node explicitly marked as UI-only, skip silently
-            if (this.debug) {
-              console.log(`[BackendEngine] Skipping UI-only node: ${nodeData.label}`);
-            }
+            // Only the registry may explicitly designate UI-only nodes.
+            skippedNodeTypes.add(nodeData.label || nodeType || 'unknown');
             continue;
           }
           nodeType = byLabel.name;
           NodeClass = byLabel.NodeClass;
-          if (this.debug) {
-            console.log(`[BackendEngine] Resolved "${nodeData.label}" → ${nodeType}`);
-          }
         }
       }
-      
-      if (NodeClass) {
-        try {
-          const node = new NodeClass();
-          node.id = nodeData.id;
-          node.label = nodeData.label || nodeType;
-          
-          // Restore saved properties - check multiple locations
-          const props = nodeData.data?.properties || nodeData.properties || nodeData.data;
-          if (props && typeof node.restore === 'function') {
-            node.restore({ properties: props });
-          } else if (props) {
-            node.properties = { ...node.properties, ...props };
-          }
-          
-          this.nodes.set(nodeData.id, node);
-          
-          if (this.debug) {
-            console.log(`[BackendEngine] Instantiated node: ${nodeType} (${nodeData.id})`);
-          }
-        } catch (error) {
-          console.error(`[BackendEngine] Failed to instantiate ${nodeType}: ${error.message}`);
-        }
-      } else {
-        // Track skipped nodes for summary instead of individual logs
-        if (!this._skippedNodeTypes) this._skippedNodeTypes = new Set();
-        this._skippedNodeTypes.add(nodeData.label || nodeType || 'unknown');
+      if (typeof NodeClass !== 'function') {
+        throw new Error(`Unregistered executable node type: ${nodeType || nodeData.label || 'unknown'} (${nodeData.id})`);
+      }
+      descriptors.set(nodeData.id, {
+        NodeClass,
+        type: NodeClass.type || nodeType,
+        label: nodeData.label || nodeType,
+        // Snapshot callers' descriptors before waiting on the lifecycle queue.
+        properties: structuredClone(nodeData.data?.properties || nodeData.properties || nodeData.data || {})
+      });
+    }
+
+    const skippedConnections = [];
+    const connections = connectionsData
+      .filter(conn => {
+        const keep = descriptors.has(conn.source) && descriptors.has(conn.target);
+        if (!keep) skippedConnections.push({ source: conn.source, target: conn.target });
+        return keep;
+      })
+      .map(conn => ({
+        source: conn.source,
+        sourceOutput: conn.sourceOutput,
+        target: conn.target,
+        targetInput: conn.targetInput
+      }));
+    dependencyOrder(descriptors, connections);
+    return {
+      descriptors,
+      connections,
+      diagnostics: { skippedNodeTypes: Array.from(skippedNodeTypes), skippedConnections }
+    };
+  }
+
+  async _disposeNodes(nodes) {
+    for (const node of nodes) {
+      const cleanup = typeof node.destroy === 'function' ? node.destroy : node.dispose;
+      if (typeof cleanup !== 'function') continue;
+      try {
+        await cleanup.call(node);
+      } catch (error) {
+        console.warn(`[BackendEngine] Node cleanup failed: ${error.message}`);
       }
     }
+  }
 
-    // Log summary of skipped node types (if any)
-    if (this._skippedNodeTypes && this._skippedNodeTypes.size > 0) {
-      console.log(`[BackendEngine] Skipped ${this._skippedNodeTypes.size} unregistered node types: ${Array.from(this._skippedNodeTypes).join(', ')}`);
-      this._skippedNodeTypes.clear();
+  /** Called only under the lifecycle queue; no ticks may enter during awaits. */
+  async _replaceGraph(prepared, reconcile = false) {
+    this.loading = true;
+    const generation = this.lifecycleGeneration;
+    try {
+      // Wait for the actual data() promise, not a timeout/Promise.race. Stop
+      // cannot cancel side effects inside a node that ignores cancellation.
+      if (this.tickPromise) await this.tickPromise;
+
+      const candidates = new Map();
+      try {
+        for (const [id, descriptor] of prepared.descriptors) {
+          const node = new descriptor.NodeClass();
+          candidates.set(id, node); // Include a node whose restore() throws.
+          node.id = id;
+          node.label = descriptor.label;
+          if (typeof node.restore === 'function') {
+            await node.restore({ properties: descriptor.properties });
+          } else {
+            node.properties = { ...node.properties, ...descriptor.properties };
+          }
+        }
+        // Also validate restored defaults/normalization before disposing old nodes.
+        dependencyOrder(candidates, prepared.connections);
+      } catch (error) {
+        await this._disposeNodes(Array.from(candidates.values()).reverse());
+        throw error;
+      }
+
+      // Staging protects the old graph on restore failure, but is not a sandbox:
+      // constructors/restores may start private timers or mutate shared state.
+      // A throwing constructor never exposes its instance for cleanup. Full
+      // rollback of those side effects requires a node-level activation contract.
+      await this._disposeNodes(this.nodes.values());
+      this.graphGeneration++;
+      this.scheduledEventsRegistry.clear();
+      AutoTronBuffer.clear();
+      this.nodes = candidates;
+      this.connections = prepared.connections;
+      this.outputs.clear();
+      this.nodeErrors.clear();
+      this.loadDiagnostics = prepared.diagnostics;
+
+      // Hot reload retains the one existing interval, paused by `loading`.
+      // A concurrent Stop stays authoritative; no restart can undo it.
+      if (reconcile && this.running && generation === this.lifecycleGeneration) {
+        if (this.nodes.size === 0) {
+          this.stop();
+        } else {
+          this.lastReconciliation = await this.reconcileDeviceStates();
+        }
+      }
+    } finally {
+      this.loading = false;
     }
-
-    // Store connections
-    this.connections = connectionsData.map(conn => ({
-      source: conn.source,
-      sourceOutput: conn.sourceOutput,
-      target: conn.target,
-      targetInput: conn.targetInput
-    }));
   }
 
   /**
@@ -378,68 +482,7 @@ class BackendEngine {
    * @returns {string[]} - Node IDs in execution order
    */
   topologicalSort() {
-    const visited = new Set();
-    const result = [];
-    const nodeIds = Array.from(this.nodes.keys());
-
-    // Build adjacency list (reverse - from outputs to inputs)
-    const dependsOn = new Map();
-    for (const nodeId of nodeIds) {
-      dependsOn.set(nodeId, new Set());
-    }
-    
-    // Add wire connection dependencies
-    for (const conn of this.connections) {
-      if (dependsOn.has(conn.target)) {
-        dependsOn.get(conn.target).add(conn.source);
-      }
-    }
-
-    // Add virtual buffer dependencies:
-    // - All Receivers depend on ALL Senders (ensures buffers are populated first)
-    // - This is simpler than matching by buffer name and works for all cases
-    const senderIds = [];
-    const receiverIds = [];
-    
-    for (const nodeId of nodeIds) {
-      const node = this.nodes.get(nodeId);
-      if (!node) continue;
-      const nodeType = node.type || node.constructor?.name || '';
-      if (nodeType === 'SenderNode' || nodeType.includes('Sender')) {
-        senderIds.push(nodeId);
-      } else if (nodeType === 'ReceiverNode' || nodeType.includes('Receiver')) {
-        receiverIds.push(nodeId);
-      }
-    }
-    
-    // Make every Receiver depend on every Sender (virtual edge)
-    for (const receiverId of receiverIds) {
-      const deps = dependsOn.get(receiverId);
-      if (deps) {
-        for (const senderId of senderIds) {
-          deps.add(senderId);
-        }
-      }
-    }
-
-    // Kahn's algorithm (DFS-based)
-    const visit = (nodeId) => {
-      if (visited.has(nodeId)) return;
-      visited.add(nodeId);
-      
-      const deps = dependsOn.get(nodeId) || new Set();
-      for (const dep of deps) {
-        visit(dep);
-      }
-      
-      result.push(nodeId);
-    };
-
-    for (const nodeId of nodeIds) {
-      visit(nodeId);
-    }
-
-    return result;
+    return dependencyOrder(this.nodes, this.connections).order;
   }
 
   /**
@@ -447,7 +490,32 @@ class BackendEngine {
    * @param {boolean} force - If true, run even if engine is stopped (for testing)
    */
   async tick(force = false) {
-    if (!this.running && !force) return;
+    // Skip, don't wait: a queued replacement may itself be draining this tick.
+    if (this.loading) return;
+    if (this.tickPromise) return this.tickPromise;
+
+    const generation = this.lifecycleGeneration;
+    const tickPromise = Promise.resolve().then(() => this._runTick(force, generation));
+    this.tickPromise = tickPromise;
+
+    try {
+      return await tickPromise;
+    } finally {
+      if (this.tickPromise === tickPromise) {
+        this.tickPromise = null;
+      }
+    }
+  }
+
+  async _runTick(force = false, generation = this.lifecycleGeneration) {
+    if (this.loading || generation !== this.lifecycleGeneration || (!this.running && !force)) return;
+
+    const tickGeneration = this.graphGeneration;
+    const tickStartedAt = Date.now();
+    // Force permits a stopped single-step, but a NEW Stop still cancels it at
+    // node boundaries, even if another Start has already been requested.
+    const isCurrent = () => !this.loading && generation === this.lifecycleGeneration &&
+      tickGeneration === this.graphGeneration && (this.running || force);
     
     this.lastTickTime = Date.now();
     this.tickCount++;
@@ -455,7 +523,7 @@ class BackendEngine {
     // Periodic health log every 10 minutes (6000 ticks at 100ms)
     if (this.tickCount % 6000 === 0) {
       const uptimeMinutes = Math.floor((Date.now() - this.startedAt) / 60000);
-      console.log(`[BackendEngine] Health check: uptime=${uptimeMinutes}min, ticks=${this.tickCount}, nodes=${this.nodes.size}`);
+      if (VERBOSE) console.log(`[BackendEngine] Health check: uptime=${uptimeMinutes}min, ticks=${this.tickCount}, nodes=${this.nodes.size}`);
       engineLogger.logEngineEvent('HEALTH', { 
         uptimeMinutes, 
         tickCount: this.tickCount, 
@@ -466,10 +534,26 @@ class BackendEngine {
 
     try {
       // Get execution order
-      const sortedNodeIds = this.topologicalSort();
+      const { order: sortedNodeIds, dependencies } = dependencyOrder(this.nodes, this.connections);
+      const failed = new Set();
       
       // Execute each node
       for (const nodeId of sortedNodeIds) {
+        if (!isCurrent()) return;
+
+        const blockedBy = Array.from(dependencies.get(nodeId)).filter(id => failed.has(id));
+        if (blockedBy.length) {
+          failed.add(nodeId);
+          this.outputs.delete(nodeId);
+          this.nodeErrors.set(nodeId, {
+            ...this.nodeErrors.get(nodeId),
+            message: `Skipped because upstream failed: ${blockedBy.join(', ')}`,
+            blockedBy,
+            lastAt: Date.now()
+          });
+          continue;
+        }
+
         const node = this.nodes.get(nodeId);
         if (!node) continue;
         
@@ -484,21 +568,40 @@ class BackendEngine {
         if (execMethod) {
           try {
             const outputs = await node[execMethod](inputs);
+            if (!isCurrent()) return;
             if (this.debug) {
               console.log(`[BackendEngine] Node ${nodeId} ${execMethod}() returned:`, outputs);
             }
-            if (outputs) {
+            if (outputs && this.nodes.get(nodeId) === node) {
               this.outputs.set(nodeId, outputs);
             }
+            this.nodeErrors.delete(nodeId);
           } catch (error) {
-            if (this.debug) {
+            if (!isCurrent()) return;
+            failed.add(nodeId);
+            this.outputs.delete(nodeId);
+            const previous = this.nodeErrors.get(nodeId);
+            const now = Date.now();
+            const nodeError = {
+              message: error.message,
+              lastAt: now,
+              count: (previous?.count || 0) + 1,
+              lastLoggedAt: previous?.lastLoggedAt
+            };
+            this.nodeErrors.set(nodeId, nodeError);
+            if (nodeError.lastLoggedAt == null || now - nodeError.lastLoggedAt >= 60000) {
+              nodeError.lastLoggedAt = now;
               console.error(`[BackendEngine] Error in node ${nodeId}: ${error.message}`);
             }
           }
         }
       }
+      this.lastTickCompletedTime = Date.now();
+      this.lastTickDurationMs = this.lastTickCompletedTime - tickStartedAt;
+      this.lastTickError = null;
     } catch (error) {
       console.error(`[BackendEngine] Tick error: ${error.message}`);
+      this.lastTickError = { message: error.message, at: Date.now() };
     }
   }
 
@@ -556,16 +659,38 @@ class BackendEngine {
   /**
    * Start the engine
    */
-  async start() {
+  start() {
+    if (this.startPromise) return this.startPromise;
+    const generation = this.lifecycleGeneration;
+    const pending = this._queueLifecycle(() => this._start(generation));
+    const tracked = pending.finally(() => {
+      if (this.startPromise === tracked) this.startPromise = null;
+    });
+    this.startPromise = tracked;
+    return tracked;
+  }
+
+  async _start(generation) {
+    if (generation !== this.lifecycleGeneration) return false;
     if (this.running) {
-      console.log('[BackendEngine] Already running');
-      return;
+      return true;
     }
 
     if (this.nodes.size === 0) {
       console.warn('[BackendEngine] No nodes loaded, cannot start');
-      return;
+      return false;
     }
+
+    // Validate dependency order before changing lifecycle state. A cyclic
+    // graph must leave the engine stopped and its current graph inspectable.
+    const executionOrder = this.topologicalSort();
+
+    if (this.tickPromise) await this.tickPromise;
+    if (generation !== this.lifecycleGeneration) return false;
+    // Best effort, as before: an HA outage must not permanently disable the
+    // whole graph. Device-specific warmup/recovery remains with the HA nodes.
+    this.lastReconciliation = await this.reconcileDeviceStates();
+    if (generation !== this.lifecycleGeneration) return false;
 
     this.running = true;
     this.tickCount = 0;
@@ -588,33 +713,32 @@ class BackendEngine {
     }
     
     // Log execution order
-    const executionOrder = this.topologicalSort();
     engineLogger.log('EXEC-ORDER', 'Node execution order:', executionOrder.map((id, i) => {
       const node = this.nodes.get(id);
       const type = node?.type || node?.constructor?.name || '?';
       return `${i + 1}. ${type} (${id})`;
     }));
     
-    // *** Reconcile device states with HA before first tick ***
-    // This prevents unnecessary OFF commands at startup
-    await this.reconcileDeviceStates();
-    
     // Call tick immediately, then on interval
-    this.tick();
-    this.tickInterval = setInterval(() => this.tick(), this.tickRate);
+    await this.tick();
+    if (generation !== this.lifecycleGeneration || !this.running) return false;
+    if (!this.tickInterval) {
+      this.tickInterval = setInterval(() => this.tick(), this.tickRate);
+    }
     
     engineLogger.logEngineEvent('RUNNING', { tickRate: this.tickRate });
+    return true;
   }
 
   /**
    * Stop the engine
    */
   stop() {
-    if (!this.running) {
-      console.log('[BackendEngine] Not running');
-      return;
-    }
-
+    const wasActive = this.running || this.startPromise !== null;
+    this.lifecycleGeneration++;
+    // A subsequent explicit Start may queue behind the canceled operation.
+    // The old operation is still awaited, never abandoned with Promise.race.
+    this.startPromise = null;
     this.running = false;
     
     if (this.tickInterval) {
@@ -622,32 +746,21 @@ class BackendEngine {
       this.tickInterval = null;
     }
     
-    engineLogger.logEngineEvent('STOP', { tickCount: this.tickCount });
-    console.log(`[BackendEngine] Stopped after ${this.tickCount} ticks`);
+    if (wasActive) {
+      engineLogger.logEngineEvent('STOP', { tickCount: this.tickCount });
+      console.log(`[BackendEngine] Stopped after ${this.tickCount} ticks`);
+    }
   }
 
   /**
-   * Hot-reload graph without stopping
+   * Hot-reload under the same lifecycle queue as startup. Invalid candidates
+   * never stop/dispose the old graph; successful replacement pauses its timer
+   * through `loading` rather than risking a second asynchronous start.
    * @param {object} graphData - New graph data
    */
   async hotReload(graphData) {
-    const wasRunning = this.running;
-    
-    if (wasRunning) {
-      this.stop();
-    }
-    
-    await this.loadGraphData(graphData);
-    
-    // Only restart if there are nodes to process
-    if (wasRunning && this.nodes.size > 0) {
-      await this.start();
-      if (VERBOSE) console.log('[BackendEngine] Hot-reloaded graph and restarted');
-    } else if (wasRunning) {
-      if (VERBOSE) console.log('[BackendEngine] Hot-reload: graph is empty, staying stopped');
-    } else {
-      if (VERBOSE) console.log('[BackendEngine] Hot-reloaded graph (engine was not running)');
-    }
+    const prepared = this._prepareGraph(graphData);
+    return this._queueLifecycle(() => this._replaceGraph(prepared, true));
   }
 
   /**
@@ -657,15 +770,23 @@ class BackendEngine {
   getStatus() {
     return {
       running: this.running,
+      loading: this.loading,
+      starting: this.startPromise !== null && !this.running,
+      lastReconciliation: this.lastReconciliation,
       nodeCount: this.nodes.size,
       connectionCount: this.connections.length,
       tickCount: this.tickCount,
       tickRate: this.tickRate,
       lastTickTime: this.lastTickTime,
+      lastTickCompletedTime: this.lastTickCompletedTime,
+      lastTickDurationMs: this.lastTickDurationMs,
+      lastTickError: this.lastTickError,
+      nodeErrors: Object.fromEntries(this.nodeErrors),
       graphPath: this.graphPath,
       startedAt: this.startedAt,
       uptime: this.startedAt ? Date.now() - this.startedAt : 0,
       registeredNodeTypes: registry.list(),
+      loadDiagnostics: this.loadDiagnostics,
       frontendActive: this.frontendActive,
       frontendLastSeen: this.frontendLastSeen
     };
