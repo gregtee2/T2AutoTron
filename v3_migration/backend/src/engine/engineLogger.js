@@ -24,8 +24,8 @@
  *   - GET /api/engine/logs/device-history - Device command history
  */
 
+const fs = require('fs');
 const path = require('path');
-const BoundedLogWriter = require('../logging/BoundedLogWriter');
 
 // Determine log directory based on environment
 // In HA add-on, /data is a persistent volume that survives container restarts
@@ -41,9 +41,8 @@ const TIMEZONE = process.env.LOCATION_TIMEZONE || process.env.ENGINE_TIMEZONE ||
 // Log level: 0=quiet, 1=normal (default), 2=verbose
 let LOG_LEVEL = parseInt(process.env.ENGINE_LOG_LEVEL || '1', 10);
 
-const logWriter = new BoundedLogWriter({ filePath: LOG_FILE, maxFileBytes: MAX_LOG_SIZE });
+let logStream = null;
 let sessionStart = null;
-let closePromise = null;
 
 // Track last values to detect changes
 const lastBufferValues = new Map();
@@ -127,10 +126,43 @@ function checkHourlySummary() {
   hourlySummary.hour = currentHour;
 }
 
-function initLogger() {
-  if (sessionStart || closePromise) return;
-  sessionStart = new Date();
+function ensureLogDir() {
+  if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+  }
+}
 
+function rotateIfNeeded() {
+  try {
+    if (fs.existsSync(LOG_FILE)) {
+      const stats = fs.statSync(LOG_FILE);
+      if (stats.size > MAX_LOG_SIZE) {
+        const backupFile = LOG_FILE + '.old';
+        if (fs.existsSync(backupFile)) {
+          fs.unlinkSync(backupFile);
+        }
+        fs.renameSync(LOG_FILE, backupFile);
+      }
+    }
+  } catch (err) {
+    // Ignore rotation errors
+  }
+}
+
+function initLogger() {
+  ensureLogDir();
+  rotateIfNeeded();
+  
+  sessionStart = new Date();
+  
+  // Open in append mode
+  try {
+    logStream = fs.createWriteStream(LOG_FILE, { flags: 'a' });
+  } catch (err) {
+    // Silent failure - engine will work without logging
+    return;
+  }
+  
   // Write session header with local time
   const header = `
 ================================================================================
@@ -138,26 +170,26 @@ function initLogger() {
    Timezone: ${TIMEZONE}
 ================================================================================
 `;
-  logWriter.write(header);
-}
-
-function writeLine(line) {
-  initLogger();
-  return logWriter.write(`${line}\n`);
+  logStream.write(header);
 }
 
 /**
  * Low-level write to log file
  */
 function writeLog(line) {
-  writeLine(line);
+  if (!logStream) {
+    initLogger();
+  }
+  logStream.write(line + '\n');
 }
 
 /**
  * Main log function - writes with ISO + local timestamp for both parsing and readability
  */
 function log(category, message, data = null) {
-  initLogger();
+  if (!logStream) {
+    initLogger();
+  }
   
   checkHourlySummary();
   
@@ -175,7 +207,7 @@ function log(category, message, data = null) {
     }
   }
   
-  writeLine(line);
+  logStream.write(line + '\n');
 }
 
 function logNodeExecution(nodeId, nodeType, inputs, outputs) {
@@ -280,9 +312,7 @@ function getLogLevel() {
 }
 
 function close() {
-  if (closePromise) return closePromise;
-  process.removeListener('beforeExit', close);
-  if (sessionStart) {
+  if (logStream) {
     const endTime = new Date();
     const durationMs = sessionStart ? endTime.getTime() - sessionStart.getTime() : 0;
     const hours = Math.floor(durationMs / 3600000);
@@ -295,20 +325,17 @@ function close() {
 ================================================================================
 
 `;
-    logWriter.write(footer);
+    logStream.write(footer);
+    logStream.end();
+    logStream = null;
   }
-  closePromise = logWriter.close();
-  return closePromise;
 }
 
-function getWriterStatus() {
-  return logWriter.getStatus();
-}
-
-// Best effort for natural exit only. Async work cannot finish in an 'exit'
-// listener; explicit shutdown must await close() BEFORE calling process.exit().
-// close() is terminal: subsequent entries are counted as rejected, not reopened.
-process.once('beforeExit', close);
+// Auto-close on process exit
+process.on('exit', close);
+// Don't call process.exit() here - let the main server handle graceful shutdown
+// process.on('SIGINT', () => { close(); process.exit(); });
+// process.on('SIGTERM', () => { close(); process.exit(); });
 
 module.exports = {
   log,
@@ -323,7 +350,6 @@ module.exports = {
   setLogLevel,
   getLogLevel,
   close,
-  getWriterStatus,
   LOG_FILE,
   formatLocalTime,
   formatTime

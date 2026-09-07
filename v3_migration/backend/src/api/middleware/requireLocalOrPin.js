@@ -3,27 +3,35 @@ const authManager = require('./authMiddleware');
 // Detect Home Assistant add-on environment
 const IS_HA_ADDON = !!process.env.SUPERVISOR_TOKEN;
 
-function normalizeIp(ip) {
-  const value = String(ip || '').trim().toLowerCase();
-  return value.startsWith('::ffff:') ? value.slice(7) : value;
-}
-
 function isLoopbackIp(ip) {
-  const normalizedIp = normalizeIp(ip);
-  return normalizedIp === '127.0.0.1' || normalizedIp === '::1';
+  if (!ip) return false;
+  // Express may provide IPv6 and IPv4-mapped IPv6 forms
+  return (
+    ip === '127.0.0.1' ||
+    ip === '::1' ||
+    ip === '::ffff:127.0.0.1' ||
+    ip.endsWith('::1')
+  );
 }
 
 function isDockerInternal(ip) {
-  // HA documents this exact Supervisor ingress peer, not an entire subnet.
-  // Keep the exported name for existing Socket.IO callers.
-  return normalizeIp(ip) === '172.30.32.2';
+  if (!ip) return false;
+  // Docker internal network ranges (172.30.x.x is common for HA add-ons)
+  return (
+    ip.startsWith('172.') ||
+    ip.startsWith('::ffff:172.') ||
+    ip.startsWith('192.168.') ||
+    ip.startsWith('::ffff:192.168.') ||
+    ip.startsWith('10.') ||
+    ip.startsWith('::ffff:10.')
+  );
 }
 
 function getClientIp(req) {
   // Avoid trusting X-Forwarded-For by default.
   // If you later run behind a reverse proxy, set app.set('trust proxy', true)
   // and/or update this accordingly.
-  return req.socket?.remoteAddress || req.connection?.remoteAddress || req.ip || '';
+  return req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || '';
 }
 
 /**
@@ -35,13 +43,14 @@ function getClientIp(req) {
  * - Authorization: Bearer <PIN>
  */
 module.exports = function requireLocalOrPin(req, res, next) {
+  // In HA add-on mode, HA's own ingress authentication handles security.
+  // Adding another auth layer breaks device control and is redundant.
+  if (IS_HA_ADDON) return next();
+
   const clientIp = getClientIp(req);
 
   // Always allow loopback
   if (isLoopbackIp(clientIp)) return next();
-
-  // Trust only the documented ingress peer; LAN/other containers need a PIN.
-  if (IS_HA_ADDON && isDockerInternal(clientIp)) return next();
 
   const headerPin = req.get('X-APP-PIN');
   const auth = req.get('Authorization') || '';
@@ -55,6 +64,3 @@ module.exports = function requireLocalOrPin(req, res, next) {
     error: 'Forbidden: local access or valid PIN required'
   });
 };
-
-module.exports.isLoopbackIp = isLoopbackIp;
-module.exports.isDockerInternal = isDockerInternal;

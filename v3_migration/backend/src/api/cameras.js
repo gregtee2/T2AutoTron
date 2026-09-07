@@ -8,12 +8,8 @@ const router = express.Router();
 const net = require('net');
 const http = require('http');
 const https = require('https');
-const { execFile } = require('child_process');
-const { promisify } = require('util');
-const execFileAsync = promisify(execFile);
+const { execSync } = require('child_process');
 const requireLocalOrPin = require('./middleware/requireLocalOrPin');
-const { cameraConfigStore, validateConfig, mergeCameraUpdate, redactResponse } = require('../cameras/cameraConfigStore');
-const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 
 // Stream manager for RTSP → HLS
 const streamManager = require('../streams/StreamManager');
@@ -24,34 +20,42 @@ const { cameraService } = require('../cameras');
 // Camera discovery (ONVIF + path probing)
 const cameraDiscovery = require('../discovery/CameraDiscovery');
 
-// Camera routes include snapshots, streams, and configuration. Protect every
-// route here so a newly added read endpoint cannot accidentally be public.
-router.use(requireLocalOrPin);
+// Camera configuration stored in memory (could be persisted to file)
+let cameraConfig = {
+    cameras: [],
+    defaultCredentials: {
+        username: '',
+        password: ''
+    },
+    subnet: '192.168.1.',
+    rangeStart: 1,
+    rangeEnd: 254
+};
 
-// Detached snapshots prevent request mutations from changing live settings
-// before a successful save. Importing this router does not read user files.
-router.use((req, res, next) => {
-    try {
-        req.cameraConfig = cameraConfigStore.load();
-        next();
-    } catch {
-        res.status(500).json({ success: false, error: 'Could not read camera configuration' });
-    }
-});
+// Load saved config on startup
+const fs = require('fs');
+const path = require('path');
+const configPath = path.join(__dirname, '../../config/cameras.json');
 
-function saveConfig(config, res) {
-    try {
-        validateConfig(config);
-    } catch {
-        res.status(400).json({ success: false, error: 'Invalid camera settings' });
-        return false;
+try {
+    if (fs.existsSync(configPath)) {
+        cameraConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        console.log(`[Cameras] Loaded ${cameraConfig.cameras?.length || 0} cameras from config`);
     }
+} catch (err) {
+    console.error('[Cameras] Error loading config:', err.message);
+}
+
+// Save config helper
+function saveConfig() {
     try {
-        cameraConfigStore.save(config);
-        return true;
-    } catch {
-        res.status(500).json({ success: false, error: 'Could not save camera configuration' });
-        return false;
+        const configDir = path.dirname(configPath);
+        if (!fs.existsSync(configDir)) {
+            fs.mkdirSync(configDir, { recursive: true });
+        }
+        fs.writeFileSync(configPath, JSON.stringify(cameraConfig, null, 2));
+    } catch (err) {
+        console.error('[Cameras] Error saving config:', err.message);
     }
 }
 
@@ -89,7 +93,7 @@ router.post('/inspect', async (req, res) => {
         return res.status(400).json({ error: 'IP address is required' });
     }
     
-    if (VERBOSE) console.log('[Cameras] Inspecting camera');
+    console.log(`[Cameras] Inspecting camera at ${ip}...`);
     
     try {
         const result = await cameraDiscovery.inspectCamera(ip, username, password, {
@@ -97,12 +101,12 @@ router.post('/inspect', async (req, res) => {
             rtspPort
         });
         
-        if (VERBOSE) console.log(`[Cameras] Inspection result: ${result.success ? 'SUCCESS' : 'FAILED'}`);
-
-        res.json(redactResponse(result));
+        console.log(`[Cameras] Inspection result: ${result.success ? 'SUCCESS' : 'FAILED'} - ${result.method || 'no method'}`);
+        
+        res.json(result);
     } catch (err) {
-        console.error('[Cameras] Inspection failed');
-        res.status(500).json({ error: 'Camera inspection failed' });
+        console.error(`[Cameras] Inspection error:`, err.message);
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -110,9 +114,8 @@ router.post('/inspect', async (req, res) => {
  * GET /api/cameras - List configured cameras
  */
 router.get('/', (req, res) => {
-    const cameraConfig = req.cameraConfig;
     res.json({
-        cameras: cameraConfig.cameras.map(redactResponse),
+        cameras: cameraConfig.cameras,
         defaultCredentials: {
             username: cameraConfig.defaultCredentials?.username || '',
             hasPassword: !!cameraConfig.defaultCredentials?.password
@@ -124,10 +127,9 @@ router.get('/', (req, res) => {
  * POST /api/cameras - Add or update a camera
  */
 router.post('/', requireLocalOrPin, (req, res) => {
-    const cameraConfig = req.cameraConfig;
-    const { ip } = req.body || {};
+    const { ip, name, username, password, snapshotPath, rtspPath } = req.body;
     
-    if (typeof ip !== 'string' || !ip.trim()) {
+    if (!ip) {
         return res.status(400).json({ error: 'IP address is required' });
     }
     
@@ -135,25 +137,16 @@ router.post('/', requireLocalOrPin, (req, res) => {
     const existingIndex = cameraConfig.cameras.findIndex(c => c.ip === ip);
     const existingCamera = existingIndex >= 0 ? cameraConfig.cameras[existingIndex] : null;
     
-    const base = existingCamera || {
+    const camera = {
         ip,
-        name: `Camera ${ip}`,
-        username: cameraConfig.defaultCredentials.username,
-        password: cameraConfig.defaultCredentials.password,
-        snapshotPath: '/cgi-bin/snapshot.cgi',
-        rtspPath: '/stream1',
-        addedAt: new Date().toISOString()
+        name: name || existingCamera?.name || `Camera ${ip}`,
+        username: username !== undefined ? username : (existingCamera?.username || cameraConfig.defaultCredentials?.username || ''),
+        // Only update password if a new one is provided (non-empty string)
+        password: password ? password : (existingCamera?.password || cameraConfig.defaultCredentials?.password || ''),
+        snapshotPath: snapshotPath || existingCamera?.snapshotPath || '/cgi-bin/snapshot.cgi',
+        rtspPath: rtspPath || existingCamera?.rtspPath || '/stream1',
+        addedAt: existingCamera?.addedAt || new Date().toISOString()
     };
-
-    let camera;
-    try {
-        camera = mergeCameraUpdate(base, req.body);
-        // Empty password from the Settings form means keep the saved password.
-        if (req.body.password === '') camera.password = base.password;
-        camera.addedAt = base.addedAt;
-    } catch {
-        return res.status(400).json({ success: false, error: 'Invalid or redacted camera settings' });
-    }
     
     if (existingIndex >= 0) {
         cameraConfig.cameras[existingIndex] = camera;
@@ -161,21 +154,20 @@ router.post('/', requireLocalOrPin, (req, res) => {
         cameraConfig.cameras.push(camera);
     }
     
-    if (!saveConfig(cameraConfig, res)) return;
-    res.json({ success: true, camera: redactResponse(camera) });
+    saveConfig();
+    res.json({ success: true, camera });
 });
 
 /**
  * DELETE /api/cameras/:ip - Remove a camera
  */
 router.delete('/:ip', requireLocalOrPin, (req, res) => {
-    const cameraConfig = req.cameraConfig;
     const ip = req.params.ip;
     const initialLength = cameraConfig.cameras.length;
     cameraConfig.cameras = cameraConfig.cameras.filter(c => c.ip !== ip);
     
     if (cameraConfig.cameras.length < initialLength) {
-        if (!saveConfig(cameraConfig, res)) return;
+        saveConfig();
         res.json({ success: true });
     } else {
         res.status(404).json({ error: 'Camera not found' });
@@ -186,17 +178,9 @@ router.delete('/:ip', requireLocalOrPin, (req, res) => {
  * POST /api/cameras/credentials - Set default credentials
  */
 router.post('/credentials', requireLocalOrPin, (req, res) => {
-    const cameraConfig = req.cameraConfig;
-    const { username, password } = req.body || {};
-    try {
-        const changes = {};
-        if (username !== undefined) changes.username = username;
-        if (password !== undefined && password !== '') changes.password = password;
-        cameraConfig.defaultCredentials = mergeCameraUpdate(cameraConfig.defaultCredentials, changes);
-    } catch {
-        return res.status(400).json({ success: false, error: 'Invalid or redacted camera credentials' });
-    }
-    if (!saveConfig(cameraConfig, res)) return;
+    const { username, password } = req.body;
+    cameraConfig.defaultCredentials = { username, password };
+    saveConfig();
     res.json({ success: true });
 });
 
@@ -204,7 +188,6 @@ router.post('/credentials', requireLocalOrPin, (req, res) => {
  * POST /api/cameras/discover - Scan network for cameras
  */
 router.post('/discover', async (req, res) => {
-    const cameraConfig = req.cameraConfig;
     const { subnet, rangeStart, rangeEnd } = req.body;
     
     const scanSubnet = subnet || cameraConfig.subnet || '192.168.1.';
@@ -258,25 +241,16 @@ router.post('/discover', async (req, res) => {
  * Fetch snapshot using curl with digest auth support
  * Many cameras (Amcrest, Dahua) require digest auth which Node.js http doesn't support natively
  */
-async function fetchSnapshotWithCurl(url, username, password) {
+function fetchSnapshotWithCurl(url, username, password) {
     try {
-        // Use argument-based execution so camera credentials and URLs are never
-        // interpreted by a shell.
-        const curlArgs = [
-            '--max-time', '10',
-            '--silent',
-            '--output', '-'
-        ];
-        if (username && password) {
-            curlArgs.unshift('--anyauth', '-u', `${username}:${password}`);
-        }
-        curlArgs.push('--', url);
+        // Build curl command with both basic and digest auth support
+        const authArgs = username && password ? `--anyauth -u "${username}:${password}"` : '';
+        const cmd = `curl ${authArgs} "${url}" --max-time 10 --silent --output -`;
         
-        // Execute curl without blocking the automation event loop.
-        const { stdout: buffer } = await execFileAsync('curl', curlArgs, {
+        // Execute curl and capture binary output
+        const buffer = execSync(cmd, { 
             encoding: 'buffer',
-            maxBuffer: 10 * 1024 * 1024,
-            timeout: 12000
+            maxBuffer: 10 * 1024 * 1024  // 10MB max
         });
         
         // Verify it's a JPEG (starts with 0xFF 0xD8)
@@ -295,7 +269,6 @@ async function fetchSnapshotWithCurl(url, username, password) {
  * Supports both basic and digest authentication via curl
  */
 router.get('/snapshot/:ip', async (req, res) => {
-    const cameraConfig = req.cameraConfig;
     const ip = req.params.ip;
     const camera = cameraConfig.cameras.find(c => c.ip === ip);
     
@@ -334,21 +307,13 @@ router.get('/snapshot/:ip', async (req, res) => {
             const url = `http://${ip}${snapshotPath}`;
             
             // Use curl for snapshot (supports both basic and digest auth)
-            const imageData = await fetchSnapshotWithCurl(url, username, password);
+            const imageData = fetchSnapshotWithCurl(url, username, password);
             
             if (imageData && imageData.length > 1000) {
-                // Merge into the latest snapshot after the network await, not
-                // the stale request copy (another request may have edited it).
+                // Success - update camera config with working path
                 if (camera.snapshotPath !== snapshotPath) {
-                    const latest = cameraConfigStore.load();
-                    const current = latest.cameras.find(c => c.ip === ip);
-                    if (current && current.snapshotPath === camera.snapshotPath &&
-                        current.username === camera.username && current.password === camera.password &&
-                        latest.defaultCredentials.username === cameraConfig.defaultCredentials.username &&
-                        latest.defaultCredentials.password === cameraConfig.defaultCredentials.password) {
-                        current.snapshotPath = snapshotPath;
-                        if (!saveConfig(latest, res)) return;
-                    }
+                    camera.snapshotPath = snapshotPath;
+                    saveConfig();
                 }
                 
                 res.set('Content-Type', 'image/jpeg');
@@ -369,7 +334,6 @@ router.get('/snapshot/:ip', async (req, res) => {
  * GET /api/cameras/test/:ip - Test camera connection
  */
 router.get('/test/:ip', async (req, res) => {
-    const cameraConfig = req.cameraConfig;
     const ip = req.params.ip;
     const camera = cameraConfig.cameras.find(c => c.ip === ip);
     
@@ -423,7 +387,6 @@ router.get('/test/:ip', async (req, res) => {
  * POST /api/cameras/stream/:ip/start - Start RTSP → HLS stream
  */
 router.post('/stream/:ip/start', (req, res) => {
-    const cameraConfig = req.cameraConfig;
     const ip = req.params.ip;
     const camera = cameraConfig.cameras.find(c => c.ip === ip);
     
@@ -445,10 +408,11 @@ router.post('/stream/:ip/start', (req, res) => {
         rtspUrl: camera.rtspUrl  // Optional explicit URL
     };
     
-    if (VERBOSE) console.log('[Cameras] Starting stream');
+    console.log(`[Cameras] Starting stream for ${ip}`);
+    console.log(`[Cameras] Using credentials: user=${username ? username : '(none)'}, pass=${password ? '****' : '(none)'}, path=${streamConfig.rtspPath}`);
     const result = streamManager.startStream(streamConfig);
     
-    res.json(redactResponse(result));
+    res.json(result);
 });
 
 /**
@@ -461,7 +425,7 @@ router.post('/stream/:ip/stop', (req, res) => {
     console.log(`[Cameras] Stopping stream for ${ip} (force=${force})`);
     const result = streamManager.stopStream(ip, force);
     
-    res.json(redactResponse(result));
+    res.json(result);
 });
 
 /**
@@ -484,7 +448,7 @@ router.get('/stream/:ip/status', (req, res) => {
  */
 router.get('/streams', (req, res) => {
     res.json({
-        streams: redactResponse(streamManager.getActiveStreams())
+        streams: streamManager.getActiveStreams()
     });
 });
 
@@ -501,7 +465,6 @@ router.get('/rtsp-presets', (req, res) => {
  * PUT /api/cameras/:ip/rtsp - Update camera RTSP settings
  */
 router.put('/:ip/rtsp', requireLocalOrPin, (req, res) => {
-    const cameraConfig = req.cameraConfig;
     const ip = req.params.ip;
     const { rtspPort, rtspPath, rtspUrl } = req.body;
     
@@ -510,20 +473,14 @@ router.put('/:ip/rtsp', requireLocalOrPin, (req, res) => {
         return res.status(404).json({ error: 'Camera not found' });
     }
     
-    let updated;
-    try {
-        const changes = {};
-        if (rtspPort !== undefined) changes.rtspPort = rtspPort;
-        if (rtspPath !== undefined) changes.rtspPath = rtspPath;
-        if (rtspUrl !== undefined) changes.rtspUrl = rtspUrl;
-        updated = mergeCameraUpdate(camera, changes);
-    } catch {
-        return res.status(400).json({ success: false, error: 'Invalid or redacted camera settings' });
-    }
-    cameraConfig.cameras[cameraConfig.cameras.indexOf(camera)] = updated;
-    if (!saveConfig(cameraConfig, res)) return;
-
-    res.json({ success: true, camera: redactResponse(updated) });
+    // Update RTSP settings
+    if (rtspPort !== undefined) camera.rtspPort = rtspPort;
+    if (rtspPath !== undefined) camera.rtspPath = rtspPath;
+    if (rtspUrl !== undefined) camera.rtspUrl = rtspUrl;
+    
+    saveConfig();
+    
+    res.json({ success: true, camera });
 });
 
 // =============================================================================
@@ -551,8 +508,7 @@ const MJPEG_PATHS = {
  * 
  * The browser will continuously receive JPEG frames - true live video with no JS!
  */
-router.get('/mjpeg/:ip', (req, res) => {
-    const cameraConfig = req.cameraConfig;
+router.get('/mjpeg/:ip', async (req, res) => {
     const ip = req.params.ip;
     const camera = cameraConfig.cameras.find(c => c.ip === ip);
     
@@ -576,7 +532,7 @@ router.get('/mjpeg/:ip', (req, res) => {
     
     const url = `http://${ip}${mjpegPath}`;
     
-    if (VERBOSE) console.log('[Cameras] MJPEG proxy starting');
+    console.log(`[Cameras] MJPEG proxy starting for ${ip}: ${mjpegPath}`);
     
     // We need to use a child process with curl for digest auth support
     // Stream the output directly to the response
@@ -604,12 +560,12 @@ router.get('/mjpeg/:ip', (req, res) => {
     curl.stderr.on('data', (data) => {
         const msg = data.toString();
         if (msg.includes('error') || msg.includes('Error')) {
-            console.error('[Cameras] MJPEG curl error');
+            console.error(`[Cameras] MJPEG curl error for ${ip}:`, msg);
         }
     });
     
     curl.on('error', (err) => {
-        console.error('[Cameras] MJPEG spawn error');
+        console.error(`[Cameras] MJPEG spawn error for ${ip}:`, err.message);
         if (!res.headersSent) {
             res.status(500).json({ error: 'Failed to start MJPEG stream' });
         }
@@ -632,7 +588,6 @@ router.get('/mjpeg/:ip', (req, res) => {
  * PUT /api/cameras/:ip/mjpeg - Update camera MJPEG path
  */
 router.put('/:ip/mjpeg', requireLocalOrPin, (req, res) => {
-    const cameraConfig = req.cameraConfig;
     const ip = req.params.ip;
     const { mjpegPath } = req.body;
     
@@ -641,16 +596,10 @@ router.put('/:ip/mjpeg', requireLocalOrPin, (req, res) => {
         return res.status(404).json({ error: 'Camera not found' });
     }
     
-    let updated;
-    try {
-        updated = mergeCameraUpdate(camera, mjpegPath === undefined ? {} : { mjpegPath });
-    } catch {
-        return res.status(400).json({ success: false, error: 'Invalid or redacted camera settings' });
-    }
-    cameraConfig.cameras[cameraConfig.cameras.indexOf(camera)] = updated;
-    if (!saveConfig(cameraConfig, res)) return;
-
-    res.json({ success: true, camera: redactResponse(updated) });
+    camera.mjpegPath = mjpegPath;
+    saveConfig();
+    
+    res.json({ success: true, camera });
 });
 
 /**
@@ -670,9 +619,9 @@ router.get('/mjpeg-paths', (req, res) => {
 router.get('/service/status', (req, res) => {
     try {
         const status = cameraService.getAllStatus();
-        res.json(redactResponse(status));
+        res.json(status);
     } catch (err) {
-        res.status(500).json({ error: 'Could not read camera service status' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -684,7 +633,7 @@ router.post('/service/start', requireLocalOrPin, (req, res) => {
         cameraService.startAll();
         res.json({ success: true, message: 'All cameras started' });
     } catch (err) {
-        res.status(500).json({ error: 'Could not start cameras' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -696,7 +645,7 @@ router.post('/service/stop', requireLocalOrPin, (req, res) => {
         cameraService.stopAll();
         res.json({ success: true, message: 'All cameras stopped' });
     } catch (err) {
-        res.status(500).json({ error: 'Could not stop cameras' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -709,7 +658,7 @@ router.post('/service/reload', requireLocalOrPin, async (req, res) => {
         cameraService.startAll();
         res.json({ success: true, message: 'Camera service reloaded' });
     } catch (err) {
-        res.status(500).json({ error: 'Could not reload camera configuration' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -735,7 +684,7 @@ router.get('/frame/:ip', (req, res) => {
         res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.send(frame);
     } catch (err) {
-        res.status(500).json({ error: 'Could not read camera frame' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -769,7 +718,7 @@ router.get('/frames/:ip', (req, res) => {
             }))
         });
     } catch (err) {
-        res.status(500).json({ error: 'Could not read camera frames' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -793,7 +742,7 @@ router.get('/frame/:ip/:index', (req, res) => {
         res.set('X-Frame-Timestamp', frame.timestamp);
         res.send(frame.data);
     } catch (err) {
-        res.status(500).json({ error: 'Could not read camera frame' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -833,7 +782,7 @@ router.get('/service/camera/:ip/status', (req, res) => {
     
     const status = cameraService.getCameraStatus(ip);
     if (status) {
-        res.json(redactResponse(status));
+        res.json(status);
     } else {
         res.status(404).json({ error: `Camera ${ip} not found` });
     }
@@ -886,7 +835,7 @@ router.get('/mjpeg/:ip', (req, res) => {
             framesSent++;
             return true;
         } catch (err) {
-            console.error('[Cameras] MJPEG write failed');
+            console.log(`[Cameras] MJPEG write error for ${ip}: ${err.message}`);
             return false;
         }
     };
@@ -917,14 +866,6 @@ router.get('/mjpeg/:ip', (req, res) => {
         isStreaming = false;
         clearInterval(streamInterval);
     });
-});
-
-// Catch synchronous dependency failures without Express echoing an error stack
-// (which can contain a full camera URI or a curl command with its password).
-router.use((error, req, res, next) => {
-    console.error('[Cameras] Camera operation failed');
-    if (res.headersSent) return res.end();
-    res.status(500).json({ success: false, error: 'Camera operation failed' });
 });
 
 module.exports = router;

@@ -2,16 +2,6 @@ const fetch = require('node-fetch');
 const WebSocket = require('ws');
 const logger = require('../../logging/logger');
 
-// node-fetch errors and HA response bodies may contain credential-bearing
-// URLs. Keep error envelopes useful without forwarding those raw strings.
-function safeRequestError(error) {
-  if (Number.isInteger(error?.status)) return `HA API error: ${error.status}`;
-  if (error?.name === 'AbortError' || ['request-timeout', 'body-timeout'].includes(error?.type)) {
-    return 'HA request cancelled or timed out';
-  }
-  return 'Home Assistant request failed';
-}
-
 // Lazy-load commandTracker to avoid circular dependencies
 let commandTracker = null;
 function getCommandTracker() {
@@ -33,16 +23,6 @@ class HomeAssistantManager {
       token: process.env.HA_TOKEN,
     };
     this.ws = null;
-    this.wsReconnectTimer = null;
-    this.wsReconnectAttempts = 0;
-    this.wsReconnectEnabled = true;
-    this.connectionGeneration = 0;
-    this.active = false;
-    this.initialRequest = null;
-    this.wsHandshakeTimer = null;
-    this.log = logger.log.bind(logger);
-    this.INITIAL_REQUEST_TIMEOUT = 10000;
-    this.WS_HANDSHAKE_TIMEOUT = 10000;
     this.io = null;
     this.notificationEmitter = null;  // Store for lock state change notifications
     this.isConnected = false;
@@ -57,92 +37,6 @@ class HomeAssistantManager {
     this.deviceHealth = new Map(); // entityId -> { failures: number, lastFailure: Date, unhealthy: boolean }
     this.FAILURE_THRESHOLD = 3; // Mark unhealthy after 3 consecutive failures
     this.UNHEALTHY_RETRY_INTERVAL = 5 * 60 * 1000; // Retry unhealthy devices every 5 minutes
-  }
-
-  clearReconnectTimer() {
-    clearTimeout(this.wsReconnectTimer);
-    this.wsReconnectTimer = null;
-  }
-
-  closeWebSocket() {
-    clearTimeout(this.wsHandshakeTimer);
-    this.wsHandshakeTimer = null;
-    const ws = this.ws;
-    this.ws = null; // Retire it before close/error callbacks can run.
-    this.wsConnected = false;
-    if (ws) {
-      try {
-        if (typeof ws.terminate === 'function') ws.terminate();
-        else ws.close();
-      } catch (_) { /* Already closed. */ }
-    }
-  }
-
-  cancelConnection() {
-    this.connectionGeneration++;
-    this.clearReconnectTimer();
-    this.initialRequest?.cancel();
-    this.initialRequest = null;
-    this.closeWebSocket();
-    this.isConnected = false;
-  }
-
-  // Bound the entire request, including response.json(). Cancellation also
-  // settles the initializer when a transport/mock does not honor AbortSignal.
-  async fetchInitialStates(config) {
-    const controller = new AbortController();
-    let cancel;
-    let timer;
-    const cancelled = new Promise((_, reject) => {
-      cancel = () => {
-        clearTimeout(timer);
-        controller.abort();
-        reject(new Error('HA initial request cancelled or timed out'));
-      };
-    });
-    const request = { cancel };
-    this.initialRequest = request;
-    timer = setTimeout(cancel, this.INITIAL_REQUEST_TIMEOUT);
-    timer.unref?.();
-    try {
-      return await Promise.race([
-        (async () => {
-          const response = await fetch(`${config.host}/api/states`, {
-            headers: { Authorization: `Bearer ${config.token}` },
-            signal: controller.signal,
-            timeout: this.INITIAL_REQUEST_TIMEOUT
-          });
-          if (!response.ok) {
-            throw Object.assign(new Error('HA API request failed'), { status: response.status });
-          }
-          return response.json();
-        })(),
-        cancelled
-      ]);
-    } finally {
-      clearTimeout(timer);
-      if (this.initialRequest === request) this.initialRequest = null;
-    }
-  }
-
-  scheduleWebSocketReconnect(log = this.log, generation = this.connectionGeneration) {
-    if (generation !== this.connectionGeneration || !this.active || !this.wsReconnectEnabled || this.wsReconnectTimer || this.ws || this.initialRequest || !this.io || !this.notificationEmitter || !this.config.token) {
-      return;
-    }
-
-    const attempt = this.wsReconnectAttempts++;
-    const delay = Math.min(30000, 1000 * (2 ** Math.min(attempt, 5))) + Math.floor(Math.random() * 250);
-    log(`HA WebSocket reconnect scheduled in ${delay}ms (attempt ${attempt + 1})`, 'warn', false, 'ha:websocket:reconnect');
-
-    const timer = setTimeout(() => {
-      if (this.wsReconnectTimer !== timer || generation !== this.connectionGeneration || !this.wsReconnectEnabled) return;
-      this.wsReconnectTimer = null;
-      // Creating a socket is not a failed handshake. Only the attempt's
-      // failure handlers may schedule the next retry.
-      void this.initializeConnection(generation, log);
-    }, delay);
-    this.wsReconnectTimer = timer;
-    this.wsReconnectTimer.unref?.();
   }
 
   /**
@@ -205,67 +99,52 @@ class HomeAssistantManager {
     return unhealthy;
   }
 
-  getStatusHost() {
-    try {
-      const url = new URL(this.config.host);
-      return ['http:', 'https:'].includes(url.protocol) ? url.origin : 'Not configured';
-    } catch (_) {
-      return 'Not configured';
-    }
-  }
-
   broadcastConnectionStatus() {
     if (this.io) {
       this.io.emit('ha-connection-status', {
         connected: this.isConnected,
         wsConnected: this.wsConnected,
         deviceCount: this.devices.length,
-        host: this.getStatusHost()
+        host: this.config.host
       });
     }
   }
 
-  async initialize(io, notificationEmitter, log = this.log) {
-    this.updateConfig();
-    this.cancelConnection();
+  async initialize(io, notificationEmitter, log) {
     this.io = io;
-    this.notificationEmitter = notificationEmitter;
-    this.log = log;
-    this.active = true;
-    this.wsReconnectEnabled = true;
-    this.wsReconnectAttempts = 0;
-    this.broadcastConnectionStatus();
-    return this.initializeConnection(this.connectionGeneration, log);
-  }
-
-  async initializeConnection(generation, log) {
-    const isCurrent = () => this.active && generation === this.connectionGeneration;
-    if (!isCurrent() || !this.wsReconnectEnabled) return [];
-    const { io, notificationEmitter } = this;
-    const config = { ...this.config }; // Never authenticate an old socket with a new token.
+    this.notificationEmitter = notificationEmitter;  // Store for lock notifications
     try {
-      log('Initializing Home Assistant...', 'info', false, 'ha:init');
-      if (!config.token) {
-        this.wsReconnectEnabled = false;
-        throw new Error('HA token is not configured');
-      }
-      const states = await this.fetchInitialStates(config);
-      if (!isCurrent()) return [];
+      // Always refresh config from current environment before connecting.
+      // This prevents stale host/token if the module was loaded before dotenv
+      // or if settings were updated at runtime.
+      this.updateConfig();
+
+      await log('Initializing Home Assistant...', 'info', false, 'ha:init');
+      await log(
+        `HA config: host=${this.config.host} token=${this.config.token ? 'set' : 'missing'}`,
+        'info',
+        false,
+        'ha:config'
+      );
+      const response = await fetch(`${this.config.host}/api/states`, {
+        headers: { Authorization: `Bearer ${this.config.token}` },
+      });
+      if (!response.ok) throw new Error(`HA API error: ${response.status}: ${response.statusText}`);
+      const states = await response.json();
       this.devices = states.filter(s => {
         const domain = s.entity_id.split('.')[0];
         return ['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather', 'device_tracker', 'person', 'lock', 'climate', 'vacuum', 'camera'].includes(domain);
       });
 
-      // REST-only users can read the snapshot; real-time readiness requires
-      // a confirmed subscription, not just a successful REST request.
-      this.isConnected = !(io && notificationEmitter);
+      this.isConnected = true;
 
-      // Discard the previous snapshot before getDevices builds its cache.
-      this.stateCache.clear();
-      this.deviceCache = null;
-      this.getDevices();
+      // Initialize device cache
+      this.deviceCache = {
+        data: this.getDevices(),
+        expiry: Date.now() + this.DEVICE_CACHE_TTL
+      };
 
-      log(`Initialized ${this.devices.length} HA devices`, 'info', false, 'ha:initialized');
+      await log(`Initialized ${this.devices.length} HA devices`, 'info', false, 'ha:initialized');
       this.broadcastConnectionStatus();
 
       if (io && notificationEmitter) {
@@ -286,96 +165,34 @@ class HomeAssistantManager {
           // REMOVED: notificationEmitter.emit - no Telegram spam on init
         });
 
-        if (!isCurrent()) return [];
-        const ws = new WebSocket(`${config.host.replace(/^http/, 'ws')}/api/websocket`);
-        this.ws = ws;
-        let phase = 'waiting-auth';
-        const isCurrentSocket = () => isCurrent() && this.ws === ws;
-        const fail = (message, retry = true) => {
-          if (!isCurrentSocket()) return;
-          this.isConnected = false;
-          if (!retry) {
-            this.wsReconnectEnabled = false;
+        // Initialize WebSocket for real-time updates
+        // Close existing WebSocket if reconnecting to prevent memory leak
+        if (this.ws) {
+          try {
+            this.ws.close();
+          } catch (e) {
+            // Ignore close errors
           }
-          this.clearReconnectTimer();
-          this.closeWebSocket();
-          log(message, 'warn', false, 'ha:websocket:failure');
+          this.ws = null;
+        }
+        this.ws = new WebSocket(`${this.config.host.replace('http', 'ws')}/api/websocket`);
+        this.ws.on('open', () => {
+          this.ws.send(JSON.stringify({ type: 'auth', access_token: this.config.token }));
+          this.ws.send(JSON.stringify({ id: 1, type: 'subscribe_events', event_type: 'state_changed' }));
+          this.wsConnected = true;
+          log(' HA WebSocket connected', 'info', false, 'ha:websocket');
           this.broadcastConnectionStatus();
-          if (retry) this.scheduleWebSocketReconnect(log, generation);
-        };
-        // Covers transport open, auth_required/auth_ok, and subscription ack.
-        this.wsHandshakeTimer = setTimeout(() => {
-          fail('HA WebSocket authentication/subscription timed out');
-        }, this.WS_HANDSHAKE_TIMEOUT);
-        this.wsHandshakeTimer.unref?.();
-        ws.on('open', () => {
-          if (!isCurrentSocket()) return;
-          log('HA WebSocket transport connected; awaiting authentication', 'info', false, 'ha:websocket');
         });
-        ws.on('message', (data) => {
-          if (!isCurrentSocket()) return;
+        this.ws.on('message', (data) => {
           try {
             const msg = JSON.parse(data);
-            if (msg.type === 'auth_required' && phase === 'waiting-auth') {
-              phase = 'auth-sent';
-              ws.send(JSON.stringify({ type: 'auth', access_token: config.token }));
-              return;
-            }
-            if (msg.type === 'auth_ok' && phase === 'auth-sent') {
-              phase = 'subscribing';
-              ws.send(JSON.stringify({ id: 1, type: 'subscribe_events', event_type: 'state_changed' }));
-              return;
-            }
-
-            if (msg.type === 'auth_invalid') {
-              fail('HA WebSocket authentication rejected; update HA credentials', false);
-              return;
-            }
-
-            if (msg.type === 'result' && msg.id === 1 && phase === 'subscribing') {
-              if (!msg.success) {
-                fail('HA WebSocket subscription failed', msg.error?.code !== 'unauthorized');
-                return;
-              }
-
-              phase = 'ready';
-              clearTimeout(this.wsHandshakeTimer);
-              this.wsHandshakeTimer = null;
-              this.clearReconnectTimer();
-              this.isConnected = true;
-              this.wsConnected = true;
-              this.wsReconnectAttempts = 0;
-              log('HA WebSocket authenticated and subscribed', 'info', false, 'ha:websocket');
-              this.broadcastConnectionStatus();
-              return;
-            }
-
-            if (phase === 'ready' && msg.type === 'event' && msg.event?.event_type === 'state_changed') {
+            if (msg.type === 'event' && msg.event.event_type === 'state_changed') {
               const entity = msg.event.data.new_state;
               const oldEntity = msg.event.data.old_state;
               const context = msg.event.data.context; // HA's context: user_id, parent_id, id
-              const entityId = entity?.entity_id || oldEntity?.entity_id;
-              if (!entityId) return;
-              const domain = entityId.split('.')[0];
+              if (!entity) return;
+              const domain = entity.entity_id.split('.')[0];
               if (!['light', 'switch', 'sensor', 'binary_sensor', 'media_player', 'fan', 'cover', 'weather', 'device_tracker', 'person', 'lock', 'climate', 'vacuum', 'camera'].includes(domain)) return;
-
-              if (!entity) {
-                const cacheKey = `ha_${entityId}`;
-                this.stateCache.delete(entityId);
-                this.stateCache.delete(cacheKey);
-                this.deviceCache = null;
-                this.devices = this.devices.filter(device => device.entity_id !== entityId);
-                io.emit('device-state-update', {
-                  id: cacheKey,
-                  name: oldEntity?.attributes?.friendly_name || entityId,
-                  type: domain,
-                  state: 'unavailable',
-                  on: false,
-                  attributes: {}
-                });
-                log(`HA entity removed: ${entityId}`, 'warn', false, `ha:removed:${entityId}`);
-                return;
-              }
 
               // Track state change origin for debugging
               const tracker = getCommandTracker();
@@ -391,7 +208,6 @@ class HomeAssistantManager {
 
               // Invalidate cache on state change
               const cacheKey = `ha_${entity.entity_id}`;
-              this.stateCache.delete(entity.entity_id);
               this.stateCache.delete(cacheKey);
               
               // Also invalidate device list cache so getDevices() returns fresh data
@@ -461,38 +277,42 @@ class HomeAssistantManager {
                 }
               }
             }
-          } catch (_) {
-            // Parser/transport errors can contain payloads or credential URLs.
-            fail('HA WebSocket message processing failed');
+          } catch (err) {
+            log(`HA WebSocket message error: ${err.message}`, 'error', false, 'ha:websocket:message');
           }
         });
-        ws.on('error', () => {
-          fail('HA WebSocket transport error');
+        this.ws.on('error', (err) => {
+          this.wsConnected = false;
+          log(`HA WebSocket error: ${err.message}`, 'error', false, 'ha:websocket:error');
+          this.broadcastConnectionStatus();
         });
-        ws.on('unexpected-response', (_request, response) => {
-          fail('HA WebSocket upgrade rejected', ![401, 403].includes(response.statusCode));
-        });
-        ws.on('close', () => {
-          fail('HA WebSocket closed');
+        this.ws.on('close', () => {
+          this.wsConnected = false;
+          log('HA WebSocket closed', 'warn', false, 'ha:websocket:close');
+          this.broadcastConnectionStatus();
         });
       }
       return this.devices;
     } catch (error) {
-      if (!isCurrent()) return [];
       this.isConnected = false;
-      this.closeWebSocket();
-      if (error.status === 401 || error.status === 403) {
-        this.wsReconnectEnabled = false;
-      }
+      this.wsConnected = false;
 
-      log(
-        `HA initialization failed${Number.isInteger(error.status) ? ` (HTTP ${error.status})` : ''}; check HA connection and credentials`,
+      // Include as much actionable detail as we can
+      const errCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+      const hint =
+        (errCode === 'ENOTFOUND' || errCode === 'EAI_AGAIN') &&
+        typeof this.config.host === 'string' &&
+        this.config.host.includes('.local')
+          ? ' (Hint: Windows sometimes cannot resolve *.local; try setting HA_HOST to a fixed IP like http://192.168.x.x:8123)'
+          : '';
+
+      await log(
+        `HA initialization failed (host=${this.config.host}, token=${this.config.token ? 'set' : 'missing'}${errCode ? `, code=${errCode}` : ''}): ${error.message}${hint}`,
         'error',
         false,
         'ha:error'
       );
       this.broadcastConnectionStatus();
-      this.scheduleWebSocketReconnect(log, generation);
       return [];
     }
   }
@@ -516,7 +336,7 @@ class HomeAssistantManager {
         headers: { Authorization: `Bearer ${this.config.token}` },
         timeout: 5000
       });
-      if (!response.ok) throw Object.assign(new Error('HA API request failed'), { status: response.status });
+      if (!response.ok) throw new Error(`HA API error: ${response.status}: ${response.statusText}`);
       const data = await response.json();
 
       const entityType = rawId.split('.')[0];
@@ -552,9 +372,8 @@ class HomeAssistantManager {
 
       return { success: true, state };
     } catch (error) {
-      const message = safeRequestError(error);
-      await logger.log(`Failed to fetch state for HA device ${id}: ${message}`, 'error', false, `ha:state:${id}`);
-      return { success: false, error: message };
+      await logger.log(`Failed to fetch state for HA device ${id}: ${error.message}`, 'error', false, `ha:state:${id}`);
+      return { success: false, error: error.message };
     }
   }
 
@@ -666,7 +485,8 @@ class HomeAssistantManager {
         timeout: 5000
       });
       if (!response.ok) {
-        throw Object.assign(new Error('HA API request failed'), { status: response.status });
+        const errorBody = await response.text();
+        throw new Error(`HA API error: ${response.status}: ${response.statusText}, Body: ${errorBody}`);
       }
 
       // Invalidate cache after update
@@ -679,14 +499,13 @@ class HomeAssistantManager {
       return { success: true };
     } catch (error) {
       // Record failure - may mark device as unhealthy
-      const message = safeRequestError(error);
-      const isNowUnhealthy = this.recordDeviceFailure(rawId, message);
+      const isNowUnhealthy = this.recordDeviceFailure(rawId, error.message);
       
       // Only log if device just became unhealthy or is healthy (not spam for known-bad devices)
       if (!isNowUnhealthy) {
-        await logger.log(`HA state update failed for ${id}: ${message}`, 'error', false, `ha:state:${id}`);
+        await logger.log(`HA state update failed for ${id}: ${error.message}`, 'error', false, `ha:state:${id}`);
       }
-      return { success: false, error: message };
+      return { success: false, error: error.message };
     }
   }
 
@@ -725,7 +544,8 @@ class HomeAssistantManager {
       });
 
       if (!response.ok) {
-        throw Object.assign(new Error('HA API request failed'), { status: response.status });
+        const errorBody = await response.text();
+        throw new Error(`HA API error: ${response.status}: ${response.statusText}, Body: ${errorBody}`);
       }
 
       // Record success
@@ -735,14 +555,13 @@ class HomeAssistantManager {
       return { success: true };
     } catch (error) {
       // Record failure
-      const message = safeRequestError(error);
-      const isNowUnhealthy = entityId ? this.recordDeviceFailure(entityId, message) : false;
+      const isNowUnhealthy = entityId ? this.recordDeviceFailure(entityId, error.message) : false;
       
       // Only log if not already marked unhealthy (prevents spam)
       if (!isNowUnhealthy) {
-        await logger.log(`HA service call failed: ${domain}.${service} - ${message}`, 'error', false, `ha:service:${domain}`);
+        await logger.log(`HA service call failed: ${domain}.${service} - ${error.message}`, 'error', false, `ha:service:${domain}`);
       }
-      return { success: false, error: message };
+      return { success: false, error: error.message };
     }
   }
 
@@ -781,38 +600,31 @@ class HomeAssistantManager {
 
   // Cleanup WebSocket on shutdown
   shutdown() {
-    this.active = false;
-    this.wsReconnectEnabled = false;
-    this.cancelConnection();
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
     // Clear caches
     this.stateCache.clear();
     this.deviceCache = null;
-    this.broadcastConnectionStatus();
   }
 
   // Update config from process.env (called after settings are saved)
-  updateConfig(reconfigure = false) {
+  updateConfig() {
     const oldHost = this.config.host;
     const oldToken = this.config.token;
     
     this.config.host = process.env.HA_HOST || 'http://localhost:8123';
     this.config.token = process.env.HA_TOKEN;
     
-    const changed = oldHost !== this.config.host || oldToken !== this.config.token;
-    // An explicit reconfigure can retry rejected credentials even if the
-    // values are unchanged. Ordinary REST reads do not clear that latch.
-    if (changed || reconfigure) {
-      this.cancelConnection();
-      this.wsReconnectEnabled = this.active;
-      this.wsReconnectAttempts = 0;
-      this.devices = [];
+    // Clear caches when config changes
+    if (oldHost !== this.config.host || oldToken !== this.config.token) {
       this.stateCache.clear();
       this.deviceCache = null;
       logger.log('HA config updated from environment', 'info', false, 'ha:config:update');
-      this.broadcastConnectionStatus();
-      this.scheduleWebSocketReconnect();
+      return true; // Config changed
     }
-    return changed;
+    return false; // No change
   }
 
   /**
@@ -893,18 +705,18 @@ class HomeAssistantManager {
             logger.log(`TTS sent successfully via ${service} to ${cleanEntityId}`, 'info', false, 'ha:tts');
             return { success: true, service };
           } else {
-            logger.log(`${service} failed (HTTP ${response.status})`, 'warn', false, 'ha:tts');
+            const errorText = await response.text();
+            logger.log(`${service} failed (${response.status}): ${errorText}`, 'warn', false, 'ha:tts');
           }
         } catch (err) {
-          logger.log(`${service} error: ${safeRequestError(err)}`, 'warn', false, 'ha:tts');
+          logger.log(`${service} error: ${err.message}`, 'warn', false, 'ha:tts');
         }
       }
 
       throw new Error('All TTS services failed');
     } catch (error) {
-      const message = error.message === 'All TTS services failed' ? 'All TTS services failed' : safeRequestError(error);
-      logger.log(`TTS failed for ${cleanEntityId}: ${message}`, 'error', false, 'ha:tts');
-      return { success: false, error: message };
+      logger.log(`TTS failed for ${cleanEntityId}: ${error.message}`, 'error', false, 'ha:tts');
+      return { success: false, error: error.message };
     }
   }
 
@@ -933,7 +745,7 @@ class HomeAssistantManager {
       const response = await fetch(`${this.config.host}/api/states`, {
         headers: { Authorization: `Bearer ${this.config.token}` },
       });
-      if (!response.ok) throw Object.assign(new Error('HA API request failed'), { status: response.status });
+      if (!response.ok) throw new Error(`HA API error: ${response.status}`);
       const states = await response.json();
       
       // Filter for TTS entities (entity_id starts with 'tts.')
@@ -947,7 +759,7 @@ class HomeAssistantManager {
       logger.log(`Found ${ttsEntities.length} TTS entities: ${ttsEntities.map(e => e.entity_id).join(', ')}`, 'info');
       return ttsEntities;
     } catch (error) {
-      logger.log(`Failed to get TTS entities: ${safeRequestError(error)}`, 'error');
+      logger.log(`Failed to get TTS entities: ${error.message}`, 'error');
       return [];
     }
   }
@@ -967,7 +779,7 @@ module.exports = {
   controlDevice: (deviceId, state) => instance.controlDevice(deviceId, state),
   getDevices: () => instance.getDevices(),
   shutdown: () => instance.shutdown(),
-  updateConfig: () => instance.updateConfig(true),
+  updateConfig: () => instance.updateConfig(),
   speakTTS: (entityId, message, options) => instance.speakTTS(entityId, message, options),
   getMediaPlayers: () => instance.getMediaPlayers(),
   getTtsEntities: () => instance.getTtsEntities(),
@@ -985,6 +797,6 @@ module.exports = {
     isConnected: instance.isConnected,
     wsConnected: instance.wsConnected,
     deviceCount: instance.devices?.length || 0,
-    host: instance.getStatusHost()
+    host: instance.config?.host || 'Not configured'
   })
 };

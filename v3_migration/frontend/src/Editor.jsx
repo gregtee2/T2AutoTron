@@ -22,14 +22,6 @@ import { SaveModal } from "./ui/SaveModal";
 import { FastContextMenu } from "./FastContextMenu";
 import { validateGraph, repairGraph } from "./utils/graphValidation";
 import { apiUrl } from "./utils/apiBase";
-import {
-    createGraphDocument,
-    normalizeGraphDocument,
-    recordGraphSaveResponse,
-    graphContentKey
-} from "./utils/graphDocument";
-import { composeRootGraph, exposedPorts, nodeProperties, serializeEditorGraph } from './utils/graphProject';
-import { authFetch } from "./auth/authClient";
 
 // Custom Socket Component - adds data-socket-type and title for CSS styling
 const CustomSocket = React.memo(({ data, socketKey, side }) => {
@@ -106,9 +98,6 @@ export function Editor() {
     const lassoSelectedNodesRef = useRef(new Set());
     const processImmediateRef = useRef(null);  // For graph load operations
     const loadingRef = useRef(false);  // Prevents cascading updates during graph load
-    const projectGraphSerializerRef = useRef(null);
-    const documentEditVersionRef = useRef(0);
-    const saveInProgressRef = useRef(false);
     
     // Refs to hold current instances for keyboard handler (avoids stale closure issues)
     const editorRef = useRef(null);
@@ -569,16 +558,6 @@ export function Editor() {
         // NOTE: Uses window._t2Editor/Area instead of closure to ensure we get current instances
         window._t2GetGraphData = () => {
             try {
-                if (window.graphLoading || loadingRef.current) return null;
-                const projectGraph = projectGraphSerializerRef.current?.();
-                if (projectGraph) {
-                    return {
-                        ...projectGraph,
-                        syncedOnClose: true,
-                        timestamp: Date.now()
-                    };
-                }
-
                 const ed = window._t2Editor;
                 const ar = window._t2Area;
                 if (!ed || !ar) {
@@ -606,13 +585,7 @@ export function Editor() {
                 const viewport = ar.area?.transform 
                     ? { x: ar.area.transform.x, y: ar.area.transform.y, k: ar.area.transform.k }
                     : { x: 0, y: 0, k: 1 };
-                return createGraphDocument({
-                    nodes,
-                    connections,
-                    viewport,
-                    syncedOnClose: true,
-                    timestamp: Date.now()
-                });
+                return { nodes, connections, viewport, syncedOnClose: true, timestamp: Date.now() };
             } catch (e) {
                 console.warn('[_t2GetGraphData] Failed to serialize graph:', e);
                 return null;
@@ -2667,12 +2640,26 @@ export function Editor() {
         if (!editorInstance || !areaInstance) return;
         
         // Helper to serialize current graph state
-        const serializeCurrentGraph = () => serializeEditorGraph(editorInstance, areaInstance, nodeRegistry);
-        const getNodeProperties = nodeProperties;
-        const buildExposedPorts = exposedPorts;
-        const composeProjectGraph = () => composeRootGraph(serializeCurrentGraph(), subGraphStack);
-
-        projectGraphSerializerRef.current = composeProjectGraph;
+        const serializeCurrentGraph = () => {
+            const nodes = editorInstance.getNodes().map(n => {
+                const view = areaInstance.nodeViews.get(n.id);
+                return {
+                    id: n.id,
+                    name: n.constructor.name,
+                    label: n.label,
+                    properties: n.properties ? { ...n.properties } : {},
+                    position: view ? [view.position.x, view.position.y] : [0, 0]
+                };
+            });
+            const connections = editorInstance.getConnections().map(c => ({
+                id: c.id,
+                source: c.source,
+                sourceOutput: c.sourceOutput,
+                target: c.target,
+                targetInput: c.targetInput
+            }));
+            return { nodes, connections };
+        };
         
         // Helper to load a graph (similar to handleLoad but without file I/O)
         const loadGraphData = async (graphData, centerView = true) => {
@@ -2688,9 +2675,7 @@ export function Editor() {
             
             // Add nodes
             for (const nodeData of graphData.nodes) {
-                const properties = getNodeProperties(nodeData);
-                const nodeType = nodeData.type || nodeData.name || nodeData.data?.name || nodeData.label;
-                const def = nodeRegistry.get(nodeType) || nodeRegistry.getByLabel(nodeData.label);
+                const def = nodeRegistry.getByLabel(nodeData.label);
                 if (!def) {
                     console.warn('[SubGraph] Unknown node type:', nodeData.label);
                     continue;
@@ -2702,10 +2687,10 @@ export function Editor() {
                 });
                 
                 node.id = nodeData.id;
-                if (typeof node.restore === 'function') {
-                    node.restore({ properties });
-                } else if (node.properties) {
-                    Object.assign(node.properties, properties);
+                if (nodeData.properties && typeof node.restore === 'function') {
+                    node.restore({ properties: nodeData.properties });
+                } else if (nodeData.properties) {
+                    Object.assign(node.properties || {}, nodeData.properties);
                 }
                 
                 await editorInstance.addNode(node);
@@ -2796,14 +2781,29 @@ export function Editor() {
             // Get current sub-graph's state (to save changes back to the SubGraphNode)
             const currentInternalGraph = serializeCurrentGraph();
             
-            const parentFrame = subGraphStack[subGraphStack.length - 1];
-            const parentSubGraphNodeData = parentFrame?.graphData?.nodes?.find(
-                node => node.id === parentFrame.nodeId
-            );
-            const { exposedInputs, exposedOutputs } = buildExposedPorts(
-                currentInternalGraph,
-                parentSubGraphNodeData
-            );
+            // Scan for SubGraph Input/Output nodes to build exposed ports
+            const exposedInputs = [];
+            const exposedOutputs = [];
+            
+            currentInternalGraph.nodes.forEach((nodeData, idx) => {
+                if (nodeData.label === 'SubGraph Input') {
+                    exposedInputs.push({
+                        key: `in_${idx}`,
+                        label: nodeData.properties?.portName || 'input',
+                        type: nodeData.properties?.portType || 'any',
+                        internalNodeId: nodeData.id,
+                        internalPort: 'value'
+                    });
+                } else if (nodeData.label === 'SubGraph Output') {
+                    exposedOutputs.push({
+                        key: `out_${idx}`,
+                        label: nodeData.properties?.portName || 'output',
+                        type: nodeData.properties?.portType || 'any',
+                        internalNodeId: nodeData.id,
+                        internalPort: 'value'
+                    });
+                }
+            });
             
             console.log('[SubGraph] Detected exposed ports:', { 
                 inputs: exposedInputs.length, 
@@ -2819,12 +2819,11 @@ export function Editor() {
             // This saves any edits made while inside the sub-graph
             const parentGraph = exiting.graphData;
             const subGraphNodeData = parentGraph.nodes.find(n => n.id === exiting.nodeId);
-            if (subGraphNodeData) {
-                const parentProperties = getNodeProperties(subGraphNodeData);
-                parentProperties.internalNodes = currentInternalGraph.nodes;
-                parentProperties.internalConnections = currentInternalGraph.connections;
-                parentProperties.exposedInputs = exposedInputs;
-                parentProperties.exposedOutputs = exposedOutputs;
+            if (subGraphNodeData && subGraphNodeData.properties) {
+                subGraphNodeData.properties.internalNodes = currentInternalGraph.nodes;
+                subGraphNodeData.properties.internalConnections = currentInternalGraph.connections;
+                subGraphNodeData.properties.exposedInputs = exposedInputs;
+                subGraphNodeData.properties.exposedOutputs = exposedOutputs;
             }
             
             // Load the parent graph
@@ -2851,9 +2850,10 @@ export function Editor() {
         window.exitToMainGraph = async () => {
             if (subGraphStack.length === 0) return;
             
-            const composedGraph = composeProjectGraph();
-            if (composedGraph?.nodes) {
-                await loadGraphData(composedGraph);
+            // TODO: Save changes at each level
+            // For now, just restore the main graph
+            if (mainGraphDataRef.current) {
+                await loadGraphData(mainGraphDataRef.current);
             }
             
             setSubGraphStack([]);
@@ -2865,7 +2865,6 @@ export function Editor() {
         };
         
         return () => {
-            projectGraphSerializerRef.current = null;
             delete window.enterSubGraph;
             delete window.exitSubGraph;
             delete window.exitToMainGraph;
@@ -3094,8 +3093,7 @@ export function Editor() {
                 ? { x: areaInstance.area.transform.x, y: areaInstance.area.transform.y, k: areaInstance.area.transform.k }
                 : { x: 0, y: 0, k: 1 };
             
-            const graphData = projectGraphSerializerRef.current?.() ||
-                createGraphDocument({ nodes, connections, viewport });
+            const graphData = { nodes, connections, viewport };
             const jsonString = JSON.stringify(graphData, null, 2);
 
             // Detect if running inside Home Assistant ingress (iframe) or HA add-on
@@ -3111,29 +3109,20 @@ export function Editor() {
             }
 
             // Save to localStorage for quick reload (desktop mode)
-            try {
-                localStorage.removeItem('saved-graph');
-                localStorage.setItem('saved-graph', jsonString);
-            } catch(e) {
-                console.warn('localStorage skipped');
-            }
+            try { if (jsonString.length < 2000000) { localStorage.removeItem('saved-graph'); localStorage.setItem('saved-graph', jsonString); } } catch(e) { console.warn('localStorage skipped'); }
             debug('Graph saved to localStorage');
 
             // Also save to server as "last active" for persistence
             try {
-                const response = await authFetch('/api/engine/save-active', {
+                const response = await fetch(apiUrl('/api/engine/save-active'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: jsonString
                 });
-                const result = await response.json().catch(() => ({}));
-                if (response.ok && result.success) {
-                    recordGraphSaveResponse(result, graphData);
+                if (response.ok) {
                     debug('[handleSave] Graph saved to server as last active');
                 } else {
-                    console.warn('[handleSave] Failed to save to server:', response.status, result.error);
-                    setHasUnsavedChanges(true);
-                    window.T2Toast?.warning(result.error || 'Server save failed; keep your exported copy.');
+                    console.warn('[handleSave] Failed to save to server:', response.status);
                 }
             } catch (err) {
                 console.warn('[handleSave] Failed to save to server:', err);
@@ -3211,13 +3200,7 @@ export function Editor() {
                     ? { x: areaInstance.area.transform.x, y: areaInstance.area.transform.y, k: areaInstance.area.transform.k }
                     : { x: 0, y: 0, k: 1 };
                 
-                const graphData = projectGraphSerializerRef.current?.() || createGraphDocument({
-                    nodes,
-                    connections,
-                    viewport,
-                    preUpdateSave: true,
-                    timestamp: Date.now()
-                });
+                const graphData = { nodes, connections, viewport, preUpdateSave: true, timestamp: Date.now() };
                 const jsonString = JSON.stringify(graphData);
                 
                 if (jsonString.length < 2000000) {
@@ -3241,12 +3224,9 @@ export function Editor() {
     
     // Mark as having unsaved changes when editor content changes
     useEffect(() => {
-        if (!editorInstance || !areaInstance) return;
-        let disposed = false;
+        if (!editorInstance) return;
         
         const markDirty = () => {
-            if (disposed || window.graphLoading || loadingRef.current) return;
-            documentEditVersionRef.current++;
             setHasUnsavedChanges(true);
         };
         
@@ -3257,19 +3237,7 @@ export function Editor() {
             }
             return context;
         });
-        areaInstance.addPipe(context => {
-            if (context.type === 'nodetranslated' && !programmaticMoveRef.current) markDirty();
-            return context;
-        });
-        const container = areaInstance.container;
-        container?.addEventListener('input', markDirty, true);
-        container?.addEventListener('change', markDirty, true);
-        return () => {
-            disposed = true;
-            container?.removeEventListener('input', markDirty, true);
-            container?.removeEventListener('change', markDirty, true);
-        };
-    }, [editorInstance, areaInstance]);
+    }, [editorInstance]);
     
     // Auto-save interval
     useEffect(() => {
@@ -3277,11 +3245,9 @@ export function Editor() {
         
         const autoSave = async () => {
             // Don't auto-save during loading
-            if (window.graphLoading || loadingRef.current || saveInProgressRef.current) return;
+            if (window.graphLoading || loadingRef.current) return;
             
             if (hasUnsavedChanges) {
-                saveInProgressRef.current = true;
-                const editVersion = documentEditVersionRef.current;
                 try {
                     const nodes = editorInstance.getNodes().map(n => {
                         const serializedNode = typeof n.toJSON === 'function' ? n.toJSON() : { ...n };
@@ -3304,45 +3270,32 @@ export function Editor() {
                         ? { x: areaInstance.area.transform.x, y: areaInstance.area.transform.y, k: areaInstance.area.transform.k }
                         : { x: 0, y: 0, k: 1 };
                     
-                    const graphData = projectGraphSerializerRef.current?.() || createGraphDocument({
-                        nodes,
-                        connections,
-                        viewport,
-                        autoSaved: true,
-                        timestamp: Date.now()
-                    });
+                    const graphData = { nodes, connections, viewport, autoSaved: true, timestamp: Date.now() };
                     const jsonString = JSON.stringify(graphData);
                     
-                    try {
+                    if (jsonString.length < 2000000) {
                         localStorage.setItem('saved-graph', jsonString);
-                    } catch (storageError) {
-                        console.warn('[Auto-save] localStorage unavailable:', storageError);
-                    }
-
-                    // Keep the document dirty until the durable server save is acknowledged.
-                    const response = await authFetch('/api/engine/save-active', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: jsonString
-                    });
-                    const result = await response.json().catch(() => ({}));
-                    if (!response.ok || !result.success) {
-                        throw new Error(result.error || `Server save failed (${response.status})`);
-                    }
-
-                    recordGraphSaveResponse(result, graphData);
-                    lastAutoSaveRef.current = Date.now();
-                    if (documentEditVersionRef.current === editVersion) setHasUnsavedChanges(false);
-
-                    // Show toast notification if available
-                    if (window.T2Toast) {
-                        window.T2Toast.success('Auto-saved', 2000);
+                        lastAutoSaveRef.current = Date.now();
+                        setHasUnsavedChanges(false);
+                        
+                        // Also save to server as "last active" for HA add-on persistence
+                        try {
+                            await fetch(apiUrl('/api/engine/save-active'), {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: jsonString
+                            });
+                        } catch (err) {
+                            // Silent fail for auto-save to server
+                        }
+                        
+                        // Show toast notification if available
+                        if (window.T2Toast) {
+                            window.T2Toast.success('Auto-saved', 2000);
+                        }
                     }
                 } catch (e) {
                     console.warn('[Auto-save] Failed:', e);
-                    window.T2Toast?.warning(`Not saved: ${e.message}`);
-                } finally {
-                    saveInProgressRef.current = false;
                 }
             }
         };
@@ -3429,7 +3382,7 @@ export function Editor() {
         const loadFromServer = async () => {
             try {
                 debug('[ServerAutoLoad] Fetching last active graph from server...');
-                const response = await authFetch('/api/engine/last-active');
+                const response = await fetch(apiUrl('/api/engine/last-active'));
                 const data = await response.json();
                 
                 if (data.success && data.graph) {
@@ -3490,11 +3443,7 @@ export function Editor() {
                 return;
             }
 
-            let graphData = normalizeGraphDocument(JSON.parse(saved));
-            recordGraphSaveResponse({
-                revision: graphData.revision,
-                projectId: graphData.projectId
-            });
+            const graphData = JSON.parse(saved);
             debug(`[handleLoad] Loading graph with ${graphData.nodes?.length} nodes`);
             
             // Validate graph structure
@@ -3557,8 +3506,7 @@ export function Editor() {
             try {
                 for (const nodeData of graphData.nodes) {
                     let node;
-                    const nodeType = nodeData.type || nodeData.name || nodeData.data?.name || nodeData.label;
-                    const def = nodeRegistry.get(nodeType) || nodeRegistry.getByLabel(nodeData.label);
+                    const def = nodeRegistry.getByLabel(nodeData.label);
 
                     if (def) {
                         const updateCallback = () => {
@@ -3581,12 +3529,10 @@ export function Editor() {
                         node.id = nodeData.id;
 
                         // Restore properties and state
-                        const properties = nodeData.data?.properties || nodeData.properties ||
-                            (nodeData.data && typeof nodeData.data === 'object' ? nodeData.data : {});
-                        if (typeof node.restore === 'function') {
-                            node.restore({ properties });
-                        } else if (node.properties) {
-                            Object.assign(node.properties, properties);
+                        if (typeof node.restore === 'function' && nodeData.data) {
+                            node.restore(nodeData.data);
+                        } else if (nodeData.data && nodeData.data.properties && node.properties) {
+                            Object.assign(node.properties, nodeData.data.properties);
                         }
 
                         await editorInstance.addNode(node);
@@ -3820,8 +3766,7 @@ export function Editor() {
                 ? { x: areaInstance.area.transform.x, y: areaInstance.area.transform.y, k: areaInstance.area.transform.k }
                 : { x: 0, y: 0, k: 1 };
             
-            const graphData = projectGraphSerializerRef.current?.() ||
-                createGraphDocument({ nodes, connections, viewport });
+            const graphData = { nodes, connections, viewport };
             const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -3836,8 +3781,6 @@ export function Editor() {
     };
 
     const handleImport = async (graphData) => {
-        graphData = normalizeGraphDocument(graphData);
-
         // Validate graph before import
         const validation = validateGraph(graphData);
         if (!validation.valid) {
@@ -4043,25 +3986,19 @@ export function Editor() {
                 try {
                     const jsonString = JSON.stringify(graphData, null, 2);
                     // Save to localStorage
-                    try {
+                    if (jsonString.length < 2000000) {
                         localStorage.removeItem('saved-graph');
                         localStorage.setItem('saved-graph', jsonString);
                         debug('[handleImport] Graph saved to localStorage');
-                    } catch (storageError) {
-                        console.warn('[handleImport] localStorage unavailable:', storageError);
                     }
                     // Save to server for HA add-on persistence
-                    const response = await authFetch('/api/engine/save-active', {
+                    const response = await fetch(apiUrl('/api/engine/save-active'), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: jsonString
                     });
-                    const result = await response.json().catch(() => ({}));
-                    if (response.ok && result.success) {
-                        recordGraphSaveResponse(result, graphData);
+                    if (response.ok) {
                         debug('[handleImport] Graph saved to server as last active');
-                    } else {
-                        throw new Error(result.error || `Server save failed (${response.status})`);
                     }
                 } catch (saveErr) {
                     console.warn('[handleImport] Failed to save imported graph:', saveErr);
@@ -4193,12 +4130,8 @@ export function Editor() {
             <SaveModal
                 isOpen={showSaveModal}
                 onClose={() => setShowSaveModal(false)}
-                onSave={(result, snapshot) => {
-                    recordGraphSaveResponse(result, snapshot);
-                    const current = projectGraphSerializerRef.current?.();
-                    if (current && snapshot && graphContentKey(current) === graphContentKey(snapshot)) {
-                        setHasUnsavedChanges(false);
-                    }
+                onSave={() => {
+                    setHasUnsavedChanges(false);
                     setShowSaveModal(false);
                 }}
                 currentGraphData={currentGraphDataForSave}

@@ -6,8 +6,7 @@ import ErrorBoundary from './ErrorBoundary';
 import { ToastContainer, ToastExposer, useToast } from './ui/Toast';
 import { LoadingOverlay } from './ui/LoadingOverlay';
 import UpdateModal from './components/UpdateModal';
-import { getStoredPin, authFetch } from './auth/authClient';
-import { recordGraphSaveResponse } from './utils/graphDocument';
+import { getStoredPin } from './auth/authClient';
 import './App.css';
 import './styles/performance-mode.css'; // Performance mode overrides
 
@@ -15,7 +14,7 @@ import './styles/performance-mode.css'; // Performance mode overrides
 // SYNC-ON-CLOSE: Push graph to backend when browser closes
 // This runs at module load time (not in React) for maximum reliability
 // ============================================================================
-const syncGraphToBackend = async (event) => {
+const syncGraphToBackend = (event) => {
   // For visibilitychange, only sync when page becomes hidden
   if (event?.type === 'visibilitychange' && document.visibilityState !== 'hidden') {
     return;
@@ -29,18 +28,20 @@ const syncGraphToBackend = async (event) => {
   if (window._t2GetGraphData) {
     try {
       const graphData = window._t2GetGraphData();
-      if (graphData && Array.isArray(graphData.nodes)) {
+      if (graphData && graphData.nodes && graphData.nodes.length > 0) {
         const jsonString = JSON.stringify(graphData);
-        // Browser backup is best-effort; the server acknowledgement remains
-        // authoritative. Close delivery is never guaranteed for large graphs.
-        try { localStorage.setItem('saved-graph', jsonString); } catch { /* Storage may be full. */ }
-        const response = await authFetch('/api/engine/save-active', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: jsonString,
-          keepalive: new Blob([jsonString]).size < 60000
-        });
-        const result = await response.json();
-        if (!response.ok || !result.success) throw new Error(result.error || 'Server save failed');
-        recordGraphSaveResponse(result, graphData);
+        // Use port 3000 (backend) not 5173 (vite dev server)
+        const apiBase = window.location.port === '5173' 
+          ? 'http://localhost:3000' 
+          : window.location.origin;
+        
+        // Use synchronous XHR - only reliable method during page close
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${apiBase}/api/engine/save-active`, false); // false = synchronous
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(jsonString);
+        
+        console.log(`[App] Synced graph on close (${graphData.nodes.length} nodes, status=${xhr.status})`);
       }
     } catch (e) {
       console.warn('[App] Failed to sync graph on close:', e);
@@ -48,7 +49,7 @@ const syncGraphToBackend = async (event) => {
   }
   
   // Signal editor inactive
-  if (document.visibilityState === 'hidden' && window.socket?.connected) {
+  if (window.socket?.connected) {
     window.socket.emit('editor-inactive');
   }
   
@@ -542,13 +543,13 @@ function App() {
       setIsConnected(true);
     }
 
-    // Send well inside the unchanged 30-second backend timeout.
+    // Send heartbeat every 30 seconds to keep frontend-active status alive
     // This prevents stale "frontend active" status if browser crashes without disconnect
     const heartbeatInterval = setInterval(() => {
-      if (socket.connected && document.visibilityState !== 'hidden') {
+      if (socket.connected) {
         socket.emit('editor-heartbeat');
       }
-    }, 10000);
+    }, 30000);
 
     return () => {
       // Tell backend editor is closing before disconnecting

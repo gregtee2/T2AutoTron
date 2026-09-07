@@ -13,7 +13,6 @@ let engine = null;
 let registry = null;
 let io = null;
 let tickBroadcastInterval = null;
-const wrappedEngines = new WeakSet();
 
 // Throttle tick broadcasts to max 1 per second
 const TICK_BROADCAST_INTERVAL = 1000;
@@ -42,7 +41,6 @@ function initEngineSocketHandlers(socketIO) {
     
     // Client requests to start engine
     socket.on('start-engine', async () => {
-      const generation = engine.lifecycleGeneration;
       try {
         const path = require('path');
         const fs = require('fs').promises;
@@ -66,9 +64,8 @@ function initEngineSocketHandlers(socketIO) {
           }
         }
         
-        // Stop also wins while registry/graph loading is still pending.
-        if (generation !== engine.lifecycleGeneration) return;
-        await engine.start(); // Lifecycle wrapper broadcasts only a real start.
+        await engine.start();
+        io.emit('engine-started', engine.getStatus());
       } catch (error) {
         socket.emit('engine-error', { message: error.message });
       }
@@ -78,6 +75,7 @@ function initEngineSocketHandlers(socketIO) {
     socket.on('stop-engine', () => {
       try {
         engine.stop();
+        io.emit('engine-stopped', engine.getStatus());
       } catch (error) {
         socket.emit('engine-error', { message: error.message });
       }
@@ -147,40 +145,36 @@ function broadcastEngineStatus() {
  * Set up listeners for engine lifecycle events
  */
 function setupEngineEventListeners() {
-  if (!engine || wrappedEngines.has(engine)) return;
-  wrappedEngines.add(engine);
-  const targetEngine = engine;
+  if (!engine) return;
   
   // Start periodic status broadcasts when engine is running
-  const originalStart = targetEngine.start.bind(targetEngine);
-  targetEngine.start = async function() {
-    const generation = targetEngine.lifecycleGeneration;
-    const result = await originalStart();
-    if (result === false || !targetEngine.running || generation !== targetEngine.lifecycleGeneration) {
-      return result;
+  const originalStart = engine.start.bind(engine);
+  engine.start = function() {
+    originalStart();
+    
+    // Broadcast start event
+    if (io) {
+      io.emit('engine-started', engine.getStatus());
     }
-
-    // Concurrent starts share one engine activation and one broadcast timer.
+    
+    // Start periodic tick broadcasts
     if (!tickBroadcastInterval) {
-      if (io) io.emit('engine-started', targetEngine.getStatus());
       tickBroadcastInterval = setInterval(() => {
-        if (targetEngine.running) {
+        if (engine.running) {
           broadcastEngineStatus();
         }
       }, TICK_BROADCAST_INTERVAL);
     }
-
-    return result;
   };
   
   // Stop periodic broadcasts when engine stops
-  const originalStop = targetEngine.stop.bind(targetEngine);
-  targetEngine.stop = function() {
+  const originalStop = engine.stop.bind(engine);
+  engine.stop = function() {
     originalStop();
     
     // Broadcast stop event
     if (io) {
-      io.emit('engine-stopped', targetEngine.getStatus());
+      io.emit('engine-stopped', engine.getStatus());
     }
     
     // Stop periodic broadcasts
@@ -205,7 +199,6 @@ async function autoStartEngine() {
     const engineModule = require('../engine');
     engine = engineModule.engine;
     registry = engineModule.registry;
-    const generation = engine.lifecycleGeneration;
     
     // Load builtin nodes
     await engineModule.loadBuiltinNodes();
@@ -265,9 +258,7 @@ async function autoStartEngine() {
     }
     
     // Start the engine (this runs reconciliation which triggers device state changes)
-    if (generation !== engine.lifecycleGeneration) return;
-    const started = await engine.start();
-    if (started === false || !engine.running || generation !== engine.lifecycleGeneration) return;
+    await engine.start();
     console.log(`[Engine] Auto-started ${graphLoaded ? `with ${engine.nodes.size} nodes` : '(no graph loaded)'}`);
     
     // Note: Batch will auto-flush after 15 seconds of no new device changes

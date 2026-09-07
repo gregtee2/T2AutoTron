@@ -37,7 +37,6 @@ global.fetch = jest.fn(async (url) => {
 
 const registry = require('../src/engine/BackendNodeRegistry');
 require('../src/engine/nodes/HADeviceNodes');
-const engine = require('../src/engine/BackendEngine');
 
 describe('HAGenericDeviceNode HSV safety', () => {
   const hsv = { hue: 0.5, saturation: 1, brightness: 200 };
@@ -45,16 +44,12 @@ describe('HAGenericDeviceNode HSV safety', () => {
   beforeEach(() => {
     process.env.HA_HOST = 'http://ha.local:8123';
     process.env.HA_TOKEN = 'test-token';
-    engine.frontendActive = false;
-    engine.frontendLastSeen = null;
     global.fetch.mockClear();
   });
 
   afterEach(() => {
     delete process.env.HA_HOST;
     delete process.env.HA_TOKEN;
-    engine.frontendActive = false;
-    engine.frontendLastSeen = null;
   });
 
   function createReadyNode(entityId) {
@@ -84,63 +79,5 @@ describe('HAGenericDeviceNode HSV safety', () => {
     await node.data({ hsv_info: [hsv] });
 
     expect(node.controlDevice).toHaveBeenCalledWith('light.on_lamp', true, hsv);
-  });
-
-  test('does not send HA service calls while the frontend owns control', async () => {
-    engine.setFrontendActive(true);
-    const node = registry.create('HAServiceCallNode');
-    node.properties.domain = 'light';
-    node.properties.service = 'turn_on';
-    node.properties.entityId = 'light.frontend_owned';
-
-    const result = await node.data({ trigger: [true] });
-
-    expect(result.result).toEqual(expect.objectContaining({ success: true, skipped: true }));
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  test('does not send simplified light commands while the frontend owns control', async () => {
-    engine.setFrontendActive(true);
-    const node = registry.create('HALightControlNode');
-    node.properties.entityId = 'light.frontend_owned';
-
-    const result = await node.data({ trigger: [true] });
-
-    expect(result).toEqual({ is_on: true });
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  test('does not send lock commands while the frontend owns control', async () => {
-    engine.setFrontendActive(true);
-    const node = registry.create('HALockNode');
-    node.properties.deviceId = 'ha_lock.frontend_owned';
-
-    await node.sendLockCommand('lock');
-
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  test('does not send Hue effects while the frontend owns control', async () => {
-    engine.setFrontendActive(true);
-    const node = registry.create('HueEffectNode');
-
-    const result = await node.callHAService('light', 'turn_on', 'light.frontend_owned', {
-      effect: 'candle'
-    });
-
-    expect(result).toEqual(expect.objectContaining({ success: true, skipped: true }));
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  test('does not send WiZ effects while the frontend owns control', async () => {
-    engine.setFrontendActive(true);
-    const node = registry.create('WizEffectNode');
-
-    const result = await node.callHAService('light', 'turn_on', 'light.frontend_owned', {
-      effect: 'Fireplace'
-    });
-
-    expect(result).toEqual(expect.objectContaining({ success: true, skipped: true }));
-    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

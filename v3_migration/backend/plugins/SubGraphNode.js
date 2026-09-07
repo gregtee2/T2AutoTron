@@ -18,144 +18,6 @@
     const React = window.React;
     const { useState, useEffect, useRef } = React;
     const sockets = window.sockets;
-    const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
-    const getNodeProperties = node => node?.data?.properties || node?.properties || node?.data || {};
-
-    // Keep the plain-data clone and preflight rules aligned with the backend.
-    // Never share saved configuration with a node's mutable runtime properties.
-    function cloneConfig(value, ancestors = new Set(), budget = { count: 0 }, depth = 0) {
-        if (++budget.count > 100000 || depth > 128) throw new Error('Subgraph configuration is too large/deep');
-        if (value === null || typeof value !== 'object') {
-            if (['function', 'symbol', 'bigint'].includes(typeof value)) throw new Error('Subgraph configuration must be plain data');
-            return value;
-        }
-        if (ancestors.has(value)) throw new Error('Subgraph configuration contains a recursive reference');
-        ancestors.add(value);
-        const copy = Array.isArray(value) ? new Array(value.length) : {};
-        for (const key of Object.keys(value)) {
-            Object.defineProperty(copy, key, {
-                value: cloneConfig(value[key], ancestors, budget, depth + 1),
-                enumerable: true, configurable: true, writable: true
-            });
-        }
-        ancestors.delete(value);
-        return copy;
-    }
-
-    function sameConfig(a, b) {
-        if (Object.is(a, b)) return true;
-        if (!a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) !== Array.isArray(b)) return false;
-        if (Array.isArray(a) && a.length !== b.length) return false;
-        const keys = Object.keys(a);
-        return keys.length === Object.keys(b).length && keys.every(key => hasOwn(b, key) && sameConfig(a[key], b[key]));
-    }
-
-    function valuesFor(inputs, key) {
-        if (!hasOwn(inputs, key)) return [];
-        return Array.isArray(inputs[key]) ? inputs[key].slice() : [inputs[key]];
-    }
-
-    function resolveNode(node) {
-        const registry = window.nodeRegistry;
-        const types = [node.type, node.name, node.data?.type, node.data?.name].filter(Boolean);
-        let definition;
-        let type;
-        for (const candidate of types) {
-            definition = registry?.get(candidate);
-            if (definition) { type = candidate; break; }
-        }
-        if (!definition) {
-            for (const label of [...types, node.label].filter(Boolean)) {
-                definition = registry?.getByLabel(label);
-                if (definition) { type = definition.nodeClass?.type || label; break; }
-            }
-        }
-        if (typeof definition?.factory !== 'function') throw new Error(`Unknown internal node type: ${types[0] || node.label || 'unknown'}`);
-        const kind = definition === registry.get('SubGraphNode') ? 'graph'
-            : definition === registry.get('SubGraphInputNode') ? 'input'
-                : definition === registry.get('SubGraphOutputNode') ? 'output' : 'ordinary';
-        return { definition, type, kind };
-    }
-
-    function portKeys(record, side) {
-        if (record.kind === 'input') return side === 'outputs' ? ['value'] : [];
-        if (record.kind === 'output') return side === 'inputs' ? ['value'] : [];
-        if (record.kind === 'graph') {
-            const exposed = record.properties[side === 'inputs' ? 'exposedInputs' : 'exposedOutputs'] || [];
-            return [side === 'inputs' ? 'trigger' : 'out', ...exposed.map(port => `exp_${port.key}`)];
-        }
-        // Only saved/static socket metadata is safe to inspect before effects.
-        const metadata = record.node[side] ?? record.node.data?.[side] ?? record.definition[side] ?? record.definition.nodeClass?.[side];
-        if (Array.isArray(metadata)) {
-            const keys = metadata.map(port => typeof port === 'string' ? port : port?.key);
-            return keys.every(key => typeof key === 'string') ? keys : null;
-        }
-        return metadata && typeof metadata === 'object' ? Object.keys(metadata) : null;
-    }
-
-    function validateGraph(properties, budget = { nodes: 0 }, depth = 1) {
-        if (depth > 8) throw new Error('Subgraph nesting exceeds 8 levels');
-        const nodes = properties.internalNodes || [];
-        const connections = properties.internalConnections || [];
-        const exposedInputs = properties.exposedInputs || [];
-        const exposedOutputs = properties.exposedOutputs || [];
-        if (![nodes, connections, exposedInputs, exposedOutputs].every(Array.isArray)) throw new Error('Subgraph nodes/connections/ports must be arrays');
-        budget.nodes += nodes.length;
-        if (budget.nodes > 1000) throw new Error('Subgraph exceeds 1000 internal nodes');
-        const records = new Map();
-        for (const node of nodes) {
-            if (!node || typeof node.id !== 'string' || !node.id) throw new Error('Subgraph node requires an id');
-            if (records.has(node.id)) throw new Error(`Duplicate subgraph node id: ${node.id}`);
-            const record = { node, properties: getNodeProperties(node), ...resolveNode(node) };
-            records.set(node.id, record);
-            if (record.kind === 'graph') validateGraph(record.properties, budget, depth + 1);
-        }
-        const checkPort = (id, port, side) => {
-            const record = records.get(id);
-            if (!record) throw new Error(`Subgraph port references an unknown node: ${id}`);
-            const keys = portKeys(record, side);
-            if (typeof port !== 'string' || !port || (keys && !keys.includes(port))) throw new Error(`Dangling subgraph ${side} port: ${id}.${port}`);
-        };
-        const degrees = new Map(nodes.map(node => [node.id, 0]));
-        const outgoing = new Map(nodes.map(node => [node.id, []]));
-        for (const connection of connections) {
-            if (!connection) throw new Error('Invalid subgraph connection');
-            checkPort(connection.source, connection.sourceOutput, 'outputs');
-            checkPort(connection.target, connection.targetInput, 'inputs');
-            outgoing.get(connection.source).push(connection.target);
-            degrees.set(connection.target, degrees.get(connection.target) + 1);
-        }
-        for (const [ports, side] of [[exposedInputs, 'inputs'], [exposedOutputs, 'outputs']]) {
-            const keys = new Set();
-            for (const port of ports) {
-                if (!port || typeof port.key !== 'string' || !port.key || keys.has(port.key)) throw new Error('Invalid/duplicate exposed subgraph port key');
-                keys.add(port.key);
-                const kind = records.get(port.internalNodeId)?.kind;
-                const mappedSide = side === 'inputs' && kind === 'input' ? 'outputs' : side === 'outputs' && kind === 'output' ? 'inputs' : side;
-                checkPort(port.internalNodeId, port.internalPort, mappedSide);
-            }
-        }
-        const order = nodes.filter(node => degrees.get(node.id) === 0).map(node => node.id);
-        for (let index = 0; index < order.length; index++) {
-            for (const target of outgoing.get(order[index])) {
-                degrees.set(target, degrees.get(target) - 1);
-                if (degrees.get(target) === 0) order.push(target);
-            }
-        }
-        if (order.length !== nodes.length) throw new Error('Subgraph contains a cycle');
-        return { records, order, connections, exposedInputs, exposedOutputs };
-    }
-
-    async function cleanupNodes(nodes) {
-        for (const node of nodes) {
-            try {
-                if (typeof node.destroy === 'function') await node.destroy();
-                else if (typeof node.dispose === 'function') await node.dispose();
-            } catch (error) {
-                console.warn('[SubGraphNode] Internal node cleanup failed:', error);
-            }
-        }
-    }
     
     // =========================================================================
     // SubGraphNode Class
@@ -178,124 +40,10 @@
                 exposedInputs: [],   // [{ key, label, type, internalNodeId, internalPort }]
                 exposedOutputs: [],  // [{ key, label, type, internalNodeId, internalPort }]
             };
-
-            this.internalNodeInstances = new Map();
-            this.internalExecutionOrder = [];
-            this._configuration = null;
-            this._plan = null;
-            this._tail = Promise.resolve();
-            this._generation = 0;
-            this._disposed = false;
-            this._callbackToken = null;
-            this._activeData = 0;
-            this._pendingChange = false;
-            this._changeTimer = null;
             
             // Create default trigger input/output for basic functionality
             this.addInput('trigger', new ClassicPreset.Input(sockets.boolean, 'Trigger'));
             this.addOutput('out', new ClassicPreset.Output(sockets.any, 'Output'));
-        }
-
-        _enqueue(operation) {
-            const task = this._tail.then(operation);
-            this._tail = task.catch(() => {});
-            return task;
-        }
-
-        _cancelChanges() {
-            if (this._callbackToken) this._callbackToken.active = false;
-            if (this._changeTimer !== null) clearTimeout(this._changeTimer);
-            this._changeTimer = null;
-            this._pendingChange = false;
-        }
-
-        _internalChanged(token) {
-            if (this._disposed || !token.active || token !== this._callbackToken) return;
-            this._pendingChange = true;
-            this._scheduleParentChange();
-        }
-
-        _scheduleParentChange() {
-            if (this._disposed || this._activeData || !this._pendingChange || this._changeTimer !== null) return;
-            this._changeTimer = setTimeout(() => {
-                this._changeTimer = null;
-                if (this._disposed || !this._callbackToken?.active || !this._pendingChange) return;
-                // A timer can fire while a child awaits I/O. Let data()'s finally
-                // schedule the notification, never reset the engine mid-fetch.
-                if (this._activeData) return;
-                this._pendingChange = false;
-                try {
-                    Promise.resolve(this.changeCallback?.()).catch(error => {
-                        console.warn('[SubGraphNode] Parent callback failed:', error);
-                    });
-                } catch (error) {
-                    console.warn('[SubGraphNode] Parent callback failed:', error);
-                }
-            }, 0);
-        }
-
-        async _clearInternalGraph() {
-            this._cancelChanges();
-            const nodes = Array.from(this.internalNodeInstances.values());
-            this.internalNodeInstances.clear();
-            this.internalExecutionOrder = [];
-            this._configuration = null;
-            this._plan = null;
-            await cleanupNodes(nodes);
-        }
-
-        disposeInternalGraph() {
-            this._generation++;
-            this._cancelChanges();
-            // Wait for in-flight child data/restore before destroying its resources.
-            return this._enqueue(() => this._clearInternalGraph());
-        }
-
-        _assertCurrent(generation) {
-            if (this._disposed || generation !== this._generation) throw new Error('Subgraph evaluation cancelled/disposed');
-        }
-
-        async initializeInternalGraph(generation = this._generation) {
-            const candidates = new Map();
-            const token = { active: false };
-            try {
-                this._assertCurrent(generation);
-                const configuration = cloneConfig({
-                    internalNodes: this.properties.internalNodes,
-                    internalConnections: this.properties.internalConnections,
-                    exposedInputs: this.properties.exposedInputs,
-                    exposedOutputs: this.properties.exposedOutputs
-                });
-                if (this._plan && sameConfig(configuration, this._configuration)) return;
-                const plan = validateGraph(configuration);
-                await this._clearInternalGraph();
-                this._assertCurrent(generation);
-                for (const [id, record] of plan.records) {
-                    const instance = record.definition.factory(() => this._internalChanged(token));
-                    if (!instance || typeof instance !== 'object') throw new Error(`Invalid internal node factory: ${record.type}`);
-                    candidates.set(id, instance);
-                    instance.id = id;
-                    instance.label = record.node.label || instance.label || record.type;
-                    const properties = cloneConfig(record.properties);
-                    if (typeof instance.restore === 'function') await instance.restore({ properties });
-                    else instance.properties = { ...(instance.properties || {}), ...properties };
-                    // Commit the whole initialized tree, not a partially restored
-                    // outer shell that leaks siblings if a deep restore fails.
-                    if (record.kind === 'graph') await instance.initializeInternalGraph();
-                    this._assertCurrent(generation);
-                }
-                this.internalNodeInstances = candidates;
-                this.internalExecutionOrder = plan.order;
-                this._configuration = configuration;
-                this._plan = plan;
-                this._callbackToken = token;
-                token.active = true;
-            } catch (error) {
-                token.active = false;
-                await cleanupNodes(candidates.values());
-                await this._clearInternalGraph();
-                throw error;
-            }
         }
         
         /**
@@ -321,7 +69,7 @@
             // Add exposed inputs
             this.properties.exposedInputs.forEach(exp => {
                 const socketType = sockets[exp.type] || sockets.any;
-                this.addInput(`exp_${exp.key}`, new ClassicPreset.Input(socketType, exp.label, true));
+                this.addInput(`exp_${exp.key}`, new ClassicPreset.Input(socketType, exp.label));
             });
             
             // Add exposed outputs
@@ -342,8 +90,8 @@
          * Set the internal graph data
          */
         setInternalGraph(nodes, connections) {
-            this.properties.internalNodes = cloneConfig(nodes);
-            this.properties.internalConnections = cloneConfig(connections);
+            this.properties.internalNodes = nodes;
+            this.properties.internalConnections = connections;
             if (this.changeCallback) this.changeCallback();
         }
         
@@ -396,73 +144,31 @@
         }
         
         /**
-         * Data processing - evaluates the internal graph as a nested dataflow.
+         * Data processing - runs internal graph and returns outputs
          */
-        data(inputs = {}) {
-            const generation = this._generation;
-            this._activeData++;
-            return this._enqueue(async () => {
-                try {
-                    this._assertCurrent(generation);
-                    await this.initializeInternalGraph(generation);
-                    this._assertCurrent(generation);
-                    const plan = this._plan;
-                    const inputsByNode = new Map(plan.order.map(id => [id, Object.create(null)]));
-                    const append = (id, port, values) => {
-                        const nodeInputs = inputsByNode.get(id);
-                        if (!hasOwn(nodeInputs, port)) nodeInputs[port] = [];
-                        nodeInputs[port].push(...values);
-                    };
-                    for (const [id, record] of plan.records) {
-                        if (record.kind === 'input') this.internalNodeInstances.get(id)._inputValues = [];
-                    }
-                    for (const port of plan.exposedInputs) {
-                        if (!hasOwn(inputs, `exp_${port.key}`)) continue;
-                        const values = valuesFor(inputs, `exp_${port.key}`);
-                        if (plan.records.get(port.internalNodeId).kind === 'input') {
-                            this.internalNodeInstances.get(port.internalNodeId)._inputValues.push(...values);
-                        } else {
-                            // Converted selections expose an ordinary input directly.
-                            append(port.internalNodeId, port.internalPort, values);
-                        }
-                    }
-                    const outputsByNode = new Map();
-                    for (const id of plan.order) {
-                        this._assertCurrent(generation);
-                        const node = this.internalNodeInstances.get(id);
-                        for (const connection of plan.connections) {
-                            if (connection.target !== id) continue;
-                            const source = this.internalNodeInstances.get(connection.source);
-                            // Input ports forward lists, but an ordinary array output
-                            // remains one message (do not flatten array payloads).
-                            const values = plan.records.get(connection.source).kind === 'input'
-                                ? source._inputValues
-                                : [outputsByNode.get(connection.source)?.[connection.sourceOutput]];
-                            append(id, connection.targetInput, values);
-                        }
-                        const method = typeof node.data === 'function' ? node.data : node.process;
-                        const result = typeof method === 'function' ? await method.call(node, inputsByNode.get(id)) : {};
-                        this._assertCurrent(generation);
-                        outputsByNode.set(id, result || {});
-                    }
-                    const outputs = { out: inputs.trigger?.[0] };
-                    for (const port of plan.exposedOutputs) {
-                        const nodeOutputs = outputsByNode.get(port.internalNodeId) || {};
-                        const node = this.internalNodeInstances.get(port.internalNodeId);
-                        const property = plan.records.get(port.internalNodeId).kind === 'output' ? '_outputValue' : `_${port.internalPort}Value`;
-                        outputs[`exp_${port.key}`] = hasOwn(nodeOutputs, port.internalPort)
-                            ? nodeOutputs[port.internalPort] : node.properties?.[property];
-                    }
-                    return outputs;
-                } finally {
-                    this._activeData--;
-                    this._scheduleParentChange();
-                }
+        data(inputs) {
+            // For now, pass through trigger to output
+            // Full implementation will process internal graph
+            const trigger = inputs.trigger?.[0];
+            
+            // Collect exposed input values
+            const exposedInputValues = {};
+            this.properties.exposedInputs.forEach(exp => {
+                const inputKey = `exp_${exp.key}`;
+                exposedInputValues[exp.key] = inputs[inputKey]?.[0];
             });
+            
+            // TODO: Process internal graph with exposedInputValues
+            // For now, just pass trigger through
+            
+            return {
+                out: trigger,
+                // Add exposed outputs here after processing
+            };
         }
         
         serialize() {
-            return cloneConfig({
+            return {
                 name: this.properties.name,
                 description: this.properties.description,
                 icon: this.properties.icon,
@@ -470,22 +176,15 @@
                 internalConnections: this.properties.internalConnections,
                 exposedInputs: this.properties.exposedInputs,
                 exposedOutputs: this.properties.exposedOutputs,
-            });
+            };
         }
         
         restore(state) {
-            const props = state?.data?.properties || state?.properties || state?.data || state;
+            const props = state.properties || state;
             if (props) {
-                Object.assign(this.properties, cloneConfig(props));
-                const cleanup = this.disposeInternalGraph();
+                Object.assign(this.properties, props);
                 this.rebuildSockets();
-                return cleanup;
             }
-        }
-
-        destroy() {
-            this._disposed = true;
-            return this.disposeInternalGraph();
         }
     }
     

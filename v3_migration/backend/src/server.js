@@ -66,9 +66,7 @@ console.log(`[Startup] ENV_PATH=${ENV_PATH}`);
 // ALWAYS log this so we can diagnose addon detection issues
 console.log(`[Startup] IS_HA_ADDON=${IS_HA_ADDON}, SUPERVISOR_TOKEN=${process.env.SUPERVISOR_TOKEN ? 'present' : 'missing'}`);
 
-// Parse persisted settings as data. The add-on launcher must not source
-// user-controlled values as shell code.
-require('dotenv').config({ path: ENV_PATH, override: IS_HA_ADDON });
+require('dotenv').config({ path: ENV_PATH });
 
 // Debug mode - set VERBOSE_LOGGING=true in .env to enable detailed console output
 const DEBUG = process.env.VERBOSE_LOGGING === 'true';
@@ -123,8 +121,6 @@ const deviceManagers = require('./devices/managers/deviceManagers');
 const mongoose = require('mongoose');
 const fs = require('fs').promises;
 const requireLocalOrPin = require('./api/middleware/requireLocalOrPin');
-const isLoopbackIp = requireLocalOrPin.isLoopbackIp;
-const isDockerInternal = requireLocalOrPin.isDockerInternal;
 const fetch = globalThis.fetch || require('node-fetch');
 
 debug('Weather imports:', {
@@ -163,12 +159,13 @@ const authManager = require('./api/middleware/authMiddleware');
 io.use((socket, next) => {
   const ip = socket.handshake.address || '';
   // Allow loopback
-  if (isLoopbackIp(ip)) {
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.endsWith('::1')) {
     return next();
   }
-  // Only Docker ingress traffic is trusted automatically in add-on mode.
-  // Direct host-network LAN clients still need the application PIN.
-  if (IS_HA_ADDON && isDockerInternal(ip)) {
+  // Allow Docker internal in HA addon mode
+  if (IS_HA_ADDON && (ip.startsWith('172.') || ip.startsWith('::ffff:172.') ||
+      ip.startsWith('192.168.') || ip.startsWith('::ffff:192.168.') ||
+      ip.startsWith('10.') || ip.startsWith('::ffff:10.'))) {
     return next();
   }
   // Otherwise require PIN via handshake auth or headers
@@ -1002,7 +999,7 @@ app.get('/api/custom-nodes', async (req, res) => {
 });
 
 // New endpoint to fetch HA token (securely)
-app.get('/api/ha-token', requireLocalOrPin, (req, res) => {
+app.get('/api/ha-token', (req, res) => {
   try {
     const token = process.env.HA_TOKEN || '';
     res.json({ success: true, token: token ? '********' : '' });
@@ -1013,7 +1010,7 @@ app.get('/api/ha-token', requireLocalOrPin, (req, res) => {
 });
 
 // New endpoint to fetch Home Assistant config
-app.get('/api/config', requireLocalOrPin, async (req, res) => {
+app.get('/api/config', async (req, res) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '') || process.env.HA_TOKEN;
     if (!token) throw new Error('No Home Assistant token provided');
@@ -1248,7 +1245,7 @@ app.use('/api/shared-logic', sharedLogicRoutes);
 
 // Debug Dashboard API routes
 const debugRoutes = require('./api/routes/debugRoutes');
-app.use('/api/debug', requireLocalOrPin, debugRoutes);
+app.use('/api/debug', debugRoutes);
 
 // Audio Mixer routes (unified stream with TTS mixing)
 const audioRoutes = require('./api/routes/audioRoutes');
@@ -1262,12 +1259,13 @@ app.use('/api/media', createMediaRoutes(io));
 const agentRoutes = require('./api/routes/agentRoutes');
 app.use('/api/agent', agentRoutes);
 
-function registerApiErrorHandlers() {
-  app.use('/api', (req, res) => {
-    res.status(404).json({ error: 'Not found' });
-  });
-  app.use(require('./api/middleware/errorHandler'));
-}
+// --- Error handling (AFTER all routes) ---
+// 404 handler for unmatched API routes
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+// Global error handler
+app.use(require('./api/middleware/errorHandler'));
 
 // Initialize DeviceService
 debug('Initializing DeviceService...');
@@ -1391,17 +1389,11 @@ async function startServer() {
     const deviceService = await initializeDeviceService();
     debug('Setting up routes...');
     await setupRoutes(deviceService);
-    registerApiErrorHandlers();
     debug('Initializing modules...');
     await initializeModules(deviceService);
     
     // Initialize Camera Service (always-on frame capture for ML)
     // Set DISABLE_CAMERAS=true in .env to skip camera startup
-    try {
-      require('./cameras/cameraConfigStore').cameraConfigStore.initialize();
-    } catch {
-      console.error('[Cameras] Configuration unavailable; existing file retained');
-    }
     const CAMERAS_ENABLED = process.env.DISABLE_CAMERAS !== 'true';
     if (CAMERAS_ENABLED) {
       debug('Initializing Camera Service...');
@@ -1446,31 +1438,6 @@ startServer();
 
 // Track if we've received a shutdown signal to prevent double-shutdown
 let shuttingDown = false;
-
-process.on('SIGTERM', async () => {
-  console.log('[SIGTERM] Received SIGTERM signal');
-
-  // Desktop launchers do not use SIGTERM as the normal stop mechanism.
-  if (!IS_HA_ADDON) return;
-  if (shuttingDown) {
-    console.log('[SIGTERM] Force exiting...');
-    process.exit(1);
-  }
-
-  shuttingDown = true;
-  await logger.log('Shutting down server via SIGTERM', 'info', false, 'shutdown');
-  backendEngine?.stop();
-
-  server.close(async () => {
-    await mongoose.connection.close();
-    process.exit(0);
-  });
-
-  setTimeout(() => {
-    console.log('[SIGTERM] Graceful shutdown timed out, force exiting...');
-    process.exit(1);
-  }, 5000);
-});
 
 // In HA add-on mode (Docker), handle SIGINT/SIGTERM for graceful shutdown
 // In desktop mode, ignore SIGINT completely - it's usually VS Code terminal artifacts
