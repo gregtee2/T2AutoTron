@@ -69,10 +69,14 @@
         }
     }
     
-    // Load immediately
-    loadAllModules();
+    // Load immediately and expose readiness so behavior-critical plugins can wait
+    // for the shared contract instead of racing the asynchronous module fetches.
+    window.T2SharedLogic._ready = loadAllModules();
     
     // Also expose loader for manual refresh
-    window.T2SharedLogic._reload = loadAllModules;
+    window.T2SharedLogic._reload = () => {
+        window.T2SharedLogic._ready = loadAllModules();
+        return window.T2SharedLogic._ready;
+    };
     
 })();

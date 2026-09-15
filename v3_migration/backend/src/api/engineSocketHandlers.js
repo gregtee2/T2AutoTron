@@ -72,9 +72,9 @@ function initEngineSocketHandlers(socketIO) {
     });
     
     // Client requests to stop engine
-    socket.on('stop-engine', () => {
+    socket.on('stop-engine', async () => {
       try {
-        engine.stop();
+        await engine.stop();
         io.emit('engine-stopped', engine.getStatus());
       } catch (error) {
         socket.emit('engine-error', { message: error.message });

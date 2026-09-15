@@ -70,7 +70,8 @@ router.get('/status', (req, res) => {
       lastTickTime: status.lastTickTime,
       uptime: status.running ? Date.now() - status.startTime : 0,
       frontendActive: status.frontendActive,
-      frontendLastSeen: status.frontendLastSeen
+      frontendLastSeen: status.frontendLastSeen,
+      frontendHandoffInProgress: status.frontendHandoffInProgress
     }
   });
 });
@@ -131,10 +132,10 @@ router.post('/start', requireLocalOrPin, async (req, res) => {
  * POST /api/engine/stop
  * Stop the backend engine
  */
-router.post('/stop', requireLocalOrPin, (req, res) => {
+router.post('/stop', requireLocalOrPin, async (req, res) => {
   try {
     const { engine } = getEngine();
-    engine.stop();
+    await engine.stop();
     
     // Stop periodic audit
     deviceAudit.stopPeriodicAudit();
@@ -349,7 +350,11 @@ router.get('/device-states', async (req, res) => {
           // First check deviceStates (tracks actual commands sent)
           // Note: deviceStates may be keyed with or without ha_ prefix - check both
           const trackedState = node.deviceStates?.[entityId] ?? node.deviceStates?.[`ha_${entityId}`] ?? node.deviceStates?.[deviceId];
-          if (trackedState !== undefined) {
+          const commandState = node.commandStates?.[entityId] || node.commandStates?.[deviceId] || null;
+          if (commandState?.desiredState !== null && commandState?.desiredState !== undefined) {
+            expectedState = commandState.desiredState ? 'on' : 'off';
+          }
+          else if (trackedState !== undefined) {
             expectedState = trackedState ? 'on' : 'off';
           }
           // If trigger is connected, use trigger state
@@ -381,6 +386,16 @@ router.get('/device-states', async (req, res) => {
             hasHsvInput: !!node.lastSentHsv,
             expectedHsv: node.lastSentHsv || null,  // What color engine is sending
             trackedState: trackedState,  // Already looked up above with fallback
+            commandState: commandState ? {
+              desiredState: commandState.desiredState,
+              observedState: commandState.observedState,
+              pendingCommand: commandState.pendingCommand,
+              phase: commandState.phase,
+              attempt: commandState.attempt,
+              lastError: commandState.lastError,
+              confirmationDueAt: commandState.confirmationDueAt,
+              nextRetryAt: commandState.nextRetryAt
+            } : null,
             effectOverride: effectControlledEntities.has(entityId),  // Skip color check if Hue Effect active
             lastOutput: output
           });
@@ -590,7 +605,7 @@ router.post('/save-active', requireLocalOrPin, async (req, res) => {
           if (VERBOSE) console.log('[Engine API] Graph hot-reloaded into engine');
         } else {
           // Graph was cleared - stop the engine gracefully
-          engine.stop();
+          await engine.stop();
           if (VERBOSE) console.log('[Engine API] Graph cleared - engine stopped');
         }
       }

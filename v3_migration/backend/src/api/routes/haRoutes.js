@@ -62,15 +62,16 @@ module.exports = function (io) {
     const { id } = req.params;
     const cacheKey = `ha_state_${id}`;
     const cached = stateCache.get(cacheKey);
+    const forceRefresh = req.query.fresh === 'true';
 
-    if (cached && Date.now() < cached.expiry) {
+    if (!forceRefresh && cached && Date.now() < cached.expiry) {
       // Cache hit - no logging needed
       return res.json({ success: true, state: cached.state });
     }
 
     // Fetching state - logging done in manager layer
     try {
-      const result = await homeAssistantManager.getState(id);
+      const result = await homeAssistantManager.getState(id, { forceRefresh });
       if (!result.success) {
         logWithTimestamp(`HA device ${id} not found or error: ${result.error}`, 'error');
         return res.status(404).json({ success: false, error: result.error || 'Device not found' });
@@ -159,25 +160,28 @@ module.exports = function (io) {
       const result = await homeAssistantManager.updateState(id, update);
       if (!result.success) {
         logWithTimestamp(`Error updating HA device ${id}: ${result.error}`, 'error');
-        return res.status(400).json({ success: false, error: result.error });
+        const status = result.retryable ? 503 : (result.status || 400);
+        return res.status(status).json({
+          success: false,
+          error: result.error,
+          retryable: result.retryable === true
+        });
       }
       const stateResult = await homeAssistantManager.getState(id);
       if (stateResult.success) {
         if (io) {
           const state = {
             id,
+            state: stateResult.state.state,
+            on: stateResult.state.on,
             ...(entityType === 'light' ? {
-              on: stateResult.state.on,
               brightness: stateResult.state.brightness,
               hs_color: stateResult.state.hs_color
             } : entityType === 'fan' ? {
-              on: stateResult.state.on,
               percentage: stateResult.state.percentage
             } : entityType === 'cover' ? {
-              on: stateResult.state.on,
               position: stateResult.state.position
             } : entityType === 'switch' ? {
-              on: stateResult.state.on,
               brightness: stateResult.state.brightness,
               hs_color: stateResult.state.hs_color,
               power: stateResult.state.power,

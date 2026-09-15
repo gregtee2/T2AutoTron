@@ -1259,14 +1259,6 @@ app.use('/api/media', createMediaRoutes(io));
 const agentRoutes = require('./api/routes/agentRoutes');
 app.use('/api/agent', agentRoutes);
 
-// --- Error handling (AFTER all routes) ---
-// 404 handler for unmatched API routes
-app.use('/api', (req, res) => {
-  res.status(404).json({ error: 'Not found' });
-});
-// Global error handler
-app.use(require('./api/middleware/errorHandler'));
-
 // Initialize DeviceService
 debug('Initializing DeviceService...');
 async function initializeDeviceService() {
@@ -1389,6 +1381,13 @@ async function startServer() {
     const deviceService = await initializeDeviceService();
     debug('Setting up routes...');
     await setupRoutes(deviceService);
+
+    // These fallbacks must be registered after plugin-provided API routes.
+    app.use('/api', (req, res) => {
+      res.status(404).json({ error: 'Not found' });
+    });
+    app.use(require('./api/middleware/errorHandler'));
+
     debug('Initializing modules...');
     await initializeModules(deviceService);
     

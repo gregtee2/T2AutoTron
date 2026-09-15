@@ -342,6 +342,13 @@ See [CHANGELOG.md](CHANGELOG.md) for full history.
 
 ---
 
+## Recovery Notes
+
+- [Home Assistant TP-Link/Kasa login recovery](ha_workarounds/tplink_klap_v2/README.md): September 7, 2026 repair record, plain-English explanation, backup and repeat-repair steps, temporary-access precautions, and rollback. The owner reported broader device recovery after enabling Kasa compatibility and applying the host-limited KLAP v2 workaround.
+- [HA Generic Device command contract](v3_migration/HA_GENERIC_DEVICE_CONTRACT.md): desired versus observed state, delivery confirmation, retries, ownership handoff, and overnight acceptance tests.
+
+---
+
 ## 🙏 Credits
 
 Built with:

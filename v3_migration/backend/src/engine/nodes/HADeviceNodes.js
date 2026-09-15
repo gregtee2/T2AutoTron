@@ -9,6 +9,19 @@ const registry = require('../BackendNodeRegistry');
 const engineLogger = require('../engineLogger');
 const deviceAudit = require('../deviceAudit');
 const commandTracker = require('../commandTracker');
+const {
+  createDeviceCommandState,
+  setDesiredDeviceState,
+  recordObservedDeviceState,
+  isExternalDeviceOverride,
+  adoptObservedDeviceState,
+  rearmDeviceCommandState,
+  beginDeviceCommand,
+  recordDeviceCommandResult,
+  isRetryableHttpStatus,
+  normalizeObservedPowerState,
+  shouldIssueDeviceCommand
+} = require('../../../../shared/logic/DeviceLogic');
 
 // Lazy-load homeAssistantManager for health tracking
 let _haManager = null;
@@ -39,8 +52,7 @@ const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 // Matches frontend behavior to ensure consistent edge detection
 // ============================================================================
 function coerceBoolean(value) {
-  if (value === undefined) return undefined;  // Preserve undefined (no connection)
-  if (value === null) return false;
+  if (value === undefined || value === null) return undefined;  // Preserve missing input
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
   if (typeof value === 'string') {
@@ -144,12 +156,14 @@ const bulkStateCache = {
    * @param {string} entityId - e.g., "sensor.temperature" (without ha_ prefix)
    * @returns {object|null} State object or null if not found
    */
-  async getState(entityId) {
+  async getState(entityId, options = {}) {
     const now = Date.now();
+    const requireFresh = options.requireFresh === true;
     
-    // If cache is stale, refresh it
-    if (now - this.lastFetchTime > this.CACHE_TTL) {
-      await this.refreshCache();
+    // Confirmation callers require a new HA snapshot even when the TTL has not expired.
+    if (requireFresh || now - this.lastFetchTime > this.CACHE_TTL) {
+      const refreshed = await this.refreshCache({ maxAgeMs: requireFresh ? 100 : null });
+      if (requireFresh && !refreshed) return null;
     }
     
     return this.states.get(entityId) || null;
@@ -158,15 +172,20 @@ const bulkStateCache = {
   /**
    * Refresh the bulk state cache with ALL states from HA
    */
-  async refreshCache() {
+  async refreshCache(options = {}) {
     // If already fetching, wait for that fetch to complete
     if (this.fetchPromise) {
       return this.fetchPromise;
     }
+
+    if (
+      Number.isFinite(options.maxAgeMs) &&
+      Date.now() - this.lastFetchTime <= options.maxAgeMs
+    ) return true;
     
     const config = getHAConfig();
     if (!config.token) {
-      return;
+      return false;
     }
     
     // Create a promise that all waiters can share
@@ -183,7 +202,7 @@ const bulkStateCache = {
         
         if (!response.ok) {
           console.error(`[BulkStateCache] Failed to fetch states: HTTP ${response.status}`);
-          return;
+          return false;
         }
         
         const states = await response.json();
@@ -202,8 +221,10 @@ const bulkStateCache = {
         
         this.lastFetchTime = Date.now();
         // Success logs removed - too noisy. Only log errors.
+        return true;
       } catch (error) {
         console.error(`[BulkStateCache] Error fetching states: ${error.message}`);
+        return false;
       } finally {
         this.fetchPromise = null;
       }
@@ -773,6 +794,7 @@ class HALightControlNode {
 class HAGenericDeviceNode {
   constructor() {
     this.id = null;
+    this.type = 'HAGenericDeviceNode';
     this.label = 'HA Generic Device';
     this.properties = {
       selectedDeviceIds: [],
@@ -783,6 +805,9 @@ class HAGenericDeviceNode {
     this.lastTrigger = null;
     this.lastHsv = null;
     this.deviceStates = {};  // Track on/off state per device for Toggle mode
+    this.commandStates = {};
+    this.commandStatus = { phase: 'idle', desiredState: null, pending: 0, failed: 0 };
+    this.awaitingTriggerBaseline = false;
   }
 
   restore(data) {
@@ -794,10 +819,156 @@ class HAGenericDeviceNode {
     this.lastSendTime = 0;
     this.lastTrigger = null;
     this.lastHsv = null;
+    this.commandStates = {};
+    this.commandStatus = { phase: 'idle', desiredState: null, pending: 0, failed: 0 };
+    this.awaitingTriggerBaseline = false;
   }
 
-  async isEntityActuallyOn(entityId, context = 'hsv_update') {
-    const state = await bulkStateCache.getState(entityId);
+  getCommandState(entityId) {
+    if (!this.commandStates[entityId]) {
+      this.commandStates[entityId] = createDeviceCommandState();
+    }
+    return this.commandStates[entityId];
+  }
+
+  setDesiredCommandState(entityId, desiredState) {
+    this.commandStates[entityId] = setDesiredDeviceState(
+      this.getCommandState(entityId),
+      desiredState
+    );
+    this.updateCommandStatus();
+    return this.commandStates[entityId];
+  }
+
+  recordObservedCommandState(entityId, observedState) {
+    const current = this.getCommandState(entityId);
+    const respectsManualOverride =
+      (this.properties.triggerMode || 'Follow') === 'Follow' &&
+      !this.properties.enforceState &&
+      isExternalDeviceOverride(current, observedState);
+    this.commandStates[entityId] = respectsManualOverride
+      ? adoptObservedDeviceState(current, observedState)
+      : recordObservedDeviceState(current, observedState);
+    if (
+      this.commandStates[entityId].phase === 'confirmed' &&
+      (this.properties.triggerMode || 'Follow') !== 'Follow'
+    ) {
+      this.commandStates[entityId] = setDesiredDeviceState(
+        this.commandStates[entityId],
+        undefined
+      );
+    }
+    this.deviceStates[entityId] = !!observedState;
+    this.deviceStates[`ha_${entityId}`] = !!observedState;
+    this.updateCommandStatus();
+    return this.commandStates[entityId];
+  }
+
+  recordCommandDelivery(entityId, result) {
+    this.commandStates[entityId] = recordDeviceCommandResult(
+      this.getCommandState(entityId),
+      result
+    );
+    this.updateCommandStatus();
+    return this.commandStates[entityId];
+  }
+
+  beginCommandDelivery(entityId) {
+    const started = beginDeviceCommand(this.getCommandState(entityId));
+    this.commandStates[entityId] = started.state;
+    this.updateCommandStatus();
+    return started.command;
+  }
+
+  rearmCommandStates() {
+    for (const entityId of Object.keys(this.commandStates)) {
+      this.commandStates[entityId] = rearmDeviceCommandState(this.commandStates[entityId]);
+    }
+    this.updateCommandStatus();
+  }
+
+  updateCommandStatus() {
+    const states = Object.values(this.commandStates);
+    const desiredStates = states.map(state => state.desiredState).filter(state => state !== null);
+    const failed = states.filter(state => state.phase === 'failed').length;
+    const retrying = states.filter(state => state.phase === 'retrying').length;
+    const pending = states.filter(state => state.phase === 'pending').length;
+    const delegated = states.filter(state => state.phase === 'delegated').length;
+    const confirmed = states.filter(state => state.phase === 'confirmed').length;
+    let phase = 'idle';
+    if (failed > 0) phase = 'failed';
+    else if (retrying > 0) phase = 'retrying';
+    else if (pending > 0) phase = 'pending';
+    else if (states.length > 0 && delegated === states.length) phase = 'delegated';
+    else if (states.length > 0 && confirmed === states.length) phase = 'confirmed';
+    this.commandStatus = {
+      phase,
+      desiredState: desiredStates.length > 0 && desiredStates.every(value => value === desiredStates[0])
+        ? desiredStates[0]
+        : null,
+      pending: pending + retrying,
+      failed
+    };
+  }
+
+  async refreshCommandObservations(entityIds, now = Date.now()) {
+    const confirmationDueById = new Map(entityIds.map(entityId => {
+      const state = this.getCommandState(entityId);
+      return [entityId,
+        state.phase === 'pending' &&
+        state.confirmationDueAt !== null &&
+        state.confirmationDueAt !== undefined &&
+        now >= state.confirmationDueAt
+      ];
+    }));
+    const retryDueById = new Map(entityIds.map(entityId => {
+      const state = this.getCommandState(entityId);
+      return [entityId,
+        state.phase === 'retrying' &&
+        now >= (state.nextRetryAt || 0)
+      ];
+    }));
+    const needsFreshCommandObservation = entityIds.some(entityId =>
+      confirmationDueById.get(entityId) || retryDueById.get(entityId)
+    );
+    const commandRefreshSucceeded = needsFreshCommandObservation
+      ? await bulkStateCache.refreshCache({ maxAgeMs: 100 })
+      : true;
+
+    for (const entityId of entityIds) {
+      const state = this.getCommandState(entityId);
+      const confirmationDue = confirmationDueById.get(entityId);
+      const observationDue = state.observedState === null ||
+        confirmationDue ||
+        retryDueById.get(entityId);
+      if (!observationDue) continue;
+
+      const requiresFreshObservation = confirmationDue || retryDueById.get(entityId);
+      const observed = requiresFreshObservation
+        ? (commandRefreshSucceeded ? bulkStateCache.states.get(entityId) || null : null)
+        : await bulkStateCache.getState(entityId);
+      const isOn = normalizeObservedPowerState(observed);
+      if (isOn !== null) this.recordObservedCommandState(entityId, isOn);
+
+      const current = this.getCommandState(entityId);
+      if (
+        confirmationDue &&
+        current.phase !== 'confirmed' &&
+        current.desiredState !== null
+      ) {
+        this.recordCommandDelivery(entityId, {
+          success: false,
+          retryable: true,
+          reason: isOn === null ? 'confirmation_unavailable' : 'confirmation_mismatch'
+        });
+      }
+    }
+  }
+
+  async isEntityActuallyOn(entityId, context = 'hsv_update', options = {}) {
+    const state = options.cacheRefreshed
+      ? bulkStateCache.states.get(entityId) || null
+      : await bulkStateCache.getState(entityId, { requireFresh: true });
 
     if (!state) {
       engineLogger.log('HA-HSV-SKIP', `No current HA state for ${entityId}; skipping HSV update`, {
@@ -807,9 +978,15 @@ class HAGenericDeviceNode {
       return false;
     }
 
-    const isOn = state.state === 'on' || state.state === 'open' || state.state === 'playing';
-    this.deviceStates[entityId] = isOn;
-    this.deviceStates[`ha_${entityId}`] = isOn;
+    const isOn = normalizeObservedPowerState(state);
+    if (isOn === null) {
+      engineLogger.log('HA-HSV-SKIP', `${entityId} state is ${state.state}; skipping HSV update`, {
+        context,
+        reason: 'state_unknown'
+      });
+      return false;
+    }
+    this.recordObservedCommandState(entityId, isOn);
 
     if (!isOn) {
       engineLogger.log('HA-HSV-SKIP', `${entityId} is ${state.state}; skipping HSV update so it stays off`, {
@@ -848,11 +1025,15 @@ class HAGenericDeviceNode {
         continue;
       }
 
-      // Check if device is ON
-      const isOn = state.state === 'on' || state.state === 'open' || state.state === 'playing';
+      // Check if device has an explicit ON/OFF-equivalent state.
+      const isOn = normalizeObservedPowerState(state);
+      if (isOn === null) {
+        results.push({ entityId, status: 'unknown', state: state.state });
+        continue;
+      }
       
-      // Pre-populate deviceStates with actual state
-      this.deviceStates[`ha_${entityId}`] = isOn;
+      // Pre-populate observed state and command contract from HA reality.
+      this.recordObservedCommandState(entityId, isOn);
       
       if (isOn) {
         onCount++;
@@ -877,6 +1058,7 @@ class HAGenericDeviceNode {
     // CRITICAL: Set hadConnection = true so first tick doesn't treat all connections as "new"
     // Without this, first tick sees hadConnection=undefined → newConnection=true → skips OFF commands
     this.hadConnection = true;
+    this.awaitingTriggerBaseline = (this.properties.triggerMode || 'Follow') !== 'Follow';
 
     engineLogger.log('HA-RECONCILE', `${this.label || this.id}: ${onCount} ON, ${offCount} OFF (lastTrigger left undefined for input to set)`, {
       nodeId: this.id,
@@ -893,26 +1075,29 @@ class HAGenericDeviceNode {
     };
   }
 
-  async controlDevice(entityId, turnOn, hsv = null) {
+  async controlDevice(entityId, turnOn, hsv = null, options = {}) {
+    const trackDesired = options.trackDesired !== false;
+    const trackCommand = options.trackCommand !== false;
+    if (trackDesired) this.setDesiredCommandState(entityId, turnOn);
     const config = getHAConfig();
     if (!config.token || !entityId) {
       console.error('[HAGenericDeviceNode] No token or entityId');
-      return { success: false };
+      const result = { success: false, retryable: true, reason: 'missing_config' };
+      if (trackCommand) this.recordCommandDelivery(entityId, result);
+      return result;
     }
-
-    // ALWAYS update internal state tracking - this keeps engine in sync with frontend
-    // Even if we skip the actual API call, we need to track what SHOULD be happening
-    this.deviceStates = this.deviceStates || {};
-    this.deviceStates[entityId] = turnOn;
-    this.deviceStates[`ha_${entityId}`] = turnOn;  // Also track with prefix for compatibility
 
     // Check if frontend is active - if so, skip the API call to avoid conflict
     // But we've already updated deviceStates above, so engine stays in sync
     const engine = getEngine();
     if (engine && engine.shouldSkipDeviceCommands()) {
-      engineLogger.log('HA-DEVICE-SKIP', `Frontend active, skipping API call for ${entityId} (state tracked: ${turnOn ? 'ON' : 'OFF'})`, { turnOn });
-      return { success: true, skipped: true };
+      engineLogger.log('HA-DEVICE-SKIP', `Frontend active, skipping API call for ${entityId} (intent delegated: ${turnOn ? 'ON' : 'OFF'})`, { turnOn });
+      const result = { success: true, skipped: true, reason: 'frontend_active' };
+      if (trackCommand) this.recordCommandDelivery(entityId, result);
+      return result;
     }
+
+    const commandToken = trackCommand ? this.beginCommandDelivery(entityId) : null;
 
     // Determine domain from entity_id
     const domain = entityId.split('.')[0] || 'light';
@@ -969,7 +1154,8 @@ class HAGenericDeviceNode {
           'Authorization': `Bearer ${config.token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10000)
       });
 
       if (!response.ok) {
@@ -977,11 +1163,35 @@ class HAGenericDeviceNode {
       } else {
         engineLogger.log('HA-DEVICE-SUCCESS', `${entityId} ${service}`, { payload });
       }
-      return { success: response.ok };
+      const result = response.ok
+        ? { success: true, confirmAfterMs: 2500, commandToken }
+        : {
+            success: false,
+            retryable: isRetryableHttpStatus(response.status),
+            reason: `HTTP ${response.status}`,
+            commandToken
+          };
+      if (trackCommand) this.recordCommandDelivery(entityId, result);
+      return result;
     } catch (error) {
       engineLogger.log('HA-DEVICE-ERROR', `${entityId}: ${error.message}`);
-      return { success: false };
+      const result = {
+        success: false,
+        retryable: true,
+        reason: error.message || 'network_error',
+        commandToken
+      };
+      if (trackCommand) this.recordCommandDelivery(entityId, result);
+      return result;
     }
+  }
+
+  async sendFollowCommand(entityId, turnOn, hsv = null, force = false) {
+    const state = this.setDesiredCommandState(entityId, turnOn);
+    if (!force && !shouldIssueDeviceCommand(state)) {
+      return { success: true, noCommand: true };
+    }
+    return this.controlDevice(entityId, turnOn, hsv, { trackDesired: false });
   }
 
   async data(inputs) {
@@ -991,7 +1201,7 @@ class HAGenericDeviceNode {
     // Coerce trigger to proper boolean (matches frontend behavior)
     // This ensures "false" (string), 0, null are properly interpreted
     const trigger = coerceBoolean(triggerRaw);
-    const hasConnection = triggerRaw !== undefined;
+    const hasConnection = trigger !== undefined;
     
     // Store inputs for command tracking (helps answer "why did this trigger?")
     this.lastInputs = { trigger, triggerRaw, hsv: hsv ? 'present' : 'none' };
@@ -1020,6 +1230,8 @@ class HAGenericDeviceNode {
     if (entityIds.length === 0) {
       return { is_on: false };
     }
+
+    const triggerMode = this.properties.triggerMode || 'Follow';
     
     // Log every tick only in verbose mode (level 2) - too noisy otherwise
     if (engineLogger.getLogLevel() >= 2) {
@@ -1050,7 +1262,7 @@ class HAGenericDeviceNode {
       // Record current trigger value for tracking
       // EXCEPT: For Follow mode with trigger=false, we want to delay this until
       // warmupComplete so we can check for device mismatches first
-      const mode = this.properties.triggerMode || 'Follow';
+      const mode = triggerMode;
       if (trigger !== undefined && !(mode === 'Follow' && !trigger)) {
         this.lastTrigger = trigger;
       }
@@ -1063,7 +1275,7 @@ class HAGenericDeviceNode {
     if (!this.warmupComplete) {
       this.warmupComplete = true;
       
-      const mode = this.properties.triggerMode || 'Follow';
+      const mode = triggerMode;
       const nodeLabel = this.properties.customTitle || this.label || this.id;
       
       // Debug log what we see at warmup complete
@@ -1078,8 +1290,7 @@ class HAGenericDeviceNode {
         });
         
         for (const entityId of entityIds) {
-          await this.controlDevice(entityId, !!trigger, trigger ? hsv : null);
-          this.deviceStates[entityId] = !!trigger;
+          await this.sendFollowCommand(entityId, !!trigger, trigger ? hsv : null);
         }
       }
       
@@ -1094,8 +1305,7 @@ class HAGenericDeviceNode {
         
         for (const entityId of entityIds) {
           if (mode === 'Follow') {
-            await this.controlDevice(entityId, !!cmd.trigger, cmd.trigger ? cmd.hsv : null);
-            this.deviceStates[entityId] = !!cmd.trigger;
+            await this.sendFollowCommand(entityId, !!cmd.trigger, cmd.trigger ? cmd.hsv : null);
           }
         }
       }
@@ -1109,6 +1319,9 @@ class HAGenericDeviceNode {
     // In this case, we should apply HSV to devices that are currently ON
     // This matches the frontend behavior where HSV-only nodes still control colors
     if (trigger === undefined) {
+      for (const entityId of entityIds) {
+        this.setDesiredCommandState(entityId, undefined);
+      }
       // If we have HSV input, apply it to devices that are currently ON
       if (hsv) {
         // Track when we last sent a command (same logic as trigger-connected nodes)
@@ -1169,16 +1382,27 @@ class HAGenericDeviceNode {
           
           this.lastSendTime = now;
           let sentCount = 0;
+          const refreshed = await bulkStateCache.refreshCache({ maxAgeMs: 100 });
+          if (!refreshed) return { is_on: !!this.lastTrigger };
           
           for (const entityId of filteredEntityIds) {
             // Only apply HSV to devices that HA says are currently ON.
             // The local deviceStates map can be stale after schedules/manual changes,
             // and light.turn_on with color would wake an OFF light back up.
-            const isCurrentlyOn = await this.isEntityActuallyOn(entityId, 'hsv_only');
+            const isCurrentlyOn = await this.isEntityActuallyOn(
+              entityId,
+              'hsv_only',
+              { cacheRefreshed: true }
+            );
             if (isCurrentlyOn) {
               // Send turn_on with color - HA interprets this as "apply color to this already-on light"
-              await this.controlDevice(entityId, true, hsv);
-              sentCount++;
+              const result = await this.controlDevice(
+                entityId,
+                true,
+                hsv,
+                { trackDesired: false, trackCommand: false }
+              );
+              if (result.success) sentCount++;
             }
             // If device is OFF, skip it - don't turn it on just to apply a color
           }
@@ -1197,10 +1421,18 @@ class HAGenericDeviceNode {
     // Handle trigger changes based on mode
     // Use explicit edge detection (matches frontend behavior)
     const triggerBool = !!trigger;
+    if (this.awaitingTriggerBaseline) {
+      this.lastTrigger = triggerBool;
+      this.awaitingTriggerBaseline = false;
+    }
     const lastBool = !!this.lastTrigger;
     const risingEdge = triggerBool && !lastBool;
     const fallingEdge = !triggerBool && lastBool;
     const newConnection = hasConnection && !this.hadConnection;
+    await this.refreshCommandObservations(entityIds);
+    const followCommandDue = triggerMode === 'Follow' && entityIds.some(entityId =>
+      shouldIssueDeviceCommand(this.getCommandState(entityId))
+    );
     
     // Check if device is ON but trigger says OFF (mismatch after reconcile)
     // This handles the case where device was ON when graph loaded, but trigger input is FALSE
@@ -1221,25 +1453,11 @@ class HAGenericDeviceNode {
     // Track connection state for next tick
     this.hadConnection = hasConnection;
     
-    // IMPORTANT: On new connection, only act if trigger is TRUE
-    // This prevents the "turn everything OFF on startup" bug where:
-    // 1. Graph loads, all connections are detected as "new"
-    // 2. Upstream nodes haven't computed yet, so trigger = false
-    // 3. Follow mode sends turn_off to all devices
-    // Fix: Only act on newConnection if it's a TRUE value (turn ON, not OFF)
+    // A new FALSE value is safe once it has been observed as an actual input:
+    // the command contract compares it with HA reality before deciding to send.
     const shouldActOnNewConnection = newConnection && triggerBool;
-    
-    // If new connection with false trigger, just record state without sending OFF command
-    if (newConnection && !triggerBool) {
-      engineLogger.log('HA-NEW-CONN-SKIP', `New connection with trigger=false, skipping OFF command (will act on next rising edge)`, {
-        entities: entityIds,
-        mode: this.properties.triggerMode || 'Follow'
-      });
-      this.lastTrigger = trigger;  // Record state for edge detection
-      return { is_on: false };
-    }
-    
-    if (risingEdge || fallingEdge || shouldActOnNewConnection || deviceMismatch) {
+
+    if (risingEdge || fallingEdge || shouldActOnNewConnection || deviceMismatch || followCommandDue) {
       // Log the edge detection for debugging
       const nodeLabel = this.properties.customTitle || this.label || this.id;
       if (VERBOSE) console.log(`[HAGenericDevice] ${nodeLabel}: Edge detected! trigger=${trigger}, lastTrigger=${this.lastTrigger}, risingEdge=${risingEdge}, fallingEdge=${fallingEdge}`);
@@ -1248,7 +1466,7 @@ class HAGenericDeviceNode {
         risingEdge ? 'RISING_EDGE' : fallingEdge ? 'FALLING_EDGE' : deviceMismatch ? 'DEVICE_MISMATCH' : 'NEW_CONNECTION');
       this.lastTrigger = trigger;
       
-      const mode = this.properties.triggerMode || 'Follow';
+      const mode = triggerMode;
       
       // Check for device exclusions from upstream HueEffectNodes
       // These devices are under effect control and should not receive trigger commands
@@ -1276,8 +1494,7 @@ class HAGenericDeviceNode {
           case 'Toggle':
             // Toggle on rising edge only (already detected above)
             if (risingEdge) {
-              this.deviceStates[entityId] = !this.deviceStates[entityId];
-              shouldTurnOn = this.deviceStates[entityId];
+              shouldTurnOn = !this.deviceStates[entityId];
               reason = `Toggle mode: rising edge → ${shouldTurnOn ? 'ON' : 'OFF'}`;
               this.lastTriggerReason = reason;
               engineLogger.log('HA-DECISION', reason, { entityId });
@@ -1288,6 +1505,7 @@ class HAGenericDeviceNode {
             }
             continue;  // Skip normal control
           case 'On':
+          case 'Turn On':
             // Only turn on, never off
             if (trigger) {
               shouldTurnOn = true;
@@ -1299,6 +1517,7 @@ class HAGenericDeviceNode {
             }
             break;
           case 'Off':
+          case 'Turn Off':
             // Only turn off, never on
             if (trigger) {
               shouldTurnOn = false;
@@ -1312,8 +1531,11 @@ class HAGenericDeviceNode {
         }
         
         engineLogger.log('HA-DECISION', reason, { entityId, shouldTurnOn });
-        await this.controlDevice(entityId, shouldTurnOn, shouldTurnOn ? hsv : null);
-        this.deviceStates[entityId] = shouldTurnOn;
+        if (mode === 'Follow') {
+          await this.sendFollowCommand(entityId, shouldTurnOn, shouldTurnOn ? hsv : null);
+        } else {
+          await this.controlDevice(entityId, shouldTurnOn, shouldTurnOn ? hsv : null);
+        }
       }
     } else {
       // No trigger change - only log in verbose mode to avoid spam
@@ -1323,6 +1545,24 @@ class HAGenericDeviceNode {
           tick: this.tickCount, 
           entities: entityIds 
         });
+      }
+    }
+
+    // Edge-triggered modes retain their command intent until HA confirms it.
+    // Retry from that stored intent without requiring another input edge.
+    if (triggerMode !== 'Follow') {
+      for (const entityId of entityIds) {
+        const commandState = this.getCommandState(entityId);
+        if (!shouldIssueDeviceCommand(commandState)) continue;
+
+        const desiredState = commandState.desiredState;
+        this.lastTriggerReason = `${triggerMode} mode retry: ${desiredState ? 'ON' : 'OFF'}`;
+        await this.controlDevice(
+          entityId,
+          desiredState,
+          desiredState ? hsv : null,
+          { trackDesired: false }
+        );
       }
     }
 
@@ -1412,14 +1652,25 @@ class HAGenericDeviceNode {
         this.lastSendTime = now;
         const oldHsv = this.lastSentHsv ? { ...this.lastSentHsv } : null;
         let sentCount = 0;
+        const refreshed = await bulkStateCache.refreshCache({ maxAgeMs: 100 });
+        if (!refreshed) return { is_on: !!this.lastTrigger };
         for (const entityId of filteredEntityIds) {
-          const isCurrentlyOn = await this.isEntityActuallyOn(entityId, 'trigger_hsv_update');
+          const isCurrentlyOn = await this.isEntityActuallyOn(
+            entityId,
+            'trigger_hsv_update',
+            { cacheRefreshed: true }
+          );
           if (!isCurrentlyOn) continue;
 
           // Track for periodic summary log
           hsvUpdateTracker.track(entityId, oldHsv, hsv);
-          await this.controlDevice(entityId, true, hsv);
-          sentCount++;
+          const result = await this.controlDevice(
+            entityId,
+            true,
+            hsv,
+            { trackDesired: false, trackCommand: false }
+          );
+          if (result.success) sentCount++;
         }
 
         if (sentCount > 0) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } from 'react';
 import './Toast.css';
 
 // Toast Context for global access
@@ -54,10 +54,10 @@ function ToastItem({ id, type, message, duration, onRemove, action, actionLabel 
 // Toast Container component
 export function ToastContainer({ children }) {
     const [toasts, setToasts] = useState([]);
-    let toastId = 0;
+    const toastId = useRef(0);
 
     const addToast = useCallback((type, message, options = {}) => {
-        const id = ++toastId;
+        const id = ++toastId.current;
         const duration = typeof options === 'number' ? options : (options.duration ?? 4000);
         const action = typeof options === 'object' ? options.action : null;
         const actionLabel = typeof options === 'object' ? options.actionLabel : null;
@@ -70,14 +70,14 @@ export function ToastContainer({ children }) {
     }, []);
 
     // Convenience methods
-    const toast = {
+    const toast = useMemo(() => ({
         success: (msg, options) => addToast('success', msg, options),
         error: (msg, options) => addToast('error', msg, typeof options === 'number' ? options : { duration: 6000, ...options }), // Errors stay longer
         warning: (msg, options) => addToast('warning', msg, options),
         info: (msg, options) => addToast('info', msg, options),
         dismiss: removeToast,
         dismissAll: () => setToasts([])
-    };
+    }), [addToast, removeToast]);
 
     return (
         <ToastContext.Provider value={toast}>

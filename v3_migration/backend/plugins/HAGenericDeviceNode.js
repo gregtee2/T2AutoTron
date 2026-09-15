@@ -77,11 +77,25 @@
         activeRequests: 0,
         MAX_CONCURRENT: 2,  // Max simultaneous API requests (browser safe limit)
         DELAY_BETWEEN: 100, // ms between requests
+        MAX_QUEUE_SIZE: 500,
         
         // Add a request to the queue and process
-        async enqueue(requestFn, priority = 0) {
+        async enqueue(requestFn, priority = 0, key = null) {
             return new Promise((resolve, reject) => {
-                this.queue.push({ requestFn, resolve, reject, priority });
+                if (key) {
+                    const existing = this.queue.find(item => item.key === key);
+                    if (existing) {
+                        existing.resolve({ ok: false, t2CommandSkipped: true, reason: 'coalesced' });
+                        Object.assign(existing, { requestFn, resolve, reject, priority });
+                        this.queue.sort((a, b) => b.priority - a.priority);
+                        return;
+                    }
+                }
+                if (this.queue.length >= this.MAX_QUEUE_SIZE) {
+                    reject(new Error('HA request queue is full'));
+                    return;
+                }
+                this.queue.push({ requestFn, resolve, reject, priority, key });
                 // Sort by priority (higher first)
                 this.queue.sort((a, b) => b.priority - a.priority);
                 // Start processing (don't await - let it run in background)
@@ -133,11 +147,29 @@
     window.T2_API_QUEUE = API_QUEUE;
     
     // Queued fetch wrapper - all HA API calls should use this
-    async function queuedFetch(url, options = {}) {
+    async function queuedFetch(url, options = {}, shouldExecute = null, queueOptions = {}) {
         return API_QUEUE.enqueue(async () => {
+            if (shouldExecute && !shouldExecute()) {
+                return { ok: false, t2CommandSkipped: true };
+            }
             const fetchFn = window.apiFetch || fetch;
-            return fetchFn(url, options);
-        });
+            let requestOptions = options;
+            let fallbackTimer = null;
+            if (!options.signal) {
+                if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+                    requestOptions = { ...options, signal: AbortSignal.timeout(10000) };
+                } else if (typeof AbortController !== 'undefined') {
+                    const controller = new AbortController();
+                    fallbackTimer = setTimeout(() => controller.abort(), 10000);
+                    requestOptions = { ...options, signal: controller.signal };
+                }
+            }
+            try {
+                return await fetchFn(url, requestOptions);
+            } finally {
+                if (fallbackTimer) clearTimeout(fallbackTimer);
+            }
+        }, queueOptions.priority || 0, queueOptions.key || null);
     }
     
     // Global debounce for fetchDevices to prevent API flood when multiple nodes load
@@ -253,6 +285,7 @@
     // -------------------------------------------------------------------------
 
     function coerceBoolean(value) {
+        if (value === undefined || value === null) return undefined;
         if (typeof value === 'boolean') return value;
         if (typeof value === 'number') return value !== 0;
         if (typeof value === 'string') {
@@ -286,12 +319,27 @@
                 enforceState: false  // Periodically enforce device state matches trigger
             };
 
-            this.lastTriggerValue = false;
+            this.lastTriggerValue = undefined;
             this.hadConnection = false;  // Track if trigger input had a connection
             this.lastHsvInfo = null;
             this.devices = [];
             this.perDeviceState = {};
             this.skipInitialTrigger = true; // Skip first trigger processing after load
+            this._desiredFollowState = null;
+            this._commandWakeTimer = null;
+            this._evaluatingData = false;
+            this.deviceCommandStates = {};
+            this._confirmationTimers = {};
+            this._initialTriggerRetries = 0;
+            this._initialTriggerRetryTimer = null;
+            this._restoreTimers = [];
+            this._restoreGraphLoadHandler = null;
+            this._lifecycleTimers = new Set();
+            this._destroyed = false;
+            this._pendingHsvInfo = null;
+            this._hsvRetryTimer = null;
+            this._hsvRetryDueAt = null;
+            this._hsvRetryAttempt = 0;
 
             try {
                 this.addInput("trigger", new ClassicPreset.Input(sockets.boolean || new ClassicPreset.Socket('boolean'), "Trigger"));
@@ -315,6 +363,276 @@
         // getDeviceApiInfo is now imported from T2HAUtils (DRY)
         getDeviceApiInfo(id) {
             return getDeviceApiInfo(id);
+        }
+
+        async ensureDeviceCommandContract() {
+            const shared = window.T2SharedLogic || {};
+            if (shared._ready) await shared._ready;
+            const required = [
+                'createDeviceCommandState',
+                'setDesiredDeviceState',
+                'recordObservedDeviceState',
+                'isExternalDeviceOverride',
+                'adoptObservedDeviceState',
+                'beginDeviceCommand',
+                'recordDeviceCommandResult',
+                'isRetryableHttpStatus',
+                'normalizeObservedPowerState',
+                'shouldIssueDeviceCommand'
+            ];
+            if (required.some(name => typeof shared[name] !== 'function')) {
+                throw new Error('Shared device command contract is unavailable');
+            }
+            return shared;
+        }
+
+        getDeviceCommandState(id, logic = window.T2SharedLogic || {}) {
+            if (!this.deviceCommandStates[id]) {
+                this.deviceCommandStates[id] = logic.createDeviceCommandState();
+            }
+            return this.deviceCommandStates[id];
+        }
+
+        setDeviceDesiredState(id, desiredState, logic = window.T2SharedLogic || {}) {
+            const current = this.getDeviceCommandState(id, logic);
+            if (current.desiredState !== desiredState && this._confirmationTimers[id]) {
+                clearTimeout(this._confirmationTimers[id]);
+                delete this._confirmationTimers[id];
+            }
+            this.deviceCommandStates[id] = logic.setDesiredDeviceState(current, desiredState);
+            this.updateCommandStatus();
+            return this.deviceCommandStates[id];
+        }
+
+        recordDeviceObservedState(id, observedState, logic = window.T2SharedLogic || {}) {
+            if (typeof logic.recordObservedDeviceState !== 'function') return;
+            const current = this.getDeviceCommandState(id, logic);
+            const respectsManualOverride =
+                (this.properties.triggerMode || 'Follow') === 'Follow' &&
+                !this.properties.enforceState &&
+                logic.isExternalDeviceOverride(current, observedState);
+            this.deviceCommandStates[id] = respectsManualOverride
+                ? logic.adoptObservedDeviceState(current, observedState)
+                : logic.recordObservedDeviceState(current, observedState);
+            if (respectsManualOverride && this._confirmationTimers[id]) {
+                clearTimeout(this._confirmationTimers[id]);
+                delete this._confirmationTimers[id];
+            }
+            if (
+                this.deviceCommandStates[id].phase === 'confirmed' &&
+                (this.properties.triggerMode || 'Follow') !== 'Follow'
+            ) {
+                this.deviceCommandStates[id] = logic.setDesiredDeviceState(
+                    this.deviceCommandStates[id],
+                    undefined
+                );
+            }
+            this.scheduleCommandWake(logic);
+            this.updateCommandStatus();
+        }
+
+        recordDeviceDelivery(id, result, logic = window.T2SharedLogic || {}) {
+            const current = this.getDeviceCommandState(id, logic);
+            this.deviceCommandStates[id] = logic.recordDeviceCommandResult(current, result);
+            this.scheduleCommandWake(logic);
+            this.updateCommandStatus();
+            return this.deviceCommandStates[id];
+        }
+
+        beginDeviceDelivery(id, logic = window.T2SharedLogic || {}) {
+            const started = logic.beginDeviceCommand(this.getDeviceCommandState(id, logic));
+            this.deviceCommandStates[id] = started.state;
+            this.updateCommandStatus();
+            return started.command;
+        }
+
+        updateCommandStatus() {
+            const states = this.properties.selectedDeviceIds
+                .filter(Boolean)
+                .map(id => this.deviceCommandStates[id])
+                .filter(Boolean);
+            if (states.length === 0) return;
+
+            const retrying = states.filter(state => state.phase === 'retrying');
+            const failed = states.filter(state => state.phase === 'failed');
+            const pending = states.filter(state => state.phase === 'pending');
+            const confirmed = states.filter(state => state.phase === 'confirmed');
+            const delegated = states.filter(state => state.phase === 'delegated');
+
+            if (failed.length > 0) this.properties.status = `${failed.length} device command${failed.length === 1 ? '' : 's'} failed`;
+            else if (retrying.length > 0) this.properties.status = `Retrying ${retrying.length} device command${retrying.length === 1 ? '' : 's'}...`;
+            else if (pending.length > 0) this.properties.status = `Waiting for HA confirmation (${pending.length})...`;
+            else if (confirmed.length === states.length) this.properties.status = `Confirmed ${states[0].desiredState ? 'On' : 'Off'}`;
+            else if (delegated.length === states.length) this.properties.status = 'Frontend control delegated';
+            else this.properties.status = 'Waiting for trigger';
+            this.triggerUpdate();
+        }
+
+        async clearFollowIntent() {
+            const logic = await this.ensureDeviceCommandContract();
+            this.clearCommandWake();
+            this._desiredFollowState = null;
+            this.properties.selectedDeviceIds.filter(Boolean).forEach(id => {
+                this.setDeviceDesiredState(id, undefined, logic);
+            });
+        }
+
+        clearCommandWake() {
+            if (this._commandWakeTimer) clearTimeout(this._commandWakeTimer);
+            this._commandWakeTimer = null;
+        }
+
+        setLifecycleTimeout(callback, delay) {
+            const timer = setTimeout(() => {
+                this._lifecycleTimers.delete(timer);
+                if (!this._destroyed) callback();
+            }, delay);
+            this._lifecycleTimers.add(timer);
+            return timer;
+        }
+
+        clearHsvRetry() {
+            if (this._hsvRetryTimer) {
+                clearTimeout(this._hsvRetryTimer);
+                this._lifecycleTimers.delete(this._hsvRetryTimer);
+            }
+            this._hsvRetryTimer = null;
+            this._hsvRetryDueAt = null;
+            this._pendingHsvInfo = null;
+            this._hsvRetryAttempt = 0;
+        }
+
+        scheduleHsvRetry(info) {
+            if (this._hsvRetryTimer) {
+                clearTimeout(this._hsvRetryTimer);
+                this._lifecycleTimers.delete(this._hsvRetryTimer);
+            }
+            this._pendingHsvInfo = { ...info };
+            this._hsvRetryAttempt++;
+            const delay = Math.min(2000 * (2 ** (this._hsvRetryAttempt - 1)), 60000);
+            this._hsvRetryDueAt = Date.now() + delay;
+            this._hsvRetryTimer = this.setLifecycleTimeout(() => {
+                this._hsvRetryTimer = null;
+                this._hsvRetryDueAt = null;
+                this.triggerUpdate();
+            }, delay);
+        }
+
+        async processHSVInput(info) {
+            if (!info || typeof info !== 'object') {
+                this.clearHsvRetry();
+                return false;
+            }
+
+            const serialized = JSON.stringify(info);
+            if (serialized === this.lastHsvInfo) {
+                if (this._pendingHsvInfo) this.clearHsvRetry();
+                return false;
+            }
+
+            this._pendingHsvInfo = { ...info };
+            if (this._hsvRetryDueAt && Date.now() < this._hsvRetryDueAt) return false;
+
+            const result = await this.applyHSVInput(info);
+            if (result.success || !result.retryable) {
+                this.lastHsvInfo = serialized;
+                this.clearHsvRetry();
+            } else {
+                this.scheduleHsvRetry(info);
+            }
+            return true;
+        }
+
+        scheduleCommandWake(logic = window.T2SharedLogic || {}) {
+            this.clearCommandWake();
+            const dueTimes = Object.values(this.deviceCommandStates).flatMap(state => {
+                if (state.phase === 'retrying' && state.nextRetryAt !== null) return [state.nextRetryAt];
+                if (
+                    state.phase === 'pending' &&
+                    !state.activeCommand &&
+                    state.confirmationDueAt === null &&
+                    state.desiredState !== null
+                ) return [Date.now()];
+                return [];
+            });
+            if (dueTimes.length === 0) return;
+
+            const delay = Math.max(0, Math.min(...dueTimes) - Date.now());
+            this._commandWakeTimer = setTimeout(() => {
+                this._commandWakeTimer = null;
+                this.triggerUpdate();
+            }, delay);
+        }
+
+        async processDueCommands(hsvInfo = null) {
+            const logic = await this.ensureDeviceCommandContract();
+            const groups = new Map();
+            this.properties.selectedDeviceIds.filter(Boolean).forEach(id => {
+                const state = this.getDeviceCommandState(id, logic);
+                if (!logic.shouldIssueDeviceCommand(state)) return;
+                const key = state.desiredState ? 'on' : 'off';
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(id);
+            });
+
+            for (const [key, ids] of groups) {
+                const turnOn = key === 'on';
+                await this.setDevicesState(turnOn, turnOn ? hsvInfo : null, ids);
+            }
+        }
+
+        scheduleDeviceConfirmation(id, desiredState) {
+            if (this._confirmationTimers[id]) clearTimeout(this._confirmationTimers[id]);
+            this._confirmationTimers[id] = setTimeout(() => {
+                delete this._confirmationTimers[id];
+                this.verifyDeviceConfirmation(id, desiredState);
+            }, 2500);
+        }
+
+        async verifyDeviceConfirmation(id, desiredState) {
+            if (this.deviceCommandStates[id]?.desiredState !== desiredState) return;
+
+            try {
+                const logic = await this.ensureDeviceCommandContract();
+                const confirmedState = await this.fetchDeviceState(id, { fresh: true });
+                if (this.deviceCommandStates[id]?.desiredState !== desiredState) return;
+
+                const confirmedOn = logic.normalizeObservedPowerState(confirmedState);
+                if (confirmedOn !== null) this.recordDeviceObservedState(id, confirmedOn, logic);
+                if (
+                    this.deviceCommandStates[id]?.desiredState === desiredState &&
+                    (confirmedOn === null || confirmedOn !== desiredState)
+                ) {
+                    this.recordDeviceDelivery(id, {
+                        success: false,
+                        retryable: true,
+                        reason: confirmedOn === null ? 'confirmation_unavailable' : 'confirmation_mismatch'
+                    }, logic);
+                }
+            } catch (error) {
+                const logic = await this.ensureDeviceCommandContract();
+                this.recordDeviceDelivery(id, {
+                    success: false,
+                    retryable: true,
+                    reason: error.message || 'confirmation_failed'
+                }, logic);
+            }
+        }
+
+        buildOutputs() {
+            const outputs = {};
+            const selectedStates = [];
+            this.properties.selectedDeviceIds.forEach((id, i) => {
+                if (id) {
+                    const state = this.perDeviceState[id] || { on: null, state: 'unknown', available: false };
+                    outputs[`device_out_${i}`] = state;
+                    selectedStates.push(state);
+                } else {
+                    outputs[`device_out_${i}`] = null;
+                }
+            });
+            outputs.all_devices = selectedStates.length > 0 ? selectedStates : null;
+            return outputs;
         }
         
         // Trace back through connections to find the original trigger source
@@ -397,6 +715,13 @@
         // Devices are fetched once on graph load; reload graph to see new HA devices
 
         restore(state) {
+            if (this._restoreGraphLoadHandler) {
+                window.removeEventListener('graphLoadComplete', this._restoreGraphLoadHandler);
+                this._restoreGraphLoadHandler = null;
+            }
+            this._restoreTimers.forEach(timer => clearTimeout(timer));
+            this._restoreTimers = [];
+
             if (state.properties) Object.assign(this.properties, state.properties);
             
             // Force debug OFF on restore (old saves may have debug: true)
@@ -438,26 +763,31 @@
             if (typeof window !== 'undefined' && window.graphLoading) {
                 const onGraphLoadComplete = () => {
                     window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
+                    this._restoreGraphLoadHandler = null;
                     // Stagger individual device state fetches to prevent API flood
                     // Device list is already fetched by _onGraphLoadComplete
                     this.properties.selectedDeviceIds.forEach((id, index) => {
                         if (id) {
-                            setTimeout(() => this.fetchDeviceState(id), 500 + index * 100);
+                            const timer = setTimeout(() => this.fetchDeviceState(id), 500 + index * 100);
+                            this._restoreTimers.push(timer);
                         }
                     });
                 };
+                this._restoreGraphLoadHandler = onGraphLoadComplete;
                 window.addEventListener('graphLoadComplete', onGraphLoadComplete);
                 
                 // Fallback: if event never fires (e.g., error during load), check after 10s
-                setTimeout(() => {
+                const fallbackTimer = setTimeout(() => {
                     if (!window.graphLoading) {
                         window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
+                        this._restoreGraphLoadHandler = null;
                         // Also ensure devices are loaded if they weren't
                         if (!this.devices || this.devices.length === 0) {
                             this.fetchDevices(true);
                         }
                     }
                 }, 10000);
+                this._restoreTimers.push(fallbackTimer);
             } else {
                 // Not during graph load - fetch immediately
                 this.fetchDevices();
@@ -472,6 +802,9 @@
             if (typeof window !== 'undefined' && window.graphLoading) {
                 return {};  // Return empty outputs during load
             }
+
+            this._evaluatingData = true;
+            try {
             
             const hsvInput = inputs.hsv_info?.[0];
             const triggerRaw = inputs.trigger?.[0];
@@ -479,8 +812,22 @@
             // (important: some sources may provide "false" as a string)
             const trigger = coerceBoolean(triggerRaw);
             // Track if we have an actual connection (triggerRaw is not undefined)
-            const hasConnection = triggerRaw !== undefined;
+            const hasConnection = trigger !== undefined;
             let needsUpdate = false;
+
+            await this.ensureDeviceCommandContract();
+
+            if (!hasConnection && !this.skipInitialTrigger) {
+                if (
+                    this._desiredFollowState !== null ||
+                    Object.values(this.deviceCommandStates).some(state => state.desiredState !== null)
+                ) {
+                    await this.clearFollowIntent();
+                }
+                this.hadConnection = false;
+                await this.processHSVInput(hsvInput);
+                return this.buildOutputs();
+            }
 
 
 
@@ -497,8 +844,9 @@
                 
                 // For Follow mode with a connection: SYNC DEVICES TO MATCH TRIGGER NOW
                 if (mode === "Follow" && hasConnection) {
+                    this._initialTriggerRetries = 0;
                     console.log(`[HAGenericDeviceNode] SYNC on load: ${nodeTitle} → trigger=${trigger}`);
-                    await this.setDevicesState(trigger, trigger ? hsvInput : null);
+                    await this.syncFollowState(trigger, trigger ? hsvInput : null);
                     this.lastTriggerValue = trigger;
                     this.hadConnection = hasConnection;
                 }
@@ -508,15 +856,18 @@
                 else if (mode === "Follow" && !hasConnection) {
                     // Check if any wires are connected to our trigger input
                     const hasTriggerWire = this._checkHasTriggerWire();
-                    if (hasTriggerWire) {
+                    if (hasTriggerWire && this._initialTriggerRetries < 10) {
+                        this._initialTriggerRetries++;
                         console.log(`[HAGenericDeviceNode] SYNC DELAYED: ${nodeTitle} has trigger wire but upstream not ready, retrying in 500ms`);
                         // Retry after upstream nodes have processed
-                        setTimeout(() => {
+                        this._initialTriggerRetryTimer = setTimeout(() => {
+                            this._initialTriggerRetryTimer = null;
                             this.skipInitialTrigger = true;
                             this.triggerUpdate();
                         }, 500);
                     } else {
-                        console.log(`[HAGenericDeviceNode] NO TRIGGER WIRE: ${nodeTitle} - not syncing`);
+                        console.log(`[HAGenericDeviceNode] ${hasTriggerWire ? 'TRIGGER VALUE UNAVAILABLE' : 'NO TRIGGER WIRE'}: ${nodeTitle} - not syncing`);
+                        await this.clearFollowIntent();
                         this.lastTriggerValue = trigger;
                         this.hadConnection = hasConnection;
                     }
@@ -529,17 +880,14 @@
                 
                 // Record HSV state for change detection
                 if (hsvInput && typeof hsvInput === 'object') {
-                    this.lastHsvInfo = JSON.stringify(hsvInput);
-                }
-            } else {
-                if (hsvInput && typeof hsvInput === 'object') {
-                    const hsvString = JSON.stringify(hsvInput);
-                    if (hsvString !== this.lastHsvInfo) {
-                        this.lastHsvInfo = hsvString;
-                        await this.applyHSVInput(hsvInput);
-                        needsUpdate = true;
+                    if (hasConnection) {
+                        this.lastHsvInfo = JSON.stringify(hsvInput);
+                    } else {
+                        needsUpdate = await this.processHSVInput(hsvInput) || needsUpdate;
                     }
                 }
+            } else {
+                needsUpdate = await this.processHSVInput(hsvInput) || needsUpdate;
 
                 const risingEdge = trigger && !this.lastTriggerValue;
                 const fallingEdge = !trigger && this.lastTriggerValue;
@@ -555,9 +903,9 @@
                 }
 
                 if (mode === "Toggle" && risingEdge) { await this.onTrigger(); needsUpdate = true; }
-                else if (mode === "Follow" && (risingEdge || fallingEdge || newConnection)) { 
+                else if (mode === "Follow" && (risingEdge || fallingEdge || newConnection)) {
                     // Pass HSV input when turning on so color is included in the command
-                    await this.setDevicesState(trigger, trigger ? hsvInput : null); 
+                    await this.syncFollowState(trigger, trigger ? hsvInput : null);
                     needsUpdate = true; 
                 }
                 else if (mode === "Turn On" && risingEdge) { await this.setDevicesState(true, hsvInput); needsUpdate = true; }
@@ -567,23 +915,35 @@
                 this.hadConnection = hasConnection;
             }
 
-            const outputs = {};
-            const selectedStates = [];
-            this.properties.selectedDeviceIds.forEach((id, i) => {
-                if (id) {
-                    const state = this.perDeviceState[id] || { on: false, state: "off" };
-                    outputs[`device_out_${i}`] = state;
-                    selectedStates.push(state);
-                } else {
-                    outputs[`device_out_${i}`] = null;
-                }
-            });
-            outputs.all_devices = selectedStates.length > 0 ? selectedStates : null;
+            await this.processDueCommands(hsvInput);
+
+            const outputs = this.buildOutputs();
             if (needsUpdate) this.triggerUpdate();
             return outputs;
+            } finally {
+                this._evaluatingData = false;
+            }
         }
 
-        triggerUpdate() { if (this.changeCallback) this.changeCallback(); }
+        triggerUpdate() {
+            if (this._evaluatingData) {
+                if (typeof window !== 'undefined' && window._t2Area && this.id) {
+                    try { window._t2Area.update("node", this.id); } catch (e) { /* ignore */ }
+                }
+                return;
+            }
+            if (this.changeCallback) this.changeCallback();
+        }
+
+        async syncFollowState(turnOn, hsvInfo = null) {
+            const desiredState = !!turnOn;
+            if (this._desiredFollowState !== desiredState) {
+                this.clearCommandWake();
+                this._desiredFollowState = desiredState;
+            }
+
+            return this.setDevicesState(desiredState, desiredState ? hsvInfo : null);
+        }
 
         // Check if we have any wire connected to our trigger input
         // This helps distinguish "no connection" from "connection exists but upstream not processed yet"
@@ -591,7 +951,7 @@
             // Try to access the Rete editor to check connections
             if (typeof window === 'undefined') return false;
             
-            const editor = window.reteEditorInstance;
+            const editor = window._t2Editor || window.reteEditorInstance;
             if (!editor) return false;
             
             try {
@@ -653,6 +1013,7 @@
         // Check if device state matches what trigger says it should be, and fix if not
         async checkAndEnforceState() {
             if (!this.properties.enforceState) return;
+            if (window.graphLoading || this.skipInitialTrigger || !this.hadConnection) return;
             
             const expectedOn = !!this.lastTriggerValue;
             const mode = this.properties.triggerMode || "Follow";
@@ -665,7 +1026,8 @@
             for (const id of this.properties.selectedDeviceIds) {
                 if (!id) continue;
                 const state = this.perDeviceState[id];
-                const actualOn = state?.on ?? false;
+                const actualOn = (window.T2SharedLogic || {}).normalizeObservedPowerState(state);
+                if (actualOn === null) continue;
                 
                 if (expectedOn !== actualOn) {
                     mismatchFound = true;
@@ -677,7 +1039,17 @@
             
             if (mismatchFound) {
                 console.log(`[HAGenericDeviceNode] Enforce State: Correcting mismatch (trigger=${expectedOn})`);
-                await this.setDevicesState(expectedOn, expectedOn ? this.lastHsvInfo : null);
+                let hsvInfo = null;
+                if (expectedOn && this.lastHsvInfo) {
+                    try {
+                        hsvInfo = typeof this.lastHsvInfo === 'string'
+                            ? JSON.parse(this.lastHsvInfo)
+                            : this.lastHsvInfo;
+                    } catch (error) {
+                        hsvInfo = null;
+                    }
+                }
+                await this.syncFollowState(expectedOn, hsvInfo);
             }
         }
         
@@ -755,11 +1127,11 @@
                     if (document.visibilityState === 'visible' && window.socket?.connected) {
                         // User returned to tab - refresh device states to ensure UI is current
                         // Small delay to let socket stabilize after tab becomes active
-                        setTimeout(() => {
+                        this.setLifecycleTimeout(() => {
                             this.refreshSelectedDeviceStates();
                             // After refreshing states, check if enforcement is needed
                             if (this.properties.enforceState) {
-                                setTimeout(() => this.checkAndEnforceState(), 1000);
+                                this.setLifecycleTimeout(() => this.checkAndEnforceState(), 1000);
                             }
                         }, 500);
                     }
@@ -800,7 +1172,7 @@
                     
                     // If devices are STILL empty but we have saved device names, schedule another try
                     if ((!this.devices || this.devices.length === 0) && this.properties.selectedDeviceIds.length > 0) {
-                        setTimeout(async () => {
+                        this.setLifecycleTimeout(async () => {
                             await this.fetchDevices(true);
                             if (this.devices && this.devices.length > 0) {
                                 this.updateDeviceSelectorOptions();
@@ -820,7 +1192,7 @@
                     // SETTLING DELAY: Wait 1 second before triggering sync
                     // This allows all nodes (especially Receiver nodes reading buffers)
                     // to process their inputs first.
-                    setTimeout(() => {
+                    this.setLifecycleTimeout(() => {
                         // Reset the skip flag and trigger an update
                         // The data() method will handle syncing devices to match trigger input
                         this.skipInitialTrigger = true;
@@ -1153,7 +1525,7 @@
             // immediately sync the device to match the trigger. This ensures newly added devices
             // match the node's intent without requiring a trigger toggle.
             const mode = this.properties.triggerMode || "Follow";
-            if (mode === "Follow") {
+            if (mode === "Follow" && this.hadConnection && this.lastTriggerValue !== undefined) {
                 const deviceState = this.perDeviceState[dev.id];
                 const deviceIsOn = deviceState?.on || deviceState?.state === 'on';
                 const triggerWantsOn = !!this.lastTriggerValue;
@@ -1179,7 +1551,7 @@
             this.triggerUpdate();
         }
 
-        async fetchDeviceState(id) {
+        async fetchDeviceState(id, options = {}) {
             if (!id) return;
             // Note: We DO fetch device state during graph loading - this is a READ operation
             // that shows current device state without changing anything
@@ -1188,12 +1560,15 @@
                 if (!apiInfo) return;
                 
                 // HA-only: All devices go through Home Assistant API
-                const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                const freshQuery = options.fresh ? '?fresh=true' : '';
+                const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state${freshQuery}`, { 
                     headers: { 'Authorization': `Bearer ${this.properties.haToken}` } 
                 });
                 const data = await res.json();
                 if (data.success && data.state) {
                     this.perDeviceState[id] = data.state;
+                    const observedOn = (window.T2SharedLogic || {}).normalizeObservedPowerState(data.state);
+                    if (observedOn !== null) this.recordDeviceObservedState(id, observedOn);
                     this.updateDeviceControls(id, data.state);
                     // updateDeviceControls already calls triggerUpdate and _t2Area.update
                     return data.state;
@@ -1203,15 +1578,16 @@
         }
 
         async isDeviceActuallyOn(id) {
-            const freshState = await this.fetchDeviceState(id);
+            const freshState = await this.fetchDeviceState(id, { fresh: true });
             if (!freshState) {
                 if (this.properties.debug) {
                     console.log(`[HAGenericDeviceNode] Skipping HSV for ${id} - current HA state unavailable`);
                 }
-                return false;
+                return null;
             }
 
-            const isOn = freshState?.on === true || freshState?.state === 'on';
+            const isOn = (window.T2SharedLogic || {}).normalizeObservedPowerState(freshState);
+            if (isOn === null) return null;
             if (!isOn && this.properties.debug) {
                 console.log(`[HAGenericDeviceNode] Skipping HSV for ${id} - HA says device is off`);
             }
@@ -1219,9 +1595,13 @@
         }
 
         async applyHSVInput(info) {
-            if (!info || typeof info !== "object") return;
+            if (!info || typeof info !== "object" || this._destroyed) {
+                return { success: false, retryable: false, attempted: 0, succeeded: 0, failed: 0 };
+            }
             // Skip API calls during graph loading
-            if (typeof window !== 'undefined' && window.graphLoading) return;
+            if (typeof window !== 'undefined' && window.graphLoading) {
+                return { success: false, retryable: true, attempted: 0, succeeded: 0, failed: 0 };
+            }
             const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
             
             // Check for device exclusions from upstream HueEffectNodes
@@ -1239,8 +1619,14 @@
                 return true;
             });
             
-            if (ids.length === 0) return;
+            if (ids.length === 0) {
+                return { success: true, retryable: false, attempted: 0, succeeded: 0, failed: 0 };
+            }
             this.updateStatus("Applying control...");
+            let attempted = 0;
+            let succeeded = 0;
+            let failed = 0;
+            let retryableFailures = 0;
             
             // Register pending commands so the Event Log knows this change came from the app
             const nodeTitle = this.getEffectiveTriggerSource();
@@ -1253,7 +1639,10 @@
             for (let i = 0; i < ids.length; i++) {
                 const id = ids[i];
                 const apiInfo = this.getDeviceApiInfo(id);
-                if (!apiInfo) continue;
+                if (!apiInfo) {
+                    failed++;
+                    continue;
+                }
                 
                 const device = this.devices.find(d => d.id === id);
                 const deviceType = device?.type || (id.includes('.') ? id.split('.')[0].replace(/^ha_/, '') : 'light');
@@ -1264,6 +1653,11 @@
                 const isCurrentlyOn = await this.isDeviceActuallyOn(id);
                 
                 // If device is off, don't apply HSV (and don't turn it on!)
+                if (isCurrentlyOn === null) {
+                    failed++;
+                    retryableFailures++;
+                    continue;
+                }
                 if (!isCurrentlyOn) continue;
                 
                 // Use shared logic if available, otherwise fallback to inline
@@ -1302,11 +1696,32 @@
                 }
                 
                 try {
-                    await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
+                    const response = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
                         method: "PUT", 
                         headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
                         body: JSON.stringify(payload) 
+                    }, () => {
+                        if (this._destroyed) return false;
+                        if (this.deviceCommandStates[id]?.desiredState === false) return false;
+                        const observed = (window.T2SharedLogic || {}).normalizeObservedPowerState(
+                            this.perDeviceState[id]
+                        );
+                        if (observed === false) return false;
+                        attempted++;
+                        return true;
+                    }, {
+                        key: `hsv:${this.id || 'node'}:${id}`,
+                        priority: -1
                     });
+                    if (response.t2CommandSkipped) continue;
+                    if (!response.ok) {
+                        failed++;
+                        if ((window.T2SharedLogic || {}).isRetryableHttpStatus(response.status)) {
+                            retryableFailures++;
+                        }
+                        continue;
+                    }
+                    succeeded++;
                     // Update local state (brightness as 0-100 for UI)
                     const current = this.perDeviceState[id] || {};
                     const brightnessPercent = brightness !== null ? Math.round((brightness / 255) * 100) : current.brightness;
@@ -1319,7 +1734,11 @@
                         ...(brightnessPercent !== undefined ? { brightness: brightnessPercent } : {}) 
                     };
                     this.updateDeviceControls(id, this.perDeviceState[id]);
-                } catch (e) { console.error(`Control apply failed for ${id}`, e); }
+                } catch (e) {
+                    failed++;
+                    retryableFailures++;
+                    console.error(`Control apply failed for ${id}`, e);
+                }
                 
                 // Small delay between requests
                 if (i < ids.length - 1) {
@@ -1327,16 +1746,34 @@
                 }
             }
             this.triggerUpdate();
-            setTimeout(() => this.updateStatus(`Control applied to ${ids.length} devices`), 600);
+            this.setLifecycleTimeout(() => {
+                this.updateStatus(failed > 0
+                    ? `Color update failed for ${failed} device${failed === 1 ? '' : 's'}`
+                    : `Control applied to ${succeeded} devices`);
+            }, 600);
+            return {
+                success: failed === 0,
+                retryable: retryableFailures > 0,
+                attempted,
+                succeeded,
+                failed
+            };
         }
 
-        async setDevicesState(turnOn, hsvInfo = null) {
+        async setDevicesState(turnOn, hsvInfo = null, targetIds = null) {
+            if (this._destroyed) {
+                return { success: false, retryable: false, attempted: 0, succeeded: 0, failed: 0, reason: 'node_destroyed' };
+            }
             // Skip API calls during graph loading to prevent resource exhaustion
-            if (typeof window !== 'undefined' && window.graphLoading) return;
+            if (typeof window !== 'undefined' && window.graphLoading) {
+                return { success: false, attempted: 0, succeeded: 0, failed: 0, reason: 'graph_loading' };
+            }
             
             this.updateStatus(turnOn ? "Turning On..." : "Turning Off...");
-            let ids = this.properties.selectedDeviceIds.filter(Boolean);
-            if (ids.length === 0) return;
+            let ids = Array.isArray(targetIds) ? targetIds.filter(Boolean) : this.properties.selectedDeviceIds.filter(Boolean);
+            if (ids.length === 0) {
+                return { success: true, attempted: 0, succeeded: 0, failed: 0, reason: 'no_devices' };
+            }
             
             // Check for device exclusions from upstream HueEffectNodes
             // These devices are under effect control and should not receive on/off or HSV commands
@@ -1353,7 +1790,7 @@
                 });
                 if (ids.length === 0) {
                     this.updateStatus("All devices under effect control");
-                    return;
+                    return { success: true, attempted: 0, succeeded: 0, failed: 0, reason: 'effect_control' };
                 }
             }
             
@@ -1385,18 +1822,49 @@
                 }
             }
             
+            const contract = await this.ensureDeviceCommandContract();
+            ids.forEach(id => this.setDeviceDesiredState(id, turnOn, contract));
+            const commandIds = ids.filter(id => contract.shouldIssueDeviceCommand(
+                this.getDeviceCommandState(id, contract)
+            ));
+
+            if (commandIds.length === 0) {
+                this.updateCommandStatus();
+                return { success: true, retryable: false, attempted: 0, succeeded: 0, failed: 0 };
+            }
+
             // Register pending commands so the Event Log knows this change came from the app
             const nodeTitle = this.getEffectiveTriggerSource();
             const nodeId = this.id;
             if (typeof window !== 'undefined' && window.registerPendingCommand) {
-                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off', nodeId));
+                commandIds.forEach(id => window.registerPendingCommand(id, nodeTitle, turnOn ? 'turn_on' : 'turn_off', nodeId));
             }
-            
+
+            let succeeded = 0;
+            let failed = 0;
+            let retryableFailures = 0;
+            let attempted = 0;
             // Process devices sequentially to prevent API flood
-            for (let i = 0; i < ids.length; i++) {
-                const id = ids[i];
+            for (let i = 0; i < commandIds.length; i++) {
+                const id = commandIds[i];
+                const currentCommandState = this.getDeviceCommandState(id, contract);
+                if (
+                    currentCommandState.desiredState !== turnOn ||
+                    !contract.shouldIssueDeviceCommand(currentCommandState)
+                ) continue;
+
+                const commandToken = this.beginDeviceDelivery(id, contract);
                 const apiInfo = this.getDeviceApiInfo(id);
-                if (!apiInfo) continue;
+                if (!apiInfo) {
+                    failed++;
+                    this.recordDeviceDelivery(id, {
+                        success: false,
+                        retryable: false,
+                        reason: 'unsupported_device',
+                        commandToken
+                    }, contract);
+                    continue;
+                }
                 
                 const device = this.devices.find(d => d.id === id);
                 const deviceType = device?.type || (id.includes('.') ? id.split('.')[0].replace(/^ha_/, '') : 'light');
@@ -1414,94 +1882,93 @@
                     const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
                         method: "PUT", 
                         headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
-                        body: JSON.stringify(payload) 
+                        body: JSON.stringify(payload)
+                    }, () => {
+                        const latest = this.deviceCommandStates[id];
+                        const commandIsCurrent =
+                            !this._destroyed &&
+                            latest?.desiredState === turnOn &&
+                            latest?.activeCommand?.intentVersion === commandToken?.intentVersion &&
+                            latest?.activeCommand?.desiredState === commandToken?.desiredState;
+                        if (commandIsCurrent) attempted++;
+                        return commandIsCurrent;
+                    }, {
+                        priority: 10
                     });
-                    if (!res.ok) {
-                        console.error(`Set state failed for ${id} (HTTP ${res.status})`);
+                    if (res.t2CommandSkipped) {
+                        if (this._destroyed) continue;
+                        this.recordDeviceDelivery(id, {
+                            success: false,
+                            retryable: true,
+                            reason: 'superseded_before_send',
+                            commandToken
+                        }, contract);
                         continue;
                     }
-                    
-                    // OPTIMISTIC UPDATE: Trust the command we just sent
-                    // Don't wait for HA to confirm - Zigbee devices can take 1-3 seconds
-                    // This prevents the UI showing "off" when we just sent "on"
-                    // When turning OFF, set brightness to 0 (not the old cached value)
-                    const brightnessPercent = turnOn 
-                        ? (brightness !== null ? Math.round((brightness / 255) * 100) : (this.perDeviceState[id]?.brightness || 100))
-                        : 0;  // OFF = 0 brightness
-                    this.perDeviceState[id] = {
-                        ...this.perDeviceState[id],
-                        on: turnOn,
-                        state: turnOn ? "on" : "off",
-                        brightness: brightnessPercent,
-                        ...(hs_color ? { hs_color } : {})
-                    };
-                    this.updateDeviceControls(id, this.perDeviceState[id]);
-                    
-                    // COMMAND LOCK: Prevent incoming HA socket updates from overwriting our optimistic state
-                    // Lock expires after 3 seconds, giving device time to respond
-                    if (!this._commandLocks) this._commandLocks = {};
-                    this._commandLocks[id] = Date.now() + 3000;
-                    
-                    // Fetch confirmation after a delay to let device respond
-                    // This will correct any mismatches once device actually responds
-                    setTimeout(() => {
-                        // Clear the lock before fetching - we want to accept this update
-                        if (this._commandLocks) delete this._commandLocks[id];
-                        this.fetchDeviceState(id);
-                    }, 2500);
-                } catch (e) { console.error(`Set state failed for ${id}`, e); }
+                    if (!res.ok) {
+                        console.error(`Set state failed for ${id} (HTTP ${res.status})`);
+                        failed++;
+                        const retryable = contract.isRetryableHttpStatus(res.status);
+                        if (retryable) retryableFailures++;
+                        this.recordDeviceDelivery(id, {
+                            success: false,
+                            retryable,
+                            reason: `HTTP ${res.status}`,
+                            commandToken
+                        }, contract);
+                        continue;
+                    }
+                    succeeded++;
+                    this.recordDeviceDelivery(id, {
+                        success: true,
+                        confirmAfterMs: 2500,
+                        commandToken
+                    }, contract);
+                    this.scheduleDeviceConfirmation(id, turnOn);
+                } catch (e) {
+                    failed++;
+                    retryableFailures++;
+                    this.recordDeviceDelivery(id, {
+                        success: false,
+                        retryable: true,
+                        reason: e.message || 'network_error',
+                        commandToken
+                    }, contract);
+                    console.error(`Set state failed for ${id}`, e);
+                }
                 
                 // Small delay between requests to prevent API flood
-                if (i < ids.length - 1) {
+                if (i < commandIds.length - 1) {
                     await new Promise(r => setTimeout(r, 50));
                 }
             }
             this.triggerUpdate();
-            setTimeout(() => this.updateStatus(turnOn ? "Turned On" : "Turned Off"), 600);
+            const success = failed === 0 && succeeded === attempted;
+            this.updateCommandStatus();
+            return {
+                success,
+                retryable: retryableFailures > 0,
+                attempted,
+                succeeded,
+                failed
+            };
         }
 
         async onTrigger() {
             this.updateStatus("Toggling...");
             const ids = this.properties.selectedDeviceIds.filter(Boolean);
             if (ids.length === 0) { this.updateStatus("No devices selected"); return; }
-            
-            // Register pending commands so the Event Log knows this change came from the app
-            const nodeTitle = this.getEffectiveTriggerSource();
-            const nodeId = this.id;
-            if (typeof window !== 'undefined' && window.registerPendingCommand) {
-                ids.forEach(id => window.registerPendingCommand(id, nodeTitle, 'toggle', nodeId));
-            }
-            
-            const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
-            
-            // Process devices sequentially to prevent API flood
+
             for (let i = 0; i < ids.length; i++) {
                 const id = ids[i];
-                const apiInfo = this.getDeviceApiInfo(id);
-                if (!apiInfo) continue;
-                
-                const current = this.perDeviceState[id] || { on: false };
-                const newOn = !current.on;
-                const payload = { on: newOn, state: newOn ? "on" : "off" };
-                if (newOn && transitionMs) payload.transition = transitionMs;
-                
-                try {
-                    await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
-                        method: "PUT", 
-                        headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${this.properties.haToken}` }, 
-                        body: JSON.stringify(payload) 
-                    });
-                    this.perDeviceState[id] = { ...this.perDeviceState[id], on: newOn, state: payload.state };
-                    this.updateDeviceControls(id, this.perDeviceState[id]);
-                } catch (e) { console.error(`Toggle failed for ${id}`, e); }
-                
-                // Small delay between requests
-                if (i < ids.length - 1) {
-                    await new Promise(r => setTimeout(r, 50));
+                const current = await this.fetchDeviceState(id, { fresh: true });
+                const observedOn = (window.T2SharedLogic || {}).normalizeObservedPowerState(current);
+                if (observedOn === null) {
+                    console.error(`[HAGenericDeviceNode] Cannot toggle ${id} - HA state unavailable`);
+                    continue;
                 }
+                await this.setDevicesState(!observedOn, null, [id]);
             }
-            this.triggerUpdate();
-            setTimeout(() => this.updateStatus(`Toggled ${ids.length} device(s)`), 600);
         }
 
         handleDeviceStateUpdate(data) {
@@ -1510,11 +1977,14 @@
             if (data.entity_id && data.new_state) {
                 id = data.entity_id;
                 const a = data.new_state.attributes || {};
+                const rawState = data.new_state.state;
+                const normalizedOn = (window.T2SharedLogic || {}).normalizeObservedPowerState(rawState);
                 // Normalize brightness from HA's 0-255 to 0-100 percentage (matches homeAssistantManager format)
                 const brightnessNormalized = a.brightness ? Math.round((a.brightness / 255) * 100) : 0;
                 state = { 
-                    on: data.new_state.state === "on", 
-                    state: data.new_state.state, 
+                    on: normalizedOn,
+                    state: rawState,
+                    available: rawState !== 'unavailable' && rawState !== 'unknown',
                     brightness: brightnessNormalized, 
                     hs_color: a.hs_color ?? [0, 0], 
                     power: a.power || a.current_power_w || a.load_power || null, 
@@ -1524,7 +1994,19 @@
             // Handle direct id-based updates (generic format)
             else if (data.id) {
                 id = data.id;
-                state = { ...data, state: data.state || (data.on ? "on" : "off") };
+                const directState = data.state ?? (
+                    data.on === true ? 'on' : data.on === false ? 'off' : 'unknown'
+                );
+                const normalizedOn = (window.T2SharedLogic || {}).normalizeObservedPowerState({
+                    ...data,
+                    state: directState
+                });
+                state = {
+                    ...data,
+                    on: normalizedOn,
+                    state: directState,
+                    available: data.available ?? (directState !== 'unavailable' && directState !== 'unknown')
+                };
             }
             
             if (!id) return;
@@ -1534,26 +2016,9 @@
             
             if (!matchedId) return; // Not a device we're tracking
             
-            // DEBUG: Log state updates for kitchen devices
-            if (id.includes('kitchen_cabinet') || id.includes('kitchen_sink')) {
-                console.log(`[HAGenericDeviceNode] 🔍 Socket update for ${id}:`, {
-                    matchedId,
-                    newState: state,
-                    locked: this._commandLocks?.[matchedId] ? 'YES' : 'NO'
-                });
-            }
-            
-            // Skip updates for devices we recently commanded (optimistic lock)
-            // This prevents stale HA state from overwriting our optimistic update
-            if (this._commandLocks?.[matchedId] && Date.now() < this._commandLocks[matchedId]) {
-                // Still within lock period - ignore this update
-                if (id.includes('kitchen_cabinet') || id.includes('kitchen_sink')) {
-                    console.log(`[HAGenericDeviceNode] 🔒 LOCKED - ignoring update for ${id}`);
-                }
-                return;
-            }
-            
             this.perDeviceState[matchedId] = { ...this.perDeviceState[matchedId], ...state };
+            const observedOn = (window.T2SharedLogic || {}).normalizeObservedPowerState(state);
+            if (observedOn !== null) this.recordDeviceObservedState(matchedId, observedOn);
             this.updateDeviceControls(matchedId, state);
         }
 
@@ -1620,8 +2085,32 @@
         }
 
         destroy() {
+            this._destroyed = true;
+            const logic = window.T2SharedLogic || {};
+            if (typeof logic.setDesiredDeviceState === 'function') {
+                Object.keys(this.deviceCommandStates || {}).forEach(id => {
+                    this.deviceCommandStates[id] = logic.setDesiredDeviceState(
+                        this.deviceCommandStates[id],
+                        undefined
+                    );
+                });
+            }
             // Stop enforce state interval
             this.stopEnforceInterval();
+            this.clearCommandWake();
+            Object.values(this._confirmationTimers || {}).forEach(timer => clearTimeout(timer));
+            this._confirmationTimers = {};
+            if (this._initialTriggerRetryTimer) clearTimeout(this._initialTriggerRetryTimer);
+            this._initialTriggerRetryTimer = null;
+            this.clearHsvRetry();
+            if (this._restoreGraphLoadHandler) {
+                window.removeEventListener('graphLoadComplete', this._restoreGraphLoadHandler);
+                this._restoreGraphLoadHandler = null;
+            }
+            this._restoreTimers.forEach(timer => clearTimeout(timer));
+            this._restoreTimers = [];
+            this._lifecycleTimers.forEach(timer => clearTimeout(timer));
+            this._lifecycleTimers.clear();
             
             // Remove socket listeners to prevent memory leaks
             if (window.socket) {

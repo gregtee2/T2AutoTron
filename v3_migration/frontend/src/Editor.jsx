@@ -327,11 +327,15 @@ export function Editor() {
         }
     }, [editorInstance]);
 
-    const createEditor = useCallback(async (container) => {
+    const createEditor = useCallback(async (container, isCancelled = () => false) => {
         // Wait for container to have proper dimensions (fixes race condition in Electron)
         // This ensures the AreaPlugin initializes with correct viewport size
         await new Promise((resolve) => {
             const checkReady = () => {
+                if (isCancelled()) {
+                    resolve();
+                    return;
+                }
                 const rect = container.getBoundingClientRect();
                 if (rect.width > 0 && rect.height > 0) {
                     resolve();
@@ -342,6 +346,8 @@ export function Editor() {
             // Use requestAnimationFrame to ensure DOM is laid out
             requestAnimationFrame(checkReady);
         });
+
+        if (isCancelled()) return null;
         
         const editor = new NodeEditor();
         const area = new AreaPlugin(container);
@@ -381,11 +387,13 @@ export function Editor() {
         // Process all nodes through the dataflow engine (debounced version)
         // Uses trailing-edge debounce: waits for quiet period, then processes
         let processRunning = false;  // True while actually processing nodes
+        let processRerunRequested = false;
         
         const process = async () => {
-            // If actively processing, skip (prevents re-entry during async work)
+            // If actively processing, retain one trailing pass instead of losing the update.
             if (processRunning) {
                 processSkipCount++;
+                processRerunRequested = true;
                 return;
             }
             
@@ -422,6 +430,10 @@ export function Editor() {
                     }
                 } finally {
                     processRunning = false;
+                    if (processRerunRequested) {
+                        processRerunRequested = false;
+                        process();
+                    }
                 }
             }, debounceMs); // Dynamic: 16ms for small graphs, up to 100ms for large ones
         };
@@ -429,7 +441,10 @@ export function Editor() {
         // Immediate process for when we need synchronous graph evaluation (e.g., after load)
         const processImmediate = async () => {
             // Prevent re-entry while already running
-            if (processRunning) return;
+            if (processRunning) {
+                processRerunRequested = true;
+                return;
+            }
             
             // Cancel any pending debounced process
             if (processTimeout) {
@@ -449,6 +464,10 @@ export function Editor() {
                 }
             } finally {
                 processRunning = false;
+                if (processRerunRequested) {
+                    processRerunRequested = false;
+                    process();
+                }
             }
         };
 
@@ -1743,6 +1762,9 @@ export function Editor() {
                 window.removeEventListener('blur', onWindowBlur);
                 document.removeEventListener('visibilitychange', onVisibilityChange);
                 if (groupMovingTimeout) clearTimeout(groupMovingTimeout);
+                if (processTimeout) clearTimeout(processTimeout);
+                if (nodeUpdateTimeout) clearTimeout(nodeUpdateTimeout);
+                processRerunRequested = false;
                 if (selectionBox.parentNode) selectionBox.parentNode.removeChild(selectionBox);
                 area.destroy();
             },
@@ -1765,6 +1787,7 @@ export function Editor() {
         let selectorInstance = null;
         let editorPromise = null;
         let resizeObserver = null;
+        let disposed = false;
 
         // Track pointer captures so we can reliably release the *actual* captured IDs.
         // Some machines end up with a stuck pointer capture that breaks pan/zoom until a full reload.
@@ -1798,9 +1821,15 @@ export function Editor() {
 
         // Load plugins FIRST, then create editor
         editorPromise = loadPlugins().then(() => {
+            if (disposed) return null;
             debug(" External plugins loaded, now creating editor...");
-            return createEditor(container);
+            return createEditor(container, () => disposed);
         }).then((result) => {
+            if (!result) return null;
+            if (disposed) {
+                result.destroy();
+                return null;
+            }
             editorInstance = result.editor;
             areaInstance = result.area;
             engineInstance = result.engine;
@@ -1819,6 +1848,7 @@ export function Editor() {
             // Dispatch a synthetic wheel event to "wake up" the zoom handler
             // And focus the container to enable pan/drag
             setTimeout(() => {
+                if (disposed) return;
                 if (container) {
                     container.tabIndex = -1;
                     container.focus();
@@ -1840,10 +1870,12 @@ export function Editor() {
                     
                     // Expose a global reset function for debugging/recovery
                     window.resetEditorView = () => {
+                        if (disposed) return;
                         debug(' Manual reset triggered');
                         
                         // Use requestAnimationFrame to avoid blocking the main thread
                         requestAnimationFrame(() => {
+                            if (disposed) return;
                             // Also reset our internal drag/selection states
                             if (window.resetEditorDragState) {
                                 window.resetEditorDragState();
@@ -1918,6 +1950,7 @@ export function Editor() {
                             
                             // Small delay to let cancellation events process
                             setTimeout(() => {
+                                if (disposed) return;
                                 // Dispatch pointer events to reset drag state
                                 const downEvent = new PointerEvent('pointerdown', {
                                     bubbles: true, cancelable: true,
@@ -1934,6 +1967,7 @@ export function Editor() {
                                 
                                 container.dispatchEvent(downEvent);
                                 setTimeout(() => {
+                                    if (disposed) return;
                                     container.dispatchEvent(upEvent);
                                     // Dispatch wheel event for zoom
                                     const wheelEvent = new WheelEvent('wheel', {
@@ -1963,6 +1997,7 @@ export function Editor() {
                         
                         // Trigger area recalculation by focusing and dispatching events
                         setTimeout(() => {
+                            if (disposed) return;
                             container.focus();
                             // Dispatch a zero-delta wheel to reinitialize handlers
                             const rect = container.getBoundingClientRect();
@@ -1986,6 +2021,7 @@ export function Editor() {
         const onGraphLoadComplete = () => {
             debug(' graphLoadComplete event received - triggering view reset');
             const tryReset = () => {
+                if (disposed) return;
                 if (window.resetEditorView) window.resetEditorView();
             };
             // Retry a few times because `resetEditorView` may not exist yet
@@ -1997,6 +2033,7 @@ export function Editor() {
         window.addEventListener('graphLoadComplete', onGraphLoadComplete);
 
         return () => {
+            disposed = true;
             if (resizeObserver) {
                 resizeObserver.disconnect();
             }
@@ -2005,7 +2042,7 @@ export function Editor() {
             container.removeEventListener('lostpointercapture', onLostPointerCapture, true);
             window.removeEventListener('pointerup', onPointerEnd, true);
             window.removeEventListener('pointercancel', onPointerEnd, true);
-            editorPromise.then((result) => result.destroy());
+            editorPromise.then((result) => result?.destroy());
         };
     }, [createEditor]);
 

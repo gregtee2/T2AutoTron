@@ -662,6 +662,5 @@ function register(registry) {
     registry.register('RGBToHSVNode', RGBToHSVNode);
     registry.register('ColorMixerNode', ColorMixerNode);
 }
-}
 
 module.exports = { register };

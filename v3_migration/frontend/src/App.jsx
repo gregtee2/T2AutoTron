@@ -543,13 +543,13 @@ function App() {
       setIsConnected(true);
     }
 
-    // Send heartbeat every 30 seconds to keep frontend-active status alive
-    // This prevents stale "frontend active" status if browser crashes without disconnect
+    // Send well inside the backend's 30-second timeout so normal timer jitter
+    // cannot cause a false frontend-to-backend handoff.
     const heartbeatInterval = setInterval(() => {
       if (socket.connected) {
         socket.emit('editor-heartbeat');
       }
-    }, 30000);
+    }, 10000);
 
     return () => {
       // Tell backend editor is closing before disconnecting

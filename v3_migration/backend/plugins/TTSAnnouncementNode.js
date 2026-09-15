@@ -38,6 +38,36 @@
         { name: 'Jazz24', url: 'https://live.wostreaming.net/direct/ppm-jazz24aac-ibc1' }
     ];
 
+    class SpeakerCommandCoordinator {
+        constructor() {
+            this.stationGenerations = new Map();
+            this.volumeTimers = new Map();
+        }
+
+        beginStationChange(speakerId) {
+            const generation = (this.stationGenerations.get(speakerId) || 0) + 1;
+            this.stationGenerations.set(speakerId, generation);
+            return () => this.stationGenerations.get(speakerId) === generation;
+        }
+
+        queueVolume(speakerId, volume, sendVolume, delay = 150) {
+            const existingTimer = this.volumeTimers.get(speakerId);
+            if (existingTimer) clearTimeout(existingTimer);
+
+            const timer = setTimeout(() => {
+                this.volumeTimers.delete(speakerId);
+                sendVolume(volume);
+            }, delay);
+            this.volumeTimers.set(speakerId, timer);
+        }
+
+        clear() {
+            this.volumeTimers.forEach(timer => clearTimeout(timer));
+            this.volumeTimers.clear();
+            this.stationGenerations.clear();
+        }
+    }
+
     // Tooltips
     const tooltips = {
         node: "Combined TTS + Streaming: Play background music, interrupt for announcements, then resume. Like a DJ booth for your smart home.",
@@ -138,6 +168,7 @@
             this._stationInputKeys = []; // Track dynamic station input keys
             this._lastActiveStates = {}; // Track last active state per speaker for edge detection
             this._lastStationInputs = {}; // Track last station input values for edge detection ("last write wins")
+            this._speakerCommands = new SpeakerCommandCoordinator();
             
             // Lock to prevent duplicate play commands (fixes AirPlay "already streaming" error)
             this._playInProgress = false;
@@ -368,11 +399,31 @@
             console.log(`[AudioOutput] 📻 Set station ${stationIndex} for ${speakerId}`);
         }
 
+        async queueStationChange(speakerId, streamUrl) {
+            const isCurrent = this._speakerCommands.beginStationChange(speakerId);
+            return this.playSingleSpeaker(
+                speakerId,
+                streamUrl,
+                1,
+                true,
+                isCurrent
+            );
+        }
+
+        queueVolumeChange(speakerId, volume) {
+            this._speakerCommands.queueVolume(
+                speakerId,
+                volume,
+                latestVolume => this.setVolume(speakerId, latestVolume)
+            );
+        }
+
         // Helper: play stream on single speaker with retry
-        async playSingleSpeaker(speaker, streamUrl, attempt = 1, forceStop = false) {
+        async playSingleSpeaker(speaker, streamUrl, attempt = 1, forceStop = false, shouldContinue = () => true) {
             const maxAttempts = 2;
             const volume = this.getSpeakerVolume(speaker);
             try {
+                if (!shouldContinue()) return false;
                 // If forceStop is true, stop the current stream first (helps with station changes)
                 if (forceStop) {
                     console.log(`[AudioOutput] ⏹️ Force-stopping ${speaker} before starting new stream`);
@@ -383,8 +434,10 @@
                     });
                     // Brief delay to let the stop command complete
                     await new Promise(r => setTimeout(r, 300));
+                    if (!shouldContinue()) return false;
                 }
                 
+                if (!shouldContinue()) return false;
                 const response = await (window.apiFetch || fetch)('/api/media/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -402,7 +455,7 @@
                     console.warn(`[AudioOutput] ✗ Failed ${speaker}: HTTP ${response.status} (attempt ${attempt})`);
                     if (attempt < maxAttempts) {
                         await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
-                        return this.playSingleSpeaker(speaker, streamUrl, attempt + 1, false);
+                        return this.playSingleSpeaker(speaker, streamUrl, attempt + 1, false, shouldContinue);
                     }
                     return false;
                 }
@@ -410,7 +463,7 @@
                 console.error(`[AudioOutput] ✗ Error on ${speaker}: ${err.message} (attempt ${attempt})`);
                 if (attempt < maxAttempts) {
                     await new Promise(r => setTimeout(r, 1000));
-                    return this.playSingleSpeaker(speaker, streamUrl, attempt + 1, false);
+                    return this.playSingleSpeaker(speaker, streamUrl, attempt + 1, false, shouldContinue);
                 }
                 return false;
             }
@@ -1298,13 +1351,18 @@
                 if (volumeInput !== undefined && volumeInput !== null) {
                     const vol = Math.max(0, Math.min(100, Math.round(volumeInput)));
                     const currentVol = this.getSpeakerVolume(speakerId);
+                    const stationInputKey = `station_${speakerId.replace('media_player.', '')}`;
+                    const stationInput = inputs[stationInputKey]?.[0];
+                    const stationWillChange = stationInput !== undefined &&
+                        stationInput !== null &&
+                        stationInput !== this._lastStationInputs?.[speakerId];
                     // Update if changed OR if we need to force-sync after restore
                     if (vol !== currentVol || forceVolumeSync) {
                         if (forceVolumeSync) {
                             console.log(`[AudioOutput] 🔄 Force-syncing volume ${vol}% to ${speakerId}`);
                         }
                         this.setSpeakerVolume(speakerId, vol);
-                        this.setVolume(speakerId, vol);
+                        if (!stationWillChange) this.queueVolumeChange(speakerId, vol);
                         syncedAnyVolume = true;
                     }
                 }
@@ -1398,9 +1456,9 @@
                         this.properties.speakerCustomUrls[speakerId] = customUrl;
                         console.log(`[AudioOutput] 📻 Station input changed: Custom URL for ${speakerId}`);
                         // Restart stream if playing
-                        const speakerIsPlaying = this.properties.isStreaming || this._lastActiveStates?.[speakerId];
+                        const speakerIsPlaying = this.properties.streamEnabled || this.properties.isStreaming || this._lastActiveStates?.[speakerId];
                         if (speakerIsPlaying) {
-                            this.playSingleSpeaker(speakerId, customUrl, 1, true); // forceStop=true for station change
+                            this.queueStationChange(speakerId, customUrl);
                         }
                     } else if (stationIndex !== null) {
                         // Clear any custom URL
@@ -1410,14 +1468,14 @@
                         this.setSpeakerStation(speakerId, stationIndex);
                         
                         // Check if this speaker is actively playing (via automation OR global stream)
-                        const speakerIsPlaying = this.properties.isStreaming || this._lastActiveStates?.[speakerId];
+                        const speakerIsPlaying = this.properties.streamEnabled || this.properties.isStreaming || this._lastActiveStates?.[speakerId];
                         console.log(`[AudioOutput] 📻 Station input changed to ${stationIndex} for ${speakerId}, playing=${speakerIsPlaying}`);
                         
                         // Restart stream if this speaker is playing - use forceStop to ensure station change takes effect
                         if (speakerIsPlaying) {
                             const streamUrl = this.getStreamUrlForSpeaker(speakerId);
                             console.log(`[AudioOutput] 📻 Switching to: ${streamUrl}`);
-                            this.playSingleSpeaker(speakerId, streamUrl, 1, true); // forceStop=true for station change
+                            this.queueStationChange(speakerId, streamUrl);
                         }
                     }
                 }

@@ -38,6 +38,14 @@ let batchSettleTimeout = null;
 const BATCH_MAX_MS = 180000;           // Max 3 minutes of batching (safety limit)
 const BATCH_SETTLE_MS = 15000;         // Flush after 15 seconds of no new changes
 
+const recordBatchedState = (name, isOn) => {
+  const target = isOn ? batchedChanges.on : batchedChanges.off;
+  const opposite = isOn ? batchedChanges.off : batchedChanges.on;
+  const oppositeIndex = opposite.indexOf(name);
+  if (oppositeIndex >= 0) opposite.splice(oppositeIndex, 1);
+  if (!target.includes(name)) target.push(name);
+};
+
 // Startup quiet period - suppress ALL individual device messages during startup
 let startupQuietUntil = 0;             // Timestamp when quiet period ends
 const STARTUP_QUIET_MS = 120000;       // 2 minutes of quiet after server start
@@ -73,11 +81,7 @@ function setupNotifications(io) {
               const [_, rawName, state] = turnedMatch;
               const name = rawName.replace(/_/g, ' ').replace(/[*[\]`]/g, '').trim();
               const isOn = state.toUpperCase() === 'ON';
-              if (isOn) {
-                if (!batchedChanges.on.includes(name)) batchedChanges.on.push(name);
-              } else {
-                if (!batchedChanges.off.includes(name)) batchedChanges.off.push(name);
-              }
+              recordBatchedState(name, isOn);
               log(`[Batch] Moved queued message to batch: ${name}`, 'info');
             }
           }
@@ -153,11 +157,7 @@ function setupNotifications(io) {
         // During startup quiet period OR batch mode, collect instead of sending
         if (batchMode || inQuietPeriod) {
           const isOn = state.toUpperCase() === 'ON';
-          if (isOn) {
-            if (!batchedChanges.on.includes(name)) batchedChanges.on.push(name);
-          } else {
-            if (!batchedChanges.off.includes(name)) batchedChanges.off.push(name);
-          }
+          recordBatchedState(name, isOn);
           deviceStates.set(deviceId, newState);
           
           // Reset settle timer - but only flush AFTER quiet period ends
@@ -311,11 +311,7 @@ function setupNotifications(io) {
           const [_, rawName, state] = turnedMatch;
           const name = rawName.replace(/_/g, ' ').replace(/[*[\]`]/g, '').trim();
           const isOn = state.toUpperCase() === 'ON';
-          if (isOn) {
-            if (!batchedChanges.on.includes(name)) batchedChanges.on.push(name);
-          } else {
-            if (!batchedChanges.off.includes(name)) batchedChanges.off.push(name);
-          }
+          recordBatchedState(name, isOn);
         }
       }
     }

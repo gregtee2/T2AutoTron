@@ -61,5 +61,16 @@ module.exports = {
     normalizeHSVInput: DeviceLogic.normalizeHSVInput,
     convertBrightness: DeviceLogic.convertBrightness,
     determineTriggerAction: DeviceLogic.determineTriggerAction,
-    buildHAPayload: DeviceLogic.buildHAPayload
+    buildHAPayload: DeviceLogic.buildHAPayload,
+    DEVICE_COMMAND_PHASES: DeviceLogic.DEVICE_COMMAND_PHASES,
+    createDeviceCommandState: DeviceLogic.createDeviceCommandState,
+    setDesiredDeviceState: DeviceLogic.setDesiredDeviceState,
+    recordObservedDeviceState: DeviceLogic.recordObservedDeviceState,
+    rearmDeviceCommandState: DeviceLogic.rearmDeviceCommandState,
+    beginDeviceCommand: DeviceLogic.beginDeviceCommand,
+    normalizeDeviceCommandResult: DeviceLogic.normalizeDeviceCommandResult,
+    isRetryableHttpStatus: DeviceLogic.isRetryableHttpStatus,
+    normalizeObservedPowerState: DeviceLogic.normalizeObservedPowerState,
+    recordDeviceCommandResult: DeviceLogic.recordDeviceCommandResult,
+    shouldIssueDeviceCommand: DeviceLogic.shouldIssueDeviceCommand
 };

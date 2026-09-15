@@ -1,6 +1,10 @@
 const fetch = require('node-fetch');
 const WebSocket = require('ws');
 const logger = require('../../logging/logger');
+const {
+  isRetryableHttpStatus,
+  normalizeObservedPowerState
+} = require('../../../../shared/logic/DeviceLogic');
 
 // Lazy-load commandTracker to avoid circular dependencies
 let commandTracker = null;
@@ -208,6 +212,7 @@ class HomeAssistantManager {
 
               // Invalidate cache on state change
               const cacheKey = `ha_${entity.entity_id}`;
+              this.stateCache.delete(entity.entity_id);
               this.stateCache.delete(cacheKey);
               
               // Also invalidate device list cache so getDevices() returns fresh data
@@ -228,12 +233,14 @@ class HomeAssistantManager {
                 log(`New HA entity discovered: ${entity.entity_id}`, 'info', false, 'ha:new-entity');
               }
 
+              const observedOn = normalizeObservedPowerState(entity.state);
               const state = {
                 id: cacheKey,
                 name: entity.attributes.friendly_name || entity.entity_id,
                 type: domain,
                 state: entity.state,
-                on: entity.state === 'on' || entity.state === 'open' || entity.state === 'playing',
+                on: observedOn,
+                available: observedOn !== null,
                 brightness: entity.attributes.brightness ? Math.round((entity.attributes.brightness / 255) * 100) : (entity.state === 'on' ? 100 : 0),
                 hs_color: entity.attributes.hs_color || [0, 0],
                 power: entity.attributes.power || entity.attributes.current_power_w || entity.attributes.load_power || null,
@@ -317,32 +324,34 @@ class HomeAssistantManager {
     }
   }
 
-  async getState(id) {
+  async getState(id, options = {}) {
     // Keep config current in case settings were updated at runtime
     this.updateConfig();
 
-    const cacheKey = id;
+    const rawId = id.replace('ha_', '');
+    const cacheKey = rawId;
     const cached = this.stateCache.get(cacheKey);
 
     // Check cache first
-    if (cached && Date.now() < cached.expiry) {
+    if (!options.forceRefresh && cached && Date.now() < cached.expiry) {
       logger.log(`[CACHE HIT] Returning cached state for HA device ${cacheKey}`, 'info', false, `ha:state:${cacheKey}`).catch(() => { });
       return { success: true, state: cached.state };
     }
 
     try {
-      const rawId = id.replace('ha_', '');
       const response = await fetch(`${this.config.host}/api/states/${rawId}`, {
         headers: { Authorization: `Bearer ${this.config.token}` },
-        timeout: 5000
+        signal: AbortSignal.timeout(5000)
       });
       if (!response.ok) throw new Error(`HA API error: ${response.status}: ${response.statusText}`);
       const data = await response.json();
 
       const entityType = rawId.split('.')[0];
+      const observedOn = normalizeObservedPowerState(data.state);
       const state = {
         state: data.state,
-        on: data.state === 'on' || data.state === 'open' || data.state === 'playing',
+        on: observedOn,
+        available: observedOn !== null,
         brightness: data.attributes?.brightness !== undefined
           ? Math.round((Number(data.attributes.brightness) / 255) * 100)
           : (data.state === 'on' ? 100 : 0),
@@ -388,7 +397,12 @@ class HomeAssistantManager {
       // Check device health before sending command
       if (!this.isDeviceHealthy(rawId)) {
         // Device is unhealthy and not ready for retry - skip silently
-        return { success: false, error: 'Device marked unhealthy - skipping', skipped: true };
+        return {
+          success: false,
+          error: 'Device marked unhealthy - skipping',
+          skipped: true,
+          retryable: true
+        };
       }
       
       const entityType = rawId.split('.')[0];
@@ -482,14 +496,17 @@ class HomeAssistantManager {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
-        timeout: 5000
+        signal: AbortSignal.timeout(5000)
       });
       if (!response.ok) {
         const errorBody = await response.text();
-        throw new Error(`HA API error: ${response.status}: ${response.statusText}, Body: ${errorBody}`);
+        const error = new Error(`HA API error: ${response.status}: ${response.statusText}, Body: ${errorBody}`);
+        error.status = response.status;
+        throw error;
       }
 
       // Invalidate cache after update
+      this.stateCache.delete(rawId);
       this.stateCache.delete(id);
 
       // Record success - device is healthy
@@ -505,7 +522,12 @@ class HomeAssistantManager {
       if (!isNowUnhealthy) {
         await logger.log(`HA state update failed for ${id}: ${error.message}`, 'error', false, `ha:state:${id}`);
       }
-      return { success: false, error: error.message };
+      return {
+        success: false,
+        error: error.message,
+        status: error.status || null,
+        retryable: error.status ? isRetryableHttpStatus(error.status) : true
+      };
     }
   }
 
@@ -774,7 +796,7 @@ module.exports = {
   type: 'device',
   prefix: 'ha_',
   initialize: (io, notificationEmitter, log) => instance.initialize(io, notificationEmitter, log),
-  getState: (id) => instance.getState(id),
+  getState: (id, options) => instance.getState(id, options),
   updateState: (id, update) => instance.updateState(id, update),
   controlDevice: (deviceId, state) => instance.controlDevice(deviceId, state),
   getDevices: () => instance.getDevices(),

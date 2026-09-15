@@ -10,6 +10,7 @@ const path = require('path');
 const registry = require('./BackendNodeRegistry');
 const engineLogger = require('./engineLogger');
 const { AutoTronBuffer } = require('./nodes/BufferNodes');
+const { normalizeObservedPowerState } = require('../../../shared/logic/DeviceLogic');
 
 const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 
@@ -31,6 +32,15 @@ class BackendEngine {
     // This prevents the engine and UI from fighting over device control
     this.frontendActive = false;
     this.frontendLastSeen = null;
+    this.frontendHandoffInProgress = false;
+    this.frontendHandoffPromise = null;
+    this.frontendHandoffRetryTimer = null;
+    this.tickInProgress = false;
+    this.activeTickPromise = null;
+    this.tickGeneration = 0;
+    this.hotReloadPromise = null;
+    this.hotReloadGeneration = 0;
+    this.hotReloadShouldRun = false;
     
     // Scheduled events registry - nodes register their upcoming events here
     // This enables UpcomingEventsNode to work in headless mode
@@ -79,9 +89,15 @@ class BackendEngine {
     const wasActive = this.frontendActive;
     this.frontendActive = active;
     this.frontendLastSeen = active ? Date.now() : this.frontendLastSeen;
+    if (active && this.frontendHandoffRetryTimer) {
+      clearTimeout(this.frontendHandoffRetryTimer);
+      this.frontendHandoffRetryTimer = null;
+      this.frontendHandoffPromise = null;
+      this.frontendHandoffInProgress = false;
+    }
     
     if (wasActive !== active) {
-      const status = active ? 'PAUSING device commands (frontend active)' : 'RESUMING device commands (frontend disconnected)';
+      const status = active ? 'PAUSING device commands (frontend active)' : 'PREPARING backend takeover (frontend disconnected)';
       console.log(`[BackendEngine] ${status}`);
       engineLogger.logEngineEvent(active ? 'FRONTEND-ACTIVE' : 'FRONTEND-INACTIVE', { 
         wasActive, 
@@ -91,10 +107,37 @@ class BackendEngine {
       
       // When frontend goes inactive, sync backend node states from HA reality
       // This prevents backend from "correcting" things that frontend intentionally set
-      if (wasActive && !active) {
-        this.onFrontendInactive();
-      }
+      if (wasActive && !active) this.startFrontendHandoff();
     }
+  }
+
+  startFrontendHandoff() {
+    if (this.frontendHandoffPromise || this.frontendActive) return this.frontendHandoffPromise;
+
+    this.frontendHandoffInProgress = true;
+    this.frontendHandoffPromise = this.onFrontendInactive()
+      .then(success => {
+        if (success) {
+          this.frontendHandoffInProgress = false;
+          if (!this.frontendActive) console.log('[BackendEngine] RESUMING device commands (handoff complete)');
+          return true;
+        }
+
+        if (!this.frontendActive && !this.frontendHandoffRetryTimer) {
+          console.warn('[BackendEngine] Handoff sync incomplete - keeping commands paused and retrying in 5s');
+          this.frontendHandoffRetryTimer = setTimeout(() => {
+            this.frontendHandoffRetryTimer = null;
+            this.frontendHandoffPromise = null;
+            this.startFrontendHandoff();
+          }, 5000);
+        }
+        return false;
+      })
+      .finally(() => {
+        if (!this.frontendHandoffRetryTimer) this.frontendHandoffPromise = null;
+        if (this.frontendActive) this.frontendHandoffInProgress = false;
+      });
+    return this.frontendHandoffPromise;
   }
 
   /**
@@ -120,14 +163,16 @@ class BackendEngine {
       }
       
       // Then sync device states from HA reality
-      await this.syncDeviceStatesFromHA();
+      const syncResult = await this.syncDeviceStatesFromHA();
+      if (!syncResult.success) return false;
       
       // Force all device nodes to resend their current HSV on next tick
       // This ensures colors sync immediately after handoff instead of waiting for "significant change"
       this.forceHsvResync();
-      
+      return true;
     } catch (err) {
       console.error(`[BackendEngine] Failed to handle frontend inactive:`, err.message);
+      return false;
     }
   }
 
@@ -170,29 +215,69 @@ class BackendEngine {
       // Note: States are kept fresh via WebSocket push - no need to force refresh
       
       let syncCount = 0;
+      let expectedCount = 0;
       for (const node of this.nodes.values()) {
         // Only sync HAGenericDeviceNode types
-        if (node.type === 'HAGenericDeviceNode' && node.properties?.devices) {
-          for (const device of node.properties.devices) {
-            if (device.entityId) {
-              // Use getState() which fetches fresh if not in cache
-              const haState = await haManager.getState(device.entityId);
-              const isOn = haState?.state === 'on' || haState?.on === true;
-              
-              // Update lastTrigger to match reality
-              if (node.lastTrigger !== isOn) {
-                node.lastTrigger = isOn;
-                syncCount++;
+        if (node.type === 'HAGenericDeviceNode') {
+          const entityIds = (node.properties?.selectedDeviceIds || [])
+            .filter(Boolean)
+            .map(id => id.startsWith('ha_') ? id.slice(3) : id);
+
+          node.deviceStates = node.deviceStates || {};
+          for (const entityId of entityIds) {
+            expectedCount++;
+            // getState returns { success, state: { state, on, ... } }
+            const result = await haManager.getState(entityId, { forceRefresh: true });
+            if (!result?.success || !result.state) continue;
+
+            const isOn = normalizeObservedPowerState(result.state);
+            if (isOn === null) continue;
+            if (typeof node.recordObservedCommandState === 'function') {
+              node.recordObservedCommandState(entityId, isOn);
+              if (!node.properties?.enforceState && typeof node.setDesiredCommandState === 'function') {
+                node.setDesiredCommandState(entityId, undefined);
               }
+            } else {
+              node.deviceStates[entityId] = isOn;
+              node.deviceStates[`ha_${entityId}`] = isOn;
             }
+            syncCount++;
+          }
+
+          // Baseline the current graph input after handoff. A normal Follow node must
+          // preserve HA reality until that input changes; Enforce State opts back into reassertion.
+          node.lastTrigger = undefined;
+          node.awaitingTriggerBaseline =
+            (node.properties?.triggerMode || 'Follow') !== 'Follow' ||
+            !node.properties?.enforceState;
+          node.reconciled = true;
+          node.hadConnection = true;
+          if (node.properties?.enforceState && typeof node.rearmCommandStates === 'function') {
+            node.rearmCommandStates();
           }
         }
       }
       
       if (VERBOSE) console.log(`[BackendEngine] Synced ${syncCount} device states from HA`);
+      return {
+        success: expectedCount === 0 || syncCount > 0,
+        syncCount,
+        expectedCount
+      };
     } catch (err) {
       console.error(`[BackendEngine] Failed to sync from HA:`, err.message);
+      return { success: false, error: err.message };
     }
+  }
+
+  expireFrontendLeaseIfNeeded(now = Date.now()) {
+    if (!this.frontendActive) return false;
+    const timeSinceHeartbeat = now - (this.frontendLastSeen || 0);
+    if (timeSinceHeartbeat < 30000) return false;
+
+    console.log(`[BackendEngine] Frontend claims active but no heartbeat in ${Math.round(timeSinceHeartbeat/1000)}s - backend taking over`);
+    this.setFrontendActive(false);
+    return true;
   }
 
   /**
@@ -205,17 +290,15 @@ class BackendEngine {
    * @returns {boolean} True if backend should skip commands (frontend is active)
    */
   shouldSkipDeviceCommands() {
+    this.expireFrontendLeaseIfNeeded();
+
+    // Never send from the backend until graph reload and HA-state reconciliation finish.
+    if (this.frontendHandoffInProgress) return true;
+
     // If frontend is active and was seen recently (within 30 seconds), skip backend commands
     // Frontend controls devices directly; backend is the fallback
     if (this.frontendActive) {
-      const timeSinceHeartbeat = Date.now() - (this.frontendLastSeen || 0);
-      if (timeSinceHeartbeat < 30000) {
-        // Frontend is active and responsive - let it control devices
-        return true;
-      }
-      // Frontend claims active but no heartbeat in 30s - it might be sleeping
-      console.log(`[BackendEngine] Frontend claims active but no heartbeat in ${Math.round(timeSinceHeartbeat/1000)}s - backend taking over`);
-      this.frontendActive = false;
+      return true;
     }
     return false;
   }
@@ -224,9 +307,11 @@ class BackendEngine {
    * Update frontend last seen timestamp (called from heartbeat)
    */
   frontendHeartbeat() {
-    if (this.frontendActive) {
-      this.frontendLastSeen = Date.now();
+    if (!this.frontendActive) {
+      this.setFrontendActive(true);
+      return;
     }
+    this.frontendLastSeen = Date.now();
   }
 
   /**
@@ -240,7 +325,8 @@ class BackendEngine {
       const graph = JSON.parse(graphJson);
       this.graphPath = graphPath;
       
-      await this.loadGraphData(graph);
+      if (this.running) await this.hotReload(graph);
+      else await this.loadGraphData(graph);
       
       if (VERBOSE) console.log(`[BackendEngine] Loaded graph from ${graphPath}`);
       if (VERBOSE) console.log(`[BackendEngine] Nodes: ${this.nodes.size}, Connections: ${this.connections.length}`);
@@ -448,6 +534,14 @@ class BackendEngine {
    */
   async tick(force = false) {
     if (!this.running && !force) return;
+    if (this.tickInProgress) return this.activeTickPromise;
+    if (this.expireFrontendLeaseIfNeeded()) return;
+
+    this.tickInProgress = true;
+    const tickGeneration = this.tickGeneration;
+    let resolveTick;
+    const tickPromise = new Promise(resolve => { resolveTick = resolve; });
+    this.activeTickPromise = tickPromise;
     
     this.lastTickTime = Date.now();
     this.tickCount++;
@@ -470,6 +564,7 @@ class BackendEngine {
       
       // Execute each node
       for (const nodeId of sortedNodeIds) {
+        if (tickGeneration !== this.tickGeneration || (!force && !this.running)) break;
         const node = this.nodes.get(nodeId);
         if (!node) continue;
         
@@ -484,6 +579,7 @@ class BackendEngine {
         if (execMethod) {
           try {
             const outputs = await node[execMethod](inputs);
+            if (tickGeneration !== this.tickGeneration || (!force && !this.running)) break;
             if (this.debug) {
               console.log(`[BackendEngine] Node ${nodeId} ${execMethod}() returned:`, outputs);
             }
@@ -499,6 +595,12 @@ class BackendEngine {
       }
     } catch (error) {
       console.error(`[BackendEngine] Tick error: ${error.message}`);
+    } finally {
+      resolveTick();
+      if (this.activeTickPromise === tickPromise) {
+        this.activeTickPromise = null;
+        this.tickInProgress = false;
+      }
     }
   }
 
@@ -514,7 +616,11 @@ class BackendEngine {
       
       // Refresh cache to get current HA states
       if (VERBOSE) console.log('[BackendEngine] Reconciling device states with Home Assistant...');
-      await bulkStateCache.refreshCache();
+      const refreshed = await bulkStateCache.refreshCache();
+      if (!refreshed) {
+        console.warn('[BackendEngine] Could not refresh HA states for reconciliation');
+        return { success: false, reason: 'refresh_failed' };
+      }
       
       const stateCache = bulkStateCache.states;
       if (!stateCache || stateCache.size === 0) {
@@ -556,18 +662,23 @@ class BackendEngine {
   /**
    * Start the engine
    */
-  async start() {
+  async start(expectedReloadGeneration = null) {
+    if (
+      expectedReloadGeneration !== null &&
+      expectedReloadGeneration !== this.hotReloadGeneration
+    ) return false;
     if (this.running) {
       console.log('[BackendEngine] Already running');
-      return;
+      return true;
     }
 
     if (this.nodes.size === 0) {
       console.warn('[BackendEngine] No nodes loaded, cannot start');
-      return;
+      return false;
     }
 
     this.running = true;
+    this.tickGeneration++;
     this.tickCount = 0;
     this.startedAt = Date.now();
     
@@ -600,54 +711,102 @@ class BackendEngine {
     await this.reconcileDeviceStates();
     
     // Call tick immediately, then on interval
-    this.tick();
+    if (
+      !this.running ||
+      (expectedReloadGeneration !== null && expectedReloadGeneration !== this.hotReloadGeneration)
+    ) {
+      this.running = false;
+      return false;
+    }
+    await this.tick();
+    if (
+      !this.running ||
+      (expectedReloadGeneration !== null && expectedReloadGeneration !== this.hotReloadGeneration)
+    ) {
+      this.running = false;
+      return false;
+    }
     this.tickInterval = setInterval(() => this.tick(), this.tickRate);
     
     engineLogger.logEngineEvent('RUNNING', { tickRate: this.tickRate });
+    return true;
   }
 
   /**
    * Stop the engine
    */
-  stop() {
-    if (!this.running) {
+  async stop() {
+    this.hotReloadShouldRun = false;
+    this.hotReloadGeneration++;
+    if (!this.running && !this.activeTickPromise) {
       console.log('[BackendEngine] Not running');
       return;
     }
 
+    const wasRunning = this.running;
     this.running = false;
+    this.tickGeneration++;
     
     if (this.tickInterval) {
       clearInterval(this.tickInterval);
       this.tickInterval = null;
     }
+    const activeTick = this.activeTickPromise;
+    if (activeTick) await activeTick;
     
-    engineLogger.logEngineEvent('STOP', { tickCount: this.tickCount });
-    console.log(`[BackendEngine] Stopped after ${this.tickCount} ticks`);
+    if (wasRunning) {
+      engineLogger.logEngineEvent('STOP', { tickCount: this.tickCount });
+      console.log(`[BackendEngine] Stopped after ${this.tickCount} ticks`);
+    }
   }
 
   /**
    * Hot-reload graph without stopping
    * @param {object} graphData - New graph data
    */
-  async hotReload(graphData) {
-    const wasRunning = this.running;
-    
-    if (wasRunning) {
-      this.stop();
+  hotReload(graphData) {
+    const requestGeneration = ++this.hotReloadGeneration;
+    this.hotReloadShouldRun = this.hotReloadShouldRun || this.running;
+
+    // Cancel the current schedule immediately. The queued reload waits for any active
+    // node execution to drain before replacing maps used by that tick.
+    this.running = false;
+    this.tickGeneration++;
+    if (this.tickInterval) {
+      clearInterval(this.tickInterval);
+      this.tickInterval = null;
     }
-    
-    await this.loadGraphData(graphData);
-    
-    // Only restart if there are nodes to process
-    if (wasRunning && this.nodes.size > 0) {
-      await this.start();
-      if (VERBOSE) console.log('[BackendEngine] Hot-reloaded graph and restarted');
-    } else if (wasRunning) {
-      if (VERBOSE) console.log('[BackendEngine] Hot-reload: graph is empty, staying stopped');
-    } else {
-      if (VERBOSE) console.log('[BackendEngine] Hot-reloaded graph (engine was not running)');
-    }
+
+    const previousReload = this.hotReloadPromise || Promise.resolve();
+    const operation = previousReload.catch(() => {}).then(async () => {
+      if (requestGeneration !== this.hotReloadGeneration) return false;
+
+      const activeTick = this.activeTickPromise;
+      if (activeTick) await activeTick;
+      if (requestGeneration !== this.hotReloadGeneration) return false;
+
+      await this.loadGraphData(graphData);
+      if (requestGeneration !== this.hotReloadGeneration) return false;
+
+      const shouldRestart = this.hotReloadShouldRun;
+      if (shouldRestart && this.nodes.size > 0) {
+        const started = await this.start(requestGeneration);
+        if (!started || requestGeneration !== this.hotReloadGeneration) return false;
+        if (VERBOSE) console.log('[BackendEngine] Hot-reloaded graph and restarted');
+      } else if (shouldRestart) {
+        if (VERBOSE) console.log('[BackendEngine] Hot-reload: graph is empty, staying stopped');
+      } else {
+        if (VERBOSE) console.log('[BackendEngine] Hot-reloaded graph (engine was not running)');
+      }
+
+      if (requestGeneration === this.hotReloadGeneration) this.hotReloadShouldRun = false;
+      return true;
+    });
+
+    this.hotReloadPromise = operation;
+    return operation.finally(() => {
+      if (this.hotReloadPromise === operation) this.hotReloadPromise = null;
+    });
   }
 
   /**
@@ -667,7 +826,8 @@ class BackendEngine {
       uptime: this.startedAt ? Date.now() - this.startedAt : 0,
       registeredNodeTypes: registry.list(),
       frontendActive: this.frontendActive,
-      frontendLastSeen: this.frontendLastSeen
+      frontendLastSeen: this.frontendLastSeen,
+      frontendHandoffInProgress: this.frontendHandoffInProgress
     };
   }
 }

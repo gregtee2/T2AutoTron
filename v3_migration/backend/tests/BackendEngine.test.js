@@ -38,8 +38,14 @@ class StubNode {
 registry.register('StubNode', StubNode);
 
 describe('BackendEngine', () => {
-  afterEach(() => {
-    if (engine.running) engine.stop();
+  afterEach(async () => {
+    jest.restoreAllMocks();
+    if (engine.frontendHandoffRetryTimer) clearTimeout(engine.frontendHandoffRetryTimer);
+    engine.frontendHandoffRetryTimer = null;
+    engine.frontendHandoffPromise = null;
+    engine.frontendHandoffInProgress = false;
+    engine.tickInProgress = false;
+    if (engine.running || engine.activeTickPromise) await engine.stop();
     // Reset state between tests
     engine.nodes.clear();
     engine.connections = [];
@@ -47,7 +53,12 @@ describe('BackendEngine', () => {
     engine.tickCount = 0;
     engine.frontendActive = false;
     engine.frontendLastSeen = null;
+    engine.frontendHandoffInProgress = false;
+    engine.frontendHandoffPromise = null;
     engine.scheduledEventsRegistry.clear();
+    engine.activeTickPromise = null;
+    engine.hotReloadPromise = null;
+    engine.hotReloadShouldRun = false;
   });
 
   // ---------------------------------------------------------------------------
@@ -220,7 +231,7 @@ describe('BackendEngine', () => {
 
       // Wait for at least one tick
       await new Promise(r => setTimeout(r, 150));
-      engine.stop();
+      await engine.stop();
       expect(engine.running).toBe(false);
       expect(engine.tickCount).toBeGreaterThan(0);
     });
@@ -246,6 +257,175 @@ describe('BackendEngine', () => {
       engine.frontendHeartbeat();
       expect(engine.frontendLastSeen).toBeGreaterThanOrEqual(before);
     });
+
+    test('heartbeat reclaims frontend ownership after a timeout', () => {
+      engine.frontendActive = false;
+      engine.frontendLastSeen = Date.now() - 31000;
+
+      engine.frontendHeartbeat();
+
+      expect(engine.frontendActive).toBe(true);
+      expect(Date.now() - engine.frontendLastSeen).toBeLessThan(1000);
+      expect(engine.shouldSkipDeviceCommands()).toBe(true);
+    });
+
+    test('stale heartbeat keeps commands paused until backend handoff completes', async () => {
+      let finishHandoff;
+      const handoff = new Promise(resolve => { finishHandoff = resolve; });
+      const handoffSpy = jest.spyOn(engine, 'onFrontendInactive').mockReturnValue(handoff);
+
+      engine.setFrontendActive(true);
+      engine.frontendLastSeen = Date.now() - 31000;
+
+      expect(engine.shouldSkipDeviceCommands()).toBe(true);
+      expect(engine.frontendActive).toBe(false);
+      expect(engine.frontendHandoffInProgress).toBe(true);
+      expect(handoffSpy).toHaveBeenCalledTimes(1);
+      expect(engine.shouldSkipDeviceCommands()).toBe(true);
+
+      const pendingHandoff = engine.frontendHandoffPromise;
+      finishHandoff(true);
+      await pendingHandoff;
+
+      expect(engine.frontendHandoffInProgress).toBe(false);
+      expect(engine.shouldSkipDeviceCommands()).toBe(false);
+    });
+
+    test('handoff reconciles HA Generic devices and baselines normal Follow input', async () => {
+      const haManager = require('../src/devices/managers/homeAssistantManager');
+      const getState = jest.spyOn(haManager, 'getState').mockImplementation(async entityId => ({
+        success: true,
+        state: { state: entityId === 'light.on_lamp' ? 'on' : 'off', on: entityId === 'light.on_lamp' }
+      }));
+      const node = {
+        type: 'HAGenericDeviceNode',
+        properties: { selectedDeviceIds: ['ha_light.on_lamp', 'ha_light.off_lamp'] },
+        deviceStates: {},
+        lastTrigger: false,
+        reconciled: false,
+        hadConnection: false,
+        recordObservedCommandState: jest.fn(function (entityId, isOn) {
+          this.deviceStates[entityId] = isOn;
+          this.deviceStates[`ha_${entityId}`] = isOn;
+        }),
+        setDesiredCommandState: jest.fn(),
+        rearmCommandStates: jest.fn()
+      };
+      engine.nodes.set('generic', node);
+
+      await engine.syncDeviceStatesFromHA();
+
+      expect(getState).toHaveBeenCalledWith('light.on_lamp', { forceRefresh: true });
+      expect(getState).toHaveBeenCalledWith('light.off_lamp', { forceRefresh: true });
+      expect(node.deviceStates['light.on_lamp']).toBe(true);
+      expect(node.deviceStates['ha_light.off_lamp']).toBe(false);
+      expect(node.lastTrigger).toBeUndefined();
+      expect(node.awaitingTriggerBaseline).toBe(true);
+      expect(node.reconciled).toBe(true);
+      expect(node.hadConnection).toBe(true);
+      expect(node.setDesiredCommandState).toHaveBeenCalledWith('light.on_lamp', undefined);
+      expect(node.setDesiredCommandState).toHaveBeenCalledWith('light.off_lamp', undefined);
+      expect(node.rearmCommandStates).not.toHaveBeenCalled();
+    });
+
+    test('failed handoff keeps backend commands paused and schedules retry', async () => {
+      jest.spyOn(engine, 'onFrontendInactive').mockResolvedValue(false);
+      engine.setFrontendActive(true);
+
+      engine.setFrontendActive(false);
+      await engine.frontendHandoffPromise;
+
+      expect(engine.frontendHandoffInProgress).toBe(true);
+      expect(engine.frontendHandoffRetryTimer).not.toBeNull();
+      expect(engine.shouldSkipDeviceCommands()).toBe(true);
+    });
+
+    test('tick actively expires a stale frontend lease without device traffic', async () => {
+      let finishHandoff;
+      jest.spyOn(engine, 'onFrontendInactive').mockReturnValue(new Promise(resolve => {
+        finishHandoff = resolve;
+      }));
+      engine.running = true;
+      engine.frontendActive = true;
+      engine.frontendLastSeen = Date.now() - 31000;
+
+      await engine.tick();
+
+      expect(engine.frontendActive).toBe(false);
+      expect(engine.frontendHandoffInProgress).toBe(true);
+      expect(engine.tickCount).toBe(0);
+      finishHandoff(true);
+      await engine.frontendHandoffPromise;
+    });
+  });
+
+  test('does not overlap backend ticks while a node is still awaiting', async () => {
+    let finishNode;
+    const data = jest.fn(() => new Promise(resolve => { finishNode = resolve; }));
+    engine.nodes.set('slow', { id: 'slow', type: 'StubNode', data });
+    engine.running = true;
+
+    const firstTick = engine.tick();
+    await Promise.resolve();
+    const overlappingTick = engine.tick();
+
+    expect(data).toHaveBeenCalledTimes(1);
+    expect(engine.tickCount).toBe(1);
+    finishNode({ out: true });
+    await Promise.all([firstTick, overlappingTick]);
+    expect(data).toHaveBeenCalledTimes(1);
+  });
+
+  test('hot reload waits for the active tick before replacing the graph', async () => {
+    let finishNode;
+    const data = jest.fn(() => new Promise(resolve => { finishNode = resolve; }));
+    engine.nodes.set('slow', { id: 'slow', type: 'StubNode', data });
+    engine.running = true;
+    jest.spyOn(engine, 'reconcileDeviceStates').mockResolvedValue({ success: true });
+
+    const activeTick = engine.tick();
+    await Promise.resolve();
+    const reload = engine.hotReload({
+      nodes: [{ id: 'new', name: 'StubNode', properties: { value: 7 } }],
+      connections: []
+    });
+    await Promise.resolve();
+
+    expect(engine.nodes.has('slow')).toBe(true);
+    finishNode({ out: 'old' });
+    await activeTick;
+    await reload;
+
+    expect(engine.nodes.has('slow')).toBe(false);
+    expect(engine.outputs.get('slow')).toBeUndefined();
+    expect(engine.outputs.get('new')).toEqual({ out: 7 });
+  });
+
+  test('concurrent hot reloads keep only the newest requested graph', async () => {
+    let finishNode;
+    const data = jest.fn(() => new Promise(resolve => { finishNode = resolve; }));
+    engine.nodes.set('slow', { id: 'slow', type: 'StubNode', data });
+    engine.running = true;
+    jest.spyOn(engine, 'reconcileDeviceStates').mockResolvedValue({ success: true });
+
+    const activeTick = engine.tick();
+    await Promise.resolve();
+    const olderReload = engine.hotReload({
+      nodes: [{ id: 'older', name: 'StubNode', properties: { value: 1 } }],
+      connections: []
+    });
+    const newerReload = engine.hotReload({
+      nodes: [{ id: 'newer', name: 'StubNode', properties: { value: 2 } }],
+      connections: []
+    });
+
+    finishNode({ out: 'old' });
+    await activeTick;
+    await Promise.all([olderReload, newerReload]);
+
+    expect(engine.nodes.has('older')).toBe(false);
+    expect(engine.nodes.has('newer')).toBe(true);
+    expect(engine.outputs.get('newer')).toEqual({ out: 2 });
   });
 
   // ---------------------------------------------------------------------------

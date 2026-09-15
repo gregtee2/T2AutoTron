@@ -196,6 +196,7 @@
     function StationScheduleComponent({ data, emit }) {
         const [stations, setStations] = useState(data.properties.stations || [...DEFAULT_STATIONS]);
         const [schedule, setSchedule] = useState(data.properties.schedule || []);
+        const draggedEntryIndexRef = useRef(null);
         const [currentStation, setCurrentStation] = useState(null);
         const [nodeWidth, setNodeWidth] = useState(data.properties.nodeWidth || 320);
         const [nodeHeight, setNodeHeight] = useState(data.properties.nodeHeight || 280);
@@ -386,11 +387,21 @@
             if (data.changeCallback) data.changeCallback();
         };
 
+        const moveEntry = (fromIndex, toIndex) => {
+            if (fromIndex === toIndex || fromIndex === null || toIndex === null) return;
+            const newSchedule = [...schedule];
+            const [entry] = newSchedule.splice(fromIndex, 1);
+            newSchedule.splice(toIndex, 0, entry);
+            setSchedule(newSchedule);
+            data.properties.schedule = newSchedule;
+            if (data.changeCallback) data.changeCallback();
+        };
+
         const outputs = Object.entries(data.outputs || {});
         const currentStationName = stations[currentStation]?.name || `Station ${currentStation}`;
 
-        // Sort schedule for display
-        const sortedSchedule = [...schedule].sort((a, b) => {
+        // Playback is chronological, but the editor preserves the user's manual row order.
+        const chronologicalSchedule = [...schedule].sort((a, b) => {
             const [aH, aM] = a.time.split(':').map(Number);
             const [bH, bM] = b.time.split(':').map(Number);
             return (aH * 60 + aM) - (bH * 60 + bM);
@@ -398,12 +409,12 @@
 
         // Find which entry is currently active based on time
         const getActiveEntryTime = () => {
-            if (sortedSchedule.length === 0) return null;
+            if (chronologicalSchedule.length === 0) return null;
             const now = new Date();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
             
-            let activeEntry = sortedSchedule[sortedSchedule.length - 1]; // Default to last
-            for (const entry of sortedSchedule) {
+            let activeEntry = chronologicalSchedule[chronologicalSchedule.length - 1]; // Default to last
+            for (const entry of chronologicalSchedule) {
                 const [h, m] = entry.time.split(':').map(Number);
                 const entryMinutes = h * 60 + m;
                 if (entryMinutes <= currentMinutes) {
@@ -507,13 +518,17 @@
                     marginBottom: '8px',
                     paddingRight: '4px'
                 } 
-            }, sortedSchedule.map((entry, displayIndex) => {
-                // Find the actual index in unsorted array
-                const actualIndex = schedule.findIndex(e => e === entry);
+            }, schedule.map((entry, actualIndex) => {
                 const isActive = entry.time === activeEntryTime;
                 
                 return el('div', { 
                     key: actualIndex, 
+                    onDragOver: (e) => e.preventDefault(),
+                    onDrop: (e) => {
+                        e.preventDefault();
+                        moveEntry(draggedEntryIndexRef.current, actualIndex);
+                        draggedEntryIndexRef.current = null;
+                    },
                     style: { 
                         display: 'flex', 
                         alignItems: 'center', 
@@ -532,6 +547,26 @@
                             : 'none'
                     } 
                 }, [
+                    // Drag handle - use this instead of the row so inputs remain easy to edit.
+                    el('span', {
+                        key: 'drag-handle',
+                        draggable: true,
+                        title: 'Drag to reorder this schedule entry',
+                        onDragStart: (e) => {
+                            e.stopPropagation();
+                            e.dataTransfer.effectAllowed = 'move';
+                            draggedEntryIndexRef.current = actualIndex;
+                        },
+                        onDragEnd: () => { draggedEntryIndexRef.current = null; },
+                        onPointerDown: (e) => e.stopPropagation(),
+                        style: {
+                            cursor: 'grab',
+                            color: THEME.textMuted,
+                            fontSize: '14px',
+                            lineHeight: 1,
+                            userSelect: 'none'
+                        }
+                    }, '⋮⋮'),
                     // Time input
                     el('input', {
                         key: 'time',
