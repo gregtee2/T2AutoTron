@@ -1388,6 +1388,17 @@ async function startServer() {
     });
     app.use(require('./api/middleware/errorHandler'));
 
+    // Bind the HTTP port before slow device, weather, camera, and engine startup.
+    // Home Assistant ingress needs a reachable listener before those optional
+    // integrations finish initializing.
+    debug('Starting server on port...');
+    const PORT = config.get('port');
+    const HOST = process.env.HOST || '0.0.0.0';
+    server.listen(PORT, HOST, () => {
+      logger.log(`Server running on http://${HOST}:${PORT}`, 'info', false, 'server:start');
+      console.log(chalk.cyan(`✓ Server running on http://${HOST}:${PORT}`));
+    });
+
     debug('Initializing modules...');
     await initializeModules(deviceService);
     
@@ -1409,16 +1420,8 @@ async function startServer() {
       console.log('[CameraService] ⏸ Disabled via DISABLE_CAMERAS=true');
     }
     
-    debug('Starting server on port...');
-    const PORT = config.get('port');
-    const HOST = process.env.HOST || '0.0.0.0';  // Bind to all interfaces for Docker/HA
-    server.listen(PORT, HOST, () => {
-      logger.log(`Server running on http://${HOST}:${PORT}`, 'info', false, 'server:start');
-      console.log(chalk.cyan(`✓ Server running on http://${HOST}:${PORT}`));
-    });
-    
-    // Note: Keep-alive is started at the very top of this file (before any async operations)
-    // to ensure the process stays alive even if startup takes a while
+    // Keep-alive is started at the top of this file so the process stays alive
+    // while integrations finish initializing after the listener is available.
     
     // Explicitly keep stdin open to prevent exit
     if (process.stdin.isTTY) {
