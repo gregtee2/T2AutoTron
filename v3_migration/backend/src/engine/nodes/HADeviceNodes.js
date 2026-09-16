@@ -437,13 +437,15 @@ class HADeviceStateNode {
 
     // Extract common values
     const state = this.cachedState.state;
-    const isOn = state === 'on' || state === 'playing' || state === 'home';
+    const isOn = ['on', 'open', 'opening', 'playing', 'home', 'active', 'detected', 'occupied', 'present']
+      .includes(String(state ?? '').trim().toLowerCase());
     
     // Removed per-tick logging - too noisy for addon logs
     
     return {
       state: state,
       is_on: isOn,
+      is_active: isOn,
       device_state: this.cachedState,
       brightness: this.cachedState.attributes?.brightness,
       temperature: this.cachedState.attributes?.temperature,

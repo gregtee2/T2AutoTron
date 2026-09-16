@@ -219,14 +219,9 @@ class HSVModifierNode {
       }
     }
     
-    // If disabled, output null
-    if (!isEnabled) {
-      return { hsv_out: null };
-    }
-    
     // 2. Check for HSV Buffer override (bypasses sliders entirely)
     const hsvBufferName = this.properties.selectedHsvBuffer || this.properties.bufferName;
-    if (hsvBufferName) {
+    if (isEnabled && hsvBufferName) {
       const bufferVal = AutoTronBuffer.get(hsvBufferName);
       if (bufferVal && typeof bufferVal === 'object' && 'hue' in bufferVal) {
         // Output HSV buffer directly (bypass slider modifications)
@@ -239,7 +234,12 @@ class HSVModifierNode {
       return { hsv_out: { hue: 0, saturation: 0, brightness: 0 } };
     }
     
-    // 4. Apply slider modifications to socket input
+    // 4. A disabled modifier is a true passthrough; preserve the input value.
+    if (!isEnabled) {
+      return { hsv_out: hsvIn };
+    }
+
+    // 5. Apply slider modifications to socket input
     // Get modifiers from inputs or properties (support both old and new names)
     const hueOffset = inputs.hueOffset?.[0] ?? this.properties.hueShift ?? this.properties.hueOffset ?? 0;
     const satMult = inputs.satMult?.[0] ?? this.properties.saturationScale ?? this.properties.saturationMultiplier ?? 1;

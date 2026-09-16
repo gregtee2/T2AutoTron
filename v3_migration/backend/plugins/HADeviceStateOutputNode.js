@@ -44,7 +44,8 @@
     const tooltips = {
         node: "📤 OUTPUTS device state for use in automations.\n\n🔗 WORKFLOW: Connect output → HA Device Automation → extract fields like brightness, power, temperature.\n\n💡 Use when you need to READ device state (not control it).\n\nNo trigger needed - continuously monitors selected device.",
         outputs: {
-            device_state: "Full device state object.\n\nIncludes: on/off, brightness, color, attributes, etc.\n\nConnect to Display or Automation nodes."
+            device_state: "Full device state object.\n\nIncludes: on/off, brightness, color, attributes, etc.\n\nConnect to Display or Automation nodes.",
+            is_active: "Boolean state for triggers and Enable inputs.\n\nTrue for On/Open and false for Off/Closed."
         },
         controls: {
             filterType: "Filter device list by entity type.\n\nLight, Switch, Sensor, etc.",
@@ -52,6 +53,11 @@
             device: "Select which device to monitor."
         }
     };
+
+    function getBooleanState(state) {
+        const normalized = String(state ?? '').trim().toLowerCase();
+        return ['on', 'open', 'opening', 'playing', 'home', 'active', 'detected', 'occupied', 'present'].includes(normalized);
+    }
 
     // -------------------------------------------------------------------------
     // NODE CLASS
@@ -81,6 +87,10 @@
             this.addOutput("device_state", new ClassicPreset.Output(
                 sockets.lightInfo || sockets.object || new ClassicPreset.Socket('lightInfo'), 
                 "Device State"
+            ));
+            this.addOutput("is_active", new ClassicPreset.Output(
+                sockets.boolean || new ClassicPreset.Socket('boolean'),
+                "Open / On"
             ));
 
             // Setup controls
@@ -191,7 +201,7 @@
                             
                             switch (entityType) {
                                 case "binary_sensor":
-                                    state = d.state.on ? "on" : "off";
+                                    state = d.state.state || d.state.value || (d.state.on ? "on" : "off");
                                     attributes = { battery: "unknown" };
                                     break;
                                 case "sensor":
@@ -216,7 +226,7 @@
                                     attributes = { percentage: d.state.percentage || 0 };
                                     break;
                                 case "cover":
-                                    state = d.state.on ? "open" : "closed";
+                                    state = d.state.state || d.state.value || (d.state.on ? "open" : "closed");
                                     attributes = { position: d.state.position || 0 };
                                     break;
                                 case "device_tracker":
@@ -358,7 +368,7 @@
                             attributes = { unit: data.state.unit || "", value: data.state.value };
                             break;
                         case "binary_sensor":
-                            stateValue = data.state.on ? "on" : "off";
+                            stateValue = data.state.state || data.state.value || (data.state.on ? "on" : "off");
                             attributes = { battery: data.state.battery_level || "unknown" };
                             break;
                         case "media_player":
@@ -383,7 +393,7 @@
                             attributes = { percentage: data.state.percentage || 0 };
                             break;
                         case "cover":
-                            stateValue = data.state.on ? "open" : "closed";
+                            stateValue = data.state.state || data.state.value || (data.state.on ? "open" : "closed");
                             attributes = { position: data.state.position || 0 };
                             break;
                         case "device_tracker":
@@ -438,7 +448,7 @@
                     attributes = { unit: data.unit || "" };
                     break;
                 case "binary_sensor":
-                    stateValue = data.on || data.state === "on" ? "on" : "off";
+                    stateValue = data.state || (data.on ? "on" : "off");
                     attributes = { battery: data.battery_level || "unknown" };
                     break;
                 case "media_player":
@@ -453,6 +463,10 @@
                         zone: data.state || "unknown",
                         is_home: data.state === "home"
                     };
+                    break;
+                case "cover":
+                    stateValue = data.state || (data.on ? "open" : "closed");
+                    attributes = { position: data.position || 0 };
                     break;
                 default:
                     stateValue = data.on || data.state === "on" ? "on" : "off";
@@ -480,15 +494,16 @@
 
             const state = this.perDeviceState[deviceId] || { state: device.state || "unknown", attributes: device.attributes || {} };
             const entityType = device.entityType || deviceId.split(".")[0];
+            const isActive = getBooleanState(state.state);
 
             // Determine on/off status
             let statusText = "Off";
             if (entityType === "media_player") {
                 statusText = state.state !== "off" && state.state !== "unknown" ? "On" : "Off";
             } else if (entityType === "binary_sensor") {
-                statusText = state.state === "on" ? "Open" : "Closed";
+                statusText = isActive ? "Open" : "Closed";
             } else if (entityType === "cover") {
-                statusText = state.state === "open" ? "On" : "Off";
+                statusText = isActive ? "Open" : "Closed";
             } else if (entityType === "device_tracker" || entityType === "person") {
                 // For device_tracker/person, state is a zone name like "home", "not_home", "work"
                 statusText = state.state === "home" ? "Home" : state.state || "Away";
@@ -524,8 +539,8 @@
                 deviceData.value = state.state || null;
                 deviceData.unit = state.attributes.unit || null;
             } else if (entityType === "binary_sensor") {
-                deviceData.brightness = state.state === "on" ? 100 : 0;
-                deviceData.status = state.state === "on" ? "Open" : "Closed";
+                deviceData.brightness = isActive ? 100 : 0;
+                deviceData.status = isActive ? "Open" : "Closed";
             } else if (entityType === "weather") {
                 deviceData.temperature = deviceData.attributes.temperature || null;
             } else if (entityType === "device_tracker" || entityType === "person") {
@@ -539,7 +554,7 @@
             const outputData = { lights: [deviceData], status: this.properties.status };
             this.lastValidOutput = outputData;
             this.log("data", `Output: ${deviceData.name} (${entityType}) - ${statusText}, brightness=${deviceData.brightness}`, false);
-            return { device_state: outputData };
+            return { device_state: outputData, is_active: isActive };
         }
 
         restore(state) {

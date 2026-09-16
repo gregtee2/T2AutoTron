@@ -58,21 +58,21 @@
                 this.properties.lastInputHSV = hsvIn;
             }
 
-            // 1. Determine if HSV Buffer override is enabled
+            // 1. Determine whether the modifier is enabled.
             // Priority: Enable Buffer > Socket input > Checkbox
-            let hsvBufferEnabled = this.properties.enabled;
+            let modifierEnabled = this.properties.enabled;
             if (enableIn !== undefined) {
-                hsvBufferEnabled = !!enableIn;
+                modifierEnabled = !!enableIn;
             }
             if (this.properties.selectedBuffer && window.AutoTronBuffer) {
                 const bufferVal = window.AutoTronBuffer.get(this.properties.selectedBuffer);
                 if (bufferVal !== undefined) {
-                    hsvBufferEnabled = !!bufferVal;
+                    modifierEnabled = !!bufferVal;
                 }
             }
 
-            // 2. If HSV Buffer override is enabled AND HSV Buffer is selected, OUTPUT HSV BUFFER DIRECTLY (bypass sliders)
-            if (hsvBufferEnabled && this.properties.selectedHsvBuffer && window.AutoTronBuffer) {
+            // 2. If enabled with an HSV buffer, output the buffer directly.
+            if (modifierEnabled && this.properties.selectedHsvBuffer && window.AutoTronBuffer) {
                 const bufferVal = window.AutoTronBuffer.get(this.properties.selectedHsvBuffer);
                 if (bufferVal && typeof bufferVal === 'object' && 'hue' in bufferVal) {
                     // Store for UI to show in output swatch
@@ -88,7 +88,13 @@
                 return { hsv_out: passthrough };
             }
 
-            // 4. Apply slider modifications (ALWAYS when we have input and no HSV buffer override)
+            // 4. A disabled modifier is a true passthrough; preserve the input value.
+            if (!modifierEnabled) {
+                this.properties.lastOutputHSV = hsvIn;
+                return { hsv_out: hsvIn };
+            }
+
+            // 5. Apply slider modifications.
             let hue = (hsvIn.hue * 360 + this.properties.hueShift) % 360;
             if (hue < 0) hue += 360;
             
@@ -140,14 +146,14 @@
         node: "Modifies HSV (Hue, Saturation, Brightness) color values. Can shift hue, adjust saturation/brightness, or pass through an HSV buffer directly.",
         inputs: {
             hsv_in: "HSV object input: { hue: 0-1, saturation: 0-1, brightness: 0-254 }",
-            enable: "Boolean: When false, HSV Buffer override is disabled"
+            enable: "Boolean: When false, passes HSV In through unchanged"
         },
         outputs: {
             hsv_out: "Modified HSV object. Shows Input→Modified or Buffer value"
         },
         controls: {
-            enabled: "Master enable. Can be overridden by Enable socket or Enable Buffer",
-            enableBuffer: "Select a Trigger buffer to control the Enable state remotely",
+            enabled: "Master enable. When off, HSV In passes through unchanged. Can be overridden by Enable socket or Enable Buffer",
+            enableBuffer: "Select a Trigger buffer to enable modifications remotely. When false, HSV In passes through unchanged",
             hsvBuffer: "When enabled + HSV Buffer selected: outputs buffer value directly, bypassing sliders",
             hueShift: "Rotate hue by degrees (-360 to +360). 180 = complementary color",
             saturation: "Color intensity (0 = gray, 1 = full color)",
@@ -259,15 +265,15 @@
         const outputColor = `rgb(${outRGB[0]},${outRGB[1]},${outRGB[2]})`;
 
         // Determine if HSV Buffer override is active (for disabling sliders)
-        let hsvBufferEnabled = state.enabled;
+        let modifierEnabled = state.enabled;
         if (state.selectedBuffer && window.AutoTronBuffer) {
             const bufVal = window.AutoTronBuffer.get(state.selectedBuffer);
-            if (bufVal !== undefined) hsvBufferEnabled = !!bufVal;
+            if (bufVal !== undefined) modifierEnabled = !!bufVal;
         }
         
         // Check if HSV buffer override is actually active
         let hsvBufferOverrideActive = false;
-        if (hsvBufferEnabled && state.selectedHsvBuffer && window.AutoTronBuffer) {
+        if (modifierEnabled && state.selectedHsvBuffer && window.AutoTronBuffer) {
             const bufVal = window.AutoTronBuffer.get(state.selectedHsvBuffer);
             if (bufVal && typeof bufVal === 'object' && 'hue' in bufVal) {
                 hsvBufferOverrideActive = true;
@@ -313,7 +319,10 @@
         let statusText = 'No Input';
         const hasInput = !!(state.lastInputHSV && (state.lastInputHSV.hue || state.lastInputHSV.saturation || state.lastInputHSV.brightness));
         
-        if (hsvBufferOverrideActive) {
+        if (!modifierEnabled && hasInput) {
+            statusColor = '#2196f3';
+            statusText = 'Passthrough';
+        } else if (hsvBufferOverrideActive) {
             statusColor = '#ff9800';  // orange = override active
             statusText = 'Override';
         } else if (hasInput) {
@@ -441,20 +450,20 @@
                     React.createElement('div', { key: 'out', className: 'hsv-mod-swatch', style: { background: outputColor } }, "Output")
                 ]),
 
-                // Sliders - disabled when HSV Buffer override is active
+                // Sliders only affect output while the modifier is enabled.
                 React.createElement(Slider, { 
                     key: 'hue', label: "Hue Shift", value: state.hueShift, min: -360, max: 360, step: 1, 
-                    onChange: v => updateState({ hueShift: v }), disabled: hsvBufferOverrideActive,
+                    onChange: v => updateState({ hueShift: v }), disabled: !modifierEnabled || hsvBufferOverrideActive,
                     tooltip: tooltips.controls.hueShift, HelpIcon: HelpIcon
                 }),
                 React.createElement(Slider, { 
                     key: 'sat', label: "Saturation", value: state.saturationScale, min: 0, max: 1, step: 0.01, 
-                    onChange: v => updateState({ saturationScale: v }), disabled: hsvBufferOverrideActive,
+                    onChange: v => updateState({ saturationScale: v }), disabled: !modifierEnabled || hsvBufferOverrideActive,
                     tooltip: tooltips.controls.saturation, HelpIcon: HelpIcon
                 }),
                 React.createElement(Slider, { 
                     key: 'bri', label: "Brightness", value: state.brightnessScale, min: 0, max: 254, step: 1, 
-                    onChange: v => updateState({ brightnessScale: v }), disabled: hsvBufferOverrideActive,
+                    onChange: v => updateState({ brightnessScale: v }), disabled: !modifierEnabled || hsvBufferOverrideActive,
                     tooltip: tooltips.controls.brightness, HelpIcon: HelpIcon
                 }),
 
