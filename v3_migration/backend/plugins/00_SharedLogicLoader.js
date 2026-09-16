@@ -35,8 +35,12 @@
      */
     async function loadModule(name) {
         try {
-            const apiUrl = window.T2_API_URL || '';
-            const response = await fetch(`${apiUrl}/api/shared-logic/${name}`);
+            // PluginLoader exposes the ingress-aware URL builder before this
+            // infrastructure plugin runs. Raw root-relative URLs bypass HA ingress.
+            const buildApiUrl = typeof window.apiUrl === 'function'
+                ? window.apiUrl
+                : (path => `${window.getApiBase?.() || ''}${path}`);
+            const response = await fetch(buildApiUrl(`/api/shared-logic/${name}`));
             
             if (!response.ok) {
                 console.warn(`[SharedLogicLoader] Failed to load ${name}: ${response.status}`);
