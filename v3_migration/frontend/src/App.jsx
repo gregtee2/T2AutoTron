@@ -426,7 +426,7 @@ function App() {
 
     // Listen for device state changes from backend (real-time updates from HA, Hue, Kasa)
     function onDeviceStateUpdate(data) {
-      const { id, state, on, name, vendor } = data;
+      const { id, state, on, name, vendor, commandSource, commandSourceDetails } = data;
       if (!id) return;
       
       // Determine current state
@@ -457,9 +457,15 @@ function App() {
         else if (id.startsWith('kasa_')) source = 'Kasa';
       }
       
-      if (pending && (Date.now() - pending.timestamp) < 5000) {
+      const backendAppCommand = commandSource?.includes('T2AutoTron');
+      if (backendAppCommand || (pending && (Date.now() - pending.timestamp) < 5000)) {
         // This change was triggered by a node in the app
-        addEventLog('device', `${deviceName} → ${stateStr}`, { source: 'app', triggeredBy: pending.nodeTitle, nodeId: pending.nodeId });
+        addEventLog('device', `${deviceName} → ${stateStr}`, {
+          source: 'app',
+          triggeredBy: pending?.nodeTitle || commandSourceDetails?.reason || 'T2AutoTron scheduled command',
+          nodeId: pending?.nodeId || commandSourceDetails?.nodeId,
+          commandSource
+        });
         pendingCommands.delete(id);
       } else {
         // This change came externally (physical switch, other automation, etc.)

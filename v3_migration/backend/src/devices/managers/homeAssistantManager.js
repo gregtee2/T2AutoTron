@@ -200,8 +200,9 @@ class HomeAssistantManager {
 
               // Track state change origin for debugging
               const tracker = getCommandTracker();
+              let commandOrigin = null;
               if (tracker && ['light', 'switch', 'lock', 'cover', 'fan', 'climate'].includes(domain)) {
-                tracker.logIncomingStateChange({
+                commandOrigin = tracker.logIncomingStateChange({
                   entityId: entity.entity_id,
                   oldState: oldEntity?.state,
                   newState: entity.state,
@@ -245,7 +246,10 @@ class HomeAssistantManager {
                 hs_color: entity.attributes.hs_color || [0, 0],
                 power: entity.attributes.power || entity.attributes.current_power_w || entity.attributes.load_power || null,
                 energy: entity.attributes.energy || entity.attributes.energy_kwh || entity.attributes.total_energy_kwh || null,
-                attributes: entity.attributes // Include attributes for power data
+                attributes: entity.attributes, // Include attributes for power data
+                // Preserve backend command correlation for the browser Event Log.
+                commandSource: commandOrigin?.source || null,
+                commandSourceDetails: commandOrigin?.sourceDetails || null
               };
               io.emit('device-state-update', state);
               log(`HA state update: ${state.id} - ${entity.state}`, 'info', false, `ha:state:${state.id}`);
