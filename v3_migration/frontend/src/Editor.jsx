@@ -20,6 +20,7 @@ import { ForecastPanel } from "./ui/ForecastPanel";
 import { FavoritesPanel } from "./ui/FavoritesPanel";
 import { SaveModal } from "./ui/SaveModal";
 import { FastContextMenu } from "./FastContextMenu";
+import { TraceMap } from "./ui/TraceMap";
 import { validateGraph, repairGraph } from "./utils/graphValidation";
 import { apiUrl } from "./utils/apiBase";
 
@@ -4151,6 +4152,7 @@ export function Editor() {
                 </div>
             )}
             <div ref={ref} className="rete-editor" style={{ width: "100%", height: "100%", marginRight: "320px", marginLeft: `${FAVORITES_WIDTH}px` }} />
+            <TraceMap editor={editorInstance} area={areaInstance} />
             <div ref={dockOverlaySlotRef} />
             {(() => {
                 const target = dockMergedIntoForecast ? forecastDockSlotRef.current : dockOverlaySlotRef.current;
