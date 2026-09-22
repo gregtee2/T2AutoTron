@@ -9,13 +9,13 @@ function channelName(value) {
 function buildTrace(editor, selectedNodeId, includeAll) {
   const nodes = editor?.getNodes?.() || [];
   const connections = editor?.getConnections?.() || [];
-  const adjacent = new Map(nodes.map((node) => [node.id, new Set()]));
+  const upstream = new Map(nodes.map((node) => [node.id, new Set()]));
   const wirelessLinks = [];
 
   const connect = (source, target, wireless = false) => {
-    if (!adjacent.has(source) || !adjacent.has(target)) return;
-    adjacent.get(source).add(target);
-    adjacent.get(target).add(source);
+    if (!upstream.has(source) || !upstream.has(target)) return;
+    // Trace the decisions that can flow into the selected node, not every branch it can reach.
+    upstream.get(target).add(source);
     if (wireless) wirelessLinks.push({ source, target });
   };
 
@@ -32,7 +32,7 @@ function buildTrace(editor, selectedNodeId, includeAll) {
     });
   });
 
-  if (includeAll || !selectedNodeId || !adjacent.has(selectedNodeId)) {
+  if (includeAll || !selectedNodeId || !upstream.has(selectedNodeId)) {
     return { activeIds: new Set(nodes.map((node) => node.id)), wirelessLinks };
   }
 
@@ -40,10 +40,10 @@ function buildTrace(editor, selectedNodeId, includeAll) {
   const queue = [selectedNodeId];
   while (queue.length) {
     const nodeId = queue.shift();
-    adjacent.get(nodeId).forEach((connectedId) => {
-      if (!activeIds.has(connectedId)) {
-        activeIds.add(connectedId);
-        queue.push(connectedId);
+    upstream.get(nodeId).forEach((sourceId) => {
+      if (!activeIds.has(sourceId)) {
+        activeIds.add(sourceId);
+        queue.push(sourceId);
       }
     });
   }
@@ -150,7 +150,7 @@ export function TraceMap({ editor, area }) {
   return (
     <>
       <div className="trace-map-toolbar">
-        <button className="trace-map-button" onClick={openSelectedTrace} title="Show the selected node's connected path" type="button">
+        <button className="trace-map-button" onClick={openSelectedTrace} title="Show nodes that can feed the selected node" type="button">
           Trace Map
         </button>
         <button className="trace-map-button" onClick={showFullGraph} title="Show every node and wireless channel" type="button">
@@ -165,7 +165,7 @@ export function TraceMap({ editor, area }) {
             ))}
           </svg>
           <div className="trace-map-panel">
-            <span>{showAll ? 'Full graph' : selectedNodeId ? 'Connected path' : 'Full graph'}</span>
+            <span>{showAll ? 'Full graph' : selectedNodeId ? 'Upstream path' : 'Full graph'}</span>
             <span className="trace-map-legend">Dashed lines: wireless channels</span>
             <button className="trace-map-clear" onClick={closeTrace} type="button">Clear</button>
           </div>
