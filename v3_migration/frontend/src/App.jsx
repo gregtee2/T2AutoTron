@@ -5,6 +5,8 @@ import { onPluginProgress } from './registries/PluginLoader';
 import ErrorBoundary from './ErrorBoundary';
 import { ToastContainer, ToastExposer, useToast } from './ui/Toast';
 import { LoadingOverlay } from './ui/LoadingOverlay';
+import { NodeInspector } from './ui/NodeInspector';
+import { CommandTimeline } from './ui/CommandTimeline';
 import UpdateModal from './components/UpdateModal';
 import { getStoredPin } from './auth/authClient';
 import './App.css';
@@ -284,6 +286,7 @@ function App() {
   const [countdownTicker, setCountdownTicker] = useState(0);
   // Event log filter: 'all', 'app', 'ha'
   const [eventLogFilter, setEventLogFilter] = useState(() => localStorage.getItem('eventLogFilter') || 'all');
+  const [selectedNode, setSelectedNode] = useState(null);
   // Backdrop groups for quick navigation buttons
   const [backdropGroups, setBackdropGroups] = useState([]);
   const eventLogRef = useRef(null);
@@ -298,6 +301,18 @@ function App() {
       setCountdownTicker(t => t + 1);
     }, 30000); // 30 seconds
     return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    const onNodeSelected = (event) => setSelectedNode(event.detail || null);
+    const onNodeSelectionCleared = () => setSelectedNode(null);
+
+    window.addEventListener('t2-node-selected', onNodeSelected);
+    window.addEventListener('t2-node-selection-cleared', onNodeSelectionCleared);
+    return () => {
+      window.removeEventListener('t2-node-selected', onNodeSelected);
+      window.removeEventListener('t2-node-selection-cleared', onNodeSelectionCleared);
+    };
   }, []);
 
   // Refresh backdrop groups from editor (for quick navigation buttons)
@@ -829,6 +844,11 @@ function App() {
       
       <div className="editor-wrapper">
         <Editor />
+        <NodeInspector
+          node={selectedNode}
+          onClose={() => setSelectedNode(null)}
+          onFocus={focusNode}
+        />
       </div>
       <div 
         className="resize-handle" 
@@ -930,6 +950,7 @@ function App() {
             )}
           </div>
         </div>
+        <CommandTimeline onFocusNode={focusNode} />
         <div className="panel upcoming-events-panel">
           <div className="panel-header">
             <span className="panel-title">Upcoming Events</span>

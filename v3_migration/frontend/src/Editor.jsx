@@ -1160,6 +1160,7 @@ export function Editor() {
                         target.closest('[data-testid="area"]');
                     if (isCanvas) {
                         clearLassoSelection();
+                        window.dispatchEvent(new CustomEvent('t2-node-selection-cleared'));
                     }
                 }
             }
@@ -1474,6 +1475,16 @@ export function Editor() {
                     view.element.classList.add('selected');
                     view.element.style.outline = '3px solid #00f3ff';
                 }
+
+                const definition = nodeRegistry.getByInstance(node);
+                window.dispatchEvent(new CustomEvent('t2-node-selected', {
+                    detail: {
+                        id: node.id,
+                        label: node.label,
+                        category: definition?.category || 'Other',
+                        properties: { ...(node.properties || {}) }
+                    }
+                }));
                 
                 // Debug: debug(' Selection after pick:', Array.from(lassoSelectedNodes));
             }
