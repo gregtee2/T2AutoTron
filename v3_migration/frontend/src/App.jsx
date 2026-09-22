@@ -251,6 +251,23 @@ window.applyTheme = applyThemeFromStorage;
 
 // Track commands sent by nodes (to distinguish app-triggered vs HA-triggered changes)
 const pendingCommands = new Map(); // deviceId -> { nodeTitle, action, timestamp }
+
+const EVENT_LOG_NOISE_BINARY_SENSOR_CLASSES = new Set([
+  'battery',
+  'connectivity',
+  'problem',
+  'update'
+]);
+
+function isEventLogNoise(data) {
+  const entityId = String(data?.id || data?.entity_id || '').replace(/^ha_/, '');
+  const domain = entityId.split('.')[0];
+  if (domain === 'sensor') return true;
+  if (domain !== 'binary_sensor') return false;
+
+  const deviceClass = data?.attributes?.device_class || data?.device_class;
+  return EVENT_LOG_NOISE_BINARY_SENSOR_CLASSES.has(deviceClass);
+}
 // Track last known state to detect actual changes (not just repeated updates)
 const lastKnownState = new Map(); // deviceId -> { on: boolean, state: string }
 
@@ -428,6 +445,7 @@ function App() {
     function onDeviceStateUpdate(data) {
       const { id, state, on, name, vendor, commandSource, commandSourceDetails } = data;
       if (!id) return;
+      if (isEventLogNoise(data)) return;
       
       // Determine current state
       const lastState = lastKnownState.get(id);

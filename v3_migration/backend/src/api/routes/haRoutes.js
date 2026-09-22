@@ -174,6 +174,12 @@ module.exports = function (io) {
             id,
             state: stateResult.state.state,
             on: stateResult.state.on,
+            commandSource: 'T2AutoTron (accepted)',
+            commandSourceDetails: {
+              nodeId: 'API',
+              nodeType: 'HAGenericDeviceNode',
+              reason: 'User triggered via UI'
+            },
             ...(entityType === 'light' ? {
               brightness: stateResult.state.brightness,
               hs_color: stateResult.state.hs_color
