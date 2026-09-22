@@ -97,6 +97,10 @@
   background: rgba(var(--theme-primary-rgb), 0.12);
 }
 
+.command-trace-step.source:disabled {
+  cursor: default;
+}
+
 .command-trace-step-label,
 .command-trace-step-value,
 .command-trace-step-detail {

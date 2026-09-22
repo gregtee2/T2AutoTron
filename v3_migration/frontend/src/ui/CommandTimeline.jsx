@@ -118,6 +118,7 @@ export function CommandTimeline({ onFocusNode }) {
             const reason = entry.sourceDetails?.reason || entry.reason;
             const commandDetails = run.command && displayDetails(run.command);
             const confirmationDetails = run.confirmation && displayDetails(run.confirmation);
+            const isGraphNode = Boolean(nodeId && nodeId !== 'API');
             return (
               <article className={`command-trace-run${isObserved ? ' observed' : ''}`} key={`${entry.timestamp}-${entry.type}-${index}`}>
                 <div className="command-trace-run-header">
@@ -133,13 +134,14 @@ export function CommandTimeline({ onFocusNode }) {
                 ) : (
                   <>
                     <button
-                      className={`command-trace-step source${nodeId ? ' clickable' : ''}`}
-                      onClick={() => nodeId && onFocusNode?.(nodeId)}
-                      title={nodeId ? 'Focus source node' : ''}
+                      className={`command-trace-step source${isGraphNode ? ' clickable' : ''}`}
+                      disabled={!isGraphNode}
+                      onClick={() => isGraphNode && onFocusNode?.(nodeId)}
+                      title={isGraphNode ? 'Focus source node on graph' : 'This command was sent directly from the user interface'}
                       type="button"
                     >
-                      <span className="command-trace-step-label">Source node</span>
-                      <span className="command-trace-step-value">{entry.nodeType || 'Automation node'}</span>
+                      <span className="command-trace-step-label">{isGraphNode ? 'Source node' : 'Source'}</span>
+                      <span className="command-trace-step-value">{isGraphNode ? (entry.nodeType || 'Automation node') : 'Manual control'}</span>
                       {reason && <span className="command-trace-step-detail">{reason}</span>}
                     </button>
                     <div className="command-trace-connector" aria-hidden="true" />
