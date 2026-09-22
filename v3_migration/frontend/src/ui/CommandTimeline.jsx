@@ -67,10 +67,16 @@ function buildTraceRuns(history) {
   return runs.reverse();
 }
 
+function getTraceStatus(run) {
+  if (run.observation) return 'observed';
+  return run.confirmation ? 'completed' : 'waiting';
+}
+
 export function CommandTimeline({ onFocusNode }) {
   const [history, setHistory] = useState([]);
   const [pending, setPending] = useState([]);
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     let disposed = false;
@@ -98,22 +104,46 @@ export function CommandTimeline({ onFocusNode }) {
   }, []);
 
   const traceRuns = buildTraceRuns(history);
+  const visibleTraceRuns = filter === 'all'
+    ? traceRuns
+    : traceRuns.filter((run) => getTraceStatus(run) === filter);
 
   return (
     <div className="command-timeline">
       <div className="command-timeline-header">
-        <span>Automation Trace</span>
-        {pending.length > 0 && <span className="command-timeline-pending">{pending.length} pending</span>}
+        <div className="command-timeline-title-row">
+          <span>Automation Trace</span>
+          {pending.length > 0 && <span className="command-timeline-pending">{pending.length} pending</span>}
+        </div>
+        <div className="command-timeline-filters" role="group" aria-label="Automation Trace filter">
+          {[
+            ['all', 'All'],
+            ['completed', 'Completed'],
+            ['waiting', 'Waiting'],
+            ['observed', 'Observed']
+          ].map(([value, label]) => (
+            <button
+              aria-pressed={filter === value}
+              className={`command-timeline-filter${filter === value ? ' active' : ''}`}
+              key={value}
+              onClick={() => setFilter(value)}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
       {error ? (
         <div className="command-timeline-empty">History unavailable: {error}</div>
-      ) : history.length === 0 ? (
+      ) : visibleTraceRuns.length === 0 ? (
         <div className="command-timeline-empty">No recent commands.</div>
       ) : (
         <div className="command-timeline-list">
-          {traceRuns.map((run, index) => {
+          {visibleTraceRuns.map((run, index) => {
             const entry = run.command || run.observation;
             const isObserved = Boolean(run.observation);
+            const status = getTraceStatus(run);
             const nodeId = entry.sourceDetails?.nodeId || entry.nodeId;
             const reason = entry.sourceDetails?.reason || entry.reason;
             const commandDetails = run.command && displayDetails(run.command);
@@ -122,7 +152,7 @@ export function CommandTimeline({ onFocusNode }) {
             return (
               <article className={`command-trace-run${isObserved ? ' observed' : ''}`} key={`${entry.timestamp}-${entry.type}-${index}`}>
                 <div className="command-trace-run-header">
-                  <span className="command-trace-status">{isObserved ? 'Observed' : run.confirmation ? 'Completed' : 'Waiting'}</span>
+                  <span className="command-trace-status">{status}</span>
                   <time>{formatTime(entry.timestamp)}</time>
                 </div>
                 {isObserved ? (

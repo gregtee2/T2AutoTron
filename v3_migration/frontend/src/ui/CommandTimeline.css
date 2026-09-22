@@ -9,8 +9,8 @@
 
 .command-timeline-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 6px;
   padding: 8px 12px;
   border-bottom: 1px solid rgba(var(--theme-primary-rgb), 0.3);
   background: linear-gradient(135deg, rgba(95, 170, 125, 0.16), rgba(var(--theme-primary-rgb), 0.08));
@@ -21,6 +21,13 @@
   text-transform: uppercase;
 }
 
+.command-timeline-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .command-timeline-pending {
   border: 1px solid rgba(212, 160, 84, 0.45);
   border-radius: 10px;
@@ -29,6 +36,36 @@
   letter-spacing: 0;
   padding: 2px 6px;
   text-transform: none;
+}
+
+.command-timeline-filters {
+  display: flex;
+  gap: 3px;
+}
+
+.command-timeline-filter {
+  border: 1px solid rgba(var(--theme-primary-rgb), 0.28);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--theme-textMuted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+  letter-spacing: 0;
+  line-height: 1;
+  padding: 3px 5px;
+  text-transform: none;
+}
+
+.command-timeline-filter:hover {
+  border-color: rgba(var(--theme-primary-rgb), 0.6);
+  color: var(--theme-text);
+}
+
+.command-timeline-filter.active {
+  border-color: var(--theme-primary);
+  background: rgba(var(--theme-primary-rgb), 0.18);
+  color: var(--theme-primary);
 }
 
 .command-timeline-list {
