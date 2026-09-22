@@ -1,0 +1,88 @@
+.graph-health {
+  position: relative;
+  color: var(--theme-text);
+  font-size: 10px;
+}
+
+.graph-health button {
+  border: 1px solid rgba(var(--theme-primary-rgb), 0.45);
+  border-radius: 4px;
+  background: rgba(var(--theme-background-rgb), 0.96);
+  color: var(--theme-primary);
+  cursor: pointer;
+  font: inherit;
+  padding: 5px 8px;
+}
+
+.graph-health button:hover,
+.graph-health button:focus-visible {
+  border-color: var(--theme-primary);
+  background: rgba(var(--theme-primary-rgb), 0.16);
+}
+
+.graph-health-panel {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  z-index: 1;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(360px, 50vh);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(var(--theme-primary-rgb), 0.5);
+  border-radius: 5px;
+  background: var(--theme-background);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.graph-health-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px;
+  border-bottom: 1px solid rgba(var(--theme-primary-rgb), 0.3);
+}
+
+.graph-health-header strong {
+  flex: 1;
+}
+
+.graph-health-list {
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.graph-health-issue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  margin-bottom: 5px;
+  padding: 8px;
+  border-left: 3px solid var(--theme-warning);
+  background: rgba(var(--theme-warning-rgb), 0.1);
+  overflow-wrap: anywhere;
+}
+
+.graph-health-issue.error {
+  border-left-color: var(--theme-error);
+  background: rgba(var(--theme-error-rgb), 0.1);
+}
+
+.graph-health-issue span,
+.graph-health-empty {
+  color: var(--theme-textMuted);
+  line-height: 1.4;
+}
+
+.graph-health-empty {
+  margin: 8px;
+}
+
+[data-testid="node"].graph-health-highlight,
+.rete-node.graph-health-highlight {
+  box-shadow: 0 0 0 4px var(--theme-error, #e34b4b),
+    0 0 20px 7px rgba(var(--theme-error-rgb, 227, 75, 75), 0.85) !important;
+  outline: 2px solid var(--theme-error, #e34b4b) !important;
+  outline-offset: 4px;
+}
