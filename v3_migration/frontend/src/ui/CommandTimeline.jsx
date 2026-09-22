@@ -15,6 +15,58 @@ function displayEntity(entityId) {
     .replace(/_/g, ' ');
 }
 
+function displayAction(action) {
+  return String(action || 'updated').replace(/_/g, ' ');
+}
+
+function formatBrightness(value) {
+  const brightness = Number(value);
+  if (!Number.isFinite(brightness)) return null;
+  return `${Math.round(brightness > 100 ? (brightness / 255) * 100 : brightness)}%`;
+}
+
+function displayDetails(entry) {
+  const values = entry.type === 'OUTGOING' ? entry.payload : entry.significantAttributes;
+  if (!values || typeof values !== 'object') return '';
+
+  const details = [];
+  const brightness = formatBrightness(values.brightness ?? values.brightness_pct);
+  if (brightness) details.push(`brightness ${brightness}`);
+  if (Array.isArray(values.hs_color)) details.push(`color ${Math.round(values.hs_color[0])} degrees`);
+  if (values.color_temp !== undefined) details.push(`color temp ${values.color_temp}`);
+  if (values.effect) details.push(`effect ${values.effect}`);
+  if (values.position !== undefined) details.push(`position ${values.position}%`);
+  return details.join(' · ');
+}
+
+function buildTraceRuns(history) {
+  const runs = [];
+
+  for (const entry of [...history].reverse()) {
+    if (entry.type === 'OUTGOING') {
+      runs.push({ command: entry, confirmation: null });
+      continue;
+    }
+
+    const nodeId = entry.sourceDetails?.nodeId;
+    const matchingCommand = [...runs].reverse().find((run) => (
+      run.command
+      && !run.confirmation
+      && run.command.entityId === entry.entityId
+      && entry.source === 'T2AutoTron (confirmed)'
+      && (!nodeId || run.command.nodeId === nodeId)
+    ));
+
+    if (matchingCommand) {
+      matchingCommand.confirmation = entry;
+    } else {
+      runs.push({ observation: entry });
+    }
+  }
+
+  return runs.reverse();
+}
+
 export function CommandTimeline({ onFocusNode }) {
   const [history, setHistory] = useState([]);
   const [pending, setPending] = useState([]);
@@ -45,10 +97,12 @@ export function CommandTimeline({ onFocusNode }) {
     };
   }, []);
 
+  const traceRuns = buildTraceRuns(history);
+
   return (
     <div className="command-timeline">
       <div className="command-timeline-header">
-        <span>Command Trail</span>
+        <span>Automation Trace</span>
         {pending.length > 0 && <span className="command-timeline-pending">{pending.length} pending</span>}
       </div>
       {error ? (
@@ -57,24 +111,52 @@ export function CommandTimeline({ onFocusNode }) {
         <div className="command-timeline-empty">No recent commands.</div>
       ) : (
         <div className="command-timeline-list">
-          {history.map((entry, index) => {
-            const isOutgoing = entry.type === 'OUTGOING';
-            const reason = entry.sourceDetails?.reason || entry.reason;
+          {traceRuns.map((run, index) => {
+            const entry = run.command || run.observation;
+            const isObserved = Boolean(run.observation);
             const nodeId = entry.sourceDetails?.nodeId || entry.nodeId;
+            const reason = entry.sourceDetails?.reason || entry.reason;
+            const commandDetails = run.command && displayDetails(run.command);
+            const confirmationDetails = run.confirmation && displayDetails(run.confirmation);
             return (
-              <button
-                className={`command-timeline-entry ${isOutgoing ? 'outgoing' : 'incoming'}${nodeId ? ' clickable' : ''}`}
-                key={`${entry.timestamp}-${entry.type}-${index}`}
-                onClick={() => nodeId && onFocusNode?.(nodeId)}
-                title={nodeId ? 'Focus source node' : ''}
-                type="button"
-              >
-                <span className="command-timeline-marker">{isOutgoing ? 'Sent' : 'State'}</span>
-                <span className="command-timeline-time">{formatTime(entry.timestamp)}</span>
-                <span className="command-timeline-device">{displayEntity(entry.entityId)}</span>
-                <span className="command-timeline-action">{entry.action || entry.newState || entry.source || 'updated'}</span>
-                {reason && <span className="command-timeline-reason">{reason}</span>}
-              </button>
+              <article className={`command-trace-run${isObserved ? ' observed' : ''}`} key={`${entry.timestamp}-${entry.type}-${index}`}>
+                <div className="command-trace-run-header">
+                  <span className="command-trace-status">{isObserved ? 'Observed' : run.confirmation ? 'Completed' : 'Waiting'}</span>
+                  <time>{formatTime(entry.timestamp)}</time>
+                </div>
+                {isObserved ? (
+                  <div className="command-trace-step observation">
+                    <span className="command-trace-step-label">Home Assistant</span>
+                    <span className="command-trace-step-value">{entry.newState || entry.source || 'state updated'}</span>
+                    <span className="command-trace-step-detail">{displayEntity(entry.entityId)} · {entry.source}</span>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      className={`command-trace-step source${nodeId ? ' clickable' : ''}`}
+                      onClick={() => nodeId && onFocusNode?.(nodeId)}
+                      title={nodeId ? 'Focus source node' : ''}
+                      type="button"
+                    >
+                      <span className="command-trace-step-label">Source node</span>
+                      <span className="command-trace-step-value">{entry.nodeType || 'Automation node'}</span>
+                      {reason && <span className="command-trace-step-detail">{reason}</span>}
+                    </button>
+                    <div className="command-trace-connector" aria-hidden="true" />
+                    <div className="command-trace-step command">
+                      <span className="command-trace-step-label">{displayEntity(entry.entityId)}</span>
+                      <span className="command-trace-step-value">{displayAction(entry.action)}</span>
+                      {commandDetails && <span className="command-trace-step-detail">{commandDetails}</span>}
+                    </div>
+                    <div className="command-trace-connector" aria-hidden="true" />
+                    <div className={`command-trace-step confirmation${run.confirmation ? '' : ' pending'}`}>
+                      <span className="command-trace-step-label">Home Assistant</span>
+                      <span className="command-trace-step-value">{run.confirmation ? `confirmed ${run.confirmation.newState}` : 'awaiting confirmation'}</span>
+                      {confirmationDetails && <span className="command-trace-step-detail">{confirmationDetails}</span>}
+                    </div>
+                  </>
+                )}
+              </article>
             );
           })}
         </div>
