@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AreaExtensions } from 'rete-area-plugin';
+import { GraphHealth } from './GraphHealth';
 import './TraceMap.css';
 
 function channelName(value) {
@@ -156,6 +157,7 @@ export function TraceMap({ editor, area }) {
         <button className="trace-map-button" onClick={showFullGraph} title="Show every node and wireless channel" type="button">
           Show All
         </button>
+        <GraphHealth editor={editor} area={area} />
       </div>
       {isOpen && (
         <>
