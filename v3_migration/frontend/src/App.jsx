@@ -341,22 +341,24 @@ function App() {
 
   // Listen for graph load/change events to refresh backdrop groups
   useEffect(() => {
-    const onGraphLoadComplete = () => {
-      // Delay slightly to ensure nodes are fully rendered
-      setTimeout(refreshBackdropGroups, 200);
+    const scheduleBackdropRefresh = () => {
+      // The editor can finish restoring backdrops after this component mounts.
+      [0, 200, 800].forEach(delay => setTimeout(refreshBackdropGroups, delay));
     };
     
-    window.addEventListener('graphLoadComplete', onGraphLoadComplete);
+    window.addEventListener('graphLoadComplete', scheduleBackdropRefresh);
+    window.addEventListener('t2-backdrops-changed', scheduleBackdropRefresh);
     // Also expose refresh function for manual updates (e.g., when backdrop is created/deleted)
     window.refreshBackdropGroups = refreshBackdropGroups;
     
-    // Initial refresh after a short delay (in case graph is already loaded)
-    const initialRefresh = setTimeout(refreshBackdropGroups, 500);
+    // Try across editor startup so a restored graph cannot be missed.
+    const initialRefreshes = [200, 800, 1600].map(delay => setTimeout(refreshBackdropGroups, delay));
     
     return () => {
-      window.removeEventListener('graphLoadComplete', onGraphLoadComplete);
+      window.removeEventListener('graphLoadComplete', scheduleBackdropRefresh);
+      window.removeEventListener('t2-backdrops-changed', scheduleBackdropRefresh);
       delete window.refreshBackdropGroups;
-      clearTimeout(initialRefresh);
+      initialRefreshes.forEach(clearTimeout);
     };
   }, [refreshBackdropGroups]);
 

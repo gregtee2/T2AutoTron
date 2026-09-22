@@ -3698,6 +3698,9 @@ export function Editor() {
                     });
                 }
             }, 300);
+
+            // Let App.jsx rebuild its group navigation after every normal graph load.
+            window.dispatchEvent(new CustomEvent('t2-backdrops-changed'));
             
             debug('Graph loaded');
         } catch (err) {
