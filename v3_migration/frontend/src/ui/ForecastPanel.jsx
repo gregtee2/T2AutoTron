@@ -4,6 +4,21 @@ import { apiUrl } from '../utils/apiBase';
 import { authFetch } from '../auth/authClient';
 import './ForecastPanel.css';
 
+function normalizeTemperatureUnit(unit) {
+    return String(unit || '').toLowerCase().includes('c') ? 'C' : 'F';
+}
+
+function toFahrenheit(value, unit = 'F') {
+    const temperature = Number(value);
+    if (!Number.isFinite(temperature)) return null;
+    return unit === 'C' ? (temperature * 9 / 5) + 32 : temperature;
+}
+
+function CelsiusValue({ fahrenheit }) {
+    if (!Number.isFinite(fahrenheit)) return null;
+    return <span className="temp-celsius">{Math.round((fahrenheit - 32) * 5 / 9)}°C</span>;
+}
+
 export function ForecastPanel({ dockSlotRef }) {
     const [expanded, setExpanded] = useState(true);
     const [devicesExpanded, setDevicesExpanded] = useState(true);
@@ -58,7 +73,8 @@ export function ForecastPanel({ dockSlotRef }) {
                 const res = await authFetch(apiUrl(`/api/lights/ha/${config.tempSensor}/state`));
                 if (res.ok) {
                     const data = await res.json();
-                    newData.temp = parseFloat(data.state);
+                    newData.temp = parseFloat(data.state?.state ?? data.state);
+                    newData.tempUnit = normalizeTemperatureUnit(data.state?.attributes?.unit_of_measurement);
                 }
             }
             if (config.windSensor) {
@@ -125,6 +141,7 @@ export function ForecastPanel({ dockSlotRef }) {
                 
                 return {
                     temp: data.tempf,
+                    tempUnit: 'F',
                     humidity: data.humidity,
                     windSpeed: data.windspeedmph,
                     windDir: data.winddir,
@@ -148,9 +165,10 @@ export function ForecastPanel({ dockSlotRef }) {
             if (sensorConfig) {
                 const entityId = id.replace('ha_', '');
                 if (entityId === sensorConfig.tempSensor) {
-                    const value = parseFloat(state);
+                    const value = parseFloat(typeof state === 'object' ? state.state : state);
                     if (!isNaN(value)) {
-                        setStationData(prev => ({ ...prev, temp: value, source: 'ha-sensors' }));
+                        const unit = normalizeTemperatureUnit(data.attributes?.unit_of_measurement || state?.attributes?.unit_of_measurement);
+                        setStationData(prev => ({ ...prev, temp: value, tempUnit: unit, source: 'ha-sensors' }));
                     }
                 } else if (entityId === sensorConfig.windSensor) {
                     const value = parseFloat(state);
@@ -497,7 +515,10 @@ export function ForecastPanel({ dockSlotRef }) {
                     {isToday && stationData && (
                         <div className="station-data">
                             <div className="station-current-temp">
-                                {Math.round(stationData.temp)}°
+                                <span className="station-current-value">
+                                    {Math.round(toFahrenheit(stationData.temp, stationData.tempUnit))}°F
+                                </span>
+                                <CelsiusValue fahrenheit={toFahrenheit(stationData.temp, stationData.tempUnit)} />
                                 <span className="station-label">now</span>
                             </div>
                             <div className="station-details">
@@ -514,8 +535,14 @@ export function ForecastPanel({ dockSlotRef }) {
                     )}
                     
                     <div className="forecast-row-bottom">
-                        <span className="temp-low">{day.low}°</span>
-                        <span className="temp-high">{day.high}°</span>
+                        <span className="forecast-temp-pair">
+                            <span className="temp-low">{day.low}°F</span>
+                            <CelsiusValue fahrenheit={Number(day.low)} />
+                        </span>
+                        <span className="forecast-temp-pair">
+                            <span className="temp-high">{day.high}°F</span>
+                            <CelsiusValue fahrenheit={Number(day.high)} />
+                        </span>
                         <span className="precip-group">
                             <svg className="precip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"></path>

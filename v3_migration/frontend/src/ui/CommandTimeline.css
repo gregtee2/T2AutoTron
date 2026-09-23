@@ -32,7 +32,7 @@
   border: 1px solid rgba(212, 160, 84, 0.45);
   border-radius: 10px;
   color: var(--theme-warning);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0;
   padding: 2px 6px;
   text-transform: none;
@@ -50,7 +50,7 @@
   color: var(--theme-textMuted);
   cursor: pointer;
   font: inherit;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0;
   line-height: 1;
   padding: 3px 5px;
@@ -83,7 +83,7 @@
   background: rgba(95, 170, 125, 0.06);
   color: var(--theme-text);
   font-family: Consolas, Monaco, monospace;
-  font-size: 10px;
+  font-size: 12px;
   text-align: left;
 }
 
@@ -99,12 +99,12 @@
   gap: 8px;
   margin-bottom: 6px;
   color: var(--theme-textMuted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .command-trace-status {
   color: var(--theme-success);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -148,7 +148,16 @@
 
 .command-trace-step-label {
   color: var(--theme-textMuted);
-  font-size: 9px;
+  font-size: 10px;
+}
+
+.command-trace-device {
+  overflow: hidden;
+  color: var(--theme-text);
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .command-trace-step-value {
@@ -166,7 +175,7 @@
 
 .command-trace-step-detail {
   color: var(--theme-textMuted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .command-trace-connector {
@@ -178,7 +187,7 @@
 
 .command-timeline-empty {
   color: var(--theme-textMuted);
-  font-size: 11px;
+  font-size: 12px;
   padding: 20px;
   text-align: center;
 }

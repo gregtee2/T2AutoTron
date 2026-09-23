@@ -157,9 +157,10 @@ export function CommandTimeline({ onFocusNode }) {
                 </div>
                 {isObserved ? (
                   <div className="command-trace-step observation">
-                    <span className="command-trace-step-label">Home Assistant</span>
-                    <span className="command-trace-step-value">{entry.newState || entry.source || 'state updated'}</span>
-                    <span className="command-trace-step-detail">{displayEntity(entry.entityId)} · {entry.source}</span>
+                    <span className="command-trace-step-label">Device changed outside T2</span>
+                    <span className="command-trace-device">{displayEntity(entry.entityId)}</span>
+                    <span className="command-trace-step-value">Now {entry.newState || 'updated'}</span>
+                    <span className="command-trace-step-detail">Source: {entry.source || 'Home Assistant'}</span>
                   </div>
                 ) : (
                   <>
@@ -176,15 +177,16 @@ export function CommandTimeline({ onFocusNode }) {
                     </button>
                     <div className="command-trace-connector" aria-hidden="true" />
                     <div className="command-trace-step command">
-                      <span className="command-trace-step-label">{displayEntity(entry.entityId)}</span>
-                      <span className="command-trace-step-value">{displayAction(entry.action)}</span>
-                      {commandDetails && <span className="command-trace-step-detail">{commandDetails}</span>}
+                      <span className="command-trace-step-label">Target device</span>
+                      <span className="command-trace-device">{displayEntity(entry.entityId)}</span>
+                      <span className="command-trace-step-value">Command: {displayAction(entry.action)}</span>
+                      {commandDetails && <span className="command-trace-step-detail">Requested {commandDetails}</span>}
                     </div>
                     <div className="command-trace-connector" aria-hidden="true" />
                     <div className={`command-trace-step confirmation${run.confirmation ? '' : ' pending'}`}>
-                      <span className="command-trace-step-label">Home Assistant</span>
-                      <span className="command-trace-step-value">{run.confirmation ? `confirmed ${run.confirmation.newState}` : 'awaiting confirmation'}</span>
-                      {confirmationDetails && <span className="command-trace-step-detail">{confirmationDetails}</span>}
+                      <span className="command-trace-step-label">Home Assistant result · {displayEntity(entry.entityId)}</span>
+                      <span className="command-trace-step-value">{run.confirmation ? `Confirmed: ${run.confirmation.newState}` : 'Awaiting device confirmation'}</span>
+                      {confirmationDetails && <span className="command-trace-step-detail">Actual {confirmationDetails}</span>}
                     </div>
                   </>
                 )}

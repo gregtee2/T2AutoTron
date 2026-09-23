@@ -1,3 +1,13 @@
+## [2.1.261] - 2026-09-22
+### Fixed
+- HSV Control now passes through its connected HSV input, while preserving Scene HSV priority and slider fallback.
+- Corrected All-in-One Color temperature/tint controls so RGB colors round-trip consistently.
+- Forecast temperatures now show Celsius alongside Fahrenheit, including Home Assistant sensors configured in Celsius.
+
+### Changed
+- Refined the All-in-One Color controls and output preview without changing the HSV device-output contract.
+- Improved Automation Trace readability for command targets and device confirmations.
+
 ## [2.1.196] - 2026-01-04
 ### Fixed
 - **TTS Triple-Play Bug**: Fixed TTS playing 2-3 times per button click. Chatterbox WAV files now auto-cleanup after 30 seconds. Added `enqueue: 'replace'` to HA play_media calls.

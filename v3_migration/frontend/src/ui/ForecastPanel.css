@@ -177,14 +177,21 @@
 }
 
 .station-current-temp {
-    font-size: 28px;
     font-weight: 700;
     color: var(--theme-primary, #00f3ff);
     text-shadow: 0 0 10px rgba(var(--theme-primary-rgb, 0, 243, 255), 0.5);
     display: flex;
     flex-direction: column;
     align-items: center;
-    line-height: 1;
+    line-height: 1.05;
+}
+
+.station-current-value {
+    font-size: 28px;
+}
+
+.station-current-temp .temp-celsius {
+    margin-top: 3px;
 }
 
 .station-current-temp .station-label {
@@ -232,6 +239,20 @@
     flex-direction: row;
     align-items: center;
     gap: 8px;
+}
+
+.forecast-temp-pair {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.temp-celsius {
+    color: var(--theme-textMuted, #8a959e);
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.1;
 }
 
 .temp-low {

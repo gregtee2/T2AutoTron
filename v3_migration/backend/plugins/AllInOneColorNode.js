@@ -56,7 +56,7 @@
     // TOOLTIPS
     // -------------------------------------------------------------------------
     const tooltips = {
-        node: "Complete color control node with Nuke-style Color Grade. Temperature shifts warm↔cool, Tint shifts green↔magenta. All sliders stay synced.",
+        node: "Complete color control node with Kelvin, warm/cool, and green/magenta color-balance controls.",
         inputs: {
             hsv_in: "Incoming HSV color values from other nodes (e.g., Timeline Color, Spline). Overrides manual settings when connected.",
             scene_hsv: "Scene input - when connected, this output is passed through directly, bypassing all local controls. Use for scene switching."
@@ -66,7 +66,7 @@
         },
         controls: {
             rgb: "Adjust Red, Green, Blue channels directly (0-255). Moving RGB sliders will update Temperature and Tint to match.",
-            colorGrade: "Nuke-style color grading. Temperature: Orange(+)↔Blue(-). Tint: Magenta(+)↔Green(-). Moving these updates RGB sliders.",
+            colorGrade: "Color balance controls. Temperature shifts warm↔cool; Tint shifts green↔magenta. Saturation controls chroma strength.",
             transition: "Transition time in milliseconds. How long the light takes to fade to the new color (0=instant, 1000=1 second).",
             autoTrigger: "When enabled, automatically sends output at the specified interval. Useful for keeping lights updated without manual triggers.",
             palette: "Quick color selection. Click any color swatch to instantly set that color."
@@ -180,7 +180,7 @@
      */
     const Slider = ({ label, value, min, max, onChange, step = 1, gradient }) => {
         // Calculate thumb position percentage for gradient sliders
-        const percent = ((value - min) / (max - min)) * 100;
+        const displayValue = Number.isFinite(Number(value)) ? Math.round(Number(value)) : value;
         
         // Create a unique style for gradient sliders
         const sliderStyle = gradient ? {
@@ -224,7 +224,7 @@
                     } : {}
                 })
             ]),
-            React.createElement('span', { key: 'val', className: 'aio-slider-value' }, value)
+            React.createElement('span', { key: 'val', className: 'aio-slider-value' }, displayValue)
         ]);
     };
 
@@ -244,6 +244,7 @@
         
         const lastUpdateRef = useRef(0);
         const timeoutRef = useRef(null);
+        const propertiesSnapshotRef = useRef(JSON.stringify(data.properties));
 
         // Get shared tooltip components
         const { NodeHeader, HelpIcon } = window.T2Controls || {};
@@ -256,6 +257,7 @@
             const newState = { ...state, ...updates };
             setState(newState);
             Object.assign(data.properties, newState);
+            propertiesSnapshotRef.current = JSON.stringify(data.properties);
             
             const now = Date.now();
             const limit = 50; 
@@ -279,6 +281,21 @@
         }, []);
 
         useEffect(() => {
+            const syncRestoredProperties = () => {
+                const properties = data.properties || {};
+                const snapshot = JSON.stringify(properties);
+                if (snapshot === propertiesSnapshotRef.current) return;
+
+                propertiesSnapshotRef.current = snapshot;
+                setState(previous => JSON.stringify(previous) === snapshot ? previous : { ...properties });
+            };
+
+            syncRestoredProperties();
+            const interval = setInterval(syncRestoredProperties, 100);
+            return () => clearInterval(interval);
+        }, [data]);
+
+        useEffect(() => {
             if (state.enableAutoTrigger) {
                 const interval = setInterval(() => {
                     if (data.changeCallback) data.changeCallback();
@@ -292,73 +309,31 @@
         }, [state.enableAutoTrigger, state.autoInterval]);
 
         // =====================================================================
-        // TMI COLOR GRADE MATH (Nuke-style Temperature/Tint)
+        // COLOR-BALANCE MATH
         // =====================================================================
-        // Gradient visual: Orange (left/-100) ↔ Gray (center/0) ↔ Blue (right/+100)
-        // Gradient visual: Green (left/-100) ↔ Gray (center/0) ↔ Magenta (right/+100)
+        // Temp and Tint describe the direction of the opponent-color offset;
+        // saturation controls its magnitude and brightness controls the peak.
 
         /**
-         * Calculate RGB from Temperature, Tint, Saturation, and Brightness
-         * Uses ADDITIVE color offsets so both axes work independently
-         * 
-         * Temperature and Tint are treated as independent color axes:
-         * - Center (0,0) = neutral gray/white
-         * - Each axis adds/subtracts color independently
-         * - Combined positions blend both contributions
+         * Reconstruct RGB from normalized warm/cool and magenta/green axes.
+         * The matching RGB-to-TMI function uses the inverse coordinates, so
+         * round-tripping RGB through these controls preserves the color.
          */
         const calculateRGBFromTMI = (temp, tint, sat, bri) => {
-            const intensity = bri / 255;
-            
-            // Normalize to -1 to +1 range
-            const t = -temp / 100;  // Flip: -100=warm(+1), +100=cool(-1)
-            const m = tint / 100;   // -100=green(-1), +100=magenta(+1)
-            
-            // =====================================================
-            // ADDITIVE COLOR MODEL
-            // Each axis contributes independently to R, G, B
-            // Starting from neutral (0.5, 0.5, 0.5) and offsetting
-            // =====================================================
-            
-            // Temperature contribution (Orange ↔ Blue axis)
-            // Warm (t>0): +R, +G(partial for orange), -B
-            // Cool (t<0): -R, -G(partial), +B
-            const tempR = t * 0.5;      // ±0.5 range
-            const tempG = t * 0.25;     // Less G change (orange needs some green)
-            const tempB = -t * 0.5;     // Opposite of R
-            
-            // Tint contribution (Green ↔ Magenta axis)
-            // Magenta (m>0): +R, -G, +B
-            // Green (m<0): -R, +G, -B
-            const tintR = m * 0.5;
-            const tintG = -m * 0.5;
-            const tintB = m * 0.5;
-            
-            // Combine: start at 0.5 (neutral) and add both contributions
-            let r = 0.5 + tempR + tintR;
-            let g = 0.5 + tempG + tintG;
-            let b = 0.5 + tempB + tintB;
-            
-            // Clamp to valid range
-            r = Math.max(0, Math.min(1, r));
-            g = Math.max(0, Math.min(1, g));
-            b = Math.max(0, Math.min(1, b));
-            
-            // Apply saturation (expand/contract from gray)
-            // At sat=0: everything becomes gray
-            // At sat=100: full color range
-            const satFactor = sat / 100;
-            const gray = 0.5;
-            r = gray + (r - gray) * satFactor;
-            g = gray + (g - gray) * satFactor;
-            b = gray + (b - gray) * satFactor;
-            
-            // Apply brightness (scale up from 0.5 base to full range)
-            // Multiply by 2 because we're centered at 0.5
-            r = Math.max(0, Math.min(255, Math.round(r * 2 * intensity * 255)));
-            g = Math.max(0, Math.min(255, Math.round(g * 2 * intensity * 255)));
-            b = Math.max(0, Math.min(255, Math.round(b * 2 * intensity * 255)));
-            
-            return { r, g, b };
+            const chroma = Math.max(0, Math.min(1, sat / 100));
+            const temperatureAxis = (-temp / 100) * chroma;
+            const tintAxis = (tint / 100) * chroma;
+
+            // Center the opponent axes so the largest output channel equals brightness.
+            const center = 1 - Math.max(Math.abs(temperatureAxis) / 2, -tintAxis);
+            const scale = Math.max(0, Math.min(255, bri));
+            const clampChannel = value => Math.round(Math.max(0, Math.min(1, value)) * scale);
+
+            return {
+                r: clampChannel(center + temperatureAxis / 2),
+                g: clampChannel(center - tintAxis),
+                b: clampChannel(center - temperatureAxis / 2)
+            };
         };
 
         /**
@@ -369,42 +344,16 @@
             // Normalize to 0-1
             const rn = r / 255, gn = g / 255, bn = b / 255;
             const max = Math.max(rn, gn, bn);
-            const min = Math.min(rn, gn, bn);
             
             // Avoid division by zero for black/white
             if (max === 0) return { temp: 0, tint: 0, sat: 0, bri: 0 };
             
-            // Temperature: based on normalized red-blue balance
-            // Pure orange (1, 0.5, 0) → temp = -100
-            // Pure blue (0, 0.7, 1) → temp = +100
-            let temp = 0;
-            if (rn > bn) {
-                // Warm side: how much more red than blue
-                temp = -((rn - bn) / max) * 100;
-            } else if (bn > rn) {
-                // Cool side: how much more blue than red
-                temp = ((bn - rn) / max) * 100;
-            }
-            temp = Math.max(-100, Math.min(100, Math.round(temp)));
-            
-            // Tint: based on green vs average of R+B
-            // Pure green (0, 1, 0) → tint = -100
-            // Pure magenta (1, 0, 1) → tint = +100
-            const avgRB = (rn + bn) / 2;
-            let tint = 0;
-            if (gn > avgRB) {
-                // Green side
-                tint = -((gn - avgRB) / max) * 100;
-            } else if (avgRB > gn) {
-                // Magenta side
-                tint = ((avgRB - gn) / max) * 100;
-            }
-            tint = Math.max(-100, Math.min(100, Math.round(tint)));
-            
-            // Saturation: how far from gray (standard HSV saturation)
-            const sat = max > 0 ? Math.round(((max - min) / max) * 100) : 0;
-            
-            // Brightness: max channel
+            const temperatureAxis = rn - bn;
+            const tintAxis = ((rn + bn) / 2) - gn;
+            const sat = Math.max(Math.abs(temperatureAxis), Math.abs(tintAxis)) * 100;
+            const temp = sat === 0 ? 0 : (-temperatureAxis / (sat / 100)) * 100;
+            const tint = sat === 0 ? 0 : (tintAxis / (sat / 100)) * 100;
+
             const bri = Math.round(max * 255);
             
             return { temp, tint, sat, bri };
@@ -505,6 +454,7 @@
 
         const paletteColors = ["#FF0000","#FFA500","#FFFF00","#00FF00","#0000FF","#00FFFF","#800080","#FFFFFF"];
         const rgb = `rgb(${state.red},${state.green},${state.blue})`;
+        const hexColor = `#${[state.red, state.green, state.blue].map(value => Math.round(value).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
 
         return React.createElement('div', { className: 'hsv-node-tron', style: { minWidth: '380px' } }, [
             // Header with tooltip
@@ -567,20 +517,28 @@
             // Controls
             !isCollapsed && React.createElement('div', { 
                 key: 'controls', 
-                className: 'ha-controls-container', 
+                className: 'ha-controls-container aio-controls-container',
                 onPointerDown: (e) => e.stopPropagation(),
                 style: { cursor: "default" }
             }, [
-                // Swatch
-                React.createElement('div', { 
-                    key: 'swatch', 
-                    className: 'aio-swatch', 
-                    style: { background: rgb } 
-                }, `T:${state.temperature} / M:${state.tint}`),
+                React.createElement('div', { key: 'preview', className: 'aio-preview-row' }, [
+                    React.createElement('div', {
+                        key: 'swatch',
+                        className: 'aio-swatch',
+                        style: { backgroundColor: rgb },
+                        role: 'img',
+                        'aria-label': `Current output color ${hexColor}`
+                    }),
+                    React.createElement('div', { key: 'details', className: 'aio-preview-details' }, [
+                        React.createElement('span', { key: 'label', className: 'aio-preview-label' }, 'Current output'),
+                        React.createElement('strong', { key: 'hex', className: 'aio-preview-hex' }, hexColor),
+                        React.createElement('span', { key: 'rgb', className: 'aio-preview-rgb' }, `${state.red}, ${state.green}, ${state.blue}`)
+                    ])
+                ]),
 
                 // RGB Sliders
-                React.createElement('div', { key: 'rgb', style: { borderBottom: "1px solid rgba(0, 243, 255, 0.1)", paddingBottom: "8px", marginBottom: "8px" } }, [
-                    React.createElement('div', { key: 'h', className: 'aio-section-header', style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
+                React.createElement('section', { key: 'rgb', className: 'aio-control-section' }, [
+                    React.createElement('div', { key: 'h', className: 'aio-section-header' }, [
                         React.createElement('span', { key: 'txt' }, 'RGB Channels'),
                         HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.rgb, size: 12 })
                     ]),
@@ -589,9 +547,9 @@
                     React.createElement(Slider, { key: 'b', label: "Blue", value: state.blue, min: 0, max: 255, onChange: v => updateFromRGB(state.red, state.green, v) })
                 ]),
 
-                // Color Grade (TMI - Temperature/Tint like Nuke)
-                React.createElement('div', { key: 'tmi', style: { borderBottom: "1px solid rgba(0, 243, 255, 0.1)", paddingBottom: "8px", marginBottom: "8px" } }, [
-                    React.createElement('div', { key: 'h', className: 'aio-section-header', style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
+                // Color balance: warm/cool and green/magenta opponent axes
+                React.createElement('section', { key: 'balance', className: 'aio-control-section' }, [
+                    React.createElement('div', { key: 'h', className: 'aio-section-header' }, [
                         React.createElement('span', { key: 'txt' }, 'Color Grade'),
                         HelpIcon && React.createElement(HelpIcon, { key: 'help', text: "Kelvin: Real-world light temperature (2700K=warm bulb, 5500K=daylight, 6500K=cool). Temperature: Fine-tune Orange↔Blue. Tint: Green↔Magenta axis.", size: 12 })
                     ]),
@@ -622,7 +580,14 @@
                         max: 100, 
                         onChange: v => updateFromTMI(state.temperature, v, state.saturation, state.brightness),
                         gradient: GRADIENTS.tint
-                    }),
+                    })
+                ]),
+
+                React.createElement('section', { key: 'output', className: 'aio-control-section' }, [
+                    React.createElement('div', { key: 'h', className: 'aio-section-header' }, [
+                        React.createElement('span', { key: 'txt' }, 'Output'),
+                        HelpIcon && React.createElement(HelpIcon, { key: 'help', text: 'Saturation and brightness of the output color.', size: 12 })
+                    ]),
                     React.createElement(Slider, { 
                         key: 'sat', 
                         label: "Sat", 
@@ -644,8 +609,8 @@
                 ]),
 
                 // Settings
-                React.createElement('div', { key: 'settings' }, [
-                    React.createElement('div', { key: 'h', className: 'aio-section-header', style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
+                React.createElement('section', { key: 'settings', className: 'aio-control-section' }, [
+                    React.createElement('div', { key: 'h', className: 'aio-section-header' }, [
                         React.createElement('span', { key: 'txt' }, 'Settings')
                     ]),
                     React.createElement('div', { key: 'trans-row', style: { display: 'flex', alignItems: 'center', gap: '4px' } }, [
@@ -681,11 +646,10 @@
                 ]),
 
                 // Palette
-                state.showPalette && React.createElement('div', { key: 'pal' }, [
+                state.showPalette && React.createElement('section', { key: 'pal', className: 'aio-control-section aio-palette-section' }, [
                     React.createElement('div', { 
                         key: 'pal-header', 
-                        className: 'aio-section-header', 
-                        style: { display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', marginBottom: '4px' } 
+                        className: 'aio-section-header'
                     }, [
                         React.createElement('span', { key: 'txt' }, 'Quick Colors'),
                         HelpIcon && React.createElement(HelpIcon, { key: 'help', text: tooltips.controls.palette, size: 12 })

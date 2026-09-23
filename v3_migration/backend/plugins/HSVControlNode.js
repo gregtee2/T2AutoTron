@@ -54,14 +54,7 @@
             if (scene) return { hsv_out: scene };
 
             const inputHSV = inputs.hsv_in?.[0];
-            if (inputHSV) {
-                // Logic to update properties from input if needed, but usually inputs drive the output directly or update state
-                // For this node, inputs seem to override internal state in the 2.0 logic
-                // We'll handle this in the component or just pass through if we want pure data flow
-                // But the 2.0 node updates its internal sliders based on input.
-                // We can't easily update React state from here without a callback loop.
-                // For now, we'll return the internal state.
-            }
+            if (inputHSV !== undefined && inputHSV !== null) return { hsv_out: inputHSV };
 
             return {
                 hsv_out: {

@@ -435,6 +435,89 @@
   font-family: 'Consolas', 'Monaco', monospace;
 }
 
+.aio-controls-container {
+  gap: 0;
+  padding: 10px 12px;
+}
+
+.aio-preview-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  margin: 2px 2px 12px;
+}
+
+.aio-swatch {
+  width: 76px;
+  height: 54px;
+  box-sizing: border-box;
+  margin: 0;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.aio-preview-details {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.aio-preview-label {
+  color: var(--node-device-text-secondary);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.aio-preview-hex {
+  color: var(--node-color-color);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 15px;
+}
+
+.aio-preview-rgb {
+  color: var(--node-device-text-secondary);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 10px;
+}
+
+.aio-control-section {
+  margin: 0;
+  padding: 7px 0 8px;
+  border-bottom: 1px solid rgba(var(--node-color-color-rgb), 0.12);
+}
+
+.aio-controls-container .aio-control-section:last-child {
+  border-bottom: 0;
+}
+
+.aio-controls-container .aio-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 7px;
+  padding-bottom: 4px;
+}
+
+.aio-controls-container .aio-slider-container {
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.aio-controls-container .aio-slider-label {
+  width: 68px;
+}
+
+.aio-controls-container .aio-slider-value {
+  width: 34px;
+}
+
+.aio-palette-section {
+  padding-bottom: 0;
+}
+
 .aio-range-input,
 .hsv-range-input {
   -webkit-appearance: none;
@@ -540,6 +623,10 @@
   text-shadow: 0 1px 3px rgba(0,0,0,0.8);
   box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
   transition: background 0.1s;
+}
+
+.aio-swatch {
+  box-shadow: none;
 }
 
 .aio-palette-container,
