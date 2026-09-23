@@ -1,3 +1,10 @@
+## [2.1.265] - 2026-09-23
+### Fixed
+- Time of Day nodes now compute their ON/OFF state from the clock when a graph loads, instead of briefly reporting OFF and causing downstream devices to turn off and back on.
+- Sunrise/Sunset nodes now recompute their state on load instead of restoring a stale ON/OFF value saved with the graph.
+- Automation Trace confirms commands immediately when the device is already in the requested state, instead of waiting indefinitely.
+- Home Assistant light groups and rooms are no longer recorded in the Automation Trace.
+
 ## [2.1.264] - 2026-09-23
 ### Fixed
 - Event Log no longer shows the immediate command acknowledgement, which could report a light's pre-command state (for example a false "ON" before an OFF).

@@ -35,6 +35,68 @@
     // -------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
+    // SCHEDULE MATH (shared by node restore and component)
+    // -------------------------------------------------------------------------
+    function to24Hour(hour, ampm) {
+        return (hour % 12) + (ampm === "PM" ? 12 : 0);
+    }
+
+    function computeSunSchedule(props, now) {
+        if (!props.sunrise_time || !props.sunset_time) return null;
+        const todaySunrise = DateTime.fromJSDate(new Date(props.sunrise_time)).setZone(props.timezone).set({ year: now.year, month: now.month, day: now.day });
+        const todaySunset = DateTime.fromJSDate(new Date(props.sunset_time)).setZone(props.timezone).set({ year: now.year, month: now.month, day: now.day });
+
+        let nextOn;
+        if (props.fixed_on_enabled) {
+            nextOn = now.set({ hour: to24Hour(props.fixed_on_hour, props.fixed_on_ampm), minute: props.fixed_on_minute, second: 0, millisecond: 0 });
+            while (nextOn <= now) nextOn = nextOn.plus({ days: 1 });
+        } else if (props.on_enabled) {
+            nextOn = todaySunset.plus({
+                hours: props.on_offset_direction === "After" ? props.on_offset_hours : -props.on_offset_hours,
+                minutes: props.on_offset_direction === "After" ? props.on_offset_minutes : -props.on_offset_minutes
+            });
+            while (nextOn <= now) nextOn = nextOn.plus({ days: 1 });
+        }
+
+        let nextOff;
+        if (props.fixed_stop_enabled) {
+            nextOff = now.set({ hour: to24Hour(props.fixed_stop_hour, props.fixed_stop_ampm), minute: props.fixed_stop_minute, second: 0, millisecond: 0 });
+            while (nextOff <= now) nextOff = nextOff.plus({ days: 1 });
+        } else if (props.off_enabled) {
+            nextOff = todaySunrise.plus({
+                hours: props.off_offset_direction === "After" ? props.off_offset_hours : -props.off_offset_hours,
+                minutes: props.off_offset_direction === "After" ? props.off_offset_minutes : -props.off_offset_minutes
+            });
+            while (nextOff <= now) nextOff = nextOff.plus({ days: 1 });
+        }
+
+        return { nextOn, nextOff };
+    }
+
+    function isWithinSunWindow(props, now, nextOn, nextOff) {
+        if (!props.on_enabled && !props.fixed_on_enabled && !props.off_enabled && !props.fixed_stop_enabled) {
+            return false;
+        }
+        if (props.fixed_stop_enabled && nextOff && now >= nextOff) return false;
+        if (!props.on_enabled && !props.fixed_on_enabled && (props.off_enabled || props.fixed_stop_enabled) && nextOff) {
+            return now < nextOff;
+        }
+        if (!nextOn) return false;
+        if (nextOff) {
+            // Both are future events: whichever comes first tells us which side of the window we're on.
+            return nextOn < nextOff ? (now >= nextOn && now < nextOff) : (now >= nextOn || now < nextOff);
+        }
+        return now >= nextOn;
+    }
+
+    function computeRestoredSunState(props) {
+        if (props.pulseMode) return false;
+        const now = DateTime.local().setZone(props.timezone);
+        const schedule = computeSunSchedule(props, now);
+        return schedule ? isWithinSunWindow(props, now, schedule.nextOn, schedule.nextOff) : false;
+    }
+
+    // -------------------------------------------------------------------------
     // NODE CLASS
     // -------------------------------------------------------------------------
     class SunriseSunsetNode extends ClassicPreset.Node {
@@ -83,6 +145,8 @@
             if (state.properties) {
                 Object.assign(this.properties, state.properties);
             }
+            // Saved graphs may carry a stale ON/OFF from when they were saved.
+            this.properties.currentState = computeRestoredSunState(this.properties);
         }
 
         serialize() {
@@ -238,92 +302,14 @@
             }
         }, [data]);
 
-        const isCurrentTimeWithinRange = (now, nextOn, nextOff) => {
-            // 1. Check if everything is disabled
-            if (!data.properties.on_enabled && !data.properties.fixed_on_enabled && 
-                !data.properties.off_enabled && !data.properties.fixed_stop_enabled) {
-                return false;
-            }
-
-            // 2. Check Fixed Stop priority
-            // In 2.0: if (this.properties.fixed_stop_enabled && todayOff && now >= todayOff)
-            // Note: nextOff passed here is already "future" if calculated correctly, so now >= nextOff should be false usually.
-            // However, if we haven't updated nextOff yet, it might be in the past.
-            // But here we are passing the *newly calculated* nextOff which is guaranteed to be > now.
-            // So this check might be redundant if nextOff is always future.
-            // BUT, let's stick to the logic. If nextOff is somehow <= now (e.g. exact match), force off.
-            if (data.properties.fixed_stop_enabled && nextOff && now >= nextOff) {
-                return false;
-            }
-
-            // 3. Check if only Off is enabled
-            if (!data.properties.on_enabled && !data.properties.fixed_on_enabled && 
-                (data.properties.off_enabled || data.properties.fixed_stop_enabled) && nextOff) {
-                return now < nextOff;
-            }
-
-            if (!nextOn) return false;
-
-            if (nextOff) {
-                if (nextOn < nextOff) {
-                    // On is before Off (e.g. On 8am, Off 5pm). We are On if we are between them.
-                    // But wait, nextOn is *future*.
-                    // If nextOn < nextOff, it means the On event happens *sooner* than the Off event.
-                    // e.g. Now 7am. On 8am. Off 5pm.
-                    // We are currently OFF.
-                    // 7am >= 8am (False) && ... -> False. Correct.
-                    
-                    // e.g. Now 9am. On is tomorrow 8am. Off is today 5pm.
-                    // nextOn (Tom 8am) > nextOff (Today 5pm). This falls to 'else'.
-                    return now >= nextOn && now < nextOff;
-                } else {
-                    // On is after Off (e.g. nextOn is tomorrow, nextOff is tonight).
-                    // e.g. Now 9am. On Tom 8am. Off Today 5pm.
-                    // 9am >= Tom 8am (False) || 9am < Today 5pm (True). -> True. Correct.
-                    return now >= nextOn || now < nextOff;
-                }
-            }
-
-            return now >= nextOn;
-        };
-
         const calculateTimes = useCallback(() => {
             if (!data.properties.sunrise_time || !data.properties.sunset_time) return;
             const now = DateTime.local().setZone(data.properties.timezone);
-            const todaySunrise = DateTime.fromJSDate(new Date(data.properties.sunrise_time)).setZone(data.properties.timezone).set({ year: now.year, month: now.month, day: now.day });
-            const todaySunset = DateTime.fromJSDate(new Date(data.properties.sunset_time)).setZone(data.properties.timezone).set({ year: now.year, month: now.month, day: now.day });
-
-            let nextOn;
-            if (data.properties.fixed_on_enabled) {
-                let h24 = data.properties.fixed_on_hour % 12;
-                if (data.properties.fixed_on_ampm === "PM") h24 += 12;
-                nextOn = now.set({ hour: h24, minute: data.properties.fixed_on_minute, second: 0, millisecond: 0 });
-                while (nextOn <= now) nextOn = nextOn.plus({ days: 1 });
-            } else if (data.properties.on_enabled) {
-                nextOn = todaySunset.plus({
-                    hours: data.properties.on_offset_direction === "After" ? data.properties.on_offset_hours : -data.properties.on_offset_hours,
-                    minutes: data.properties.on_offset_direction === "After" ? data.properties.on_offset_minutes : -data.properties.on_offset_minutes
-                });
-                while (nextOn <= now) nextOn = nextOn.plus({ days: 1 });
-            }
-
-            let nextOff;
-            if (data.properties.fixed_stop_enabled) {
-                let h24 = data.properties.fixed_stop_hour % 12;
-                if (data.properties.fixed_stop_ampm === "PM") h24 += 12;
-                nextOff = now.set({ hour: h24, minute: data.properties.fixed_stop_minute, second: 0, millisecond: 0 });
-                while (nextOff <= now) nextOff = nextOff.plus({ days: 1 });
-            } else if (data.properties.off_enabled) {
-                nextOff = todaySunrise.plus({
-                    hours: data.properties.off_offset_direction === "After" ? data.properties.off_offset_hours : -data.properties.off_offset_hours,
-                    minutes: data.properties.off_offset_direction === "After" ? data.properties.off_offset_minutes : -data.properties.off_offset_minutes
-                });
-                while (nextOff <= now) nextOff = nextOff.plus({ days: 1 });
-            }
+            const { nextOn, nextOff } = computeSunSchedule(data.properties, now);
 
             // Determine current state if not in pulse mode
             if (!data.properties.pulseMode) {
-                const newState = isCurrentTimeWithinRange(now, nextOn, nextOff);
+                const newState = isWithinSunWindow(data.properties, now, nextOn, nextOff);
                 if (newState !== data.properties.currentState) {
                     data.properties.currentState = newState;
                     data.update();

@@ -37,6 +37,17 @@
     // -------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
+    // ACTIVE WINDOW MATH (shared by node restore)
+    // -------------------------------------------------------------------------
+    function isInActiveWindow(props, now) {
+        if (props.pulseMode || !props.start_enabled || !props.stop_enabled) return false;
+        const to24Hour = (h, ampm) => (h % 12) + (ampm === "PM" ? 12 : 0);
+        const start = now.set({ hour: to24Hour(props.start_hour, props.start_ampm), minute: props.start_minute, second: 0, millisecond: 0 });
+        const stop = now.set({ hour: to24Hour(props.stop_hour, props.stop_ampm), minute: props.stop_minute, second: 0, millisecond: 0 });
+        return start < stop ? (now >= start && now < stop) : (now >= start || now < stop);
+    }
+
+    // -------------------------------------------------------------------------
     // NODE CLASS
     // -------------------------------------------------------------------------
     class TimeOfDayNode extends ClassicPreset.Node {
@@ -96,8 +107,8 @@
                 if (p.debug !== undefined) this.properties.debug = p.debug;
                 if (p.pulseMode !== undefined) this.properties.pulseMode = p.pulseMode;
                 
-                // Always start with fresh runtime state (will be calculated on mount)
-                this.properties.currentState = false;
+                // Compute runtime state from the clock so downstream nodes never see a false OFF on load
+                this.properties.currentState = isInActiveWindow(this.properties, DateTime.local().setZone(this.properties.timezone));
                 this.properties.status = "Initializing...";
                 this.properties.next_on_date = null;
                 this.properties.next_off_date = null;

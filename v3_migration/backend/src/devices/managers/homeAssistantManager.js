@@ -201,7 +201,8 @@ class HomeAssistantManager {
               // Track state change origin for debugging
               const tracker = getCommandTracker();
               let commandOrigin = null;
-              if (tracker && ['light', 'switch', 'lock', 'cover', 'fan', 'climate'].includes(domain)) {
+              const isGroupEntity = Array.isArray(entity.attributes?.entity_id) || entity.attributes?.is_hue_group === true;
+              if (tracker && !isGroupEntity && ['light', 'switch', 'lock', 'cover', 'fan', 'climate'].includes(domain)) {
                 commandOrigin = tracker.logIncomingStateChange({
                   entityId: entity.entity_id,
                   oldState: oldEntity?.state,

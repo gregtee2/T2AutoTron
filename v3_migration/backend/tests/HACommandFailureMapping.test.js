@@ -8,7 +8,8 @@ jest.mock('../src/devices/managers/homeAssistantManager', () => ({
 }));
 
 jest.mock('../src/engine/commandTracker', () => ({
-  logOutgoingCommand: jest.fn()
+  logOutgoingCommand: jest.fn(),
+  logIncomingStateChange: jest.fn()
 }));
 
 jest.mock('../src/logging/logWithTimestamp', () => jest.fn());
@@ -110,5 +111,30 @@ describe('HA command failure mapping', () => {
       nodeId: 'API',
       reason: 'User triggered via UI'
     }));
+  });
+
+  test('confirms a command immediately when the device already matches', async () => {
+    const commandTracker = require('../src/engine/commandTracker');
+    commandTracker.logIncomingStateChange.mockClear();
+    homeAssistantManager.updateState.mockResolvedValue({ success: true });
+    homeAssistantManager.getState.mockResolvedValue({ success: true, state: { state: 'off', on: false } });
+
+    await request(app).put('/api/lights/ha/light.test/state').send({ on: false });
+
+    expect(commandTracker.logIncomingStateChange).toHaveBeenCalledWith(expect.objectContaining({
+      entityId: 'light.test',
+      newState: 'off'
+    }));
+  });
+
+  test('waits for HA when the immediate read still shows the old state', async () => {
+    const commandTracker = require('../src/engine/commandTracker');
+    commandTracker.logIncomingStateChange.mockClear();
+    homeAssistantManager.updateState.mockResolvedValue({ success: true });
+    homeAssistantManager.getState.mockResolvedValue({ success: true, state: { state: 'on', on: true } });
+
+    await request(app).put('/api/lights/ha/light.test/state').send({ on: false });
+
+    expect(commandTracker.logIncomingStateChange).not.toHaveBeenCalled();
   });
 });

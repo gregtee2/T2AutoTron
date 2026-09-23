@@ -180,6 +180,17 @@ module.exports = function (io) {
       }
       const stateResult = await homeAssistantManager.getState(id);
       if (stateResult.success) {
+        const expectedOn = update.on === true ? true : update.on === false ? false : null;
+        // HA emits no state_changed when a device is already in the requested state, so confirm it here.
+        if (['light', 'switch'].includes(entityType) && expectedOn !== null && stateResult.state.on === expectedOn) {
+          commandTracker.logIncomingStateChange({
+            entityId: id,
+            oldState: stateResult.state.state,
+            newState: stateResult.state.state,
+            context: null,
+            attributes: stateResult.state.attributes
+          });
+        }
         if (io) {
           const state = {
             id,
