@@ -652,4 +652,61 @@ describe('HA Generic frontend state enforcement', () => {
     expect(pluginWindow.apiFetch).not.toHaveBeenCalled();
     expect(node.deviceCommandStates[id].phase).toBe('idle');
   });
+
+  test('preserves and sends an instant zero-millisecond transition', async () => {
+    const node = createNode({
+      properties: {
+        enforceState: false,
+        triggerMode: 'Follow',
+        transitionTime: 0,
+        selectedDeviceIds: ['ha_light.bar_lamp'],
+        selectedDeviceNames: ['Bar Lamp']
+      },
+      setDevicesState: NodeClass.prototype.setDevicesState,
+      updateStatus: jest.fn(),
+      getEffectiveTriggerSource: jest.fn(() => 'Bar Lamp')
+    });
+    pluginWindow.apiFetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
+
+    expect(node.serialize().transitionTime).toBe(0);
+    await node.setDevicesState(false);
+
+    expect(JSON.parse(pluginWindow.apiFetch.mock.calls[0][1].body).transition).toBe(0);
+    Object.values(node._confirmationTimers).forEach(timer => clearTimeout(timer));
+    node.clearCommandWake();
+  });
+
+  test('syncs a newly selected device without replacing the selected device list', async () => {
+    const existingId = 'ha_light.bar_lamp';
+    const newId = 'ha_light.desk_lamp';
+    const selectedIdsDuringSync = [];
+    const node = createNode({
+      properties: {
+        enforceState: false,
+        triggerMode: 'Follow',
+        selectedDeviceIds: [existingId, null],
+        selectedDeviceNames: ['Bar Lamp', null]
+      },
+      lastTriggerValue: true,
+      hadConnection: true,
+      lastHsvInfo: '{invalid',
+      getAllDevicesWithUniqueNames: jest.fn(() => [{
+        device: { id: newId, name: 'Desk Lamp', type: 'light' },
+        displayName: 'Desk Lamp'
+      }]),
+      fetchDeviceState: jest.fn(async id => {
+        node.perDeviceState[id] = { on: false, state: 'off' };
+      }),
+      setDevicesState: jest.fn(async () => {
+        selectedIdsDuringSync.push([...node.properties.selectedDeviceIds]);
+        return { success: true };
+      })
+    });
+
+    await node.onDeviceSelected('Desk Lamp', 1);
+
+    expect(node.setDevicesState).toHaveBeenCalledWith(true, null, [newId]);
+    expect(selectedIdsDuringSync).toEqual([[existingId, newId]]);
+    expect(node.properties.selectedDeviceIds).toEqual([existingId, newId]);
+  });
 });

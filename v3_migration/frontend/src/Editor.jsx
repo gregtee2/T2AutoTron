@@ -759,6 +759,13 @@ export function Editor() {
                     }, 50);
                 }
             }
+            if (context.type === 'noderemoved') {
+                try {
+                    context.data?.destroy?.();
+                } catch (error) {
+                    console.error('[Editor] Node cleanup failed:', error);
+                }
+            }
             return context;
         });
 

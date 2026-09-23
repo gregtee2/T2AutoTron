@@ -365,6 +365,11 @@
             return getDeviceApiInfo(id);
         }
 
+        getTransitionMs() {
+            const transition = Number(this.properties.transitionTime);
+            return Number.isFinite(transition) && transition >= 0 ? transition : undefined;
+        }
+
         async ensureDeviceCommandContract() {
             const shared = window.T2SharedLogic || {};
             if (shared._ready) await shared._ready;
@@ -1533,16 +1538,15 @@
                 if (deviceIsOn !== triggerWantsOn) {
                     console.log(`[HAGenericDeviceNode] New device "${item.displayName}" state mismatch: device=${deviceIsOn ? 'ON' : 'OFF'}, trigger=${triggerWantsOn ? 'ON' : 'OFF'}. Syncing...`);
                     
-                    // Temporarily store just this device to sync
-                    const originalIds = [...this.properties.selectedDeviceIds];
-                    this.properties.selectedDeviceIds = [dev.id];
-                    
-                    // Get current HSV if turning on
-                    const hsvInput = triggerWantsOn && this.lastHsvInfo ? JSON.parse(this.lastHsvInfo) : null;
-                    await this.setDevicesState(triggerWantsOn, hsvInput);
-                    
-                    // Restore full device list
-                    this.properties.selectedDeviceIds = originalIds;
+                    let hsvInput = null;
+                    if (triggerWantsOn && this.lastHsvInfo) {
+                        try {
+                            hsvInput = JSON.parse(this.lastHsvInfo);
+                        } catch (error) {
+                            hsvInput = null;
+                        }
+                    }
+                    await this.setDevicesState(triggerWantsOn, hsvInput, [dev.id]);
                     
                     console.log(`[HAGenericDeviceNode] Device "${item.displayName}" synced to ${triggerWantsOn ? 'ON' : 'OFF'}`);
                 }
@@ -1602,7 +1606,7 @@
             if (typeof window !== 'undefined' && window.graphLoading) {
                 return { success: false, retryable: true, attempted: 0, succeeded: 0, failed: 0 };
             }
-            const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
+            const transitionMs = this.getTransitionMs();
             
             // Check for device exclusions from upstream HueEffectNodes
             const excludeDevices = info._excludeDevices || [];
@@ -1692,7 +1696,7 @@
                     if (color_temp_kelvin) payload.color_temp_kelvin = color_temp_kelvin;
                     else if (hs_color) payload.hs_color = hs_color;
                     if (brightness !== null) payload.brightness = Math.max(1, Math.min(255, Math.round(brightness)));
-                    if (transitionMs) payload.transition = transitionMs;
+                    if (transitionMs !== undefined) payload.transition = transitionMs;
                 }
                 
                 try {
@@ -1794,7 +1798,7 @@
                 }
             }
             
-            const transitionMs = this.properties.transitionTime > 0 ? this.properties.transitionTime : undefined;
+            const transitionMs = this.getTransitionMs();
             
             // Parse HSV info for color values when turning on
             let hs_color = null;
@@ -1876,7 +1880,7 @@
                     if (hs_color) payload.hs_color = hs_color;
                     if (brightness !== null) payload.brightness = brightness;
                 }
-                if (transitionMs) payload.transition = transitionMs;
+                if (transitionMs !== undefined) payload.transition = transitionMs;
                 
                 try {
                     const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
@@ -2066,7 +2070,7 @@
                 selectedDeviceNames: this.properties.selectedDeviceNames || [],
                 filterType: this.properties.filterType || "All",
                 triggerMode: this.properties.triggerMode || "Follow",
-                transitionTime: this.properties.transitionTime || 1000,
+                transitionTime: this.properties.transitionTime ?? 1000,
                 debug: this.properties.debug ?? false,
                 autoRefreshInterval: this.properties.autoRefreshInterval || 30000,
                 customTitle: this.properties.customTitle || "",

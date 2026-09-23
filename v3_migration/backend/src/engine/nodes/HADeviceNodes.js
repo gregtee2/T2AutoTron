@@ -1112,7 +1112,7 @@ class HAGenericDeviceNode {
 
     // Add transition time for lights
     if (domain === 'light') {
-      payload.transition = (this.properties.transitionTime || 1000) / 1000;
+      payload.transition = (this.properties.transitionTime ?? 1000) / 1000;
       
       // Add color info if turning on with HSV
       if (turnOn && hsv) {

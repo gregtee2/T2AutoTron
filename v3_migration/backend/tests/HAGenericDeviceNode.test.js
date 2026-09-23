@@ -429,4 +429,19 @@ describe('HAGenericDeviceNode HSV safety', () => {
       { trackDesired: false }
     );
   });
+
+  test('backend sends an instant zero-millisecond transition', async () => {
+    const node = registry.create('HAGenericDeviceNode');
+    node.id = 'node_zero_transition';
+    node.properties.transitionTime = 0;
+    require('../src/engine/BackendEngine').frontendActive = false;
+    global.fetch.mockResolvedValueOnce({ ok: true });
+
+    await node.controlDevice('light.on_lamp', false, null, { trackCommand: false });
+
+    const serviceCall = global.fetch.mock.calls.find(([url]) =>
+      url === 'http://ha.local:8123/api/services/light/turn_off'
+    );
+    expect(JSON.parse(serviceCall[1].body).transition).toBe(0);
+  });
 });

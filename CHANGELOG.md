@@ -1,3 +1,9 @@
+## [2.1.262] - 2026-09-22
+### Fixed
+- Deleted HA Generic nodes now clean up timers and Home Assistant listeners instead of continuing to run in the background.
+- Preserved zero-millisecond transitions in saved graphs and backend commands.
+- Syncing a newly selected device no longer temporarily replaces the node's full device list.
+
 ## [2.1.261] - 2026-09-22
 ### Fixed
 - HSV Control now passes through its connected HSV input, while preserving Scene HSV priority and slider fallback.
