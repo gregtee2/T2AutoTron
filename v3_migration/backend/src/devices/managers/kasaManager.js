@@ -156,6 +156,7 @@ async function refreshDeviceStatus(device, io, notificationEmitter) {
                 name: device.alias,
                 type: device.deviceType,
                 on: state.on,
+                ...(!oldState && { initial: true }),
                 ...(state.brightness !== null && { brightness: state.brightness }),
                 ...(state.hue !== 0 && { hue: state.hue }),
                 ...(state.saturation !== 0 && { saturation: state.saturation }),

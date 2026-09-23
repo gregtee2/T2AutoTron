@@ -261,6 +261,7 @@ const EVENT_LOG_NOISE_BINARY_SENSOR_CLASSES = new Set([
 ]);
 
 function isEventLogNoise(data) {
+  if (Array.isArray(data?.attributes?.entity_id) || data?.attributes?.is_hue_group === true) return true;
   const entityId = String(data?.id || data?.entity_id || '').replace(/^ha_/, '');
   const domain = entityId.split('.')[0];
   if (domain === 'sensor') return true;
@@ -271,6 +272,28 @@ function isEventLogNoise(data) {
 }
 // Track last known state to detect actual changes (not just repeated updates)
 const lastKnownState = new Map(); // deviceId -> { on: boolean, state: string }
+
+const RECENT_APP_DEVICE_WINDOW = 15000;
+const recentAppDeviceKeys = new Map(); // normalized device name/entity -> timestamp
+
+function deviceMatchKey(value) {
+  const text = String(value || '').trim().toLowerCase().replace(/^(ha_|kasa_|hue_)/, '');
+  const objectId = /^[a-z_]+\.[a-z0-9_]+$/.test(text) ? text.slice(text.indexOf('.') + 1) : text;
+  return objectId.replace(/[^a-z0-9]/g, '');
+}
+
+function rememberAppDevice(...values) {
+  const now = Date.now();
+  values.map(deviceMatchKey).filter(Boolean).forEach((key) => recentAppDeviceKeys.set(key, now));
+}
+
+function isRecentAppDevice(...values) {
+  const now = Date.now();
+  return values.map(deviceMatchKey).some((key) => {
+    const seenAt = key && recentAppDeviceKeys.get(key);
+    return Boolean(seenAt && now - seenAt < RECENT_APP_DEVICE_WINDOW);
+  });
+}
 
 function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
@@ -446,9 +469,11 @@ function App() {
 
     // Listen for device state changes from backend (real-time updates from HA, Hue, Kasa)
     function onDeviceStateUpdate(data) {
-      const { id, state, on, name, vendor, commandSource, commandSourceDetails } = data;
+      const { id, state, on, name, vendor, commandSource, commandSourceDetails, initial } = data;
       if (!id) return;
       if (isEventLogNoise(data)) return;
+      // Read immediately after sending, before HA applies it; the HA event carries the real result.
+      if (commandSource === 'T2AutoTron (accepted)') return;
       
       // Determine current state
       const lastState = lastKnownState.get(id);
@@ -464,6 +489,7 @@ function App() {
       
       // Update last known state
       lastKnownState.set(id, { on: currentOn, state });
+      if (initial) return;
       
       // Log the state change
       const pending = pendingCommands.get(id);
@@ -487,7 +513,11 @@ function App() {
           nodeId: pending?.nodeId || commandSourceDetails?.nodeId,
           commandSource
         });
+        rememberAppDevice(id, deviceName);
         pendingCommands.delete(id);
+      } else if (!id.startsWith('ha_') && isRecentAppDevice(deviceName, id)) {
+        // Direct Kasa/Hue report of a device a node just commanded through HA.
+        return;
       } else {
         // This change came externally (physical switch, other automation, etc.)
         addEventLog('trigger', `${deviceName} → ${stateStr}`, { source });
@@ -665,6 +695,7 @@ function App() {
     // nodeId is optional - if provided, clicking the event log entry will focus that node
     window.registerPendingCommand = (deviceId, nodeTitle, action, nodeId) => {
       pendingCommands.set(deviceId, { nodeTitle, action, nodeId, timestamp: Date.now() });
+      rememberAppDevice(deviceId);
     };
     return () => {
       delete window.addEventLog;

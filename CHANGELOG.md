@@ -1,3 +1,10 @@
+## [2.1.264] - 2026-09-23
+### Fixed
+- Event Log no longer shows the immediate command acknowledgement, which could report a light's pre-command state (for example a false "ON" before an OFF).
+- Direct Kasa and Hue reports of a device a node just commanded through Home Assistant are no longer logged as separate external changes.
+- Startup state snapshots from Kasa and Hue are no longer logged as device changes.
+- Home Assistant light groups and rooms are omitted from the Event Log because their member lights are already listed.
+
 ## [2.1.263] - 2026-09-23
 ### Fixed
 - Automation Trace now attributes browser-issued HA Generic commands to their actual source node instead of labeling them as manual UI control.

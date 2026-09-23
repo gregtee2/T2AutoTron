@@ -14,6 +14,7 @@ class HueLight {
     this.state = light._rawData?.state || {};
     this.hueApi = hueApi;
     this.previousState = { ...this.state };
+    this.hasReportedState = false;
   }
 
   async getCurrentState() {
@@ -67,6 +68,7 @@ class HueLight {
           saturation: this.state.sat,
           colorTemp: this.state.colorTemp,
           xy: this.state.xy,
+          ...(!this.hasReportedState && { initial: true }),
         };
         io.emit('device-state-update', stateToEmit);
 
@@ -81,6 +83,7 @@ class HueLight {
       }
 
       this.previousState = { ...this.state };
+      this.hasReportedState = true;
     } catch (error) {
       logWithTimestamp(`Error updating state for "${this.name}": ${error.message}`, 'error');
     }
