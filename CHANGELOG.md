@@ -1,3 +1,9 @@
+## [2.1.263] - 2026-09-23
+### Fixed
+- Automation Trace now attributes browser-issued HA Generic commands to their actual source node instead of labeling them as manual UI control.
+- Follow-up Home Assistant state echoes are correlated with their originating T2AutoTron command instead of appearing as separate external events.
+- Opposite state changes during the correlation window remain visible as external device or integration changes.
+
 ## [2.1.262] - 2026-09-22
 ### Fixed
 - Deleted HA Generic nodes now clean up timers and Home Assistant listeners instead of continuing to run in the background.

@@ -370,6 +370,15 @@
             return Number.isFinite(transition) && transition >= 0 ? transition : undefined;
         }
 
+        buildCommandSource(nodeTitle) {
+            if (!this.id) return undefined;
+            return {
+                nodeId: String(this.id).slice(0, 128),
+                nodeType: 'HAGenericDeviceNode',
+                reason: String(nodeTitle || this.label || 'HA Generic Device').slice(0, 200)
+            };
+        }
+
         async ensureDeviceCommandContract() {
             const shared = window.T2SharedLogic || {};
             if (shared._ready) await shared._ready;
@@ -1698,6 +1707,8 @@
                     if (brightness !== null) payload.brightness = Math.max(1, Math.min(255, Math.round(brightness)));
                     if (transitionMs !== undefined) payload.transition = transitionMs;
                 }
+                const colorSource = this.buildCommandSource(nodeTitle);
+                if (colorSource) payload.t2Source = colorSource;
                 
                 try {
                     const response = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 
@@ -1881,6 +1892,8 @@
                     if (brightness !== null) payload.brightness = brightness;
                 }
                 if (transitionMs !== undefined) payload.transition = transitionMs;
+                const commandSource = this.buildCommandSource(nodeTitle);
+                if (commandSource) payload.t2Source = commandSource;
                 
                 try {
                     const res = await queuedFetch(`${apiInfo.endpoint}/${apiInfo.cleanId}/state`, { 

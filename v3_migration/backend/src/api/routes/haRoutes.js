@@ -41,7 +41,12 @@ module.exports = function (io) {
     percentage: Joi.number().min(0).max(100).optional(),
     position: Joi.number().min(0).max(100).optional(),
     volume_level: Joi.number().min(0).max(1).optional(), // For media_player volume (0-1)
-    source: Joi.string().optional() // For media_player input source
+    source: Joi.string().optional(), // For media_player input source
+    t2Source: Joi.object({
+      nodeId: Joi.string().max(128).required(),
+      nodeType: Joi.string().max(64).optional(),
+      reason: Joi.string().max(200).optional()
+    }).optional()
   }).unknown(true);
 
   // GET / - Fetch all devices
@@ -147,14 +152,20 @@ module.exports = function (io) {
       }
       if (VERBOSE) logWithTimestamp(`Cleaned update for HA device ${id}: ${JSON.stringify(update)}`, 'info');
       
+      const commandSource = body.t2Source
+        ? {
+          nodeId: body.t2Source.nodeId,
+          nodeType: body.t2Source.nodeType || 'HAGenericDeviceNode',
+          reason: body.t2Source.reason || 'Graph node command'
+        }
+        : { nodeId: 'API', nodeType: 'HAGenericDeviceNode', reason: 'User triggered via UI' };
+
       // Log to command tracker so incoming state changes can be correlated to this app
       commandTracker.logOutgoingCommand({
         entityId: id.replace('ha_', ''),
         action: update.on === false ? 'turn_off' : 'turn_on',
         payload: update,
-        nodeId: 'API',
-        nodeType: 'HAGenericDeviceNode',
-        reason: 'User triggered via UI'
+        ...commandSource
       });
       
       const result = await homeAssistantManager.updateState(id, update);
@@ -175,11 +186,7 @@ module.exports = function (io) {
             state: stateResult.state.state,
             on: stateResult.state.on,
             commandSource: 'T2AutoTron (accepted)',
-            commandSourceDetails: {
-              nodeId: 'API',
-              nodeType: 'HAGenericDeviceNode',
-              reason: 'User triggered via UI'
-            },
+            commandSourceDetails: commandSource,
             ...(entityType === 'light' ? {
               brightness: stateResult.state.brightness,
               hs_color: stateResult.state.hs_color

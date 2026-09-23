@@ -163,7 +163,10 @@ function logIncomingStateChange({ entityId, oldState, newState, context, attribu
   const ourCommand = recentCommands.get(rawEntityId);
   const now = Date.now();
   const timeSinceCommand = ourCommand ? (now - ourCommand.sentAt) : null;
-  const wasUs = ourCommand && timeSinceCommand < CORRELATION_WINDOW;
+  const withinWindow = ourCommand && timeSinceCommand < CORRELATION_WINDOW;
+  const expectedState = ourCommand?.action === 'turn_on' ? 'on' : ourCommand?.action === 'turn_off' ? 'off' : null;
+  const wasUs = Boolean(withinWindow && (!expectedState || newState === expectedState));
+  if (ourCommand && !withinWindow) recentCommands.delete(rawEntityId);
   
   // Determine source based on context and correlation
   let source = 'External (no context)';  // Default when HA doesn't provide context
@@ -176,8 +179,6 @@ function logIncomingStateChange({ entityId, oldState, newState, context, attribu
       nodeType: ourCommand.nodeType,
       reason: ourCommand.reason
     };
-    // Clean up correlation cache
-    recentCommands.delete(rawEntityId);
   } else if (context) {
     if (context.user_id) {
       source = 'HA User';

@@ -59,9 +59,21 @@ function buildTraceRuns(history) {
 
     if (matchingCommand) {
       matchingCommand.confirmation = entry;
-    } else {
-      runs.push({ observation: entry });
+      continue;
     }
+
+    if (entry.source === 'T2AutoTron (confirmed)') {
+      const confirmedCommand = [...runs].reverse().find((run) => (
+        run.command
+        && run.command.entityId === entry.entityId
+        && (!nodeId || run.command.nodeId === nodeId)
+      ));
+      // Later echoes of an already-confirmed command update that run; orphaned echoes are T2's own and hidden.
+      if (confirmedCommand) confirmedCommand.confirmation = entry;
+      continue;
+    }
+
+    runs.push({ observation: entry });
   }
 
   return runs.reverse();

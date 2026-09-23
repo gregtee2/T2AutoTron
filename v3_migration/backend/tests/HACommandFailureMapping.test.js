@@ -78,4 +78,37 @@ describe('HA command failure mapping', () => {
       { forceRefresh: true }
     );
   });
+
+  test('attributes graph node commands to their source node', async () => {
+    const commandTracker = require('../src/engine/commandTracker');
+    commandTracker.logOutgoingCommand.mockClear();
+    homeAssistantManager.updateState.mockResolvedValue({ success: true });
+    homeAssistantManager.getState.mockResolvedValue({ success: true, state: { state: 'on', on: true } });
+
+    await request(app)
+      .put('/api/lights/ha/light.test/state')
+      .send({ on: true, t2Source: { nodeId: 'node-42', nodeType: 'HAGenericDeviceNode', reason: 'Porch Lights' } });
+
+    expect(commandTracker.logOutgoingCommand).toHaveBeenCalledWith(expect.objectContaining({
+      nodeId: 'node-42',
+      reason: 'Porch Lights'
+    }));
+    expect(homeAssistantManager.updateState.mock.calls[0][1]).not.toHaveProperty('t2Source');
+  });
+
+  test('keeps direct UI commands labeled as manual control', async () => {
+    const commandTracker = require('../src/engine/commandTracker');
+    commandTracker.logOutgoingCommand.mockClear();
+    homeAssistantManager.updateState.mockResolvedValue({ success: true });
+    homeAssistantManager.getState.mockResolvedValue({ success: true, state: { state: 'on', on: true } });
+
+    await request(app)
+      .put('/api/lights/ha/light.test/state')
+      .send({ on: true });
+
+    expect(commandTracker.logOutgoingCommand).toHaveBeenCalledWith(expect.objectContaining({
+      nodeId: 'API',
+      reason: 'User triggered via UI'
+    }));
+  });
 });
