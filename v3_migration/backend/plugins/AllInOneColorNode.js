@@ -341,20 +341,20 @@
          * This allows RGB sliders to update the TMI sliders
          */
         const calculateTMIFromRGB = (r, g, b) => {
-            // Normalize to 0-1
-            const rn = r / 255, gn = g / 255, bn = b / 255;
-            const max = Math.max(rn, gn, bn);
-            
+            const max = Math.max(r, g, b);
+
             // Avoid division by zero for black/white
-            if (max === 0) return { temp: 0, tint: 0, sat: 0, bri: 0 };
-            
+            if (max <= 0) return { temp: 0, tint: 0, sat: 0, bri: 0 };
+
+            // Normalize by the peak channel so balance is independent of brightness.
+            const rn = r / max, gn = g / max, bn = b / max;
             const temperatureAxis = rn - bn;
             const tintAxis = ((rn + bn) / 2) - gn;
             const sat = Math.max(Math.abs(temperatureAxis), Math.abs(tintAxis)) * 100;
             const temp = sat === 0 ? 0 : (-temperatureAxis / (sat / 100)) * 100;
             const tint = sat === 0 ? 0 : (tintAxis / (sat / 100)) * 100;
 
-            const bri = Math.round(max * 255);
+            const bri = Math.round(max);
             
             return { temp, tint, sat, bri };
         };
@@ -432,11 +432,13 @@
 
         /**
          * Update all values when Kelvin slider changes
-         * Sets RGB directly from Kelvin, then derives Temperature/Tint
+         * Uses the Kelvin hue/balance but keeps the current brightness
          */
         const updateFromKelvin = (kelvin) => {
-            const { r, g, b } = kelvinToRGB(kelvin);
-            const { temp, tint, sat, bri } = calculateTMIFromRGB(r, g, b);
+            const full = kelvinToRGB(kelvin);
+            const { temp, tint, sat } = calculateTMIFromRGB(full.r, full.g, full.b);
+            const bri = state.brightness;
+            const { r, g, b } = calculateRGBFromTMI(temp, tint, sat, bri);
             updateState({
                 red: r, green: g, blue: b,
                 temperature: temp,

@@ -256,6 +256,7 @@ const pendingCommands = new Map(); // deviceId -> { nodeTitle, action, timestamp
 const EVENT_LOG_NOISE_BINARY_SENSOR_CLASSES = new Set([
   'battery',
   'connectivity',
+  'power',
   'problem',
   'update'
 ]);

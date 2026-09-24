@@ -1,7 +1,7 @@
 # T2AutoTron 2.1
 
-[![License](https://img.shields.io/github/license/gregtee2/T2AutoTron?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.236-blue?style=flat-square)](https://github.com/gregtee2/T2AutoTron/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](v3_migration/backend/package.json)
+[![Version](https://img.shields.io/badge/version-2.1.266-blue?style=flat-square)](CHANGELOG.md)
 [![Open in VS Code](https://img.shields.io/badge/Open%20in-VS%20Code-blue?logo=visualstudiocode&style=flat-square)](https://open.vscode.dev/gregtee2/T2AutoTron)
 
 **Visual node-based smart home automation editor with a 24/7 backend engine** - your automations run even when you close the browser!
@@ -26,7 +26,7 @@ Nothing like that existed, and I wasn't a programmer. Fast forward 20 years - LL
 | **Learning curve** | Lower - no msg.payload | Steeper |
 | **Color tools** | Built-in HSV, timelines, Oklab | Manual setup |
 | **Home Automation** | Purpose-built for HA | General-purpose |
-| **Execution** | 24/7 backend engine | Flow-based |
+| **Execution** | 24/7 backend engine; browser only needed for editing | 24/7 Node.js runtime |
 
 ### Why Share This?
 
@@ -38,46 +38,57 @@ I'm sure there are others who'd appreciate a visual approach. But this is **beta
 
 ### Core Platform
 - 🎨 **Visual Node Editor** - Drag-and-drop automation building with Rete.js
-- ⚡ **24/7 Backend Engine** - Automations run on the server, not in your browser
-- 🔄 **Sync-on-Close** - Graph auto-syncs when you switch tabs or close browser
-- 💾 **Auto-Save** - Every 2 minutes to prevent work loss
+- ⚡ **24/7 Backend Engine** - Automations keep running on the server when the browser is closed
+- 🔄 **Editor/Engine Handoff** - The open editor controls devices; the backend takes over automatically about 30 seconds after the browser goes away
+- 💾 **Auto-Save & Sync-on-Close** - Saves every 2 minutes and syncs when you switch tabs
 - ⭐ **Favorites Panel** - Drag nodes to favorites for quick access
-- 📷 **Camera Panel** - View IP camera streams (MJPEG/snapshot)
+- 🎯 **Group Navigation** - Quick-jump buttons to zoom to Backdrop groups
+- 🌦️ **Forecast Panel** - Live weather and 5-day forecast in °F with °C alongside
+- 📅 **Upcoming Events** - See what your timers will do next
+- 📷 **Camera Panel** - Live RTSP camera grid (1×1 to 4×4) via FFmpeg, with pop-out windows
+- 🗣️ **Chatterbox TTS** - Optional local GPU text-to-speech for announcements, run on your desktop through the Local Agent
+
+### Understand Your Automations
+- 🧭 **Automation Trace** - Every device command with its source node, what was requested, and what Home Assistant confirmed. Filter by Completed, Waiting, or Observed, and click a source to jump to its node.
+- 🗺️ **Trace Map** - Zoom to everything feeding a node, including dashed links for wireless Sender/Receiver channels
+- 🩺 **Graph Health** - Flags common wiring problems (missing wireless senders, several nodes writing to one device, incompatible sockets, missing HA devices) and outlines the affected nodes
+- 📜 **Event Log** - One entry per real device change, labeled as app-driven or external (physical switch, HA automation, and so on)
 
 ### Device Support
-- 🏠 **Home Assistant** – All entities (lights, switches, sensors, media players, climate, etc.)
-- 💡 **Philips Hue** – Direct bridge API + built-in effects (candle, fire, prism, sparkle, etc.)
+- 🏠 **Home Assistant** – Lights, switches, locks, climate, media players, sensors, and more
+- 💡 **Philips Hue** – Direct bridge API, plus Hue and WiZ effect nodes (candle, fire, prism, sparkle, etc.) through Home Assistant
 - 🔌 **TP-Link Kasa** – Direct local API (no cloud, no HA required)
 - 🏠 **Shelly** – Via Home Assistant integration
 
 ### Color & Lighting (VFX-Inspired)
-- 🎨 **All-in-One Color Node** - Full color control with:
-  - **Kelvin Slider** (2000K-10000K) - Real-world light temperatures
-  - **TMI Color Grading** - Temperature/Tint like Nuke's Grade node
-  - **RGB/HSV Sliders** - All bidirectionally synced
-- 🌈 **Spline Timeline Color** - Time-based color gradients with custom spline curves
-- 🔬 **Oklab Color Space** - Perceptually uniform color interpolation (no muddy browns!)
-- ✨ **Hue/Wiz Effect Nodes** - Trigger built-in light effects with multi-light selection
+- 🎨 **All-in-One Color Control** - One node for:
+  - **Kelvin slider** (2000K–10000K) for real-world light temperatures
+  - **Color balance** - Temperature (warm/cool) and Tint (green/magenta) sliders that round-trip exactly with the RGB sliders
+  - **RGB, saturation, and brightness** sliders kept in sync, with a live color preview and hex readout
+- 🌈 **Timeline Color** - Time-based color gradients with custom spline curves
+- 🔬 **Oklab Interpolation** - Perceptually uniform gradients (no muddy browns!)
+- ✨ **Hue/WiZ Effect Nodes** - Trigger built-in light effects with multi-light selection
 
 ### 60+ Node Types
 
 | Category | Nodes |
 |----------|-------|
-| **Home Assistant** | HA Generic Device, HA Device Automation, HA Sensor, **HA Thermostat** |
-| **Timer/Event** | Sunrise/Sunset, Time of Day, Time Range, Day of Week, Date Comparison, Delay, Debounce, Retriggerable |
-| **Logic** | AND, OR, NOT, XOR, NAND, NOR, Compare, Threshold, Conditional Switch, Priority Encoder, Latch, Toggle |
-| **Color** | All-in-One Color, HSV Control, HSV Modifier, Spline Timeline Color, Color Gradient |
-| **Inputs** | Toggle, Number Slider, Trigger Button, Inject |
-| **Utility** | Sender/Receiver, Display, Counter, Math, Random, Stock Price, Debug |
-| **Effects** | Hue Effect, Wiz Effect |
-| **Direct Devices** | Hue Light, Hue Group, Kasa Light, Kasa Plug |
+| **Home Assistant** | HA Generic Device, HA Device Automation, HA Device Field, HA Device State Display, HA Device State Output, HA Lock Control, HA Thermostat, Hue Effect, WiZ Effect |
+| **Timer/Event** | Sunrise/Sunset Trigger, Time of Day, Delay (delay, debounce, throttle, retriggerable), Trigger, Inject, TTS Message Scheduler |
+| **Logic** | AND Gate, OR Gate, XOR Gate, Logic Operations, Logic Condition, Comparison, Conditional Switch, Conditional Integer Output, Switch, Priority Encoder, Hysteresis, Edge Detector, Filter, State Machine, Watchdog, Time Range (Continuous), Day of Week Comparison, Date Comparison |
+| **Color** | All-in-One Color Control, HSV Control, HSV Modifier, Timeline Color, Stepped Color Gradient |
+| **Inputs** | Toggle, Integer Selector, Stock Price |
+| **Media** | Audio Output, Event Announcer, Station Schedule, Station Selector |
+| **Weather** | Weather Logic |
+| **Wireless** | Sender, Receiver |
+| **Utility** | Backdrop, Change, Combine, Counter, Debug, Display, Random, Smooth, Spline Value, String Concat, Text String, Sub-Graph |
+| **Direct Devices** | Hue Lights, Kasa Lights, Kasa Plug Control |
 
 ### Developer & Debug Tools
 - 🔍 **Debug Dashboard** - Compare engine state vs actual device state with color timeline
 - 🐛 **Report Bug Button** - One-click GitHub issue with auto-filled debug info
 - 📊 **Device Timeline** - Visual history showing what color each light was at any time
 - 🔧 **Hot Plugin Updates** - Add new nodes without rebuilding
-- 🎯 **Group Navigation** - Quick-jump buttons to zoom to Backdrop groups
 
 ---
 
@@ -140,14 +151,14 @@ chmod +x install.sh && ./install.sh
 
 ### Step 3: Run
 
-**Windows:** Double-click `start_servers.bat`
+**Windows:** Double-click `start_servers.bat` (opens the Electron desktop window)
 
 **Mac/Linux:**
 ```bash
-./start_servers.sh
+./start.sh
 ```
 
-The app opens in an Electron desktop window.
+This starts the backend and frontend and opens `http://localhost:5173` in your browser.
 
 ### Step 4: Configure
 
@@ -175,8 +186,8 @@ The app opens in an Electron desktop window.
 | File | Purpose |
 |------|---------|
 | `install.bat` / `install.sh` | One-click installer (installs Node.js + dependencies) |
-| `start_servers.bat` / `start_servers.sh` | **Recommended** - Launches backend + Electron app |
-| `start.bat` / `start.sh` | Alternative - Launches backend + browser |
+| `start_servers.bat` | **Windows (recommended)** - Launches backend + Electron app |
+| `start.bat` / `start.sh` | Launches backend + frontend in the browser (`start.sh` is the Mac/Linux launcher) |
 | `update.bat` / `update.sh` | One-click updater |
 
 ---
@@ -210,7 +221,7 @@ Configure all your integrations in one place with connection testing.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    SHARED LOGIC LAYER                           │
-│              (38 pure calculation functions)                    │
+│              (pure calculation functions)                       │
 │   TimeRange • LogicGates • Color/Oklab • Delay • Utility        │
 └─────────────────────────────────────────────────────────────────┘
            ↓                                    ↓
@@ -222,11 +233,10 @@ Configure all your integrations in one place with connection testing.
 └─────────────────────┘            └─────────────────────────────┘
 ```
 
-- **Rete.js v3**: Modern visual programming framework
-- **React Components**: All nodes are React components with state management
-- **24/7 Backend Engine**: Server-side execution - 100% frontend node coverage
+- **Rete.js v2 + React 19**: Visual programming framework with React-rendered nodes
+- **24/7 Backend Engine**: Server-side execution of automation nodes (display-only nodes such as Display and Backdrop run in the editor only)
 - **Shared Logic Layer**: Same math runs on frontend AND backend
-- **Vite Build System**: Fast development with HMR
+- **Vite 7 Build System**: Fast development with HMR
 - **Plugin Architecture**: Add new nodes without rebuilding
 
 ---
@@ -244,13 +254,12 @@ cd T2AutoTron
 cd v3_migration/backend && npm install
 cd ../frontend && npm install
 
-# Create environment config
-cd ../backend
-cp .env.example .env  # Edit with your settings
-
 # Start servers (two terminals)
 cd v3_migration/backend && npm start    # Terminal 1: Backend on port 3000
 cd v3_migration/frontend && npm run dev  # Terminal 2: Frontend on port 5173
+
+# Configure: open ⚙️ Settings in the app and enter your HA URL and token.
+# Settings writes v3_migration/backend/.env for you.
 ```
 
 ### Build for Production
@@ -285,36 +294,31 @@ Debug logging is disabled by default. To enable:
 
 ---
 
-## 🆕 Recent Highlights (January 2026)
+## 🆕 Recent Highlights (September 2026)
 
-### v2.1.236 - Thermostat Control 🌡️
-- **HAThermostatNode** - Control Nest, Ecobee, and any HA climate entity
-- **Visual Temperature Ring** - See current/target temps at a glance
-- **Mode Buttons** - Off/Heat/Cool/Auto with one click
-- **Full Automation** - Connect inputs to automate setpoints and modes
-- **Backend Support** - Works 24/7 even when browser is closed
+### v2.1.263–2.1.265 - Trustworthy Logs & Startup
+- **Accurate sources** - Automation Trace shows the real node behind each command, not "Manual control"
+- **Quieter Event Log** - No duplicate reports from direct Kasa/Hue connections, startup snapshots, or room/group lights
+- **No startup flicker** - Time of Day and Sunrise/Sunset nodes compute their state from the clock when a graph loads
+- **No endless "waiting"** - Commands to devices already in the requested state confirm right away
 
-### v2.1.235 - Color Grading Overhaul
-- **Kelvin Slider** - Real-world light temperatures (2000K-10000K)
-- **TMI Color Grading** - Nuke-style Temperature/Tint sliders
-- **Additive Color Math** - Both axes work independently
+### v2.1.261–2.1.262 - Color & Device Fixes
+- **All-in-One Color redesign** - Live preview, hex readout, and exact RGB ↔ color balance round-trips
+- **HSV Control** - Connected HSV input now passes through
+- **HA Generic Device** - Deleted nodes fully stop, and 0 ms transitions stay instant
+- **Forecast in °C** - Shown alongside °F
 
-### v2.1.234 - Oklab Color Space
-- **Perceptually Uniform Gradients** - Red→Green goes through vibrant yellows, not muddy browns
-- **Shared Logic Layer** - 38 pure functions used by both frontend and backend
+### v2.1.253–2.1.260 - See Why Things Happen
+- **Automation Trace** - Command → request → HA confirmation, with status filters
+- **Trace Map** - Zoom to a node's upstream logic, including wireless links
+- **Graph Health** - Wiring checks with affected nodes outlined
 
-### v2.1.212 - Debug Dashboard Enhancements
-- **Device Timeline Colors** - See actual light colors over time
-- **Split Bar Comparison** - Engine vs HA actual color with mismatch indicator
-- **Priority Encoder Node** - Outputs index of first TRUE input
-
-### v2.1.207 - Effect Node Fixes
-- **Hue/Wiz Effect Restore** - No longer turns lights ON when effect ends
-- **Proper State Handoff** - Effect nodes only clear effect, don't override on/off
-
-### v2.1.189 - Reliability Improvements  
-- **Sync-on-Close** - Graph syncs when you switch tabs (uses visibilitychange)
-- **Heartbeat System** - Backend knows when frontend is active
+### Earlier in 2026
+- **v2.1.236** - HA Thermostat node
+- **v2.1.234** - Oklab color interpolation and the shared logic layer
+- **v2.1.212** - Debug Dashboard color timeline
+- **v2.1.207** - Hue/WiZ effects no longer turn lights on when they end
+- **v2.1.189** - Sync-on-close and heartbeat handoff
 
 See [CHANGELOG.md](CHANGELOG.md) for full history.
 
@@ -323,11 +327,13 @@ See [CHANGELOG.md](CHANGELOG.md) for full history.
 ## ✅ Roadmap
 
 ### Complete
-- [x] 60+ node types with full backend coverage
+- [x] 60+ node types, with backend engine support for automation nodes
 - [x] 24/7 backend engine with frontend sync
-- [x] Visual color tools (HSV, Oklab, TMI, Kelvin)
+- [x] Visual color tools (HSV, Oklab, color balance, Kelvin)
+- [x] Automation Trace, Trace Map, and Graph Health
 - [x] Debug dashboard with device timeline
-- [x] Hue/Wiz effect nodes
+- [x] Hue/WiZ effect nodes
+- [x] Live RTSP camera grid
 - [x] Plugin architecture with hot reload
 - [x] Settings UI with connection testing
 
@@ -344,7 +350,6 @@ See [CHANGELOG.md](CHANGELOG.md) for full history.
 
 ## Recovery Notes
 
-- [Home Assistant TP-Link/Kasa login recovery](ha_workarounds/tplink_klap_v2/README.md): September 7, 2026 repair record, plain-English explanation, backup and repeat-repair steps, temporary-access precautions, and rollback. The owner reported broader device recovery after enabling Kasa compatibility and applying the host-limited KLAP v2 workaround.
 - [HA Generic Device command contract](v3_migration/HA_GENERIC_DEVICE_CONTRACT.md): desired versus observed state, delivery confirmation, retries, ownership handoff, and overnight acceptance tests.
 
 ---
@@ -352,7 +357,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full history.
 ## 🙏 Credits
 
 Built with:
-- [Rete.js v3](https://retejs.org/) - Visual programming framework
+- [Rete.js v2](https://retejs.org/) - Visual programming framework
 - [React](https://react.dev/) - UI components
 - [Vite](https://vitejs.dev/) - Build system
 - [Home Assistant](https://www.home-assistant.io/) - Smart home platform

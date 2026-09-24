@@ -1,3 +1,13 @@
+## [2.1.266] - 2026-09-23
+### Fixed
+- All-in-One Color: changing Kelvin no longer resets brightness to 255.
+- All-in-One Color: Temperature, Tint, and Saturation now round-trip exactly with RGB at every brightness, not only at full brightness.
+- Audio mixer no longer retries every 5 seconds forever when FFmpeg is missing; it warns once and stops, and other failures back off up to 5 minutes.
+- Home Assistant power binary sensors are hidden from the Event Log.
+
+### Changed
+- README updated to match the current app (node list, features, launch steps, links).
+
 ## [2.1.265] - 2026-09-23
 ### Fixed
 - Time of Day nodes now compute their ON/OFF state from the clock when a graph loads, instead of briefly reporting OFF and causing downstream devices to turn off and back on.

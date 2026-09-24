@@ -20,6 +20,8 @@ const fs = require('fs');
 const EventEmitter = require('events');
 
 const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
+const RESTART_BASE_DELAY_MS = 5000;
+const RESTART_MAX_DELAY_MS = 5 * 60 * 1000;
 
 class AudioMixerService extends EventEmitter {
     constructor() {
@@ -30,6 +32,9 @@ class AudioMixerService extends EventEmitter {
         this.isRunning = false;
         this.ffmpegProcess = null;
         this.clients = new Set(); // Connected HTTP clients
+        this.ffmpegUnavailable = false;
+        this.restartAttempts = 0;
+        this.restartTimer = null;
         
         // Audio settings
         this.musicVolume = 1.0;  // 0.0 - 1.0
@@ -61,12 +66,17 @@ class AudioMixerService extends EventEmitter {
      * Start the audio mixer with dual-input FFmpeg (radio + TTS pipe)
      */
     start() {
+        if (this.ffmpegUnavailable) return;
         if (this.isRunning) {
             console.log('[AudioMixer] Already running');
             return;
         }
+        if (this.restartTimer) {
+            clearTimeout(this.restartTimer);
+            this.restartTimer = null;
+        }
 
-        console.log(`[AudioMixer] Starting with stream: ${this.streamUrl}`);
+        if (this.restartAttempts === 0 || VERBOSE) console.log(`[AudioMixer] Starting with stream: ${this.streamUrl}`);
         
         // FFmpeg with two inputs:
         // Input 0: Radio stream (continuous)
@@ -102,6 +112,7 @@ class AudioMixerService extends EventEmitter {
 
         // Handle audio data from FFmpeg
         this.ffmpegProcess.stdout.on('data', (chunk) => {
+            this.restartAttempts = 0;
             // Buffer the audio
             this.audioBuffer.push(chunk);
             if (this.audioBuffer.length > this.maxBufferSize) {
@@ -125,22 +136,35 @@ class AudioMixerService extends EventEmitter {
         });
 
         this.ffmpegProcess.on('close', (code) => {
-            console.log(`[AudioMixer] FFmpeg exited with code ${code}`);
             this.isRunning = false;
-            
-            // Auto-restart if unexpected exit
-            if (code !== 0 && !this._stopping) {
-                console.log('[AudioMixer] Restarting in 5 seconds...');
-                setTimeout(() => this.start(), 5000);
+            if (this.ffmpegUnavailable || this._stopping || code === 0) return;
+
+            const delay = Math.min(RESTART_BASE_DELAY_MS * (2 ** this.restartAttempts), RESTART_MAX_DELAY_MS);
+            if (this.restartAttempts === 0 || VERBOSE) {
+                console.log(`[AudioMixer] FFmpeg exited with code ${code}; retrying (backing off up to ${RESTART_MAX_DELAY_MS / 60000} min)`);
             }
+            this.restartAttempts++;
+            this.restartTimer = setTimeout(() => {
+                this.restartTimer = null;
+                this.start();
+            }, delay);
         });
 
         this.ffmpegProcess.on('error', (err) => {
-            console.error('[AudioMixer] FFmpeg error:', err.message);
             this.isRunning = false;
+            if (err.code === 'ENOENT') {
+                this.ffmpegUnavailable = true;
+                console.warn('[AudioMixer] FFmpeg is not installed; audio mixer disabled until FFmpeg is available and the server restarts.');
+                for (const client of this.clients) {
+                    try { client.end(); } catch (endErr) {}
+                }
+                this.clients.clear();
+                return;
+            }
+            console.error('[AudioMixer] FFmpeg error:', err.message);
         });
 
-        console.log('[AudioMixer] ✅ Started');
+        if (this.restartAttempts === 0 || VERBOSE) console.log('[AudioMixer] ✅ Started');
         this.emit('started');
     }
 
@@ -148,6 +172,11 @@ class AudioMixerService extends EventEmitter {
      * Stop the audio mixer
      */
     stop() {
+        if (this.restartTimer) {
+            clearTimeout(this.restartTimer);
+            this.restartTimer = null;
+        }
+        this.restartAttempts = 0;
         if (!this.isRunning) return;
         
         console.log('[AudioMixer] Stopping...');
@@ -177,6 +206,10 @@ class AudioMixerService extends EventEmitter {
      * Add an HTTP client to receive the stream
      */
     addClient(res) {
+        if (this.ffmpegUnavailable) {
+            res.status(503).json({ success: false, error: 'Audio mixer unavailable: FFmpeg is not installed' });
+            return;
+        }
         // Set headers for MP3 streaming
         res.setHeader('Content-Type', 'audio/mpeg');
         res.setHeader('Accept-Ranges', 'none');
@@ -299,6 +332,7 @@ class AudioMixerService extends EventEmitter {
     getStatus() {
         return {
             running: this.isRunning,
+            available: !this.ffmpegUnavailable,
             streamUrl: this.streamUrl,
             clients: this.clients.size,
             bufferSize: this.audioBuffer.length,
