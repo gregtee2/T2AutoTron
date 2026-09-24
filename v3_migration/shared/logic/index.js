@@ -12,6 +12,7 @@ const LogicGateLogic = require('./LogicGateLogic');
 const ColorLogic = require('./ColorLogic');
 const UtilityLogic = require('./UtilityLogic');
 const DeviceLogic = require('./DeviceLogic');
+const AudioScheduleLogic = require('./AudioScheduleLogic');
 
 module.exports = {
     // Module bundles
@@ -22,6 +23,7 @@ module.exports = {
     ColorLogic,
     UtilityLogic,
     DeviceLogic,
+    AudioScheduleLogic,
     
     // Convenience re-exports - Time
     calculateTimeRange: TimeRangeLogic.calculateTimeRange,
@@ -72,5 +74,11 @@ module.exports = {
     isRetryableHttpStatus: DeviceLogic.isRetryableHttpStatus,
     normalizeObservedPowerState: DeviceLogic.normalizeObservedPowerState,
     recordDeviceCommandResult: DeviceLogic.recordDeviceCommandResult,
-    shouldIssueDeviceCommand: DeviceLogic.shouldIssueDeviceCommand
+    shouldIssueDeviceCommand: DeviceLogic.shouldIssueDeviceCommand,
+
+    // Convenience re-exports - Audio Schedule
+    getActiveOccurrence: AudioScheduleLogic.getActiveOccurrence,
+    migrateLegacySchedule: AudioScheduleLogic.migrateLegacySchedule,
+    buildAudioProgram: AudioScheduleLogic.buildAudioProgram,
+    getLegacyStationOutput: AudioScheduleLogic.getLegacyStationOutput
 };

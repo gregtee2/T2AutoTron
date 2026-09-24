@@ -2621,6 +2621,9 @@ class TTSAnnouncementNode {
     this._resumeTimeout = null;
     this._initialized = false;
     this._lastStationInputs = {}; // Track station input values for edge detection
+    this._programEntries = {};    // Station Schedule program per speaker
+    this._programStreamUrls = {};
+    this._programBaselined = false;
     
     // Settling period on graph load - prevent TTS on initial trigger
     this._initTime = Date.now();
@@ -2638,6 +2641,9 @@ class TTSAnnouncementNode {
   }
 
   getStreamUrlForSpeaker(speakerId) {
+    // Station scheduled for this speaker right now
+    if (this._programStreamUrls?.[speakerId]) return this._programStreamUrls[speakerId];
+
     // Check per-speaker custom URL first
     const customUrl = this.properties.speakerCustomUrls?.[speakerId];
     if (customUrl) return customUrl;
@@ -2813,6 +2819,97 @@ class TTSAnnouncementNode {
     }
   }
 
+  async stopSingleSpeaker(speakerId) {
+    try {
+      const { host, token } = getHAConfig();
+      if (!token) return false;
+      const response = await fetch(`${host}/api/services/media_player/media_stop`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity_id: speakerId })
+      });
+      return response.ok;
+    } catch (err) {
+      engineLogger.warn(`[AudioOutput] Stop error on ${speakerId}: ${err.message}`);
+      return false;
+    }
+  }
+
+  async setSpeakerVolume(speakerId, volume) {
+    try {
+      const { host, token } = getHAConfig();
+      if (!token) return false;
+      const response = await fetch(`${host}/api/services/media_player/volume_set`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity_id: speakerId, volume_level: volume / 100 })
+      });
+      return response.ok;
+    } catch (err) {
+      engineLogger.warn(`[AudioOutput] Volume error on ${speakerId}: ${err.message}`);
+      return false;
+    }
+  }
+
+  _hasActiveProgram() {
+    return Object.values(this._programEntries).some(Boolean);
+  }
+
+  _rememberProgramStation(speakerId, entry) {
+    this._programStreamUrls[speakerId] = entry.url;
+    this.properties.speakerVolumes[speakerId] = entry.volume;
+  }
+
+  /**
+   * Station Schedule program: act only when a speaker's row starts, switches station,
+   * changes volume, or ends. The first program after load is a baseline (no commands),
+   * so restarts and manual changes are respected.
+   */
+  async applyProgram(program, frontendControls) {
+    const entries = program.speakers || {};
+    const speakerIds = this.getSpeakerIds();
+
+    if (!this._programBaselined) {
+      this._programBaselined = true;
+      speakerIds.forEach(speakerId => {
+        const entry = entries[speakerId] || null;
+        this._programEntries[speakerId] = entry;
+        if (entry) this._rememberProgramStation(speakerId, entry);
+      });
+      return;
+    }
+
+    for (const speakerId of speakerIds) {
+      const entry = entries[speakerId] || null;
+      const previous = this._programEntries[speakerId] || null;
+      if (entry?.key === previous?.key && entry?.volume === previous?.volume) continue;
+
+      this._programEntries[speakerId] = entry;
+      if (entry) this._rememberProgramStation(speakerId, entry);
+      else delete this._programStreamUrls[speakerId];
+
+      // The open editor plays the schedule itself; the engine only mirrors it.
+      if (frontendControls) continue;
+
+      if (entry && previous && entry.key === previous.key) {
+        await this.setSpeakerVolume(speakerId, entry.volume);
+      } else if (entry) {
+        engineLogger.log('AUDIO', `Schedule → ${speakerId}: ${entry.name || entry.url} at ${entry.volume}%`);
+        if (await this.playSingleSpeaker(speakerId, entry.url, true)) this.properties.isStreaming = true;
+      } else {
+        engineLogger.log('AUDIO', `Schedule ended → stopping ${speakerId}`);
+        await this.stopSingleSpeaker(speakerId);
+      }
+    }
+  }
+
+  async _applyProgramTTSVolumes(speakerIds) {
+    for (const speakerId of speakerIds) {
+      const rowVolume = this._programEntries[speakerId]?.ttsVolume;
+      if (rowVolume !== null && rowVolume !== undefined) await this.setSpeakerVolume(speakerId, rowVolume);
+    }
+  }
+
   setInput(name, value) {
     // Support dynamic station inputs (station_*)
     if (name in this.inputs || name.startsWith('station_')) {
@@ -2820,7 +2917,17 @@ class TTSAnnouncementNode {
     }
   }
 
-  async process() {
+  async process(inputs) {
+    // The engine passes wired values as arrays; keep the latest value of each input.
+    if (inputs && typeof inputs === 'object') {
+      this.inputs = { trigger: null, message: null, streamUrl: null };
+      for (const [key, values] of Object.entries(inputs)) {
+        this.inputs[key] = Array.isArray(values) ? values[0] : values;
+      }
+    }
+    const controllingEngine = getEngine();
+    const frontendControls = !!(controllingEngine && controllingEngine.shouldSkipDeviceCommands());
+
     const trigger = this.inputs.trigger;
     const dynamicMessage = this.inputs.message;
     const dynamicStreamUrl = this.inputs.streamUrl;
@@ -2834,6 +2941,9 @@ class TTSAnnouncementNode {
       }
     }
 
+    const program = this.inputs.program;
+    if (program && typeof program === 'object') await this.applyProgram(program, frontendControls);
+
     // Handle per-speaker station inputs with edge detection
     for (const speakerId of this.getSpeakerIds()) {
       const inputKey = `station_${speakerId.replace('media_player.', '')}`;
@@ -2845,6 +2955,8 @@ class TTSAnnouncementNode {
         if (stationInput === lastValue) continue;
         
         this._lastStationInputs[speakerId] = stationInput;
+        // The open editor applies station inputs itself; only track the value here.
+        if (frontendControls) continue;
         
         let stationIndex = null;
         let customUrl = null;
@@ -2932,6 +3044,7 @@ class TTSAnnouncementNode {
           this.properties.wasStreamingBeforeTTS = true;
           await this.stopStream();
         }
+        await this._applyProgramTTSVolumes(speakerIds);
 
         try {
           const { host, token } = getHAConfig();
@@ -2980,10 +3093,17 @@ class TTSAnnouncementNode {
           }
 
           // Schedule stream resume after TTS
-          if (this.properties.wasStreamingBeforeTTS && this.properties.streamEnabled) {
+          if (this.properties.wasStreamingBeforeTTS && (this.properties.streamEnabled || this._hasActiveProgram())) {
             if (this._resumeTimeout) clearTimeout(this._resumeTimeout);
             this._resumeTimeout = setTimeout(async () => {
-              await this.playStream();
+              if (this.properties.streamEnabled) {
+                await this.playStream();
+              } else {
+                // Schedule-only playback: resume just the speakers with an active row
+                for (const [speakerId, entry] of Object.entries(this._programEntries)) {
+                  if (entry) await this.playSingleSpeaker(speakerId, entry.url);
+                }
+              }
               this.properties.wasStreamingBeforeTTS = false;
             }, this.properties.resumeDelay);
           }

@@ -27,7 +27,8 @@
         'LogicGateLogic',
         'ColorLogic',
         'UtilityLogic',
-        'DeviceLogic'
+        'DeviceLogic',
+        'AudioScheduleLogic'
     ];
     
     /**

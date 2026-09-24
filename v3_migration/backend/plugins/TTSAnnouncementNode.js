@@ -146,13 +146,17 @@
                 // TTS Quiet Hours: Disable TTS during these hours (e.g., sleeping)
                 quietHoursEnabled: false,
                 quietHoursStart: 23,  // 11 PM (0-23)
-                quietHoursEnd: 7      // 7 AM (0-23)
+                quietHoursEnd: 7,     // 7 AM (0-23)
+
+                // New nodes use the Station Schedule Program input instead of per-speaker sockets
+                showSpeakerInputs: false
             };
 
             // Inputs
             this.addInput('trigger', new ClassicPreset.Input(sockets.boolean, 'Trigger'));
             this.addInput('message', new ClassicPreset.Input(sockets.string, 'Message'));
             this.addInput('streamUrl', new ClassicPreset.Input(sockets.string, 'Stream URL'));
+            this.addInput('program', new ClassicPreset.Input(sockets.object || sockets.any, 'Program'));
             // Dynamic per-speaker inputs (volume, active, station) added via updateVolumeInputs()
 
             // Outputs
@@ -181,6 +185,12 @@
             this._ttsInProgress = false;
             this._lastPlayedMessage = null;  // Last TTS message played (for deduplication)
             this._lastPlayedTime = 0;        // When it was played
+
+            // Station Schedule program tracking (per speaker)
+            this._programEntries = {};
+            this._programStreamUrls = {};
+            this._programBaselined = false;
+            this._lastProgramRevision = undefined;
         }
 
         // Detect if a speaker is an Apple/AirPlay device that can't mix audio
@@ -243,6 +253,12 @@
 
         // Update dynamic volume inputs based on selected speakers
         updateVolumeInputs(speakerIds, speakerNames = {}) {
+            if (!this.properties.showSpeakerInputs) {
+                this._removeUnconnectedSpeakerInputs();
+                if (this.changeCallback) this.changeCallback();
+                return;
+            }
+
             // Remove old volume inputs that are no longer needed
             const newInputKeys = speakerIds.map(id => `vol_${id.replace('media_player.', '')}`);
             
@@ -317,6 +333,117 @@
             this._stationInputKeys = newInputKeys;
         }
 
+        _isInputConnected(key) {
+            const editor = window._t2Editor;
+            if (!editor || !this.id) return false;
+            try {
+                return editor.getConnections().some(conn => conn.target === this.id && conn.targetInput === key);
+            } catch (err) {
+                return false;
+            }
+        }
+
+        // Hide per-speaker sockets, but never drop one that still has a wire attached
+        _removeUnconnectedSpeakerInputs() {
+            const prune = keys => keys.filter(key => {
+                if (this._isInputConnected(key)) return true;
+                if (this.inputs[key]) this.removeInput(key);
+                return false;
+            });
+            this._volumeInputKeys = prune(this._volumeInputKeys);
+            this._activeInputKeys = prune(this._activeInputKeys);
+            this._stationInputKeys = prune(this._stationInputKeys);
+        }
+
+        _hasActiveProgram() {
+            return Object.values(this._programEntries || {}).some(Boolean);
+        }
+
+        _rememberProgramStation(speakerId, entry) {
+            this._programStreamUrls[speakerId] = entry.url;
+            this.setSpeakerVolume(speakerId, entry.volume);
+        }
+
+        // A manual station pick overrides the schedule until the next row starts
+        clearProgramOverride(speakerId) {
+            delete this._programStreamUrls[speakerId];
+        }
+
+        /**
+         * Apply the Station Schedule program. Speakers only change when their row starts,
+         * switches station, changes volume, or ends - so manual changes stick until then.
+         * The first program seen after load is recorded without touching the speakers.
+         */
+        applyProgram(program) {
+            const entries = program?.speakers || {};
+            const revision = program?.revision;
+            const speakerIds = this.getSpeakerIds();
+
+            if (!this._programBaselined) {
+                this._programBaselined = true;
+                this._lastProgramRevision = revision;
+                speakerIds.forEach(speakerId => {
+                    const entry = entries[speakerId] || null;
+                    this._programEntries[speakerId] = entry;
+                    if (entry) this._rememberProgramStation(speakerId, entry);
+                });
+                return;
+            }
+
+            // A new revision means the Play button was pressed: re-apply everything scheduled now
+            const forced = revision !== this._lastProgramRevision;
+            this._lastProgramRevision = revision;
+            let changed = false;
+
+            for (const speakerId of speakerIds) {
+                const entry = entries[speakerId] || null;
+                const previous = this._programEntries[speakerId] || null;
+                if (!forced && entry?.key === previous?.key && entry?.volume === previous?.volume) continue;
+
+                this._programEntries[speakerId] = entry;
+                changed = true;
+
+                if (entry && previous && entry.key === previous.key && !forced) {
+                    this.setSpeakerVolume(speakerId, entry.volume);
+                    this.queueVolumeChange(speakerId, entry.volume);
+                } else if (entry) {
+                    console.log(`[AudioOutput] 📅 Schedule → ${speakerId}: ${entry.name || entry.url} at ${entry.volume}%`);
+                    this._rememberProgramStation(speakerId, entry);
+                    this.queueStationChange(speakerId, entry.url);
+                    this.properties.isStreaming = true;
+                } else if (previous) {
+                    console.log(`[AudioOutput] 📅 Schedule ended → stopping ${speakerId}`);
+                    this.clearProgramOverride(speakerId);
+                    this.stopSingleSpeaker(speakerId);
+                }
+            }
+
+            if (changed && !this.properties.streamEnabled && !this._hasActiveProgram()) {
+                this.properties.isStreaming = false;
+            }
+        }
+
+        // Announcement volume: the scheduled row's value wins, otherwise keep the existing boost rule
+        getTTSVolumeForSpeaker(speakerId, currentVol) {
+            const rowVolume = this._programEntries?.[speakerId]?.ttsVolume;
+            if (rowVolume !== null && rowVolume !== undefined) return rowVolume;
+            if (currentVol > 50) return currentVol;
+            return Math.max(currentVol, this.properties.ttsVolume || 75);
+        }
+
+        // The non-Chatterbox TTS flow never adjusted volume; only apply scheduled rows' announcement volumes
+        async _applyProgramTTSVolumes(speakerIds) {
+            this._preTTSVolumes = {};
+            for (const speakerId of speakerIds) {
+                const rowVolume = this._programEntries?.[speakerId]?.ttsVolume;
+                if (rowVolume === null || rowVolume === undefined) continue;
+                const currentVol = this.getSpeakerVolume(speakerId);
+                if (rowVolume === currentVol) continue;
+                this._preTTSVolumes[speakerId] = currentVol;
+                await this.setVolume(speakerId, rowVolume);
+            }
+        }
+
         // Get TTS-enabled speakers only
         getTTSSpeakerIds() {
             return this.getSpeakerIds().filter(id => 
@@ -373,6 +500,10 @@
             // Node-wide custom URL takes priority over everything
             if (this.properties.customStreamUrl) {
                 return this.properties.customStreamUrl;
+            }
+            // Station scheduled for this speaker right now (cleared by a manual station pick)
+            if (this._programStreamUrls?.[speakerId]) {
+                return this._programStreamUrls[speakerId];
             }
             // Per-speaker custom URL (set via automation)
             if (this.properties.speakerCustomUrls?.[speakerId]) {
@@ -967,7 +1098,7 @@
             }
             
             // Now resume - handle stopped vs ducked speakers separately
-            if (this.properties.wasStreamingBeforeTTS && this.properties.streamEnabled) {
+            if (this.properties.wasStreamingBeforeTTS && (this.properties.streamEnabled || this._hasActiveProgram())) {
                 const stoppedSpeakers = this.properties.stoppedSpeakerIds || [];
                 const duckedSpeakers = this.properties.duckedSpeakerIds || [];
                 
@@ -976,7 +1107,9 @@
                 const hasSmartTracking = stoppedSpeakers.length > 0 || duckedSpeakers.length > 0;
                 
                 // Resume STOPPED speakers (restart stream)
-                const toRestart = hasSmartTracking ? stoppedSpeakers : (this.properties.duckMode ? [] : legacyPaused);
+                let toRestart = hasSmartTracking ? stoppedSpeakers : (this.properties.duckMode ? [] : legacyPaused);
+                // Schedule-only playback: resume just the speakers that have an active row
+                if (!this.properties.streamEnabled) toRestart = toRestart.filter(id => this._programEntries?.[id]);
                 if (toRestart.length > 0) {
                     // Extra delay for AVR devices - they need time to fully clear state before new stream
                     const hasAVR = toRestart.some(id => id.includes('denon') || id.includes('avr') || id.includes('receiver'));
@@ -1271,7 +1404,6 @@
             //        If stream vol ≤ 50%, boost to ttsVolume setting (75% default)
             // EXCLUSION: AirPort Express (grotto) doesn't handle volume changes well
             this._preTTSVolumes = {};
-            const ttsTargetVol = this.properties.ttsVolume || 75;
             
             for (const speakerId of speakerIds) {
                 const currentVol = this.getSpeakerVolume(speakerId);
@@ -1283,17 +1415,8 @@
                     continue;
                 }
                 
-                // Determine what volume to use for TTS
-                let ttsVol;
-                if (currentVol > 50) {
-                    // Stream is already loud - use same volume for TTS
-                    ttsVol = currentVol;
-                    console.log(`[AudioOutput] 🔊 ${speakerId}: Stream at ${currentVol}% (high) - TTS will play at same level`);
-                } else {
-                    // Stream is quiet - boost TTS to be clearly audible
-                    ttsVol = Math.max(currentVol, ttsTargetVol);
-                    console.log(`[AudioOutput] 🔊 ${speakerId}: Stream at ${currentVol}% (low) - boosting TTS to ${ttsVol}%`);
-                }
+                const ttsVol = this.getTTSVolumeForSpeaker(speakerId, currentVol);
+                console.log(`[AudioOutput] 🔊 ${speakerId}: stream ${currentVol}% → announcement ${ttsVol}%`);
                 
                 // Set the volume BEFORE playing TTS
                 if (ttsVol !== currentVol) {
@@ -1339,6 +1462,9 @@
             const trigger = inputs.trigger?.[0];
             const dynamicMessage = inputs.message?.[0];
             const dynamicStreamUrl = inputs.streamUrl?.[0];
+
+            const program = inputs.program?.[0];
+            if (program && typeof program === 'object') this.applyProgram(program);
 
             // Handle dynamic volume inputs from automation
             // After restore, force-sync volumes even if values match (device might be different)
@@ -1524,6 +1650,7 @@
                     } else {
                         // Legacy flow for other TTS services: pause first, then generate/play
                         await this.pauseStreamForTTS(ttsSpeakerIds);
+                        await this._applyProgramTTSVolumes(ttsSpeakerIds);
                         const success = await this.sendTTS(message, ttsSpeakerIds);
                         this.properties.lastResult = success;
                         // Await resume to prevent race conditions with concurrent TTS
@@ -1578,7 +1705,8 @@
                 showIOSection: this.properties.showIOSection,
                 showSpeakersSection: this.properties.showSpeakersSection,
                 showTTSSection: this.properties.showTTSSection,
-                showStreamSection: this.properties.showStreamSection
+                showStreamSection: this.properties.showStreamSection,
+                showSpeakerInputs: this.properties.showSpeakerInputs
             };
         }
 
@@ -1621,6 +1749,8 @@
             if (props.showSpeakersSection !== undefined) this.properties.showSpeakersSection = props.showSpeakersSection;
             if (props.showTTSSection !== undefined) this.properties.showTTSSection = props.showTTSSection;
             if (props.showStreamSection !== undefined) this.properties.showStreamSection = props.showStreamSection;
+            // Graphs saved before the Program input existed keep their per-speaker sockets
+            this.properties.showSpeakerInputs = props.showSpeakerInputs !== undefined ? props.showSpeakerInputs : true;
 
             // Migrate legacy
             if (!this.properties.mediaPlayerIds?.length && this.properties.mediaPlayerId) {
@@ -1865,6 +1995,34 @@
             }
         }, [stations]);
 
+        const buildSpeakerNames = (speakerIds) => {
+            const names = {};
+            speakerIds.forEach(id => {
+                const player = mediaPlayers.find(p => (p.id?.replace('ha_', '') || p.entity_id) === id);
+                names[id] = player?.friendly_name || player?.name || id.split('.').pop();
+            });
+            return names;
+        };
+
+        // Publish selected speakers so Station Schedule can offer them
+        useEffect(() => {
+            if (!window.T2StationRegistry) {
+                window.T2StationRegistry = { stations: [] };
+            }
+            const names = buildSpeakerNames(selectedPlayers);
+            window.T2StationRegistry.speakers = selectedPlayers.map(id => ({ id, name: names[id] }));
+            window.dispatchEvent(new CustomEvent('t2-station-registry-update'));
+        }, [selectedPlayers, mediaPlayers]);
+
+        const [showSpeakerInputs, setShowSpeakerInputs] = useState(data.properties.showSpeakerInputs ?? false);
+        const handleSpeakerInputsToggle = (e) => {
+            const enabled = e.target.checked;
+            setShowSpeakerInputs(enabled);
+            data.properties.showSpeakerInputs = enabled;
+            data.updateVolumeInputs(selectedPlayers, buildSpeakerNames(selectedPlayers));
+            setTimeout(() => window.T2Controls?.updateNodeLayout?.(data.id), 50);
+        };
+
         // Migrate legacy
         useEffect(() => {
             if (data.properties.mediaPlayerId && !data.properties.mediaPlayerIds?.length) {
@@ -2036,6 +2194,7 @@
                 const updated = { ...prev, [playerId]: idx };
                 data.properties.speakerStations = updated;
                 data.setSpeakerStation(playerId, idx);
+                data.clearProgramOverride(playerId);
                 
                 // Always switch this speaker to the new station immediately
                 // Use forceStop=true to ensure Apple devices (HomePod) accept the new stream
@@ -2652,6 +2811,15 @@
                             minHeight: showIOSection ? 'auto' : '12px'
                         } 
                     }, renderOutputs(!showIOSection))
+                ]),
+                showIOSection && React.createElement('label', {
+                    key: 'speaker-inputs-toggle',
+                    title: 'Show per-speaker volume, play, and station inputs. Leave off when using a Station Schedule Program.',
+                    onPointerDown: (e) => e.stopPropagation(),
+                    style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '0 8px 8px', fontSize: '11px', color: '#c5cdd3', cursor: 'pointer' }
+                }, [
+                    React.createElement('input', { key: 'box', type: 'checkbox', checked: showSpeakerInputs, onChange: handleSpeakerInputsToggle }),
+                    React.createElement('span', { key: 'text' }, 'Per-speaker inputs')
                 ])
             ]),
 

@@ -844,73 +844,6 @@ class StationSelectorNode {
 }
 
 // ============================================================================
-// STATION SCHEDULE NODE
-// ============================================================================
-class StationScheduleNode {
-  static type = 'StationScheduleNode';
-  
-  constructor(id, properties = {}) {
-    this.id = id;
-    this.type = StationScheduleNode.type;
-    this.properties = {
-      stations: [],
-      schedule: [
-        { time: "06:00", stationIndex: 0 },
-        { time: "12:00", stationIndex: 1 },
-        { time: "18:00", stationIndex: 2 }
-      ],
-      lastOutputStation: null,
-      ...properties
-    };
-    this.inputs = [];
-    this.outputs = ['station'];
-  }
-  
-  restore(data) {
-    if (data.properties) {
-      Object.assign(this.properties, data.properties);
-    }
-  }
-  
-  /**
-   * Returns the station index that should be playing at the current time.
-   */
-  getCurrentStationIndex() {
-    const schedule = this.properties.schedule;
-    if (!schedule || schedule.length === 0) return 0;
-
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-    // Sort schedule by time
-    const sorted = [...schedule].sort((a, b) => {
-      const [aH, aM] = a.time.split(':').map(Number);
-      const [bH, bM] = b.time.split(':').map(Number);
-      return (aH * 60 + aM) - (bH * 60 + bM);
-    });
-
-    // Find the most recent entry that has passed
-    let activeEntry = sorted[sorted.length - 1]; // Default to last (wraps from previous day)
-    
-    for (const entry of sorted) {
-      const [h, m] = entry.time.split(':').map(Number);
-      const entryMinutes = h * 60 + m;
-      if (entryMinutes <= currentMinutes) {
-        activeEntry = entry;
-      }
-    }
-
-    return activeEntry.stationIndex;
-  }
-  
-  process(inputs) {
-    const stationIndex = this.getCurrentStationIndex();
-    this.properties.lastOutputStation = stationIndex;
-    return { station: stationIndex };
-  }
-}
-
-// ============================================================================
 // REGISTER ALL NODES
 // ============================================================================
 function register(registry) {
@@ -930,7 +863,6 @@ function register(registry) {
   // Also register as "Toggle" alias
   registry.register('Toggle', PushbuttonNode);
   registry.register('StationSelectorNode', StationSelectorNode);
-  registry.register('StationScheduleNode', StationScheduleNode);
 }
 
 module.exports = {
@@ -947,6 +879,5 @@ module.exports = {
   LogicOperationsNode,
   PushbuttonNode,
   StationSelectorNode,
-  StationScheduleNode,
   ColorUtils
 };

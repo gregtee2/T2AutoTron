@@ -210,6 +210,12 @@ function log(category, message, data = null) {
   logStream.write(line + '\n');
 }
 
+// Warnings are actionable, so they go to the console as well as the engine log file.
+function warn(message, data = null) {
+  log('WARN', message, data);
+  console.warn(message);
+}
+
 function logNodeExecution(nodeId, nodeType, inputs, outputs) {
   // Only log node execution in verbose mode
   if (LOG_LEVEL >= 2) {
@@ -339,6 +345,7 @@ process.on('exit', close);
 
 module.exports = {
   log,
+  warn,
   logNodeExecution,
   logTriggerChange,
   logBufferSet,

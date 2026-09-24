@@ -1,3 +1,16 @@
+## [2.1.267] - 2026-09-23
+### Added
+- Station Schedule rows: days, start and end time, speakers, station, volume, and announcement volume, sent to Audio Output through a single Program wire.
+- Audio Output Program input: speakers start when their row begins and stop when it ends; lower rows win on overlaps; manual changes are kept until the next row; each row's announcement volume is used for TTS.
+
+### Changed
+- New Audio Output nodes hide per-speaker inputs (a Per-speaker inputs checkbox restores them); existing graphs keep theirs.
+- Existing start-time schedules convert automatically and keep driving the Station #/Volume outputs.
+
+### Fixed
+- Backend Audio Output now receives its wired inputs, so announcements and station inputs work while the browser is closed.
+- Backend Audio Output error handling no longer crashes on its own warning messages.
+
 ## [2.1.266] - 2026-09-23
 ### Fixed
 - All-in-One Color: changing Kelvin no longer resets brightness to 255.

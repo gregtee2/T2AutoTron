@@ -11,6 +11,7 @@ const VERBOSE = process.env.VERBOSE_LOGGING === 'true';
 
 // Load shared utility logic
 let sharedUtilityLogic;
+const AudioScheduleLogic = require('../../../../shared/logic/AudioScheduleLogic');
 try {
   sharedUtilityLogic = require('../../../../shared/logic/UtilityLogic');
 } catch (e) {
@@ -1248,9 +1249,9 @@ class TTSMessageSchedulerNode {
 registry.register('TTSMessageSchedulerNode', TTSMessageSchedulerNode);
 
 /**
- * StationScheduleNode - Schedule radio stations throughout the day
+ * StationScheduleNode - Schedule stations per speaker by day and time
  * 
- * Returns station index and volume based on current time and schedule entries.
+ * Outputs a per-speaker Program for Audio Output, plus legacy station index and volume.
  */
 class StationScheduleNode {
   constructor() {
@@ -1262,15 +1263,10 @@ class StationScheduleNode {
         { name: 'Station 2', url: '' },
         { name: 'Station 3', url: '' }
       ],
-      schedule: [
-        { time: '06:00', stationIndex: 0, volume: 50 },
-        { time: '12:00', stationIndex: 1, volume: 50 },
-        { time: '18:00', stationIndex: 2, volume: 50 }
-      ],
+      schedule: [],
       lastOutputStation: null,
       lastOutputVolume: null
     };
-    this._lastActiveTime = null;
   }
 
   restore(data) {
@@ -1279,41 +1275,23 @@ class StationScheduleNode {
     }
   }
 
-  getCurrentActiveEntry() {
-    const schedule = this.properties.schedule;
-    if (!schedule || schedule.length === 0) return null;
-    
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    
-    // Sort schedule by time
-    const sorted = [...schedule].sort((a, b) => {
-      const [aH, aM] = a.time.split(':').map(Number);
-      const [bH, bM] = b.time.split(':').map(Number);
-      return (aH * 60 + aM) - (bH * 60 + bM);
-    });
-    
-    // Find the most recent entry that has passed
-    let activeEntry = sorted[sorted.length - 1]; // Default to last (wraps from previous day)
-    for (const entry of sorted) {
-      const [h, m] = entry.time.split(':').map(Number);
-      const entryMinutes = h * 60 + m;
-      if (entryMinutes <= currentMinutes) {
-        activeEntry = entry;
-      }
+  getRows() {
+    if (AudioScheduleLogic.isLegacySchedule(this.properties.schedule)) {
+      this.properties.schedule = AudioScheduleLogic.migrateLegacySchedule(this.properties.schedule);
     }
-    return activeEntry;
+    return Array.isArray(this.properties.schedule) ? this.properties.schedule : [];
   }
 
-  data(inputs) {
-    const activeEntry = this.getCurrentActiveEntry();
-    const stationIndex = activeEntry?.stationIndex ?? 0;
-    const volume = activeEntry?.volume ?? 50;
-    
-    this.properties.lastOutputStation = stationIndex;
-    this.properties.lastOutputVolume = volume;
-    
-    return { station: stationIndex, volume: volume };
+  data() {
+    const rows = this.getRows();
+    const now = new Date();
+    const program = AudioScheduleLogic.buildAudioProgram(rows, this.properties.stations, now);
+    const legacy = AudioScheduleLogic.getLegacyStationOutput(rows, now);
+
+    this.properties.lastOutputStation = legacy.station;
+    this.properties.lastOutputVolume = legacy.volume;
+
+    return { program, station: legacy.station, volume: legacy.volume };
   }
 }
 
